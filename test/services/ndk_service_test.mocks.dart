@@ -17,9 +17,11 @@ import 'package:ndk/domain_layer/entities/nip_01_event.dart' as _i22;
 import 'package:ndk/domain_layer/usecases/accounts/accounts.dart' as _i4;
 import 'package:ndk/domain_layer/usecases/broadcast/broadcast.dart' as _i6;
 import 'package:ndk/domain_layer/usecases/bunkers/bunkers.dart' as _i5;
-import 'package:ndk/domain_layer/usecases/connectivity/connectivity.dart' as _i18;
+import 'package:ndk/domain_layer/usecases/connectivity/connectivity.dart'
+    as _i18;
 import 'package:ndk/domain_layer/usecases/files/blossom.dart' as _i15;
-import 'package:ndk/domain_layer/usecases/files/blossom_user_server_list.dart' as _i16;
+import 'package:ndk/domain_layer/usecases/files/blossom_user_server_list.dart'
+    as _i16;
 import 'package:ndk/domain_layer/usecases/files/files.dart' as _i14;
 import 'package:ndk/domain_layer/usecases/follows/follows.dart' as _i8;
 import 'package:ndk/domain_layer/usecases/gift_wrap/gift_wrap.dart' as _i17;
@@ -31,7 +33,8 @@ import 'package:ndk/domain_layer/usecases/relay_manager.dart' as _i7;
 import 'package:ndk/domain_layer/usecases/relay_sets/relay_sets.dart' as _i12;
 import 'package:ndk/domain_layer/usecases/requests/requests.dart' as _i3;
 import 'package:ndk/domain_layer/usecases/search/search.dart' as _i21;
-import 'package:ndk/domain_layer/usecases/user_relay_lists/user_relay_lists.dart' as _i10;
+import 'package:ndk/domain_layer/usecases/user_relay_lists/user_relay_lists.dart'
+    as _i10;
 import 'package:ndk/domain_layer/usecases/zaps/zaps.dart' as _i20;
 import 'package:ndk/ndk.dart' as _i23;
 import 'package:ndk/presentation_layer/ndk_config.dart' as _i2;
@@ -100,7 +103,8 @@ class _FakeBroadcast_4 extends _i1.SmartFake implements _i6.Broadcast {
         );
 }
 
-class _FakeRelayManager_5<T> extends _i1.SmartFake implements _i7.RelayManager<T> {
+class _FakeRelayManager_5<T> extends _i1.SmartFake
+    implements _i7.RelayManager<T> {
   _FakeRelayManager_5(
     Object parent,
     Invocation parentInvocation,
@@ -130,7 +134,8 @@ class _FakeMetadatas_7 extends _i1.SmartFake implements _i9.Metadatas {
         );
 }
 
-class _FakeUserRelayLists_8 extends _i1.SmartFake implements _i10.UserRelayLists {
+class _FakeUserRelayLists_8 extends _i1.SmartFake
+    implements _i10.UserRelayLists {
   _FakeUserRelayLists_8(
     Object parent,
     Invocation parentInvocation,
@@ -190,7 +195,8 @@ class _FakeBlossom_13 extends _i1.SmartFake implements _i15.Blossom {
         );
 }
 
-class _FakeBlossomUserServerList_14 extends _i1.SmartFake implements _i16.BlossomUserServerList {
+class _FakeBlossomUserServerList_14 extends _i1.SmartFake
+    implements _i16.BlossomUserServerList {
   _FakeBlossomUserServerList_14(
     Object parent,
     Invocation parentInvocation,
@@ -260,7 +266,8 @@ class _FakeNip01Event_20 extends _i1.SmartFake implements _i22.Nip01Event {
         );
 }
 
-class _FakeNdkBroadcastResponse_21 extends _i1.SmartFake implements _i23.NdkBroadcastResponse {
+class _FakeNdkBroadcastResponse_21 extends _i1.SmartFake
+    implements _i23.NdkBroadcastResponse {
   _FakeNdkBroadcastResponse_21(
     Object parent,
     Invocation parentInvocation,
@@ -280,7 +287,8 @@ class _FakeKeyPair_22 extends _i1.SmartFake implements _i24.KeyPair {
         );
 }
 
-class _FakeVaultRepository_23 extends _i1.SmartFake implements _i25.VaultRepository {
+class _FakeVaultRepository_23 extends _i1.SmartFake
+    implements _i25.VaultRepository {
   _FakeVaultRepository_23(
     Object parent,
     Invocation parentInvocation,
@@ -555,7 +563,8 @@ class MockGiftWrap extends _i1.Mock implements _i17.GiftWrap {
       ) as _i27.Future<_i22.Nip01Event>);
 
   @override
-  _i27.Future<_i22.Nip01Event> fromGiftWrap({required _i22.Nip01Event? giftWrap}) =>
+  _i27.Future<_i22.Nip01Event> fromGiftWrap(
+          {required _i22.Nip01Event? giftWrap}) =>
       (super.noSuchMethod(
         Invocation.method(
           #fromGiftWrap,
@@ -633,7 +642,8 @@ class MockGiftWrap extends _i1.Mock implements _i17.GiftWrap {
       ) as _i27.Future<_i22.Nip01Event>);
 
   @override
-  _i27.Future<_i22.Nip01Event> unsealRumor({required _i22.Nip01Event? sealedEvent}) =>
+  _i27.Future<_i22.Nip01Event> unsealRumor(
+          {required _i22.Nip01Event? sealedEvent}) =>
       (super.noSuchMethod(
         Invocation.method(
           #unsealRumor,
@@ -651,7 +661,8 @@ class MockGiftWrap extends _i1.Mock implements _i17.GiftWrap {
       ) as _i27.Future<_i22.Nip01Event>);
 
   @override
-  _i27.Future<_i22.Nip01Event> unwrapEvent({required _i22.Nip01Event? wrappedEvent}) =>
+  _i27.Future<_i22.Nip01Event> unwrapEvent(
+          {required _i22.Nip01Event? wrappedEvent}) =>
       (super.noSuchMethod(
         Invocation.method(
           #unwrapEvent,
@@ -1023,7 +1034,8 @@ class MockNip01Event extends _i1.Mock implements _i22.Nip01Event {
 /// A class which mocks [NdkBroadcastResponse].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkBroadcastResponse extends _i1.Mock implements _i23.NdkBroadcastResponse {
+class MockNdkBroadcastResponse extends _i1.Mock
+    implements _i23.NdkBroadcastResponse {
   MockNdkBroadcastResponse() {
     _i1.throwOnMissingStub(this);
   }
@@ -1038,14 +1050,16 @@ class MockNdkBroadcastResponse extends _i1.Mock implements _i23.NdkBroadcastResp
       ) as _i22.Nip01Event);
 
   @override
-  _i27.Future<List<_i29.RelayBroadcastResponse>> get broadcastDoneFuture => (super.noSuchMethod(
+  _i27.Future<List<_i29.RelayBroadcastResponse>> get broadcastDoneFuture =>
+      (super.noSuchMethod(
         Invocation.getter(#broadcastDoneFuture),
-        returnValue:
-            _i27.Future<List<_i29.RelayBroadcastResponse>>.value(<_i29.RelayBroadcastResponse>[]),
+        returnValue: _i27.Future<List<_i29.RelayBroadcastResponse>>.value(
+            <_i29.RelayBroadcastResponse>[]),
       ) as _i27.Future<List<_i29.RelayBroadcastResponse>>);
 
   @override
-  _i27.Stream<List<_i29.RelayBroadcastResponse>> get broadcastDone => (super.noSuchMethod(
+  _i27.Stream<List<_i29.RelayBroadcastResponse>> get broadcastDone =>
+      (super.noSuchMethod(
         Invocation.getter(#broadcastDone),
         returnValue: _i27.Stream<List<_i29.RelayBroadcastResponse>>.empty(),
       ) as _i27.Stream<List<_i29.RelayBroadcastResponse>>);
@@ -1090,7 +1104,8 @@ class MockLoginService extends _i1.Mock implements _i30.LoginService {
       ) as _i27.Future<_i24.KeyPair>);
 
   @override
-  _i27.Future<_i24.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
+  _i27.Future<_i24.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
+      (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -1274,7 +1289,8 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
       ) as _i25.VaultRepository);
 
   @override
-  _i26.InvitationSendingService get invitationSendingService => (super.noSuchMethod(
+  _i26.InvitationSendingService get invitationSendingService =>
+      (super.noSuchMethod(
         Invocation.getter(#invitationSendingService),
         returnValue: _FakeInvitationSendingService_24(
           this,
@@ -1601,7 +1617,8 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
       ) as _i27.Future<void>);
 
   @override
-  _i27.Future<void> processRsvpEvent({required _i22.Nip01Event? event}) => (super.noSuchMethod(
+  _i27.Future<void> processRsvpEvent({required _i22.Nip01Event? event}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processRsvpEvent,
           [],
@@ -1612,7 +1629,8 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
       ) as _i27.Future<void>);
 
   @override
-  _i27.Future<void> processDenialEvent({required _i22.Nip01Event? event}) => (super.noSuchMethod(
+  _i27.Future<void> processDenialEvent({required _i22.Nip01Event? event}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processDenialEvent,
           [],
