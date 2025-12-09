@@ -15,6 +15,7 @@ import '../services/logger.dart';
 import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
 import '../screens/recovery_status_screen.dart';
+import '../screens/practice_recovery_screen.dart';
 
 /// Button stack widget for vault detail screen
 class VaultDetailButtonStack extends ConsumerWidget {
@@ -147,17 +148,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
                       buttons.add(
                         RowButtonConfig(
                           onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Practice Recovery'),
-                                content: const Text('todo'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PracticeRecoveryScreen(vaultId: vaultId),
                               ),
                             );
                           },
