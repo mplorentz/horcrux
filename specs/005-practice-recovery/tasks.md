@@ -15,37 +15,38 @@
 
 ## Phase 1: Model Changes
 
-- [ ] T001 Add `isPractice` boolean field to `RecoveryRequest` in `lib/models/recovery_request.dart` (default false, update constructor, copyWith, toJson, fromJson)
+- [X] T001 Add `isPractice` boolean field to `RecoveryRequest` in `lib/models/recovery_request.dart` (default false, update constructor, copyWith, toJson, fromJson)
 
 ---
 
 ## Phase 2: Service Changes
 
-- [ ] T002 Update `RecoveryService.initiateRecovery` in `lib/services/recovery_service.dart` to accept optional `isPractice` parameter and pass to RecoveryRequest
-- [ ] T003 Update `RecoveryService.sendRecoveryRequestViaNostr` to include `is_practice` in event payload
-- [ ] T004 Update `RecoveryService.respondToRecoveryRequestWithShard` to skip shard data retrieval when responding to practice requests
-- [ ] T005 Update `RecoveryService.sendRecoveryResponseViaNostr` to omit `shard_data` for practice responses
+- [X] T002 Update `RecoveryService.initiateRecovery` in `lib/services/recovery_service.dart` to accept optional `isPractice` parameter and pass to RecoveryRequest
+- [X] T003 Update `RecoveryService.sendRecoveryRequestViaNostr` to include `is_practice` in event payload
+- [X] T004 Update `RecoveryService.respondToRecoveryRequestWithShard` to skip shard data retrieval when responding to practice requests
+- [X] T005 Update `RecoveryService.sendRecoveryResponseViaNostr` to omit `shard_data` for practice responses
 
 ---
 
 ## Phase 3: UI Stubs (Outside-In)
 
-- [ ] T006 [P] Add "Practice Recovery" button stub to `lib/screens/vault_detail_screen.dart` (non-functional, visible only when shards distributed and no active recovery)
-- [ ] T007 [P] Add practice mode banner stub to `lib/screens/recovery_status_screen.dart` (shows "Practice Recovery" header when `request.isPractice`)
-- [ ] T008 [P] Add practice request styling stub to `lib/screens/recovery_request_detail_screen.dart` (shows "PRACTICE REQUEST" header and explanatory text)
-- [ ] T009 [P] Add practice badge stub to `lib/widgets/recovery_notification_overlay.dart` (visual indicator for practice requests)
-- [ ] T010 Manual verification: Navigate through stubbed practice UI and verify layout/styling
+- [X] T006 [P] Add "Practice Recovery" button stub to `lib/screens/vault_detail_screen.dart` (non-functional, visible only when shards distributed and no active recovery) - Note: Implemented via vault_detail_button_stack.dart with full functionality
+- [X] T007 [P] Add practice mode banner stub to `lib/screens/recovery_status_screen.dart` (shows "Practice Recovery" header when `request.isPractice`)
+- [X] T008 [P] Add practice request styling stub to `lib/screens/recovery_request_detail_screen.dart` (shows "PRACTICE REQUEST" header and explanatory text)
+- [X] T009 [P] Add practice badge stub to `lib/widgets/recovery_notification_overlay.dart` (visual indicator for practice requests)
+- [x] T010 Manual verification: Navigate through stubbed practice UI and verify layout/styling
 
 ---
 
 ## Phase 4: UI Implementation
 
-- [ ] T011 Implement "Practice Recovery" button in `lib/screens/vault_detail_screen.dart`:
+- [X] T011 Implement "Practice Recovery" button in `lib/screens/vault_detail_screen.dart`:
   - Check `backupConfig.stewards` has at least one with `holdingKey` status
   - Check no active non-practice recovery in progress
   - Show confirmation dialog
   - Call `RecoveryService.initiateRecovery` with `isPractice: true`
   - Navigate to recovery status screen
+  - Note: Implemented via PracticeRecoveryScreen with "Start Practice Recovery" button that calls initiateRecovery with isPractice: true
 
 - [ ] T012 Implement practice mode in `lib/screens/recovery_status_screen.dart`:
   - Different header/banner styling for practice
@@ -115,9 +116,9 @@ Task: "Widget test Practice mode styling in recovery status screen"
 
 ## Validation Checklist
 
-- [ ] `isPractice` flag persists through JSON serialization
+- [X] `isPractice` flag persists through JSON serialization
 - [ ] Practice requests clearly labeled in all UI screens
-- [ ] Practice responses do NOT include shard data
+- [X] Practice responses do NOT include shard data
 - [ ] Cannot start practice during active real recovery
 - [ ] Practice Recovery button only visible when shards distributed
 - [ ] End Practice archives the request properly

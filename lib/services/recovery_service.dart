@@ -195,6 +195,7 @@ class RecoveryService {
     required List<String> stewardPubkeys,
     required int threshold,
     Duration? expirationDuration,
+    bool isPractice = false,
   }) async {
     await initialize();
 
@@ -232,6 +233,7 @@ class RecoveryService {
       threshold: threshold,
       expiresAt: expiresAt,
       stewardResponses: stewardResponses,
+      isPractice: isPractice,
     );
 
     // Validate and save
@@ -445,8 +447,9 @@ class RecoveryService {
 
     ShardData? shardData;
 
-    // If approving, get the shard data for this vault
-    if (approved) {
+    // If approving and NOT a practice request, get the shard data for this vault
+    // Practice requests should not include shard data
+    if (approved && !request.isPractice) {
       final shards = await repository.getShardsForVault(request.vaultId);
       if (shards.isEmpty) {
         throw ArgumentError('No shard data found for vault ${request.vaultId}');
@@ -465,6 +468,8 @@ class RecoveryService {
       Log.info(
         'Selected shard with distributionVersion ${shardData.distributionVersion} for recovery request $recoveryRequestId',
       );
+    } else if (approved && request.isPractice) {
+      Log.info('Practice request - skipping shard data retrieval');
     }
 
     // Submit response locally
@@ -475,19 +480,61 @@ class RecoveryService {
       shardData: shardData,
     );
 
-    // Send response via Nostr if approved and relay URLs are available in shard data
-    if (approved &&
-        shardData != null &&
-        shardData.relayUrls != null &&
-        shardData.relayUrls!.isNotEmpty) {
+    // Send response via Nostr if approved
+    // For practice requests, we need to get relay URLs from backup config instead of shard data
+    if (approved) {
       try {
-        await sendRecoveryResponseViaNostr(
-          request,
-          shardData,
-          approved,
-          relays: shardData.relayUrls!,
-        );
-        Log.info('Sent recovery response via Nostr for request $recoveryRequestId');
+        List<String> relayUrls = [];
+
+        if (request.isPractice) {
+          // For practice requests, try multiple sources for relay URLs:
+          // 1. Backup config (if available, e.g., for owners)
+          // 2. Shard data from steward's shards (for stewards)
+          final vault = await repository.getVault(request.vaultId);
+          if (vault?.backupConfig != null && vault!.backupConfig!.relays.isNotEmpty) {
+            relayUrls = vault.backupConfig!.relays;
+            Log.info('Using relay URLs from backup config for practice request');
+          } else if (vault != null) {
+            // Fall back to relay URLs from steward's shards
+            final shards = await repository.getShardsForVault(request.vaultId);
+            if (shards.isNotEmpty) {
+              // Get relay URLs from the most recent shard
+              final latestShard = shards.reduce((a, b) {
+                final aVersion = a.distributionVersion ?? 0;
+                final bVersion = b.distributionVersion ?? 0;
+                if (aVersion != bVersion) {
+                  return aVersion > bVersion ? a : b;
+                }
+                return a.createdAt > b.createdAt ? a : b;
+              });
+              if (latestShard.relayUrls != null && latestShard.relayUrls!.isNotEmpty) {
+                relayUrls = latestShard.relayUrls!;
+                Log.info('Using relay URLs from shard data for practice request');
+              }
+            }
+          }
+          if (relayUrls.isEmpty) {
+            Log.warning(
+                'No relay URLs found for practice request (checked backup config and shards)');
+          }
+        } else if (shardData != null &&
+            shardData.relayUrls != null &&
+            shardData.relayUrls!.isNotEmpty) {
+          // For real recovery, use relay URLs from shard data
+          relayUrls = shardData.relayUrls!;
+        }
+
+        if (relayUrls.isNotEmpty) {
+          await sendRecoveryResponseViaNostr(
+            request,
+            shardData,
+            approved,
+            relays: relayUrls,
+          );
+          Log.info('Sent recovery response via Nostr for request $recoveryRequestId');
+        } else {
+          Log.warning('No relay URLs available for sending recovery response');
+        }
       } catch (e) {
         Log.error('Failed to send recovery response via Nostr', e);
         // Continue anyway - the response is still recorded locally
@@ -709,6 +756,7 @@ class RecoveryService {
         'requested_at': request.requestedAt.toIso8601String(),
         'expires_at': request.expiresAt?.toIso8601String(),
         'threshold': request.threshold,
+        'is_practice': request.isPractice,
       };
 
       final requestJson = json.encode(requestData);
@@ -744,9 +792,10 @@ class RecoveryService {
 
   /// Send recovery response (shard data) back to initiator via Nostr gift wrap
   /// Returns the gift wrap event ID
+  /// Note: shardData is nullable for practice requests (which don't include shard data)
   Future<String> sendRecoveryResponseViaNostr(
     RecoveryRequest request,
-    ShardData shardData,
+    ShardData? shardData,
     bool approved, {
     required List<String> relays,
   }) async {
@@ -764,10 +813,12 @@ class RecoveryService {
         'responder_pubkey': currentPubkey,
         'approved': approved,
         'responded_at': DateTime.now().toIso8601String(),
+        'is_practice': request.isPractice,
       };
 
-      // Include shard data if approved
-      if (approved) {
+      // Include shard data if approved and NOT a practice request
+      // Practice requests should never include shard data
+      if (approved && !request.isPractice && shardData != null) {
         responseData['shard_data'] = shardDataToJson(shardData);
       }
 

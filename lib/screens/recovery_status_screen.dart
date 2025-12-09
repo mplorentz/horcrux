@@ -25,7 +25,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Recovery'), centerTitle: false),
+      appBar: AppBar(
+        title: const Text('Recovery'),
+        centerTitle: false,
+      ),
       body: requestAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
@@ -59,6 +62,47 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Practice mode banner
+                    if (request.isPractice) ...[
+                      Card(
+                        color: Colors.blue[50],
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.school,
+                                color: Colors.blue[700],
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Practice Recovery',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue[900],
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'This is a practice recovery session. No vault data will be shared.',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Colors.blue[700],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     // Instructions section
                     if (instructions != null && instructions.isNotEmpty) ...[
                       Card(
@@ -227,12 +271,23 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
     if (confirmed == true) {
       try {
+        // Get vaultId before canceling recovery request
+        final request =
+            await ref.read(recoveryServiceProvider).getRecoveryRequest(widget.recoveryRequestId);
+        final vaultId = request?.vaultId;
+
         await ref.read(recoveryServiceProvider).cancelRecoveryRequest(widget.recoveryRequestId);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Recovery request cancelled')),
           );
+          // Invalidate providers to refresh the UI
+          ref.invalidate(recoveryRequestByIdProvider(widget.recoveryRequestId));
+          if (vaultId != null) {
+            ref.invalidate(vaultProvider(vaultId));
+            ref.invalidate(recoveryStatusProvider(vaultId));
+          }
           Navigator.pop(context);
         }
       } catch (e) {

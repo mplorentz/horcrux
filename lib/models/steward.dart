@@ -21,6 +21,7 @@ typedef Steward = ({
   DateTime? acknowledgedAt,
   String? acknowledgmentEventId,
   int? acknowledgedDistributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+  bool isOwner, // True when this steward is the vault owner
 });
 
 /// Create a new Steward with validation
@@ -45,6 +46,7 @@ Steward createSteward({
     acknowledgedAt: null,
     acknowledgmentEventId: null,
     acknowledgedDistributionVersion: null,
+    isOwner: false,
   );
 }
 
@@ -66,6 +68,7 @@ Steward createInvitedSteward({
     acknowledgedAt: null,
     acknowledgmentEventId: null,
     acknowledgedDistributionVersion: null,
+    isOwner: false,
   );
 }
 
@@ -83,6 +86,7 @@ Steward copySteward(
   DateTime? acknowledgedAt,
   String? acknowledgmentEventId,
   int? acknowledgedDistributionVersion,
+  bool? isOwner,
 }) {
   return (
     id: id ?? steward.id,
@@ -97,6 +101,7 @@ Steward copySteward(
     acknowledgmentEventId: acknowledgmentEventId ?? steward.acknowledgmentEventId,
     acknowledgedDistributionVersion:
         acknowledgedDistributionVersion ?? steward.acknowledgedDistributionVersion,
+    isOwner: isOwner ?? steward.isOwner,
   );
 }
 
@@ -173,6 +178,7 @@ Map<String, dynamic> stewardToJson(Steward steward) {
     'acknowledgedAt': steward.acknowledgedAt?.toIso8601String(),
     'acknowledgmentEventId': steward.acknowledgmentEventId,
     'acknowledgedDistributionVersion': steward.acknowledgedDistributionVersion,
+    'isOwner': steward.isOwner,
   };
 }
 
@@ -194,6 +200,7 @@ Steward stewardFromJson(Map<String, dynamic> json) {
         json['acknowledgedAt'] != null ? DateTime.parse(json['acknowledgedAt'] as String) : null,
     acknowledgmentEventId: json['acknowledgmentEventId'] as String?,
     acknowledgedDistributionVersion: json['acknowledgedDistributionVersion'] as int?,
+    isOwner: json['isOwner'] as bool? ?? false, // Default to false for backward compatibility
   );
 }
 

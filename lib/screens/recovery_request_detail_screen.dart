@@ -103,7 +103,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         title: const Text('Approve Recovery'),
         content: const Text(
           'Are you sure you want to approve this recovery request? '
-          'This will share your key with the requester.',
+          'This will share your key to the vault with the requester.',
         ),
         actions: [
           TextButton(
@@ -243,6 +243,47 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Practice request banner
+                if (request.isPractice) ...[
+                  Card(
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.school,
+                            color: Colors.blue[700],
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PRACTICE REQUEST',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue[900],
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'This is a practice request. No vault data will be shared.',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.blue[700],
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Alert card (neutral colors, no orange)
                 Card(
                   child: Padding(
