@@ -10,7 +10,7 @@ import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/practice_recovery_screen.dart';
-import 'package:horcrux/widgets/theme.dart';
+import '../helpers/golden_test_helpers.dart';
 
 void main() {
   group('PracticeRecoveryInfoScreen Golden Tests', () {
@@ -70,21 +70,23 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      await tester.pumpWidgetBuilder(
-        ProviderScope(
-          overrides: [
-            vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
-          ],
-          child: MaterialApp(
-            theme: horcruxTheme,
-            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
+        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_ready');
+
+      container.dispose();
     });
 
     testGoldens('shows error when vault has no recovery plan', (tester) async {
@@ -97,21 +99,23 @@ void main() {
         backupConfig: null, // No recovery plan
       );
 
-      await tester.pumpWidgetBuilder(
-        ProviderScope(
-          overrides: [
-            vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
-          ],
-          child: MaterialApp(
-            theme: horcruxTheme,
-            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
+        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_no_plan');
+
+      container.dispose();
     });
 
     testGoldens('shows error when recovery plan is not ready', (tester) async {
@@ -138,21 +142,23 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      await tester.pumpWidgetBuilder(
-        ProviderScope(
-          overrides: [
-            vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
-          ],
-          child: MaterialApp(
-            theme: horcruxTheme,
-            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
+        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_not_ready');
+
+      container.dispose();
     });
 
     testGoldens('shows error for non-owner', (tester) async {
@@ -181,21 +187,23 @@ void main() {
       // User is not the owner
       const nonOwnerPubkey = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
-      await tester.pumpWidgetBuilder(
-        ProviderScope(
-          overrides: [
-            vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(nonOwnerPubkey)),
-          ],
-          child: MaterialApp(
-            theme: horcruxTheme,
-            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => Future.value(nonOwnerPubkey)),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
+        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_non_owner');
+
+      container.dispose();
     });
 
     testGoldens('shows practice recovery with different threshold (3 of 5)', (tester) async {
@@ -270,21 +278,23 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      await tester.pumpWidgetBuilder(
-        ProviderScope(
-          overrides: [
-            vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
-          ],
-          child: MaterialApp(
-            theme: horcruxTheme,
-            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-          ),
-        ),
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
+        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_3_of_5');
+
+      container.dispose();
     });
   });
 }
