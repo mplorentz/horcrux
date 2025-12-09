@@ -13,5 +13,6 @@
     "editor.wordWrap": "wordWrapColumn",
     "editor.wordWrapColumn": 100,
     "cmake.sourceDirectory": "/Users/matt/work/keydex/keydex/linux",
-    "debug.selectedConfiguration": "Flutter: Run macOS"
+    "debug.selectedConfiguration": "Flutter: Run macOS",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
