@@ -474,6 +474,22 @@ class VaultRepository {
     Log.info('Cleared all shards for vault $vaultId');
   }
 
+  /// Delete vault content while preserving shards and backup config
+  /// This is used when owner has distributed keys and wants to delete
+  /// the local copy of content, relying on recovery to restore it later
+  Future<void> deleteVaultContent(String vaultId) async {
+    await initialize();
+
+    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
+    if (index == -1) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+
+    _cachedVaults![index] = _cachedVaults![index].copyWithContentDeleted();
+    await _saveVaults();
+    Log.info('Deleted content for vault $vaultId (shards preserved)');
+  }
+
   /// Check if we are a steward for a vault (have any shards)
   Future<bool> isKeyHolderForVault(String vaultId) async {
     await initialize();

@@ -89,7 +89,12 @@ class VaultStatusBanner extends ConsumerWidget {
           return _buildBanner(context, statusData, isOwner, isSteward);
         }
 
-        if (isOwner) {
+        // Owner-steward state: owner who has deleted content but kept their shard
+        final isOwnerSteward = isOwner && vault.content == null && vault.shards.isNotEmpty;
+
+        if (isOwnerSteward) {
+          return _buildOwnerStewardStatus(context, vault);
+        } else if (isOwner) {
           return _buildOwnerStatus(context, vault);
         } else if (isSteward) {
           return _buildStewardStatus(context, vault);
@@ -109,6 +114,24 @@ class VaultStatusBanner extends ConsumerWidget {
           );
         }
       },
+    );
+  }
+
+  /// Build status banner for owner-steward state
+  /// This is when the owner has deleted their content but kept their shard
+  Widget _buildOwnerStewardStatus(BuildContext context, Vault vault) {
+    return _buildBanner(
+      context,
+      const _StatusData(
+        headline: 'Content deleted',
+        subtext:
+            'You deleted the local copy of this vault. Use "Recover Content" to restore it, or "Create New Content" to start fresh.',
+        icon: Icons.delete_forever,
+        accentColor: Color(0xFF7A4A2F), // Umber
+        variant: _StatusVariant.stewardReady,
+      ),
+      true, // isOwner
+      true, // Also mark as steward-like since they have a shard
     );
   }
 

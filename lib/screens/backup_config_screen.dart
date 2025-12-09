@@ -11,6 +11,7 @@ import '../services/backup_service.dart';
 import '../services/invitation_service.dart';
 import '../services/invitation_sending_service.dart';
 import '../providers/vault_provider.dart';
+import '../providers/key_provider.dart';
 import '../utils/backup_distribution_helper.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
@@ -48,6 +49,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   bool _isEditingExistingPlan = false; // Track if we're editing an existing plan
   bool _thresholdManuallyChanged = false; // Track if user manually changed threshold
   bool _showAdvancedSettings = false; // Track if advanced settings are visible
+  bool _includeSelfAsSteward = false; // Track if owner wants to hold their own shard
 
   // Instructions controller
   final TextEditingController _instructionsController = TextEditingController();
@@ -64,6 +66,121 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   void dispose() {
     _instructionsController.dispose();
     super.dispose();
+  }
+
+  /// Handle toggling the self-shard option
+  Future<void> _handleSelfShardToggle(bool value) async {
+    if (value) {
+      // Enable self-shard: add owner as steward
+      final currentPubkey = await ref.read(currentPublicKeyProvider.future);
+      if (currentPubkey == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to get your public key'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check if owner is already in stewards list
+      final existingOwner = _stewards.where((s) => s.isOwner).toList();
+      if (existingOwner.isNotEmpty) {
+        // Owner already exists, just update the toggle state
+        setState(() {
+          _includeSelfAsSteward = true;
+        });
+        return;
+      }
+
+      // Create owner steward and add to list
+      final ownerSteward = createOwnerSteward(pubkey: currentPubkey);
+
+      setState(() {
+        _includeSelfAsSteward = true;
+        _stewards.insert(0, ownerSteward); // Add at beginning
+        // Update threshold if needed for new plans
+        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
+          _threshold = _calculateDefaultThreshold(_stewards.length);
+        } else if (_threshold > _stewards.length) {
+          _threshold = _stewards.length;
+        }
+        _hasUnsavedChanges = true;
+      });
+    } else {
+      // Disable self-shard: remove owner steward from list
+      final ownerStewards = _stewards.where((s) => s.isOwner).toList();
+      if (ownerStewards.isEmpty) {
+        // No owner to remove
+        setState(() {
+          _includeSelfAsSteward = false;
+        });
+        return;
+      }
+
+      // T024: Warn if disabling after distribution has occurred
+      if (_isEditingExistingPlan) {
+        final repository = ref.read(vaultRepositoryProvider);
+        final existingConfig = await repository.getBackupConfig(widget.vaultId);
+        if (!mounted) return;
+        if (existingConfig != null && existingConfig.lastRedistribution != null) {
+          final shouldContinue = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Remove Your Shard?'),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You already have a shard from a previous distribution.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Disabling this option will remove you from the stewards list. '
+                    'Your existing shard will remain valid until keys are redistributed.',
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'After redistribution, you won\'t receive a new shard and won\'t be '
+                    'able to use the "Delete Local Copy" feature.',
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Keep My Shard'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Remove Me'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldContinue != true || !mounted) return;
+        }
+      }
+
+      setState(() {
+        _includeSelfAsSteward = false;
+        _stewards.removeWhere((s) => s.isOwner);
+        // Update threshold if needed
+        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
+          _threshold = _calculateDefaultThreshold(_stewards.length);
+        } else if (_stewards.isEmpty) {
+          _threshold = VaultBackupConstraints.minThreshold;
+        } else if (_threshold > _stewards.length) {
+          _threshold = _stewards.length;
+        }
+        _hasUnsavedChanges = true;
+      });
+    }
   }
 
   /// Calculate default threshold based on steward count for new plans
@@ -98,7 +215,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _hasUnsavedChanges = false;
           _isEditingExistingPlan = true; // We're editing an existing plan
           _thresholdManuallyChanged = true; // Existing plan means threshold was already set
-        });
+          // Check if owner is already included as a steward
+          _includeSelfAsSteward = hasOwnerSteward(existingConfig);        });
 
         // Load existing invitations and match them to stewards
         await _loadExistingInvitations();
@@ -202,6 +320,54 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 Text(
                                   'Stewards are trusted contacts who will help you recover access. Each steward receives one key to your vault.',
                                   style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Self-shard toggle
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.person_pin,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Include yourself as a steward',
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                            Text(
+                                              'Keep one shard for yourself',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.7),
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: _includeSelfAsSteward,
+                                        onChanged: _handleSelfShardToggle,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
 
@@ -1176,6 +1342,48 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
+
+    // T022: Warn about 1-of-1 owner-only backup
+    final onlyOwnerSteward =
+        _stewards.length == 1 && _stewards.first.isOwner && _threshold == 1;
+    if (onlyOwnerSteward) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Single Owner Backup'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You\'re setting up a 1-of-1 backup with only yourself as the steward.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'This means if you lose access to your device, you won\'t be able to recover this vault.',
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Consider adding additional stewards for better security.',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Add More Stewards'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continue Anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldContinue != true || !mounted) return;
+    }
 
     try {
       final backupService = ref.read(backupServiceProvider);
