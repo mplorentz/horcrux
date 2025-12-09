@@ -299,8 +299,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
               onPressed: _handleLogout,
               icon: Icons.logout,
               text: 'Logout',
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
               addBottomSafeArea: true,
             ),
           ],
