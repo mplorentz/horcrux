@@ -15,7 +15,7 @@ import '../services/logger.dart';
 import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
 import '../screens/recovery_status_screen.dart';
-import '../models/steward_status.dart';
+import '../screens/practice_recovery_screen.dart';
 
 /// Button stack widget for vault detail screen
 class VaultDetailButtonStack extends ConsumerWidget {
@@ -170,7 +170,14 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         // are not considered "active" by the recoveryStatusProvider
                         buttons.add(
                           RowButtonConfig(
-                            onPressed: () => _initiatePracticeRecovery(context, ref, vaultId),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => PracticeRecoveryScreen(vaultId: vaultId),
+                              );
+                            },
                             icon: Icons.school,
                             text: 'Practice Recovery',
                           ),
@@ -230,178 +237,6 @@ class VaultDetailButtonStack extends ConsumerWidget {
       return vault.shards.first.instructions;
     }
     return null;
-  }
-
-  Future<void> _initiatePracticeRecovery(
-      BuildContext context, WidgetRef ref, String vaultId) async {
-    // Show full-screen loading dialog
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => PopScope(
-        canPop: false,
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.zero,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.black.withValues(alpha: 0.8),
-            child: const Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 24),
-                      Text('Sending practice recovery requests...', style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final loginService = ref.read(loginServiceProvider);
-      final currentPubkey = await loginService.getCurrentPublicKey();
-
-      if (currentPubkey == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error: Could not load current user')),
-          );
-        }
-        return;
-      }
-
-      // Get vault to access backup config
-      final vaultAsync = ref.read(vaultProvider(vaultId));
-      final vault = await vaultAsync.when(
-        data: (v) => Future.value(v),
-        loading: () => Future.value(null),
-        error: (_, __) => Future.value(null),
-      );
-
-      if (vault == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vault not found')),
-          );
-        }
-        return;
-      }
-
-      final backupConfig = vault.backupConfig;
-      if (backupConfig == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No recovery plan configured for this vault')),
-          );
-        }
-        return;
-      }
-
-      // Get steward pubkeys from backup config (owners only - stewards cannot practice recovery)
-      final stewardPubkeys = backupConfig.stewards
-          .where((s) => s.pubkey != null && s.status == StewardStatus.holdingKey)
-          .map((s) => s.pubkey!)
-          .toList();
-
-      if (stewardPubkeys.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'No stewards available for recovery. Make sure stewards have received and confirmed their keys.'),
-            ),
-          );
-        }
-        return;
-      }
-
-      final threshold = backupConfig.threshold;
-
-      Log.info(
-        'Initiating practice recovery with ${stewardPubkeys.length} stewards: ${stewardPubkeys.map((k) => k.substring(0, 8)).join(", ")}...',
-      );
-
-      final recoveryService = ref.read(recoveryServiceProvider);
-      final recoveryRequest = await recoveryService.initiateRecovery(
-        vaultId,
-        initiatorPubkey: currentPubkey,
-        stewardPubkeys: stewardPubkeys,
-        threshold: threshold,
-        isPractice: true,
-      );
-
-      // Get relays and send recovery request via Nostr
-      try {
-        final relays =
-            await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
-        final relayUrls = relays.map((r) => r.url).toList();
-
-        if (relayUrls.isEmpty) {
-          Log.warning('No relays configured, recovery request not sent via Nostr');
-        } else {
-          await recoveryService.sendRecoveryRequestViaNostr(recoveryRequest, relays: relayUrls);
-        }
-      } catch (e) {
-        Log.error('Failed to send recovery request via Nostr', e);
-      }
-
-      // Auto-approve if the initiator is also a steward
-      if (stewardPubkeys.contains(currentPubkey)) {
-        try {
-          Log.info('Initiator is a steward, auto-approving practice recovery request');
-          await recoveryService.respondToRecoveryRequestWithShard(
-            recoveryRequest.id,
-            currentPubkey,
-            true,
-          );
-          Log.info('Auto-approved practice recovery request');
-        } catch (e) {
-          Log.error('Failed to auto-approve practice recovery request', e);
-        }
-      }
-
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Practice recovery request initiated and sent')),
-        );
-
-        ref.invalidate(recoveryStatusProvider(vaultId));
-
-        if (context.mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      Log.error('Error initiating practice recovery', e);
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
   }
 
   Future<void> _distributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {

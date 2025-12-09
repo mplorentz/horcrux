@@ -25,7 +25,13 @@ class PracticeRecoveryScreen extends ConsumerWidget {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Practice Recovery')),
+      appBar: AppBar(
+        title: const Text('Practice Recovery'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: vaultAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error loading vault: $error')),
@@ -544,6 +550,10 @@ class PracticeRecoveryScreen extends ConsumerWidget {
         ref.invalidate(recoveryStatusProvider(vaultId));
 
         if (context.mounted) {
+          // Dismiss the modal bottom sheet first
+          Navigator.pop(context);
+
+          // Then push RecoveryStatusScreen from the right
           await Navigator.push(
             context,
             MaterialPageRoute(

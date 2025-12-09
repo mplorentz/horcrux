@@ -26,7 +26,11 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recovery'),
+        title: requestAsync.when(
+          data: (request) => Text(request?.isPractice == true ? 'Practice Recovery' : 'Recovery'),
+          loading: () => const Text('Recovery'),
+          error: (_, __) => const Text('Recovery'),
+        ),
         centerTitle: false,
       ),
       body: requestAsync.when(
@@ -141,13 +145,35 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                       recoveryRequestId: widget.recoveryRequestId,
                     ),
                     const SizedBox(height: 16),
+                    // Summary text for practice recovery
+                    if (request.isPractice) ...[
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '${request.respondedCount} of ${request.totalStewards} stewards responded',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     RecoveryStewardsWidget(
                       recoveryRequestId: widget.recoveryRequestId,
                     ),
                     const SizedBox(height: 16),
                     if (request.status.isActive) _buildCancelButton(),
                     if (request.status == RecoveryRequestStatus.completed)
-                      _buildExitRecoveryButton(),
+                      _buildExitRecoveryButton(request.isPractice),
                   ],
                 ),
               );
@@ -158,7 +184,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
   }
 
-  Widget _buildExitRecoveryButton() {
+  Widget _buildExitRecoveryButton([bool isPractice = false]) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -168,20 +194,29 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           foregroundColor: Colors.white,
         ),
         icon: const Icon(Icons.exit_to_app),
-        label: const Text('End Recovery'),
+        label: Text(isPractice ? 'End Practice' : 'End Recovery'),
       ),
     );
   }
 
   Future<void> _exitRecoveryMode() async {
+    // Get request to check if it's practice
+    final requestAsync = ref.read(recoveryRequestByIdProvider(widget.recoveryRequestId));
+    final request = requestAsync.value;
+    final isPractice = request?.isPractice ?? false;
+
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('End Recovery'),
-        content: const Text(
-          'This will archive the recovery request and delete the recovered content and steward keys. '
-          'Your own key to the vault will be preserved.\n\n'
-          'Are you sure you want to end recovery?',
+        title: Text(isPractice ? 'End Practice' : 'End Recovery'),
+        content: Text(
+          isPractice
+              ? 'This will archive the practice recovery request.\n\n'
+                  'Are you sure you want to end practice recovery?'
+              : 'This will archive the recovery request and delete the recovered content and steward keys. '
+                  'Your own key to the vault will be preserved.\n\n'
+                  'Are you sure you want to end recovery?',
         ),
         actions: [
           TextButton(
@@ -194,7 +229,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: const Text('End Recovery'),
+            child: Text(isPractice ? 'End Practice' : 'End Recovery'),
           ),
         ],
       ),
@@ -203,16 +238,18 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     if (confirmed == true) {
       try {
         // Get vaultId before exiting recovery mode
-        final request =
+        final requestForVaultId =
             await ref.read(recoveryServiceProvider).getRecoveryRequest(widget.recoveryRequestId);
-        final vaultId = request?.vaultId;
+        final vaultId = requestForVaultId?.vaultId;
 
         await ref.read(recoveryServiceProvider).exitRecoveryMode(widget.recoveryRequestId);
 
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Ended recovery')));
+          ).showSnackBar(SnackBar(
+            content: Text(isPractice ? 'Ended practice recovery' : 'Ended recovery'),
+          ));
           // Invalidate providers to refresh the UI
           ref.invalidate(recoveryRequestByIdProvider(widget.recoveryRequestId));
           if (vaultId != null) {

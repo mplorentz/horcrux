@@ -48,20 +48,22 @@
   - Navigate to recovery status screen
   - Note: Implemented via PracticeRecoveryScreen with "Start Practice Recovery" button that calls initiateRecovery with isPractice: true
 
-- [ ] T012 Implement practice mode in `lib/screens/recovery_status_screen.dart`:
+- [X] T012 Implement practice mode in `lib/screens/recovery_status_screen.dart`:
   - Different header/banner styling for practice
   - "End Practice" button instead of "End Recovery"
   - Summary text: "X of Y stewards responded"
 
-- [ ] T013 Implement practice request display in `lib/screens/recovery_request_detail_screen.dart`:
+- [X] T013 Implement practice request display in `lib/screens/recovery_request_detail_screen.dart`:
   - "PRACTICE REQUEST" header
   - Explanatory text: "This is a practice request. No vault data will be shared."
   - Same approve/deny flow (response won't include shard)
+  - Note: Completed in Phase 3 (T008)
 
-- [ ] T014 Implement practice badge in `lib/widgets/recovery_notification_overlay.dart`:
+- [X] T014 Implement practice badge in `lib/widgets/recovery_notification_overlay.dart`:
   - Check `recoveryRequest.isPractice`
   - Add "Practice" badge/chip with distinct color
   - Different background styling
+  - Note: Completed in Phase 3 (T009)
 
 ---
 
