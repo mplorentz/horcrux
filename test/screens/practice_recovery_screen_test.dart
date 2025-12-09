@@ -78,7 +78,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 1200),
@@ -105,7 +105,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -146,7 +146,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -189,7 +189,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -278,7 +278,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 1200),
