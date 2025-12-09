@@ -12,12 +12,12 @@ import '../services/logger.dart';
 import '../screens/recovery_status_screen.dart';
 import '../widgets/row_button.dart';
 
-/// Screen for practicing the recovery process
-/// This allows vault owners to understand what recovery looks like without actually initiating a real recovery
-class PracticeRecoveryScreen extends ConsumerWidget {
+/// Screen to explain the processs for practicing recovery.
+/// This allows vault owners to initiate a practice recovery sesssion.
+class PracticeRecoveryInfoScreen extends ConsumerWidget {
   final String vaultId;
 
-  const PracticeRecoveryScreen({super.key, required this.vaultId});
+  const PracticeRecoveryInfoScreen({super.key, required this.vaultId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

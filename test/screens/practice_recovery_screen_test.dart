@@ -13,7 +13,7 @@ import 'package:horcrux/screens/practice_recovery_screen.dart';
 import 'package:horcrux/widgets/theme.dart';
 
 void main() {
-  group('PracticeRecoveryScreen Golden Tests', () {
+  group('PracticeRecoveryInfoScreen Golden Tests', () {
     const testVaultId = 'test-vault-id';
     final testPubkey = 'a' * 64; // 64-char hex pubkey
 
@@ -78,7 +78,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: const PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 1200),
@@ -105,7 +105,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: const PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -146,7 +146,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: const PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -189,7 +189,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: const PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 800),
@@ -278,7 +278,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: horcruxTheme,
-            home: const PracticeRecoveryScreen(vaultId: testVaultId),
+            home: const PracticeRecoveryInfoScreen(vaultId: testVaultId),
           ),
         ),
         surfaceSize: const Size(400, 1200),

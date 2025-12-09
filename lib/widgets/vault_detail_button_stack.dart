@@ -175,7 +175,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                 context: context,
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
-                                builder: (context) => PracticeRecoveryScreen(vaultId: vaultId),
+                                builder: (context) => PracticeRecoveryInfoScreen(vaultId: vaultId),
                               );
                             },
                             icon: Icons.school,
