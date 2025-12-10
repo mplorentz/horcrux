@@ -9,7 +9,7 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
-import 'package:horcrux/screens/practice_recovery_screen.dart';
+import 'package:horcrux/screens/practice_recovery_info_screen.dart';
 import '../helpers/golden_test_helpers.dart';
 
 void main() {

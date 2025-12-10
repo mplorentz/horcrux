@@ -96,33 +96,74 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     }
 
     // Recovery plan is ready - show practice content
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.school, size: 32, color: theme.colorScheme.primary),
-                const SizedBox(width: 16),
-                Expanded(
+                // How Recovery Works
+                Text('How Recovery Works', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _buildStepCard(
+                  context,
+                  stepNumber: 1,
+                  title: 'Initiate Recovery',
+                  description: 'You (or a steward) send a recovery request to all other stewards.',
+                ),
+                const SizedBox(height: 8),
+                _buildStepCard(
+                  context,
+                  stepNumber: 2,
+                  title: 'Stewards Respond',
+                  description:
+                      'Stewards receive a notification and can approve or deny the request. Approved requests include their vault key.',
+                ),
+                const SizedBox(height: 8),
+                _buildStepCard(
+                  context,
+                  stepNumber: 3,
+                  title: 'Threshold Met',
+                  description:
+                      'Once ${backupConfig.threshold} stewards approve, you have enough keys to unlock your vault and recover the contents.',
+                ),
+
+                const SizedBox(height: 24),
+
+                // How Practice Mode Works
+                Text('How Practice Mode Works', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Practice Recovery', style: theme.textTheme.titleLarge),
-                      const SizedBox(height: 4),
-                      Text(
-                        'This is a practice run - no actual recovery will be initiated',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                      _buildBulletPoint(
+                        context,
+                        'In practice mode no vault keys or data is actually exchanged.',
+                      ),
+                      _buildBulletPoint(
+                        context,
+                        'Only you (the vault owner) can initiate practice recovery.',
+                      ),
+                      _buildBulletPoint(
+                        context,
+                        'Your stewards will receive a recovery request from you marked "Practice" which they can respond to in their copy of Horcrux.',
+                      ),
+                      _buildBulletPoint(
+                        context,
+                        'You will be taken to the Recovery Status screen to manage the recovery just like in a real recovery scenario.',
+                      ),
+                      _buildBulletPoint(
+                        context,
+                        'You may end the practice run at any time.',
                       ),
                     ],
                   ),
@@ -130,176 +171,15 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          // Vault Information
-          Text('Vault Information', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          _buildInfoCard(context, icon: Icons.lock, title: 'Vault Name', content: vault.name),
-
-          const SizedBox(height: 24),
-
-          // Recovery Plan Details
-          Text('Recovery Plan', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          _buildInfoCard(
-            context,
-            icon: Icons.people,
-            title: 'Stewards',
-            content:
-                '${backupConfig.stewards.length} steward${backupConfig.stewards.length > 1 ? 's' : ''} have been assigned to help recover this vault',
-          ),
-          const SizedBox(height: 8),
-          _buildInfoCard(
-            context,
-            icon: Icons.key,
-            title: 'Threshold',
-            content:
-                'You need ${backupConfig.threshold} out of ${backupConfig.totalKeys} keys to recover',
-          ),
-          const SizedBox(height: 8),
-          _buildInfoCard(
-            context,
-            icon: Icons.check_circle,
-            title: 'Status',
-            content:
-                '${backupConfig.acknowledgedStewardsCount} steward${backupConfig.acknowledgedStewardsCount > 1 ? 's' : ''} confirmed they stored their key',
-          ),
-
-          const SizedBox(height: 24),
-
-          // How Recovery Works
-          Text('How Recovery Works', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          _buildStepCard(
-            context,
-            stepNumber: 1,
-            title: 'Initiate Recovery',
-            description:
-                'You (or a steward) would send a recovery request to all stewards via Nostr.',
-          ),
-          const SizedBox(height: 8),
-          _buildStepCard(
-            context,
-            stepNumber: 2,
-            title: 'Stewards Respond',
-            description:
-                'Stewards receive a notification and can approve or deny the request. Approved requests include their encrypted shard.',
-          ),
-          const SizedBox(height: 8),
-          _buildStepCard(
-            context,
-            stepNumber: 3,
-            title: 'Threshold Met',
-            description:
-                'Once ${backupConfig.threshold} stewards approve, you have enough shards to reconstruct your vault content.',
-          ),
-          const SizedBox(height: 8),
-          _buildStepCard(
-            context,
-            stepNumber: 4,
-            title: 'Content Recovered',
-            description:
-                'The app automatically reassembles the vault content using Shamir\'s Secret Sharing.',
-          ),
-
-          const SizedBox(height: 24),
-
-          // What Stewards See
-          Text('What Stewards Will See', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.notifications_active, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text('Recovery Request Notification', style: theme.textTheme.titleSmall),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Stewards will receive a notification with:',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 8),
-                _buildBulletPoint(context, 'The vault name: "${vault.name}"'),
-                _buildBulletPoint(context, 'Who initiated the recovery'),
-                _buildBulletPoint(context, 'Option to approve or deny'),
-                _buildBulletPoint(context, 'Instructions (if you provided any)'),
-                const SizedBox(height: 12),
-                Text(
-                  'They can approve or deny the request. If they approve, their encrypted shard is automatically sent back to you.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Important Notes
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: theme.colorScheme.tertiary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Important Notes',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildBulletPoint(
-                  context,
-                  'This is practice only - no actual recovery request will be sent',
-                ),
-                _buildBulletPoint(context, 'Your stewards will not be notified or contacted'),
-                _buildBulletPoint(
-                  context,
-                  'To initiate a real recovery, you (or a steward) would tap "Initiate Recovery" on the vault detail screen',
-                ),
-                _buildBulletPoint(context, 'Real recovery requests expire after 24 hours'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Start Practice Recovery button
-          RowButton(
-            onPressed: () => _startPracticeRecovery(context, ref, vault),
-            icon: Icons.restore,
-            text: 'Start Practice Recovery',
-            addBottomSafeArea: true,
-          ),
-
-          const SizedBox(height: 16),
-        ],
-      ),
+        ),
+        // Start Practice Recovery button
+        RowButton(
+          onPressed: () => _startPracticeRecovery(context, ref, vault),
+          icon: Icons.restore,
+          text: 'Start Practice Recovery',
+          addBottomSafeArea: true,
+        ),
+      ],
     );
   }
 
@@ -320,39 +200,6 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
             ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Go Back')),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 24, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: theme.textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(content, style: theme.textTheme.bodyMedium),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
