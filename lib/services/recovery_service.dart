@@ -6,6 +6,7 @@ import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart';
 import '../models/shard_data.dart';
+import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
 import 'backup_service.dart';
@@ -21,7 +22,12 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
   final vaultShareService = ref.read(vaultShareServiceProvider);
-  final service = RecoveryService(repository, backupService, ndkService, vaultShareService);
+  final service = RecoveryService(
+    repository,
+    backupService,
+    ndkService,
+    vaultShareService,
+  );
 
   // Clean up streams when disposed
   ref.onDispose(() {
@@ -52,7 +58,12 @@ class RecoveryService {
   final _recoveryRequestController = StreamController<RecoveryRequest>.broadcast();
   Stream<RecoveryRequest> get recoveryRequestStream => _recoveryRequestController.stream;
 
-  RecoveryService(this.repository, this.backupService, this._ndkService, this._vaultShareService) {
+  RecoveryService(
+    this.repository,
+    this.backupService,
+    this._ndkService,
+    this._vaultShareService,
+  ) {
     _loadViewedNotificationIds();
     _setupNdkStreamListeners();
   }
@@ -248,6 +259,159 @@ class RecoveryService {
     await _emitNotificationUpdate();
 
     Log.info('Created recovery request $requestId for vault $vaultId');
+    return recoveryRequest;
+  }
+
+  /// Initiate recovery and send it via Nostr
+  /// This is a convenience method that handles the full orchestration:
+  /// 1. Loads vault data from repository
+  /// 2. Extracts steward pubkeys, threshold, and relays based on recovery type
+  /// 3. Creates the recovery request
+  /// 4. Sends via Nostr using relays from backup config or shard data
+  /// 5. Auto-approves if initiator is also a steward
+  ///
+  /// Returns the created recovery request
+  /// Throws an exception if recovery cannot be initiated
+  Future<RecoveryRequest> initiateAndSendRecovery(
+    String vaultId, {
+    Duration? expirationDuration,
+    bool isPractice = false,
+  }) async {
+    await initialize();
+
+    // Get current user pubkey
+    final initiatorPubkey = await _ndkService.getCurrentPubkey();
+    if (initiatorPubkey == null) {
+      throw StateError('Could not load current user');
+    }
+
+    // Load vault from repository
+    final vault = await repository.getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+
+    List<String> stewardPubkeys;
+    int threshold;
+    List<String> relayUrls;
+
+    if (isPractice) {
+      // Practice recovery: use backup config
+      final backupConfig = vault.backupConfig;
+      if (backupConfig == null) {
+        throw StateError('No recovery plan configured for this vault');
+      }
+
+      // Get steward pubkeys from backup config (owners only - stewards cannot practice recovery)
+      stewardPubkeys = backupConfig.stewards
+          .where((s) => s.pubkey != null && s.status == StewardStatus.holdingKey)
+          .map((s) => s.pubkey!)
+          .toList();
+
+      if (stewardPubkeys.isEmpty) {
+        throw StateError(
+          'No stewards available for recovery. Make sure stewards have received and confirmed their keys.',
+        );
+      }
+
+      threshold = backupConfig.threshold;
+      relayUrls = backupConfig.relays;
+
+      if (relayUrls.isEmpty) {
+        throw StateError('No relays configured in recovery plan');
+      }
+    } else {
+      // Real recovery: use shard data
+      final shards = await _vaultShareService.getVaultShares(vaultId);
+      if (shards.isEmpty) {
+        throw StateError('Cannot recover: you don\'t have a key to this vault.');
+      }
+
+      // Select the shard with the highest distributionVersion (most recent)
+      // If versions are equal or null, use the most recent createdAt timestamp
+      final selectedShard = shards.reduce((a, b) {
+        final aVersion = a.distributionVersion ?? 0;
+        final bVersion = b.distributionVersion ?? 0;
+        if (aVersion != bVersion) {
+          return aVersion > bVersion ? a : b;
+        }
+        // If versions are equal, use createdAt timestamp
+        return a.createdAt > b.createdAt ? a : b;
+      });
+
+      Log.debug(
+        'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
+      );
+
+      // Use peers list for recovery
+      stewardPubkeys = <String>[];
+      if (selectedShard.peers != null) {
+        for (final peer in selectedShard.peers!) {
+          final pubkey = peer['pubkey'];
+          if (pubkey != null) {
+            stewardPubkeys.add(pubkey);
+          }
+        }
+      }
+
+      if (stewardPubkeys.isEmpty) {
+        throw StateError('No stewards available for recovery');
+      }
+
+      threshold = selectedShard.threshold;
+
+      // Get relays from shard data (if available) or backup config
+      if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
+        relayUrls = selectedShard.relayUrls!;
+      } else if (vault.backupConfig != null && vault.backupConfig!.relays.isNotEmpty) {
+        relayUrls = vault.backupConfig!.relays;
+      } else {
+        throw StateError(
+          'No relays configured for recovery. Please configure relays in the recovery plan.',
+        );
+      }
+    }
+
+    Log.info(
+      'Initiating recovery with ${stewardPubkeys.length} stewards: ${stewardPubkeys.map((k) => k.substring(0, 8)).join(", ")}...',
+    );
+
+    // Create recovery request
+    final recoveryRequest = await initiateRecovery(
+      vaultId,
+      initiatorPubkey: initiatorPubkey,
+      stewardPubkeys: stewardPubkeys,
+      threshold: threshold,
+      expirationDuration: expirationDuration,
+      isPractice: isPractice,
+    );
+
+    // Send recovery request via Nostr
+    try {
+      await sendRecoveryRequestViaNostr(recoveryRequest, relays: relayUrls);
+    } catch (e) {
+      Log.error('Failed to send recovery request via Nostr', e);
+      // Don't rethrow - recovery request was created successfully
+      // even if sending failed
+    }
+
+    // Auto-approve if the initiator is also a steward
+    if (stewardPubkeys.contains(initiatorPubkey)) {
+      try {
+        Log.info('Initiator is a steward, auto-approving recovery request');
+        await respondToRecoveryRequestWithShard(
+          recoveryRequest.id,
+          initiatorPubkey,
+          true,
+        );
+        Log.info('Auto-approved recovery request');
+      } catch (e) {
+        Log.error('Failed to auto-approve recovery request', e);
+        // Don't rethrow - recovery request was created successfully
+        // even if auto-approval failed
+      }
+    }
+
     return recoveryRequest;
   }
 

@@ -18,7 +18,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'recovery_service_test.mocks.dart';
 import '../helpers/secure_storage_mock.dart';
 
-@GenerateMocks([BackupService, ShardDistributionService, NdkService, VaultShareService])
+@GenerateMocks([
+  BackupService,
+  ShardDistributionService,
+  NdkService,
+  VaultShareService,
+])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -76,7 +81,12 @@ void main() {
       backupService = mockBackupService;
       ndkService = mockNdkService;
       vaultShareService = mockVaultShareService;
-      recoveryService = RecoveryService(repository, backupService, ndkService, vaultShareService);
+      recoveryService = RecoveryService(
+        repository,
+        backupService,
+        ndkService,
+        vaultShareService,
+      );
       await recoveryService.clearAll();
       await repository.clearAll();
 

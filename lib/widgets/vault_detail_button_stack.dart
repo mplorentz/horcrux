@@ -9,8 +9,6 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/instructions_dialog.dart';
 import '../services/backup_service.dart';
 import '../services/recovery_service.dart';
-import '../services/vault_share_service.dart';
-import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
@@ -362,7 +360,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
     }
   }
 
-  Future<void> _initiateRecovery(BuildContext context, WidgetRef ref, String vaultId) async {
+  Future<void> _initiateRecovery(
+    BuildContext context,
+    WidgetRef ref,
+    String vaultId,
+  ) async {
     // Show full-screen loading dialog
     if (!context.mounted) return;
     showDialog(
@@ -398,110 +400,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
     );
 
     try {
-      final loginService = ref.read(loginServiceProvider);
-      final currentPubkey = await loginService.getCurrentPublicKey();
-
-      if (currentPubkey == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Error: Could not load current user')));
-        }
-        return;
-      }
-
-      // Get shard data to extract peers and creator information
-      final shareService = ref.read(vaultShareServiceProvider);
-      final shards = await shareService.getVaultShares(vaultId);
-
-      if (shards.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cannot recover: you don\'t have a key to this vault.')),
-          );
-        }
-        return;
-      }
-
-      // Select the shard with the highest distributionVersion (most recent)
-      // If versions are equal or null, use the most recent createdAt timestamp
-      final selectedShard = shards.reduce((a, b) {
-        final aVersion = a.distributionVersion ?? 0;
-        final bVersion = b.distributionVersion ?? 0;
-        if (aVersion != bVersion) {
-          return aVersion > bVersion ? a : b;
-        }
-        // If versions are equal, use createdAt timestamp
-        return a.createdAt > b.createdAt ? a : b;
-      });
-      Log.debug(
-        'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
-      );
-
-      // Use peers list for recovery
-      final stewardPubkeys = <String>[];
-      if (selectedShard.peers != null) {
-        for (final peer in selectedShard.peers!) {
-          final pubkey = peer['pubkey'];
-          if (pubkey != null) {
-            stewardPubkeys.add(pubkey);
-          }
-        }
-      }
-
-      if (stewardPubkeys.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('No stewards available for recovery')));
-        }
-        return;
-      }
-
-      Log.info(
-        'Initiating recovery with ${stewardPubkeys.length} stewards: ${stewardPubkeys.map((k) => k.substring(0, 8)).join(", ")}...',
-      );
-
       final recoveryService = ref.read(recoveryServiceProvider);
-      final recoveryRequest = await recoveryService.initiateRecovery(
+      final recoveryRequest = await recoveryService.initiateAndSendRecovery(
         vaultId,
-        initiatorPubkey: currentPubkey,
-        stewardPubkeys: stewardPubkeys,
-        threshold: selectedShard.threshold,
+        isPractice: false,
       );
-
-      // Get relays and send recovery request via Nostr
-      try {
-        final relays =
-            await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
-        final relayUrls = relays.map((r) => r.url).toList();
-
-        if (relayUrls.isEmpty) {
-          Log.warning('No relays configured, recovery request not sent via Nostr');
-        } else {
-          await recoveryService.sendRecoveryRequestViaNostr(recoveryRequest, relays: relayUrls);
-        }
-      } catch (e) {
-        Log.error('Failed to send recovery request via Nostr', e);
-      }
-
-      // Auto-approve if the initiator is also a steward
-      if (stewardPubkeys.contains(currentPubkey)) {
-        try {
-          Log.info('Initiator is a steward, auto-approving recovery request');
-          await recoveryService.respondToRecoveryRequestWithShard(
-            recoveryRequest.id,
-            currentPubkey,
-            true,
-          );
-          Log.info('Auto-approved recovery request');
-        } catch (e) {
-          Log.error('Failed to auto-approve recovery request', e);
-        }
-      }
 
       if (context.mounted) {
         Navigator.pop(context);

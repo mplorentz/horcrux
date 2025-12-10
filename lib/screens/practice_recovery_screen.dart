@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../models/backup_config.dart';
-import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../providers/recovery_provider.dart';
 import '../services/recovery_service.dart';
-import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../screens/recovery_status_screen.dart';
 import '../widgets/row_button.dart';
@@ -452,93 +450,11 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     );
 
     try {
-      final loginService = ref.read(loginServiceProvider);
-      final currentPubkey = await loginService.getCurrentPublicKey();
-
-      if (currentPubkey == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error: Could not load current user')),
-          );
-        }
-        return;
-      }
-
-      final backupConfig = vault.backupConfig;
-      if (backupConfig == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No recovery plan configured for this vault')),
-          );
-        }
-        return;
-      }
-
-      // Get steward pubkeys from backup config (owners only - stewards cannot practice recovery)
-      final stewardPubkeys = backupConfig.stewards
-          .where((s) => s.pubkey != null && s.status == StewardStatus.holdingKey)
-          .map((s) => s.pubkey!)
-          .toList();
-
-      if (stewardPubkeys.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'No stewards available for recovery. Make sure stewards have received and confirmed their keys.'),
-            ),
-          );
-        }
-        return;
-      }
-
-      final threshold = backupConfig.threshold;
-
-      Log.info(
-        'Initiating recovery with ${stewardPubkeys.length} stewards: ${stewardPubkeys.map((k) => k.substring(0, 8)).join(", ")}...',
-      );
-
       final recoveryService = ref.read(recoveryServiceProvider);
-      final recoveryRequest = await recoveryService.initiateRecovery(
+      final recoveryRequest = await recoveryService.initiateAndSendRecovery(
         vaultId,
-        initiatorPubkey: currentPubkey,
-        stewardPubkeys: stewardPubkeys,
-        threshold: threshold,
         isPractice: true,
       );
-
-      // Get relays and send recovery request via Nostr
-      try {
-        final relays =
-            await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
-        final relayUrls = relays.map((r) => r.url).toList();
-
-        if (relayUrls.isEmpty) {
-          Log.warning('No relays configured, recovery request not sent via Nostr');
-        } else {
-          await recoveryService.sendRecoveryRequestViaNostr(recoveryRequest, relays: relayUrls);
-        }
-      } catch (e) {
-        Log.error('Failed to send recovery request via Nostr', e);
-      }
-
-      // Auto-approve if the initiator is also a steward
-      if (stewardPubkeys.contains(currentPubkey)) {
-        try {
-          Log.info('Initiator is a steward, auto-approving recovery request');
-          await recoveryService.respondToRecoveryRequestWithShard(
-            recoveryRequest.id,
-            currentPubkey,
-            true,
-          );
-          Log.info('Auto-approved recovery request');
-        } catch (e) {
-          Log.error('Failed to auto-approve recovery request', e);
-        }
-      }
 
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog
