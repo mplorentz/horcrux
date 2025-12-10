@@ -262,7 +262,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'PRACTICE REQUEST',
+                                  'Practice Request',
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: Colors.blue[900],
