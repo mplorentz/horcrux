@@ -69,14 +69,14 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                     // Practice mode banner
                     if (request.isPractice) ...[
                       Card(
-                        color: Colors.blue[50],
+                        color: Theme.of(context).colorScheme.tertiaryContainer,
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.school,
-                                color: Colors.blue[700],
+                                color: Theme.of(context).colorScheme.tertiary,
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
@@ -88,14 +88,15 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                                       'Practice Recovery',
                                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.blue[900],
+                                            color: Theme.of(context).colorScheme.onTertiary,
                                           ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'This is a practice recovery session. No vault data will be shared.',
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Colors.blue[700],
+                                            color:
+                                                Theme.of(context).colorScheme.onTertiaryContainer,
                                           ),
                                     ),
                                   ],
