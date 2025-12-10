@@ -451,5 +451,169 @@ void main() {
       // When threshold is met, status should be completed
       expect(updatedRequest.status, RecoveryRequestStatus.completed);
     });
+
+    test('practice recovery response does not send shard data over the wire', () async {
+      // Arrange: Create a practice recovery request
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+        isPractice: true, // This is a practice recovery
+      );
+
+      // Add a shard to the vault (steward has this shard)
+      final shardData = createShardData(
+        shard: 'practice_shard_secret_AAA=',
+        threshold: 1,
+        shardIndex: 0,
+        totalShards: 1,
+        primeMod: 'test_prime_EEE=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: 'Test Vault',
+        relayUrls: ['wss://relay.example.com'],
+      );
+      await repository.addShardToVault(testVaultId, shardData);
+
+      // Mock the NDK service to capture what's being sent
+      final mockNdk = ndkService as MockNdkService;
+      String? capturedContent;
+      when(
+        mockNdk.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer((invocation) {
+        capturedContent = invocation.namedArguments[#content] as String?;
+        return Future.value('mock_event_id_12345');
+      });
+
+      // Act: Respond to the practice recovery request with approval
+      await recoveryService.respondToRecoveryRequestWithShard(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true, // approved
+      );
+
+      // Assert: Verify that publishEncryptedEvent was called
+      verify(
+        mockNdk.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).called(1);
+
+      // Assert: Verify the captured content does NOT contain shard data
+      expect(capturedContent, isNotNull);
+      final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
+
+      // Should have the basic response fields
+      expect(decodedContent['type'], 'recovery_response');
+      expect(decodedContent['recovery_request_id'], recoveryRequest.id);
+      expect(decodedContent['vault_id'], testVaultId);
+      expect(decodedContent['responder_pubkey'], testCreatorPubkey); // The current user responding
+      expect(decodedContent['approved'], true);
+      expect(decodedContent['is_practice'], true);
+
+      // CRITICAL: Should NOT contain shard_data field
+      expect(decodedContent.containsKey('shard_data'), false);
+
+      // Log the captured content for verification
+      // ignore: avoid_print
+      print('Captured practice recovery response (no shard data): $capturedContent');
+    });
+
+    test('real recovery response DOES send shard data over the wire', () async {
+      // Arrange: Create a REAL (non-practice) recovery request
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+        isPractice: false, // This is a REAL recovery
+      );
+
+      // Add a shard to the vault (steward has this shard)
+      final shardData = createShardData(
+        shard: 'real_shard_secret_BBB=',
+        threshold: 1,
+        shardIndex: 0,
+        totalShards: 1,
+        primeMod: 'test_prime_FFF=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: 'Test Vault',
+        relayUrls: ['wss://relay.example.com'],
+      );
+      await repository.addShardToVault(testVaultId, shardData);
+
+      // Mock the NDK service to capture what's being sent
+      final mockNdk = ndkService as MockNdkService;
+      String? capturedContent;
+      when(
+        mockNdk.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer((invocation) {
+        capturedContent = invocation.namedArguments[#content] as String?;
+        return Future.value('mock_event_id_67890');
+      });
+
+      // Act: Respond to the REAL recovery request with approval
+      await recoveryService.respondToRecoveryRequestWithShard(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true, // approved
+      );
+
+      // Assert: Verify that publishEncryptedEvent was called
+      verify(
+        mockNdk.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).called(1);
+
+      // Assert: Verify the captured content DOES contain shard data
+      expect(capturedContent, isNotNull);
+      final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
+
+      // Should have the basic response fields
+      expect(decodedContent['type'], 'recovery_response');
+      expect(decodedContent['recovery_request_id'], recoveryRequest.id);
+      expect(decodedContent['vault_id'], testVaultId);
+      expect(decodedContent['responder_pubkey'], testCreatorPubkey); // The current user responding
+      expect(decodedContent['approved'], true);
+      expect(decodedContent['is_practice'], false);
+
+      // CRITICAL: Should contain shard_data field for real recovery
+      expect(decodedContent.containsKey('shard_data'), true);
+      expect(decodedContent['shard_data'], isNotNull);
+
+      // Verify shard data structure
+      final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
+      expect(sentShardData['shard'], 'real_shard_secret_BBB=');
+      expect(sentShardData['threshold'], 1);
+      expect(sentShardData['shardIndex'], 0);
+      expect(sentShardData['totalShards'], 1);
+
+      // Log the captured content for verification
+      // ignore: avoid_print
+      print('Captured real recovery response (with shard data): $capturedContent');
+    });
   });
 }
