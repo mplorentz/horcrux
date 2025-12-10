@@ -198,7 +198,7 @@ class RecoveryProgressWidget extends ConsumerWidget {
         builder: (context) => AlertDialog(
           title: const Text('Success!'),
           content: const Text(
-            'Because this is only practice mode we can\'t show the real vault contents.',
+            "Because this is only practice mode we can't show the real vault contents.",
           ),
           actions: [
             TextButton(
