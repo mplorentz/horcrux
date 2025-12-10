@@ -9,12 +9,11 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/instructions_dialog.dart';
 import '../services/backup_service.dart';
 import '../services/recovery_service.dart';
-import '../services/vault_share_service.dart';
-import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
 import '../screens/recovery_status_screen.dart';
+import '../screens/practice_recovery_info_screen.dart';
 
 /// Button stack widget for vault detail screen
 class VaultDetailButtonStack extends ConsumerWidget {
@@ -45,9 +44,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
             // Watch vault for Generate and Distribute Keys button
             final vaultAsync = ref.watch(vaultProvider(vaultId));
             // Watch recovery status for recovery buttons
-            final recoveryStatusAsync = ref.watch(
-              recoveryStatusProvider(vaultId),
-            );
+            final recoveryStatusAsync = ref.watch(recoveryStatusProvider(vaultId));
 
             return vaultAsync.when(
               loading: () => const SizedBox.shrink(),
@@ -130,11 +127,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             // Show "Distribute Keys" button (enabled)
                             buttons.add(
                               RowButtonConfig(
-                                onPressed: () => _distributeKeys(
-                                  context,
-                                  ref,
-                                  currentVault,
-                                ),
+                                onPressed: () => _distributeKeys(context, ref, currentVault),
                                 icon: Icons.send,
                                 text: 'Distribute Keys',
                               ),
@@ -144,27 +137,50 @@ class VaultDetailButtonStack extends ConsumerWidget {
                       }
 
                       // Practice Recovery Button (only for owners)
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Practice Recovery'),
-                                content: const Text('todo'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
+                      // Check if there's an active practice recovery (not canceled/archived)
+                      // Canceled recoveries are filtered out by recoveryStatusProvider (only isActive or completed are included)
+                      final activeRequest = recoveryStatus.activeRecoveryRequest;
+                      final hasActivePracticeRecovery = recoveryStatus.hasActiveRecovery &&
+                          activeRequest?.isPractice == true &&
+                          recoveryStatus.isInitiator;
+
+                      if (hasActivePracticeRecovery) {
+                        // Show "Manage Practice Recovery" if there's an active practice recovery
+                        buttons.add(
+                          RowButtonConfig(
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RecoveryStatusScreen(
+                                    recoveryRequestId: activeRequest!.id,
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                          icon: Icons.school,
-                          text: 'Practice Recovery',
-                        ),
-                      );
+                                ),
+                              );
+                            },
+                            icon: Icons.school,
+                            text: 'Manage Practice Recovery',
+                          ),
+                        );
+                      } else {
+                        // Show "Practice Recovery" button when there's no active practice recovery
+                        // This includes when practice recovery was canceled, since canceled recoveries
+                        // are not considered "active" by the recoveryStatusProvider
+                        buttons.add(
+                          RowButtonConfig(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => PracticeRecoveryInfoScreen(vaultId: vaultId),
+                              );
+                            },
+                            icon: Icons.school,
+                            text: 'Practice Recovery',
+                          ),
+                        );
+                      }
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
@@ -221,17 +237,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
     return null;
   }
 
-  Future<void> _distributeKeys(
-    BuildContext context,
-    WidgetRef ref,
-    Vault vault,
-  ) async {
+  Future<void> _distributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {
     if (vault.backupConfig == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recovery plan not found'),
-          backgroundColor: Colors.orange,
-        ),
+        const SnackBar(content: Text('Recovery plan not found'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -279,14 +288,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
         title: Text(title),
         content: Text(contentMessage),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(action),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(action)),
         ],
       ),
     );
@@ -350,12 +353,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
           ),
         );
       }
@@ -390,10 +388,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 24),
-                      Text(
-                        'Sending recovery requests...',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      Text('Sending recovery requests...', style: TextStyle(fontSize: 16)),
                     ],
                   ),
                 ),
@@ -405,128 +400,18 @@ class VaultDetailButtonStack extends ConsumerWidget {
     );
 
     try {
-      final loginService = ref.read(loginServiceProvider);
-      final currentPubkey = await loginService.getCurrentPublicKey();
-
-      if (currentPubkey == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error: Could not load current user')),
-          );
-        }
-        return;
-      }
-
-      // Get shard data to extract peers and creator information
-      final shareService = ref.read(vaultShareServiceProvider);
-      final shards = await shareService.getVaultShares(vaultId);
-
-      if (shards.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Cannot recover: you don\'t have a key to this vault.',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      // Select the shard with the highest distributionVersion (most recent)
-      // If versions are equal or null, use the most recent createdAt timestamp
-      final selectedShard = shards.reduce((a, b) {
-        final aVersion = a.distributionVersion ?? 0;
-        final bVersion = b.distributionVersion ?? 0;
-        if (aVersion != bVersion) {
-          return aVersion > bVersion ? a : b;
-        }
-        // If versions are equal, use createdAt timestamp
-        return a.createdAt > b.createdAt ? a : b;
-      });
-      Log.debug(
-        'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
-      );
-
-      // Use peers list for recovery
-      final stewardPubkeys = <String>[];
-      if (selectedShard.peers != null) {
-        for (final peer in selectedShard.peers!) {
-          final pubkey = peer['pubkey'];
-          if (pubkey != null) {
-            stewardPubkeys.add(pubkey);
-          }
-        }
-      }
-
-      if (stewardPubkeys.isEmpty) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No stewards available for recovery')),
-          );
-        }
-        return;
-      }
-
-      Log.info(
-        'Initiating recovery with ${stewardPubkeys.length} stewards: ${stewardPubkeys.map((k) => k.substring(0, 8)).join(", ")}...',
-      );
-
       final recoveryService = ref.read(recoveryServiceProvider);
-      final recoveryRequest = await recoveryService.initiateRecovery(
+      final recoveryRequest = await recoveryService.initiateAndSendRecovery(
         vaultId,
-        initiatorPubkey: currentPubkey,
-        stewardPubkeys: stewardPubkeys,
-        threshold: selectedShard.threshold,
+        isPractice: false,
       );
-
-      // Get relays and send recovery request via Nostr
-      try {
-        final relays =
-            await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
-        final relayUrls = relays.map((r) => r.url).toList();
-
-        if (relayUrls.isEmpty) {
-          Log.warning(
-            'No relays configured, recovery request not sent via Nostr',
-          );
-        } else {
-          await recoveryService.sendRecoveryRequestViaNostr(
-            recoveryRequest,
-            relays: relayUrls,
-          );
-        }
-      } catch (e) {
-        Log.error('Failed to send recovery request via Nostr', e);
-      }
-
-      // Auto-approve if the initiator is also a steward
-      if (stewardPubkeys.contains(currentPubkey)) {
-        try {
-          Log.info(
-            'Initiator is a steward, auto-approving recovery request',
-          );
-          await recoveryService.respondToRecoveryRequestWithShard(
-            recoveryRequest.id,
-            currentPubkey,
-            true,
-          );
-          Log.info('Auto-approved recovery request');
-        } catch (e) {
-          Log.error('Failed to auto-approve recovery request', e);
-        }
-      }
 
       if (context.mounted) {
         Navigator.pop(context);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recovery request initiated and sent')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recovery request initiated and sent')));
 
         ref.invalidate(recoveryStatusProvider(vaultId));
 
@@ -543,9 +428,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }

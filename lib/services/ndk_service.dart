@@ -296,6 +296,8 @@ class NdkService {
             ? DateTime.parse(requestData['expires_at'] as String)
             : null,
         stewardResponses: {}, // Will be populated later
+        isPractice:
+            requestData['is_practice'] as bool? ?? false, // Read is_practice from Nostr payload
       );
 
       // Emit recovery request to stream (RecoveryService will listen)

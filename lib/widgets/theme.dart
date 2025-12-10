@@ -341,6 +341,15 @@ ThemeData horcrux3(Brightness brightness) {
   final buttonBg = isDark ? const Color(0xFF404040) : const Color(0xFF808080);
   final buttonText = isDark ? const Color(0xFFf4f4f4) : const Color(0xFFf4f4f4);
   const error = Color(0xFFBA1A1A);
+  // Practice banner colors - blue tones for practice mode indicators
+  final practiceBannerBg =
+      isDark ? const Color(0xFF1A2332) : const Color(0xFFE3F2FD); // blue[50] equivalent
+  final practiceBannerIcon =
+      isDark ? const Color(0xFF64B5F6) : const Color(0xFF1976D2); // blue[700] equivalent
+  final practiceBannerTitle =
+      isDark ? const Color(0xFF90CAF9) : const Color(0xFF0D47A1); // blue[900] equivalent
+  final practiceBannerText =
+      isDark ? const Color(0xFF64B5F6) : const Color(0xFF1976D2); // blue[700] equivalent
 
   return ThemeData(
     useMaterial3: true,
@@ -362,6 +371,11 @@ ThemeData horcrux3(Brightness brightness) {
       outline: dividerColor,
       error: error,
       onError: scaffoldBg,
+      // Practice banner colors
+      tertiary: practiceBannerIcon,
+      onTertiary: practiceBannerTitle,
+      tertiaryContainer: practiceBannerBg,
+      onTertiaryContainer: practiceBannerText,
     ),
 
     // Typography: Archivo for titles, Fira Sans for body

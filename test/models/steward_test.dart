@@ -21,6 +21,7 @@ void main() {
         acknowledgedAt: null,
         acknowledgmentEventId: null,
         acknowledgedDistributionVersion: null,
+        isOwner: false,
       );
     }
 
