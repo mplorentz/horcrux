@@ -31,8 +31,7 @@ class OnboardingScreen extends ConsumerWidget {
                           Center(
                             child: Text(
                               'Horcrux',
-                              style: Theme.of(context).textTheme.displaySmall
-                                  ?.copyWith(
+                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
                                     fontSize: 90,
                                     fontWeight: FontWeight.w700,
                                     height: 1.2,
@@ -67,8 +66,7 @@ class OnboardingScreen extends ConsumerWidget {
                                         content: const Text('todo'),
                                         actions: [
                                           TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
+                                            onPressed: () => Navigator.pop(context),
                                             child: const Text('OK'),
                                           ),
                                         ],

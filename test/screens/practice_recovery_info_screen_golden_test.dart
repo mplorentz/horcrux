@@ -35,8 +35,7 @@ void main() {
       lastSeen: null,
       keyShare: null,
       giftWrapEventId: null,
-      acknowledgedAt:
-          acknowledgedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
+      acknowledgedAt: acknowledgedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
       acknowledgmentEventId: null,
       acknowledgedDistributionVersion: 1,
       isOwner: false,

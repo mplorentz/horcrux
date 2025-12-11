@@ -11,8 +11,7 @@ class AccountChoiceScreen extends ConsumerStatefulWidget {
   const AccountChoiceScreen({super.key});
 
   @override
-  ConsumerState<AccountChoiceScreen> createState() =>
-      _AccountChoiceScreenState();
+  ConsumerState<AccountChoiceScreen> createState() => _AccountChoiceScreenState();
 }
 
 class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
@@ -52,8 +51,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
 
                   navigator.push(
                     MaterialPageRoute(
-                      builder: (context) =>
-                          AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                      builder: (context) => AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
                     ),
                   );
                 },

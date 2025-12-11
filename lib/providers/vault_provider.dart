@@ -117,8 +117,7 @@ class VaultRepository {
   bool _isInitialized = false;
 
   // Stream controller for notifying listeners when vaults change
-  final StreamController<List<Vault>> _vaultsController =
-      StreamController<List<Vault>>.broadcast();
+  final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
 
   // Regular constructor - Riverpod manages the singleton behavior
   VaultRepository(this._loginService);
@@ -158,9 +157,7 @@ class VaultRepository {
       final List<dynamic> jsonList = json.decode(decryptedJson);
       Log.info('Decrypted ${jsonList.length} vaults');
 
-      _cachedVaults = jsonList
-          .map((json) => Vault.fromJson(json as Map<String, dynamic>))
-          .toList();
+      _cachedVaults = jsonList.map((json) => Vault.fromJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       Log.error('Error decrypting vaults', e);
       _cachedVaults = [];
@@ -504,8 +501,7 @@ class VaultRepository {
     }
 
     final vault = _cachedVaults![index];
-    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests)
-      ..add(request);
+    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests)..add(request);
 
     _cachedVaults![index] = vault.copyWith(recoveryRequests: updatedRequests);
     await _saveVaults();

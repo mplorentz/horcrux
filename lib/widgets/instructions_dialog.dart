@@ -30,9 +30,9 @@ class InstructionsDialog extends StatelessWidget {
             : Text(
                 'No instructions provided.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
               ),
       ),
       actions: [

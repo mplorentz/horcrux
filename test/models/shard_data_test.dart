@@ -16,8 +16,7 @@ void main() {
         'totalShards': 1,
         'primeMod':
             'ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmY0Mw==',
-        'creatorPubkey':
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        'creatorPubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         'createdAt': 1759759657,
       };
 
@@ -29,23 +28,19 @@ void main() {
         'peers': [
           {
             'name': 'Alice',
-            'pubkey':
-                'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+            'pubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           },
           {
             'name': 'Bob',
-            'pubkey':
-                'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
+            'pubkey': 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
           },
           {
             'name': 'Charlie',
-            'pubkey':
-                'c33ce95f79fa5ab64fa0def735fa774ddfc5d8371e0a1bc08e8263a2e0d9546',
+            'pubkey': 'c33ce95f79fa5ab64fa0def735fa774ddfc5d8371e0a1bc08e8263a2e0d9546',
           },
         ],
         'ownerName': 'Owner',
-        'recipientPubkey':
-            'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
+        'recipientPubkey': 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
         'isReceived': true,
         'receivedAt': '2025-02-06T12:00:00.000Z',
         'nostrEventId': 'event-xyz-789',
@@ -248,8 +243,7 @@ void main() {
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'ZmZmZmZmZmZmZg==',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
       expect(shardData.shard, isNotEmpty);
@@ -267,8 +261,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -282,8 +275,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -297,8 +289,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -312,8 +303,7 @@ void main() {
           shardIndex: -1, // Negative
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -327,8 +317,7 @@ void main() {
           shardIndex: 3, // >= totalShards
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -342,8 +331,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: '', // Empty
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -371,8 +359,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'not-hex', // Invalid hex
         ),
         throwsA(isA<ArgumentError>()),
@@ -387,8 +374,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'abcd1234', // Too short
         ),
         throwsA(isA<ArgumentError>()),
@@ -405,8 +391,7 @@ void main() {
           shardIndex: 0,
           totalShards: 3,
           primeMod: 'abc',
-          creatorPubkey:
-              'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+          creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           isReceived: true,
           receivedAt: futureDate, // Future date
         ),
@@ -421,10 +406,8 @@ void main() {
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'abc',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
-        recipientPubkey:
-            'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        recipientPubkey: 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
       );
 
       expect(shardData.recipientPubkey, isNotNull);
@@ -438,8 +421,7 @@ void main() {
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'QW5vdGhlckJhc2U2NFN0cmluZ0hlcmU=',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
       expect(shardData.isValid, isTrue);
@@ -454,8 +436,7 @@ void main() {
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
       final copy = copyShardData(original, threshold: 3, shardIndex: 1);
@@ -469,16 +450,14 @@ void main() {
     });
 
     test('ageInSeconds calculates correctly', () {
-      final pastTimestamp =
-          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
+      final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
       final ShardData shardData = (
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
         vaultId: null,
         vaultName: null,
@@ -498,16 +477,14 @@ void main() {
     });
 
     test('ageInHours calculates correctly', () {
-      final pastTimestamp =
-          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200; // 2 hours ago
+      final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200; // 2 hours ago
       final ShardData shardData = (
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
         vaultId: null,
         vaultName: null,
@@ -527,16 +504,14 @@ void main() {
     });
 
     test('isRecent returns true for recent shard', () {
-      final recentTimestamp =
-          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
+      final recentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
       final ShardData shardData = (
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: recentTimestamp,
         vaultId: null,
         vaultName: null,
@@ -556,17 +531,14 @@ void main() {
 
     test('isRecent returns false for old shard', () {
       final oldTimestamp =
-          DateTime.now().millisecondsSinceEpoch ~/ 1000 -
-          86400 -
-          3600; // >24 hours ago
+          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 86400 - 3600; // >24 hours ago
       final ShardData shardData = (
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: oldTimestamp,
         vaultId: null,
         vaultName: null,
@@ -591,8 +563,7 @@ void main() {
         shardIndex: 1,
         totalShards: 3,
         primeMod: 'xyz',
-        creatorPubkey:
-            'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
       final str = shardDataToString(shardData);

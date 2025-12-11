@@ -14,8 +14,7 @@ class RecoveryStatusScreen extends ConsumerStatefulWidget {
   const RecoveryStatusScreen({super.key, required this.recoveryRequestId});
 
   @override
-  ConsumerState<RecoveryStatusScreen> createState() =>
-      _RecoveryStatusScreenState();
+  ConsumerState<RecoveryStatusScreen> createState() => _RecoveryStatusScreenState();
 }
 
 class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
@@ -49,8 +48,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
           return vaultAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) =>
-                Center(child: Text('Error loading vault: $error')),
+            error: (error, stack) => Center(child: Text('Error loading vault: $error')),
             data: (vault) {
               // Get instructions from vault
               String? instructions;
@@ -90,10 +88,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                                   children: [
                                     Text(
                                       'Practice Recovery',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                             fontWeight: FontWeight.bold,
                                             color: Theme.of(
                                               context,
@@ -103,10 +98,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'This is a practice recovery session. No vault data will be shared.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             color: Theme.of(
                                               context,
                                             ).colorScheme.onTertiaryContainer,
@@ -229,10 +221,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         content: Text(
           isPractice
               ? 'This will archive the practice recovery request.\n\n'
-                    'Are you sure you want to end practice recovery?'
+                  'Are you sure you want to end practice recovery?'
               : 'This will archive the recovery request and delete the recovered content and steward keys. '
-                    'Your own key to the vault will be preserved.\n\n'
-                    'Are you sure you want to end recovery?',
+                  'Your own key to the vault will be preserved.\n\n'
+                  'Are you sure you want to end recovery?',
         ),
         actions: [
           TextButton(
@@ -254,14 +246,11 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     if (confirmed == true) {
       try {
         // Get vaultId before exiting recovery mode
-        final requestForVaultId = await ref
-            .read(recoveryServiceProvider)
-            .getRecoveryRequest(widget.recoveryRequestId);
+        final requestForVaultId =
+            await ref.read(recoveryServiceProvider).getRecoveryRequest(widget.recoveryRequestId);
         final vaultId = requestForVaultId?.vaultId;
 
-        await ref
-            .read(recoveryServiceProvider)
-            .exitRecoveryMode(widget.recoveryRequestId);
+        await ref.read(recoveryServiceProvider).exitRecoveryMode(widget.recoveryRequestId);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -330,14 +319,11 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     if (confirmed == true) {
       try {
         // Get vaultId before canceling recovery request
-        final request = await ref
-            .read(recoveryServiceProvider)
-            .getRecoveryRequest(widget.recoveryRequestId);
+        final request =
+            await ref.read(recoveryServiceProvider).getRecoveryRequest(widget.recoveryRequestId);
         final vaultId = request?.vaultId;
 
-        await ref
-            .read(recoveryServiceProvider)
-            .cancelRecoveryRequest(widget.recoveryRequestId);
+        await ref.read(recoveryServiceProvider).cancelRecoveryRequest(widget.recoveryRequestId);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -70,8 +70,7 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: approved,
-      respondedAt:
-          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
       shardData: approved
           ? createTestShard(
               shardIndex: 0,
@@ -391,8 +390,7 @@ void main() {
     testGoldens('shard holder - in recovery', (tester) async {
       final recoveryRequest = createTestRecoveryRequest(
         vaultId: 'test-vault',
-        initiatorPubkey:
-            testPubkey, // testPubkey (shard holder) is the initiator
+        initiatorPubkey: testPubkey, // testPubkey (shard holder) is the initiator
         status: RecoveryRequestStatus.inProgress,
         responses: {
           testPubkey: createTestRecoveryResponse(

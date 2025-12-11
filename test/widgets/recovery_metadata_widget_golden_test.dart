@@ -23,8 +23,7 @@ void main() {
       id: id,
       vaultId: 'test-vault',
       initiatorPubkey: testPubkey,
-      requestedAt:
-          requestedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
+      requestedAt: requestedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
       status: status,
       threshold: threshold,
       expiresAt: expiresAt,

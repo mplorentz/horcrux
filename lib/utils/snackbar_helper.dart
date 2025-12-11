@@ -48,12 +48,10 @@ class TopSnackBarScaffoldMessenger extends StatefulWidget {
   });
 
   @override
-  State<TopSnackBarScaffoldMessenger> createState() =>
-      _TopSnackBarScaffoldMessengerState();
+  State<TopSnackBarScaffoldMessenger> createState() => _TopSnackBarScaffoldMessengerState();
 }
 
-class _TopSnackBarScaffoldMessengerState
-    extends State<TopSnackBarScaffoldMessenger> {
+class _TopSnackBarScaffoldMessengerState extends State<TopSnackBarScaffoldMessenger> {
   @override
   Widget build(BuildContext context) {
     return ScaffoldMessenger(

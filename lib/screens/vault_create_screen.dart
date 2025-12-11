@@ -23,8 +23,7 @@ class VaultCreateScreen extends ConsumerStatefulWidget {
   ConsumerState<VaultCreateScreen> createState() => _VaultCreateScreenState();
 }
 
-class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen>
-    with VaultContentSaveMixin {
+class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with VaultContentSaveMixin {
   final _nameController = TextEditingController();
   final _contentController = TextEditingController();
   final _ownerNameController = TextEditingController();
@@ -86,9 +85,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen>
       formKey: _formKey,
       name: _nameController.text,
       content: _contentController.text,
-      ownerName: _ownerNameController.text.trim().isEmpty
-          ? null
-          : _ownerNameController.text.trim(),
+      ownerName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
     );
 
     if (vaultId != null && mounted) {

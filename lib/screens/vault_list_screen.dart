@@ -115,8 +115,7 @@ class VaultListScreen extends ConsumerWidget {
                         vertical: 12,
                       ),
                       itemCount: vaults.length,
-                      separatorBuilder: (context, index) =>
-                          const Divider(height: 1),
+                      separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final vault = vaults[index];
                         return VaultCard(key: ValueKey(vault.id), vault: vault);

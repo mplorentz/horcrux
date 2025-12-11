@@ -10,8 +10,7 @@ class InlineTimePrinter extends LogPrinter {
   @override
   List<String> log(LogEvent event) {
     final time = DateTime.now();
-    final timeStr =
-        '${time.hour.toString().padLeft(2, '0')}:'
+    final timeStr = '${time.hour.toString().padLeft(2, '0')}:'
         '${time.minute.toString().padLeft(2, '0')}:'
         '${time.second.toString().padLeft(2, '0')}.'
         '${time.millisecond.toString().padLeft(3, '0')}';

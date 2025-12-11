@@ -102,10 +102,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorText = e
-              .toString()
-              .replaceAll('Exception: ', '')
-              .replaceAll('UnimplementedError: ', '');
+          _errorText =
+              e.toString().replaceAll('Exception: ', '').replaceAll('UnimplementedError: ', '');
           _isLoading = false;
         });
       }

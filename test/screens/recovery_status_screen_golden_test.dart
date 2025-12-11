@@ -116,8 +116,7 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: approved,
-      respondedAt:
-          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
     );
   }
 

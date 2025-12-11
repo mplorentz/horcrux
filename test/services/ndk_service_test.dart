@@ -180,12 +180,8 @@ void main() {
         // Verify expiration timestamp is approximately 7 days from now
         final expirationTimestamp = int.parse(expirationTag[1]);
         final expectedExpiration =
-            DateTime.now()
-                .add(const Duration(days: 7))
-                .millisecondsSinceEpoch ~/
-            1000;
-        const tolerance =
-            60; // Allow 60 seconds tolerance for test execution time
+            DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
+        const tolerance = 60; // Allow 60 seconds tolerance for test execution time
 
         expect(
           expirationTimestamp,
@@ -213,10 +209,7 @@ void main() {
         const recipientPubkey = TestHexPubkeys.alice;
         final relays = ['ws://localhost:10547'];
         final customExpiration =
-            DateTime.now()
-                .add(const Duration(days: 14))
-                .millisecondsSinceEpoch ~/
-            1000;
+            DateTime.now().add(const Duration(days: 14)).millisecondsSinceEpoch ~/ 1000;
 
         // Mock createRumor to capture tags
         when(
@@ -275,9 +268,8 @@ void main() {
         );
 
         // Assert - Verify only one expiration tag exists (the custom one)
-        final expirationTags = capturedTags
-            .where((tag) => tag.isNotEmpty && tag[0] == 'expiration')
-            .toList();
+        final expirationTags =
+            capturedTags.where((tag) => tag.isNotEmpty && tag[0] == 'expiration').toList();
 
         expect(
           expirationTags.length,
@@ -287,8 +279,7 @@ void main() {
         expect(
           expirationTags[0][1],
           equals(customExpiration.toString()),
-          reason:
-              'Should use the custom expiration timestamp, not add a new one',
+          reason: 'Should use the custom expiration timestamp, not add a new one',
         );
 
         // Verify custom tags are also present

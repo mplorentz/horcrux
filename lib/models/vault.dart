@@ -33,8 +33,7 @@ class Vault {
   final DateTime createdAt;
   final String ownerPubkey; // Hex format, 64 characters
   final String? ownerName; // Name of the vault owner
-  final List<ShardData>
-  shards; // List of shards (single as steward, multiple during recovery)
+  final List<ShardData> shards; // List of shards (single as steward, multiple during recovery)
   final List<RecoveryRequest> recoveryRequests; // Embedded recovery requests
   final BackupConfig? backupConfig; // Optional backup configuration
   final bool isArchived; // Whether this vault is archived
@@ -105,12 +104,8 @@ class Vault {
       'ownerPubkey': ownerPubkey,
       if (ownerName != null) 'ownerName': ownerName,
       'shards': shards.map((shard) => shardDataToJson(shard)).toList(),
-      'recoveryRequests': recoveryRequests
-          .map((request) => request.toJson())
-          .toList(),
-      'backupConfig': backupConfig != null
-          ? backupConfigToJson(backupConfig!)
-          : null,
+      'recoveryRequests': recoveryRequests.map((request) => request.toJson()).toList(),
+      'backupConfig': backupConfig != null ? backupConfigToJson(backupConfig!) : null,
       'isArchived': isArchived,
       if (archivedAt != null) 'archivedAt': archivedAt!.toIso8601String(),
       if (archivedReason != null) 'archivedReason': archivedReason,
@@ -128,27 +123,23 @@ class Vault {
       ownerName: json['ownerName'] as String?,
       shards: json['shards'] != null
           ? (json['shards'] as List)
-                .map(
-                  (shardJson) =>
-                      shardDataFromJson(shardJson as Map<String, dynamic>),
-                )
-                .toList()
+              .map(
+                (shardJson) => shardDataFromJson(shardJson as Map<String, dynamic>),
+              )
+              .toList()
           : [],
       recoveryRequests: json['recoveryRequests'] != null
           ? (json['recoveryRequests'] as List)
-                .map(
-                  (reqJson) =>
-                      RecoveryRequest.fromJson(reqJson as Map<String, dynamic>),
-                )
-                .toList()
+              .map(
+                (reqJson) => RecoveryRequest.fromJson(reqJson as Map<String, dynamic>),
+              )
+              .toList()
           : [],
       backupConfig: json['backupConfig'] != null
           ? backupConfigFromJson(json['backupConfig'] as Map<String, dynamic>)
           : null,
       isArchived: json['isArchived'] as bool? ?? false,
-      archivedAt: json['archivedAt'] != null
-          ? DateTime.parse(json['archivedAt'] as String)
-          : null,
+      archivedAt: json['archivedAt'] != null ? DateTime.parse(json['archivedAt'] as String) : null,
       archivedReason: json['archivedReason'] as String?,
     );
   }

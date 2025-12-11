@@ -27,8 +27,7 @@ void main() {
 
     test('should return bech32 npub when pubkey is in hex format', () {
       // Given: A KeyHolder with valid hex pubkey from the test npub (Nostr convention: no 0x prefix)
-      const hexPubkey =
-          'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+      const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final keyHolder = createTestKeyHolder(hexPubkey, name: 'Test Steward');
 
       // When: Getting the npub
@@ -51,8 +50,7 @@ void main() {
 
     test('should return bech32 npub when pubkey is hex without 0x prefix', () {
       // Given: A KeyHolder with hex pubkey without 0x prefix (Nostr convention)
-      const hexPubkey =
-          'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+      const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final keyHolder = createTestKeyHolder(hexPubkey, name: 'Test Steward');
 
       // When: Getting the npub
@@ -75,8 +73,7 @@ void main() {
 
     test('displayName uses npub when name is null', () {
       // Given: A KeyHolder with hex pubkey (Nostr convention: no 0x prefix)
-      const hexPubkey =
-          'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+      const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final keyHolder = createTestKeyHolder(
         hexPubkey,
         name: null,
@@ -93,8 +90,7 @@ void main() {
 
     test('displayName uses name when provided', () {
       // Given: A KeyHolder with hex pubkey and name (Nostr convention: no 0x prefix)
-      const hexPubkey =
-          'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+      const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final keyHolder = createTestKeyHolder(hexPubkey, name: 'Alice');
 
       // When: Getting the display name

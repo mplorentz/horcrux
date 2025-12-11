@@ -35,29 +35,29 @@ void main() {
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-          final args = call.arguments as Map? ?? {};
-          if (call.method == 'getAll') {
-            return Map<String, dynamic>.from(sharedPreferencesStore);
-          } else if (call.method == 'setString') {
-            sharedPreferencesStore[args['key']] = args['value'];
-            return true;
-          } else if (call.method == 'getString') {
-            return sharedPreferencesStore[args['key']];
-          } else if (call.method == 'remove') {
-            sharedPreferencesStore.remove(args['key']);
-            return true;
-          } else if (call.method == 'getStringList') {
-            final value = sharedPreferencesStore[args['key']];
-            return value is List ? value : null;
-          } else if (call.method == 'setStringList') {
-            sharedPreferencesStore[args['key']] = args['value'];
-            return true;
-          } else if (call.method == 'clear') {
-            sharedPreferencesStore.clear();
-            return true;
-          }
-          return null;
-        });
+      final args = call.arguments as Map? ?? {};
+      if (call.method == 'getAll') {
+        return Map<String, dynamic>.from(sharedPreferencesStore);
+      } else if (call.method == 'setString') {
+        sharedPreferencesStore[args['key']] = args['value'];
+        return true;
+      } else if (call.method == 'getString') {
+        return sharedPreferencesStore[args['key']];
+      } else if (call.method == 'remove') {
+        sharedPreferencesStore.remove(args['key']);
+        return true;
+      } else if (call.method == 'getStringList') {
+        final value = sharedPreferencesStore[args['key']];
+        return value is List ? value : null;
+      } else if (call.method == 'setStringList') {
+        sharedPreferencesStore[args['key']] = args['value'];
+        return true;
+      } else if (call.method == 'clear') {
+        sharedPreferencesStore.clear();
+        return true;
+      }
+      return null;
+    });
   });
 
   tearDownAll(() {
@@ -187,8 +187,7 @@ void main() {
 
         // Verify it succeeded (no exception thrown)
         // The invitation should now be marked as redeemed
-        final redeemedInvitation = await invitationService
-            .lookupInvitationByCode(inviteCode);
+        final redeemedInvitation = await invitationService.lookupInvitationByCode(inviteCode);
         expect(redeemedInvitation, isNotNull);
         expect(redeemedInvitation!.status.name, 'redeemed');
         expect(redeemedInvitation.redeemedBy, inviteePubkey);
@@ -429,8 +428,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedKind = invocation.namedArguments[#kind] as int;
-          capturedRecipientPubkey =
-              invocation.namedArguments[#recipientPubkey] as String;
+          capturedRecipientPubkey = invocation.namedArguments[#recipientPubkey] as String;
           capturedRelays = invocation.namedArguments[#relays] as List<String>;
           capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
           return 'test-event-id-123';
@@ -519,8 +517,7 @@ void main() {
       expect(
         payload.keys.length,
         3,
-        reason:
-            'Payload should only have 3 fields: invite_code, invitee_pubkey, responded_at',
+        reason: 'Payload should only have 3 fields: invite_code, invitee_pubkey, responded_at',
       );
     });
 

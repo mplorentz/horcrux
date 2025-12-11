@@ -17,12 +17,12 @@ import 'logger.dart';
 /// Provider for ShardDistributionService
 final Provider<ShardDistributionService> shardDistributionServiceProvider =
     Provider<ShardDistributionService>((ref) {
-      return ShardDistributionService(
-        ref.read(vaultRepositoryProvider),
-        ref.read(loginServiceProvider),
-        ref.read(ndkServiceProvider),
-      );
-    });
+  return ShardDistributionService(
+    ref.read(vaultRepositoryProvider),
+    ref.read(loginServiceProvider),
+    ref.read(ndkServiceProvider),
+  );
+});
 
 /// Service for distributing shards to stewards via Nostr
 class ShardDistributionService {
@@ -38,8 +38,7 @@ class ShardDistributionService {
 
   /// Distribute shards to all stewards
   Future<List<ShardEvent>> distributeShards({
-    required String
-    ownerPubkey, // Hex format - vault owner's pubkey for signing
+    required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
     required List<ShardData> shards,
   }) async {
@@ -80,8 +79,7 @@ class ShardDistributionService {
           final eventId = await _ndkService.publishEncryptedEvent(
             content: shardString,
             kind: NostrKind.shardData.value,
-            recipientPubkey: keyHolder
-                .pubkey!, // Hex format - safe because we checked null above
+            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
             relays: config.relays,
             tags: [
               ['d', 'shard_${config.vaultId}_$i'], // Distinguisher tag
@@ -98,10 +96,8 @@ class ShardDistributionService {
           // Create ShardEvent record
           final shardEvent = createShardEvent(
             eventId: eventId,
-            recipientPubkey: keyHolder
-                .pubkey!, // Hex format - safe because we checked null above
-            encryptedContent:
-                shardString, // Store original content for reference
+            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
+            encryptedContent: shardString, // Store original content for reference
             backupConfigId: config.vaultId,
             shardIndex: i,
           );
@@ -252,9 +248,8 @@ class ShardDistributionService {
       );
     }
 
-    final distributionVersion = distributionVersionStr != null
-        ? int.tryParse(distributionVersionStr)
-        : null;
+    final distributionVersion =
+        distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null;
 
     // Update steward status
     final keyHolderPubkey = event.pubKey;

@@ -45,8 +45,7 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: approved,
-      respondedAt:
-          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
     );
   }
 
@@ -348,8 +347,7 @@ void main() {
         name: 'My Important Vault',
         ownerPubkey: ownerPubkey,
         ownerName: 'Alice',
-        instructions:
-            'Please verify the requester\'s identity before approving.',
+        instructions: 'Please verify the requester\'s identity before approving.',
       );
 
       final container = ProviderContainer(
@@ -409,8 +407,7 @@ void main() {
         name: 'My Important Vault',
         ownerPubkey: ownerPubkey,
         ownerName: 'Alice',
-        instructions:
-            'This is a practice recovery - stewards should respond to test the process.',
+        instructions: 'This is a practice recovery - stewards should respond to test the process.',
         stewards: [
           createSteward(pubkey: initiatorPubkey, name: 'Alice'),
           createSteward(pubkey: testPubkey, name: 'Bob'),
@@ -468,8 +465,7 @@ void main() {
         name: 'My Important Vault',
         ownerPubkey: ownerPubkey,
         ownerName: 'Alice',
-        instructions:
-            'This is a practice recovery - no real data will be shared.',
+        instructions: 'This is a practice recovery - no real data will be shared.',
         stewards: [
           createSteward(pubkey: initiatorPubkey, name: 'Alice'),
           createSteward(pubkey: testPubkey, name: 'Bob'),
