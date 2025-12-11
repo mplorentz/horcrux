@@ -18,7 +18,9 @@ void main() {
 
   // T030: Widget test for owner-steward vault detail buttons
   group('Owner-steward vault detail buttons', () {
-    testWidgets('shows Recover Content and Create New Content for owner-steward state', (tester) async {
+    testWidgets('shows Recover Content and Create New Content for owner-steward state', (
+      tester,
+    ) async {
       // Owner-steward state: isOwner, content == null, shards.isNotEmpty
       final ownerShard = createShardData(
         shard: 'owner-shard-data',
@@ -34,7 +36,7 @@ void main() {
 
       final ownerSteward = createOwnerSteward(pubkey: testPubkey);
       final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
-      
+
       final backupConfig = createBackupConfig(
         vaultId: 'test-vault',
         threshold: 2,
@@ -74,9 +76,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: VaultDetailScreen(vaultId: 'test-vault'),
-          ),
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
         ),
       );
 
@@ -89,70 +89,71 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('shows Delete Local Copy button when owner has content and owner steward configured', (tester) async {
-      final ownerSteward = createOwnerSteward(pubkey: testPubkey);
-      final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
-      
-      final backupConfig = copyBackupConfig(
-        createBackupConfig(
-          vaultId: 'test-vault',
-          threshold: 2,
-          totalKeys: 2,
-          stewards: [ownerSteward, otherSteward],
-          relays: ['wss://relay.example.com'],
-        ),
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
-      );
+    testWidgets(
+      'shows Delete Local Copy button when owner has content and owner steward configured',
+      (tester) async {
+        final ownerSteward = createOwnerSteward(pubkey: testPubkey);
+        final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
 
-      // Vault with content and owner steward configured (after distribution)
-      final vault = Vault(
-        id: 'test-vault',
-        name: 'Test Vault',
-        content: 'Secret content', // Has content
-        createdAt: DateTime(2024, 1, 1),
-        ownerPubkey: testPubkey, // Current user is owner
-        shards: [],
-        backupConfig: backupConfig,
-      );
-
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
-          recoveryStatusProvider.overrideWith((ref, vaultId) {
-            return const AsyncValue.data(
-              RecoveryStatus(
-                hasActiveRecovery: false,
-                canRecover: false,
-                activeRecoveryRequest: null,
-                isInitiator: false,
-              ),
-            );
-          }),
-        ],
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: VaultDetailScreen(vaultId: 'test-vault'),
+        final backupConfig = copyBackupConfig(
+          createBackupConfig(
+            vaultId: 'test-vault',
+            threshold: 2,
+            totalKeys: 2,
+            stewards: [ownerSteward, otherSteward],
+            relays: ['wss://relay.example.com'],
           ),
-        ),
-      );
+          lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
+        );
 
-      await tester.pumpAndSettle();
+        // Vault with content and owner steward configured (after distribution)
+        final vault = Vault(
+          id: 'test-vault',
+          name: 'Test Vault',
+          content: 'Secret content', // Has content
+          createdAt: DateTime(2024, 1, 1),
+          ownerPubkey: testPubkey, // Current user is owner
+          shards: [],
+          backupConfig: backupConfig,
+        );
 
-      // Verify Delete Local Copy button is shown
-      expect(find.text('Delete Local Copy'), findsOneWidget);
+        final container = ProviderContainer(
+          overrides: [
+            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+            recoveryStatusProvider.overrideWith((ref, vaultId) {
+              return const AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: false,
+                  canRecover: false,
+                  activeRecoveryRequest: null,
+                  isInitiator: false,
+                ),
+              );
+            }),
+          ],
+        );
 
-      container.dispose();
-    });
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Verify Delete Local Copy button is shown
+        expect(find.text('Delete Local Copy'), findsOneWidget);
+
+        container.dispose();
+      },
+    );
 
     testWidgets('does not show Delete Local Copy when no owner steward configured', (tester) async {
       // Only regular stewards, no owner steward
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
-      
+
       final backupConfig = copyBackupConfig(
         createBackupConfig(
           vaultId: 'test-vault',
@@ -195,9 +196,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: VaultDetailScreen(vaultId: 'test-vault'),
-          ),
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
         ),
       );
 
@@ -210,3 +209,4 @@ void main() {
     });
   });
 }
+

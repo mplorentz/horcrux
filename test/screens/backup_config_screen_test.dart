@@ -23,37 +23,41 @@ void main() {
 
   setUpAll(() {
     secureStorageMock.setUpAll();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-      final args = call.arguments as Map? ?? {};
-      if (call.method == 'getAll') {
-        return Map<String, dynamic>.from(sharedPreferencesStore);
-      } else if (call.method == 'setString') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'getString') {
-        return sharedPreferencesStore[args['key']];
-      } else if (call.method == 'remove') {
-        sharedPreferencesStore.remove(args['key']);
-        return true;
-      } else if (call.method == 'getStringList') {
-        final value = sharedPreferencesStore[args['key']];
-        return value is List ? value : null;
-      } else if (call.method == 'setStringList') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'clear') {
-        sharedPreferencesStore.clear();
-        return true;
-      }
-      return null;
-    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      sharedPreferencesChannel,
+      (call) async {
+        final args = call.arguments as Map? ?? {};
+        if (call.method == 'getAll') {
+          return Map<String, dynamic>.from(sharedPreferencesStore);
+        } else if (call.method == 'setString') {
+          sharedPreferencesStore[args['key']] = args['value'];
+          return true;
+        } else if (call.method == 'getString') {
+          return sharedPreferencesStore[args['key']];
+        } else if (call.method == 'remove') {
+          sharedPreferencesStore.remove(args['key']);
+          return true;
+        } else if (call.method == 'getStringList') {
+          final value = sharedPreferencesStore[args['key']];
+          return value is List ? value : null;
+        } else if (call.method == 'setStringList') {
+          sharedPreferencesStore[args['key']] = args['value'];
+          return true;
+        } else if (call.method == 'clear') {
+          sharedPreferencesStore.clear();
+          return true;
+        }
+        return null;
+      },
+    );
   });
 
   tearDownAll(() {
     secureStorageMock.tearDownAll();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      sharedPreferencesChannel,
+      null,
+    );
   });
 
   setUp(() async {
@@ -77,9 +81,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: BackupConfigScreen(vaultId: 'test-vault'),
-          ),
+          child: const MaterialApp(home: BackupConfigScreen(vaultId: 'test-vault')),
         ),
       );
 
@@ -106,9 +108,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: BackupConfigScreen(vaultId: 'test-vault'),
-          ),
+          child: const MaterialApp(home: BackupConfigScreen(vaultId: 'test-vault')),
         ),
       );
 
@@ -144,9 +144,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: BackupConfigScreen(vaultId: 'test-vault'),
-          ),
+          child: const MaterialApp(home: BackupConfigScreen(vaultId: 'test-vault')),
         ),
       );
 
@@ -172,3 +170,4 @@ class _MockVaultRepository extends VaultRepository {
     return _backupConfig;
   }
 }
+
