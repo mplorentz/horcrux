@@ -87,7 +87,8 @@ platform :ios do
       skip_waiting_for_build_processing: false,
       skip_submission: true,
       distribute_external: false,
-      notify_external_testers: false
+      notify_external_testers: false,
+      uses_non_exempt_encryption: false
     )
     
     UI.success("✅ iOS beta uploaded to TestFlight")
