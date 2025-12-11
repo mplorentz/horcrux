@@ -43,7 +43,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('account created screen - multiple device sizes', (tester) async {
+    testGoldens('account created screen - multiple device sizes', (
+      tester,
+    ) async {
       const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
       final container = ProviderContainer();
@@ -65,7 +67,10 @@ void main() {
         ),
       );
 
-      await screenMatchesGolden(tester, 'account_created_screen_multiple_devices');
+      await screenMatchesGolden(
+        tester,
+        'account_created_screen_multiple_devices',
+      );
 
       container.dispose();
     });

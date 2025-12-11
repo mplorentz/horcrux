@@ -185,6 +185,7 @@ class RecoveryRequest {
   final int threshold; // Shamir threshold needed for recovery
   final Map<String, RecoveryResponse> stewardResponses; // pubkey -> response
   final String? errorMessage; // Error message if status is failed
+  final bool isPractice; // True for practice recovery sessions
 
   const RecoveryRequest({
     required this.id,
@@ -197,6 +198,7 @@ class RecoveryRequest {
     this.expiresAt,
     this.stewardResponses = const {},
     this.errorMessage,
+    this.isPractice = false,
   });
 
   /// Validate the recovery request
@@ -263,6 +265,7 @@ class RecoveryRequest {
         (key, value) => MapEntry(key, value.toJson()),
       ),
       'errorMessage': errorMessage,
+      'isPractice': isPractice,
     };
   }
 
@@ -292,6 +295,7 @@ class RecoveryRequest {
       expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
       stewardResponses: responses,
       errorMessage: json['errorMessage'] as String?,
+      isPractice: json['isPractice'] as bool? ?? false,
     );
   }
 
@@ -306,6 +310,7 @@ class RecoveryRequest {
     DateTime? expiresAt,
     Map<String, RecoveryResponse>? stewardResponses,
     String? errorMessage,
+    bool? isPractice,
   }) {
     return RecoveryRequest(
       id: id ?? this.id,
@@ -318,6 +323,7 @@ class RecoveryRequest {
       expiresAt: expiresAt ?? this.expiresAt,
       stewardResponses: stewardResponses ?? this.stewardResponses,
       errorMessage: errorMessage ?? this.errorMessage,
+      isPractice: isPractice ?? this.isPractice,
     );
   }
 

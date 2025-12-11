@@ -144,6 +144,54 @@
             },
             "problemMatcher": [],
             "detail": "Update all golden test images in the project"
+        },
+        {
+            "label": "Flutter: Build Android AppBundle (Release)",
+            "type": "shell",
+            "command": "flutter",
+            "args": [
+                "build",
+                "appbundle",
+                "--release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Build Android App Bundle for release"
+        },
+        {
+            "label": "Flutter: Build iOS (Release)",
+            "type": "shell",
+            "command": "flutter",
+            "args": [
+                "build",
+                "ios",
+                "--release"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Build iOS app for release (requires configured signing)"
         }
     ]
 }

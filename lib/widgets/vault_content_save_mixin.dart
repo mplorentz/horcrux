@@ -85,9 +85,7 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
             final updatedConfig = await repository.getBackupConfig(vaultId);
             if (updatedConfig != null && updatedConfig.canDistribute) {
               try {
-                await backupService.createAndDistributeBackup(
-                  vaultId: vaultId,
-                );
+                await backupService.createAndDistributeBackup(vaultId: vaultId);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

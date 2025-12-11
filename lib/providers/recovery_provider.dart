@@ -7,7 +7,10 @@ import 'key_provider.dart';
 
 /// Provider for recovery status of a specific vault
 /// This provides information about whether recovery is available and active recovery requests
-final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, String>((ref, vaultId) {
+final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, String>((
+  ref,
+  vaultId,
+) {
   // Watch the vault async value and transform it to recovery status
   final vaultAsync = ref.watch(vaultProvider(vaultId));
   final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
@@ -30,12 +33,16 @@ final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, Strin
       // Sort by requestedAt descending to get the most recent request first
       RecoveryRequest? manageableRequest;
       final manageableRequests = vault.recoveryRequests
-          .where((r) => r.status.isActive || r.status == RecoveryRequestStatus.completed)
+          .where(
+            (r) => r.status.isActive || r.status == RecoveryRequestStatus.completed,
+          )
           .toList();
 
       if (manageableRequests.isNotEmpty) {
         // Sort by requestedAt descending (most recent first)
-        manageableRequests.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        manageableRequests.sort(
+          (a, b) => b.requestedAt.compareTo(a.requestedAt),
+        );
         manageableRequest = manageableRequests.first;
       }
 
@@ -106,7 +113,9 @@ final recoveryRequestByIdProvider = Provider.family<AsyncValue<RecoveryRequest?>
 
               // Find the recovery request in the vault
               try {
-                final request = vault.recoveryRequests.firstWhere((r) => r.id == recoveryRequestId);
+                final request = vault.recoveryRequests.firstWhere(
+                  (r) => r.id == recoveryRequestId,
+                );
                 return AsyncValue.data(request);
               } catch (e) {
                 return const AsyncValue.data(null);
@@ -135,8 +144,13 @@ final _recoveryRequestVaultIdProvider = FutureProvider.family<String?, String>((
 /// Provider for recovery status by recovery request ID
 /// This watches the recovery request and computes the status automatically
 final recoveryStatusByIdProvider =
-    Provider.family<AsyncValue<recovery_status.RecoveryStatus?>, String>((ref, recoveryRequestId) {
-  final requestAsync = ref.watch(recoveryRequestByIdProvider(recoveryRequestId));
+    Provider.family<AsyncValue<recovery_status.RecoveryStatus?>, String>((
+  ref,
+  recoveryRequestId,
+) {
+  final requestAsync = ref.watch(
+    recoveryRequestByIdProvider(recoveryRequestId),
+  );
 
   return requestAsync.when(
     data: (request) {

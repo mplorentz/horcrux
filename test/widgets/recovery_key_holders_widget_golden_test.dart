@@ -149,10 +149,7 @@ void main() {
         useScaffold: true,
       );
 
-      await screenMatchesGolden(
-        tester,
-        'recovery_stewards_widget_all_pending',
-      );
+      await screenMatchesGolden(tester, 'recovery_stewards_widget_all_pending');
 
       container.dispose();
     });

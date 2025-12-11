@@ -66,9 +66,7 @@ void main() {
     testGoldens('loading state', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(null)),
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -264,9 +262,7 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('steward viewing list without owner in peers', (
-      tester,
-    ) async {
+    testGoldens('steward viewing list without owner in peers', (tester) async {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: fourthPubkey, // Owner not in peers

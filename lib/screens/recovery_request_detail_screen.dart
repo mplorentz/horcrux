@@ -68,9 +68,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
 
       if (mounted) {
         // Invalidate the recovery status provider to force a refresh when navigating back
-        ref.invalidate(
-          recoveryStatusProvider(widget.recoveryRequest.vaultId),
-        );
+        ref.invalidate(recoveryStatusProvider(widget.recoveryRequest.vaultId));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -103,7 +101,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         title: const Text('Approve Recovery'),
         content: const Text(
           'Are you sure you want to approve this recovery request? '
-          'This will share your key with the requester.',
+          'This will share your key to the vault with the requester.',
         ),
         actions: [
           TextButton(
@@ -243,6 +241,51 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Practice request banner
+                if (request.isPractice) ...[
+                  Card(
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.school,
+                            color: Theme.of(context).colorScheme.tertiary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Practice Request',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiary,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'This is a practice request. No vault data will be shared.',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiaryContainer,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Alert card (neutral colors, no orange)
                 Card(
                   child: Padding(

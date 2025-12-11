@@ -170,10 +170,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                     const SizedBox(height: 8),
                     publicKeyBech32Async.when(
                       loading: () => const CircularProgressIndicator(),
-                      error: (err, _) => Text(
-                        'Error: $err',
-                        style: textTheme.bodySmall,
-                      ),
+                      error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
                       data: (npub) => Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -248,7 +245,9 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                             children: [
                               Expanded(
                                 child: TextField(
-                                  controller: TextEditingController(text: _nsec),
+                                  controller: TextEditingController(
+                                    text: _nsec,
+                                  ),
                                   readOnly: true,
                                   obscureText: _obscureNsec,
                                   style: textTheme.bodyMedium?.copyWith(
@@ -299,8 +298,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
               onPressed: _handleLogout,
               icon: Icons.logout,
               text: 'Logout',
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
               addBottomSafeArea: true,
             ),
           ],

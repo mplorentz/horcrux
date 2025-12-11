@@ -92,7 +92,9 @@ class OnboardingScreen extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AccountChoiceScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const AccountChoiceScreen(),
+                  ),
                 );
               },
               icon: Icons.arrow_forward,

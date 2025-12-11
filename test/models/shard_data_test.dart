@@ -88,10 +88,7 @@ void main() {
         );
         expect(shardData.createdAt, validJsonWithRecoveryMetadata['createdAt']);
         expect(shardData.vaultId, validJsonWithRecoveryMetadata['vaultId']);
-        expect(
-          shardData.vaultName,
-          validJsonWithRecoveryMetadata['vaultName'],
-        );
+        expect(shardData.vaultName, validJsonWithRecoveryMetadata['vaultName']);
         expect(shardData.peers, isNotNull);
         expect(shardData.peers!.length, 3);
         expect(shardData.peers![0]['name'], 'Alice');
@@ -159,10 +156,7 @@ void main() {
         );
         expect(json['createdAt'], validJsonWithRecoveryMetadata['createdAt']);
         expect(json['vaultId'], validJsonWithRecoveryMetadata['vaultId']);
-        expect(
-          json['vaultName'],
-          validJsonWithRecoveryMetadata['vaultName'],
-        );
+        expect(json['vaultName'], validJsonWithRecoveryMetadata['vaultName']);
         expect(json['peers'], isNotNull);
         expect(json['peers'], isA<List>());
         expect(json['ownerName'], 'Owner');

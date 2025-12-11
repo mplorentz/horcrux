@@ -45,10 +45,7 @@ void main() {
         surfaceSize: const Size(375, 667),
       );
 
-      await screenMatchesGolden(
-        tester,
-        'account_management_screen_default',
-      );
+      await screenMatchesGolden(tester, 'account_management_screen_default');
 
       container.dispose();
     });

@@ -142,9 +142,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           // Mock provider to return null (vault not found)
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(null)),
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
         ],
       );
 
@@ -193,10 +191,7 @@ void main() {
         ), // Increased height to handle overflow
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_detail_screen_owner_no_backup',
-      );
+      await screenMatchesGolden(tester, 'vault_detail_screen_owner_no_backup');
 
       container.dispose();
     });
@@ -570,10 +565,7 @@ void main() {
         ),
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_detail_screen_multiple_devices',
-      );
+      await screenMatchesGolden(tester, 'vault_detail_screen_multiple_devices');
 
       container.dispose();
     });

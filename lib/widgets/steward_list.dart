@@ -213,10 +213,7 @@ class StewardList extends ConsumerWidget {
                       child: Text(
                         steward.displayName ??
                             (steward.pubkey != null
-                                ? Helpers.encodeBech32(
-                                    steward.pubkey!,
-                                    'npub',
-                                  )
+                                ? Helpers.encodeBech32(steward.pubkey!, 'npub')
                                 : 'Unknown'),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
@@ -254,10 +251,7 @@ class StewardList extends ConsumerWidget {
   }
 
   /// Extract stewards from vault shard data
-  List<StewardInfo> _extractStewards(
-    Vault vault,
-    String? currentPubkey,
-  ) {
+  List<StewardInfo> _extractStewards(Vault vault, String? currentPubkey) {
     // NEW: Try backupConfig first (owner will have this)
     if (vault.backupConfig != null) {
       final stewards = vault.backupConfig!.stewards.map((s) {

@@ -6,6 +6,7 @@
 import 'dart:async' as _i27;
 
 import 'package:horcrux/models/invitation_status.dart' as _i32;
+import 'package:horcrux/models/steward_status.dart' as _i33;
 import 'package:horcrux/providers/vault_provider.dart' as _i25;
 import 'package:horcrux/services/invitation_sending_service.dart' as _i26;
 import 'package:horcrux/services/invitation_service.dart' as _i31;
@@ -1300,16 +1301,32 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
   @override
   _i27.Future<
       ({
-        DateTime createdAt,
-        String inviteCode,
-        String? inviteeName,
-        String ownerPubkey,
-        DateTime? redeemedAt,
-        String? redeemedBy,
-        List<String> relayUrls,
-        _i32.InvitationStatus status,
-        String vaultId,
-        String vaultName
+        ({
+          DateTime createdAt,
+          String inviteCode,
+          String? inviteeName,
+          String ownerPubkey,
+          DateTime? redeemedAt,
+          String? redeemedBy,
+          List<String> relayUrls,
+          _i32.InvitationStatus status,
+          String vaultId,
+          String vaultName
+        }) invitation,
+        ({
+          DateTime? acknowledgedAt,
+          int? acknowledgedDistributionVersion,
+          String? acknowledgmentEventId,
+          String? giftWrapEventId,
+          String id,
+          String? inviteCode,
+          bool isOwner,
+          String? keyShare,
+          DateTime? lastSeen,
+          String? name,
+          String? pubkey,
+          _i33.StewardStatus status
+        }) steward
       })> generateInvitationLink({
     required String? vaultId,
     required String? inviteeName,
@@ -1327,6 +1344,129 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
         ),
         returnValue: _i27.Future<
             ({
+              ({
+                DateTime createdAt,
+                String inviteCode,
+                String? inviteeName,
+                String ownerPubkey,
+                DateTime? redeemedAt,
+                String? redeemedBy,
+                List<String> relayUrls,
+                _i32.InvitationStatus status,
+                String vaultId,
+                String vaultName
+              }) invitation,
+              ({
+                DateTime? acknowledgedAt,
+                int? acknowledgedDistributionVersion,
+                String? acknowledgmentEventId,
+                String? giftWrapEventId,
+                String id,
+                String? inviteCode,
+                bool isOwner,
+                String? keyShare,
+                DateTime? lastSeen,
+                String? name,
+                String? pubkey,
+                _i33.StewardStatus status
+              }) steward
+            })>.value((
+          invitation: (
+            createdAt: _FakeDateTime_25(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            ),
+            inviteCode: _i28.dummyValue<String>(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            ),
+            inviteeName: null,
+            ownerPubkey: _i28.dummyValue<String>(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            ),
+            redeemedAt: null,
+            redeemedBy: null,
+            relayUrls: <String>[],
+            status: _i32.InvitationStatus.created,
+            vaultId: _i28.dummyValue<String>(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            ),
+            vaultName: _i28.dummyValue<String>(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            )
+          ),
+          steward: (
+            acknowledgedAt: null,
+            acknowledgedDistributionVersion: null,
+            acknowledgmentEventId: null,
+            giftWrapEventId: null,
+            id: _i28.dummyValue<String>(
+              this,
+              Invocation.method(
+                #generateInvitationLink,
+                [],
+                {
+                  #vaultId: vaultId,
+                  #inviteeName: inviteeName,
+                  #relayUrls: relayUrls,
+                },
+              ),
+            ),
+            inviteCode: null,
+            isOwner: false,
+            keyShare: null,
+            lastSeen: null,
+            name: null,
+            pubkey: null,
+            status: _i33.StewardStatus.invited
+          )
+        )),
+      ) as _i27.Future<
+          ({
+            ({
               DateTime createdAt,
               String inviteCode,
               String? inviteeName,
@@ -1337,85 +1477,21 @@ class MockInvitationService extends _i1.Mock implements _i31.InvitationService {
               _i32.InvitationStatus status,
               String vaultId,
               String vaultName
-            })>.value((
-          createdAt: _FakeDateTime_25(
-            this,
-            Invocation.method(
-              #generateInvitationLink,
-              [],
-              {
-                #vaultId: vaultId,
-                #inviteeName: inviteeName,
-                #relayUrls: relayUrls,
-              },
-            ),
-          ),
-          inviteCode: _i28.dummyValue<String>(
-            this,
-            Invocation.method(
-              #generateInvitationLink,
-              [],
-              {
-                #vaultId: vaultId,
-                #inviteeName: inviteeName,
-                #relayUrls: relayUrls,
-              },
-            ),
-          ),
-          inviteeName: null,
-          ownerPubkey: _i28.dummyValue<String>(
-            this,
-            Invocation.method(
-              #generateInvitationLink,
-              [],
-              {
-                #vaultId: vaultId,
-                #inviteeName: inviteeName,
-                #relayUrls: relayUrls,
-              },
-            ),
-          ),
-          redeemedAt: null,
-          redeemedBy: null,
-          relayUrls: <String>[],
-          status: _i32.InvitationStatus.created,
-          vaultId: _i28.dummyValue<String>(
-            this,
-            Invocation.method(
-              #generateInvitationLink,
-              [],
-              {
-                #vaultId: vaultId,
-                #inviteeName: inviteeName,
-                #relayUrls: relayUrls,
-              },
-            ),
-          ),
-          vaultName: _i28.dummyValue<String>(
-            this,
-            Invocation.method(
-              #generateInvitationLink,
-              [],
-              {
-                #vaultId: vaultId,
-                #inviteeName: inviteeName,
-                #relayUrls: relayUrls,
-              },
-            ),
-          )
-        )),
-      ) as _i27.Future<
-          ({
-            DateTime createdAt,
-            String inviteCode,
-            String? inviteeName,
-            String ownerPubkey,
-            DateTime? redeemedAt,
-            String? redeemedBy,
-            List<String> relayUrls,
-            _i32.InvitationStatus status,
-            String vaultId,
-            String vaultName
+            }) invitation,
+            ({
+              DateTime? acknowledgedAt,
+              int? acknowledgedDistributionVersion,
+              String? acknowledgmentEventId,
+              String? giftWrapEventId,
+              String id,
+              String? inviteCode,
+              bool isOwner,
+              String? keyShare,
+              DateTime? lastSeen,
+              String? name,
+              String? pubkey,
+              _i33.StewardStatus status
+            }) steward
           })>);
 
   @override

@@ -193,10 +193,7 @@ void main() {
           name: 'Charlie',
           inviteCode: 'invite-code-123',
         ),
-        createTestInvitedSteward(
-          name: 'Diana',
-          inviteCode: 'invite-code-456',
-        ),
+        createTestInvitedSteward(name: 'Diana', inviteCode: 'invite-code-456'),
       ];
 
       final backupConfig = createTestBackupConfig(
@@ -236,10 +233,7 @@ void main() {
           name: 'Eve',
           status: StewardStatus.holdingKey,
         ),
-        createTestInvitedSteward(
-          name: 'Frank',
-          inviteCode: 'invite-code-789',
-        ),
+        createTestInvitedSteward(name: 'Frank', inviteCode: 'invite-code-789'),
       ];
 
       final backupConfig = createTestBackupConfig(

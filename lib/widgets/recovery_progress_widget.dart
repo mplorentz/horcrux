@@ -190,6 +190,27 @@ class RecoveryProgressWidget extends ConsumerWidget {
     final request = await recoveryService.getRecoveryRequest(recoveryRequestId);
     if (request == null) return;
 
+    // Check if this is a practice recovery
+    if (request.isPractice) {
+      if (!context.mounted) return;
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Success!'),
+          content: const Text(
+            "Because this is only practice mode we can't show the real vault contents.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     // Get the vault to access owner name
     final vaultAsync = ref.read(vaultProvider(request.vaultId));
     final vault = vaultAsync.valueOrNull;

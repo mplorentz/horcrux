@@ -182,10 +182,7 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
       ),
       data: (vault) {
         final vaultName = vault?.name ?? 'Unknown Vault';
-        final initiatorName = _getInitiatorName(
-          vault,
-          request.initiatorPubkey,
-        );
+        final initiatorName = _getInitiatorName(vault, request.initiatorPubkey);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
@@ -194,9 +191,30 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
               backgroundColor: Colors.orange[100],
               child: const Icon(Icons.lock_open, color: Colors.orange),
             ),
-            title: const Text(
-              'Recovery Request',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            title: Row(
+              children: [
+                const Text(
+                  'Recovery Request',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (request.isPractice) ...[
+                  const SizedBox(width: 8),
+                  const Chip(
+                    label: Text(
+                      'Practice',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    backgroundColor: Colors.blue,
+                    padding: EdgeInsets.zero,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ],
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

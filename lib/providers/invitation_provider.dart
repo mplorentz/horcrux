@@ -22,10 +22,7 @@ final pendingInvitationsProvider =
       );
       controller.add(initialInvitations);
     } catch (e) {
-      Log.error(
-        'Error loading initial invitations for vault $vaultId',
-        e,
-      );
+      Log.error('Error loading initial invitations for vault $vaultId', e);
       controller.addError(e);
     }
 
@@ -33,15 +30,10 @@ final pendingInvitationsProvider =
     final subscription = service.invitationsChangedStream.listen(
       (_) async {
         try {
-          final invitations = await service.getPendingInvitations(
-            vaultId,
-          );
+          final invitations = await service.getPendingInvitations(vaultId);
           controller.add(invitations);
         } catch (e) {
-          Log.error(
-            'Error reloading invitations for vault $vaultId',
-            e,
-          );
+          Log.error('Error reloading invitations for vault $vaultId', e);
           controller.addError(e);
         }
       },

@@ -35,10 +35,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invitation'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Invitation'), centerTitle: false),
       body: invitationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Padding(
@@ -126,7 +123,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                     padding: const EdgeInsets.all(12.0),
                     margin: const EdgeInsets.only(bottom: 16.0),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(invitation.status).withValues(alpha: 0.1),
+                      color: _getStatusColor(
+                        invitation.status,
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4.0),
                       border: Border.all(
                         color: _getStatusColor(invitation.status),
@@ -164,7 +163,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 Text(
                   'Accepting this invitation will grant you a single key to a shared vault. You\'ll then be able to recover the vault in coordination with the other stewards.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                 ),
                 const SizedBox(height: 24),
@@ -173,7 +174,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 Text(
                   'From',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
                 const SizedBox(height: 4),
@@ -191,7 +194,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                   Text(
                     'Invited as',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                   ),
                   const SizedBox(height: 4),
@@ -209,7 +214,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                   Text(
                     'Vault',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                   ),
                   const SizedBox(height: 4),
@@ -233,7 +240,11 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -302,7 +313,11 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                          Icon(
+                            Icons.warning_amber,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(

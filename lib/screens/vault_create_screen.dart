@@ -112,9 +112,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
     if (widget.isOnboarding) {
       // After onboarding flow completes, take the user to the vault list
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const VaultListScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const VaultListScreen()),
         (route) => false,
       );
       ScaffoldMessenger.of(context).showSnackBar(

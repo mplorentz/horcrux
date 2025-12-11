@@ -296,6 +296,8 @@ class NdkService {
             ? DateTime.parse(requestData['expires_at'] as String)
             : null,
         stewardResponses: {}, // Will be populated later
+        isPractice:
+            requestData['is_practice'] as bool? ?? false, // Read is_practice from Nostr payload
       );
 
       // Emit recovery request to stream (RecoveryService will listen)
@@ -331,10 +333,7 @@ class NdkService {
 
         // Store as a recovery shard (not a steward shard)
         final vaultShareService = _ref.read(vaultShareServiceProvider);
-        await vaultShareService.addRecoveryShard(
-          recoveryRequestId,
-          shardData,
-        );
+        await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
 
         Log.info(
           'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',

@@ -11,7 +11,11 @@ void main() {
     testGoldens('default state', (tester) async {
       final container = ProviderContainer();
 
-      await pumpGoldenWidget(tester, const SettingsScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const SettingsScreen(),
+        container: container,
+      );
 
       await screenMatchesGolden(tester, 'settings_screen_default');
 
@@ -29,8 +33,10 @@ void main() {
 
       await tester.pumpDeviceBuilder(
         builder,
-        wrapper: (child) =>
-            goldenMaterialAppWrapperWithProviders(child: child, container: container),
+        wrapper: (child) => goldenMaterialAppWrapperWithProviders(
+          child: child,
+          container: container,
+        ),
       );
 
       await screenMatchesGolden(tester, 'settings_screen_multiple_devices');

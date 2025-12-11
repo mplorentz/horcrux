@@ -15,7 +15,9 @@ import 'relay_scan_service.dart';
 import '../services/logger.dart';
 
 /// Provider for BackupService
-final Provider<BackupService> backupServiceProvider = Provider<BackupService>((ref) {
+final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
+  ref,
+) {
   return BackupService(
     ref.read(vaultRepositoryProvider),
     ref.read(shardDistributionServiceProvider),
@@ -129,7 +131,9 @@ class BackupService {
     try {
       // Validate inputs
       if (threshold < VaultBackupConstraints.minThreshold) {
-        throw ArgumentError('Threshold must be at least ${VaultBackupConstraints.minThreshold}');
+        throw ArgumentError(
+          'Threshold must be at least ${VaultBackupConstraints.minThreshold}',
+        );
       }
       if (threshold > totalShards) {
         throw ArgumentError('Threshold cannot exceed total shards');
@@ -171,7 +175,9 @@ class BackupService {
         shardDataList.add(shardData);
       }
 
-      Log.info('Generated $totalShards Shamir shares with threshold $threshold');
+      Log.info(
+        'Generated $totalShards Shamir shares with threshold $threshold',
+      );
       return shardDataList;
     } catch (e) {
       Log.error('Error generating Shamir shares', e);
@@ -180,7 +186,9 @@ class BackupService {
   }
 
   /// Reconstruct content from Shamir shares
-  Future<String> reconstructFromShares({required List<ShardData> shares}) async {
+  Future<String> reconstructFromShares({
+    required List<ShardData> shares,
+  }) async {
     try {
       if (shares.isEmpty) {
         throw ArgumentError('At least one share is required');
@@ -202,7 +210,9 @@ class BackupService {
       }
 
       if (shares.length < threshold) {
-        throw ArgumentError('At least $threshold shares are required, got ${shares.length}');
+        throw ArgumentError(
+          'At least $threshold shares are required, got ${shares.length}',
+        );
       }
 
       // Create SSS instance
@@ -210,7 +220,9 @@ class BackupService {
 
       // Verify that the prime modulus matches the one ntcdcrypto uses
       final expectedPrimeModHex = sss.prime.toRadixString(16);
-      final expectedPrimeMod = base64Url.encode(utf8.encode(expectedPrimeModHex));
+      final expectedPrimeMod = base64Url.encode(
+        utf8.encode(expectedPrimeModHex),
+      );
 
       if (primeMod != expectedPrimeMod) {
         throw ArgumentError(
@@ -225,7 +237,9 @@ class BackupService {
       // This will reconstruct the original secret
       final content = sss.combine(shareStrings, true);
 
-      Log.info('Successfully reconstructed content from ${shares.length} shares');
+      Log.info(
+        'Successfully reconstructed content from ${shares.length} shares',
+      );
       return content;
     } on ArgumentError catch (e) {
       Log.error('Error reconstructing from shares', e);
@@ -243,7 +257,11 @@ class BackupService {
       throw ArgumentError('Backup configuration not found for vault $vaultId');
     }
 
-    final updatedConfig = copyBackupConfig(config, status: status, lastUpdated: DateTime.now());
+    final updatedConfig = copyBackupConfig(
+      config,
+      status: status,
+      lastUpdated: DateTime.now(),
+    );
     await _repository.updateBackupConfig(vaultId, updatedConfig);
 
     Log.info('Updated backup status for vault $vaultId to $status');
@@ -312,7 +330,9 @@ class BackupService {
     final existingConfig = await _repository.getBackupConfig(vaultId);
 
     if (existingConfig == null) {
-      throw ArgumentError('No existing backup configuration found for vault $vaultId');
+      throw ArgumentError(
+        'No existing backup configuration found for vault $vaultId',
+      );
     }
 
     // Track if config parameters changed (requires redistribution)
@@ -405,7 +425,9 @@ class BackupService {
       Log.error('Error syncing relays to RelayScanService', e);
     }
 
-    Log.info('Merged backup configuration for vault $vaultId (version: $newDistributionVersion)');
+    Log.info(
+      'Merged backup configuration for vault $vaultId (version: $newDistributionVersion)',
+    );
     return mergedConfig;
   }
 
@@ -470,11 +492,13 @@ class BackupService {
       final existingSteward = existing.where((h) => h.id == updatedSteward.id).firstOrNull;
 
       if (existingSteward != null) {
-        // Preserve important fields from existing (status, acknowledgments, etc)
+        // Preserve important fields from existing (status, acknowledgments, pubkey, etc)
+        // Preserve pubkey from existing if it exists (should never be removed once set)
         merged.add(
           copySteward(
             updatedSteward,
             status: existingSteward.status,
+            pubkey: existingSteward.pubkey ?? updatedSteward.pubkey,
             acknowledgedAt: existingSteward.acknowledgedAt,
             acknowledgmentEventId: existingSteward.acknowledgmentEventId,
             acknowledgedDistributionVersion: existingSteward.acknowledgedDistributionVersion,
@@ -549,7 +573,9 @@ class BackupService {
   /// 3. Distributes shares to stewards via Nostr
   ///
   /// Throws exception if any step fails
-  Future<BackupConfig> createAndDistributeBackup({required String vaultId}) async {
+  Future<BackupConfig> createAndDistributeBackup({
+    required String vaultId,
+  }) async {
     try {
       // Step 1: Load vault content
       final vault = await _repository.getVault(vaultId);
@@ -558,7 +584,9 @@ class BackupService {
       }
       final content = vault.content;
       if (content == null) {
-        throw Exception('Cannot backup encrypted vault - content is not available');
+        throw Exception(
+          'Cannot backup encrypted vault - content is not available',
+        );
       }
       Log.info('Loaded vault content for backup: $vaultId');
 

@@ -64,9 +64,7 @@ void main() {
     testGoldens('loading state', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(null)),
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -255,10 +253,7 @@ void main() {
         waitForSettle: false,
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_metadata_section_user_loading',
-      );
+      await screenMatchesGolden(tester, 'vault_metadata_section_user_loading');
 
       container.dispose();
     });

@@ -74,7 +74,9 @@ class VaultShareService {
         final shard = shardDataFromJson(shardJson as Map<String, dynamic>);
         return MapEntry(vaultId, shard);
       });
-      Log.info('Loaded shard data for ${_cachedShardData!.length} vaults from storage');
+      Log.info(
+        'Loaded shard data for ${_cachedShardData!.length} vaults from storage',
+      );
     } catch (e) {
       Log.error('Error loading shard data', e);
       _cachedShardData = {};
@@ -94,7 +96,9 @@ class VaultShareService {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_shardDataKey, jsonString);
-      Log.info('Saved shard data for ${_cachedShardData!.length} vaults to storage');
+      Log.info(
+        'Saved shard data for ${_cachedShardData!.length} vaults to storage',
+      );
     } catch (e) {
       Log.error('Error saving shard data', e);
       throw Exception('Failed to save shard data: $e');
@@ -133,7 +137,10 @@ class VaultShareService {
     if (_cachedRecoveryShards == null) return;
 
     try {
-      final jsonMap = _cachedRecoveryShards!.map((recoveryRequestId, shardList) {
+      final jsonMap = _cachedRecoveryShards!.map((
+        recoveryRequestId,
+        shardList,
+      ) {
         final shardListJson = shardList.map((shard) => shardDataToJson(shard)).toList();
         return MapEntry(recoveryRequestId, shardListJson);
       });
@@ -189,7 +196,9 @@ class VaultShareService {
 
     // Add shard to vault via VaultService
     await repository.addShardToVault(vaultId, shardData);
-    Log.info('Added shard for vault $vaultId (event: ${shardData.nostrEventId})');
+    Log.info(
+      'Added shard for vault $vaultId (event: ${shardData.nostrEventId})',
+    );
   }
 
   /// Process a received vault share (invitation flow)
@@ -225,7 +234,9 @@ class VaultShareService {
         );
 
         if (eventId != null) {
-          Log.info('Sent shard confirmation event $eventId for vault $vaultId, shard $shardIndex');
+          Log.info(
+            'Sent shard confirmation event $eventId for vault $vaultId, shard $shardIndex',
+          );
         } else {
           Log.warning(
             'Failed to send shard confirmation event for vault $vaultId, shard $shardIndex',
@@ -321,7 +332,9 @@ class VaultShareService {
         id: vaultId,
         name: vaultName,
         content: null, // No decrypted content yet - we only have a shard
-        createdAt: DateTime.fromMillisecondsSinceEpoch(shardData.createdAt * 1000),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          shardData.createdAt * 1000,
+        ),
         ownerPubkey: shardData.creatorPubkey, // Owner is the creator of the shard
         ownerName: shardData.ownerName, // Set owner name from shard data
       );
@@ -344,11 +357,17 @@ class VaultShareService {
     }
 
     // Update shard data with received information
-    final updatedShard = copyShardData(shard, isReceived: true, receivedAt: DateTime.now());
+    final updatedShard = copyShardData(
+      shard,
+      isReceived: true,
+      receivedAt: DateTime.now(),
+    );
 
     _cachedShardData![vaultId] = updatedShard;
     await _saveShardData();
-    Log.info('Marked share as received for vault $vaultId (event: ${shard.nostrEventId})');
+    Log.info(
+      'Marked share as received for vault $vaultId (event: ${shard.nostrEventId})',
+    );
   }
 
   /// Mark a share as received by event ID
@@ -446,7 +465,10 @@ class VaultShareService {
   // These methods manage shards collected during recovery
 
   /// Add a recovery shard (for recovery initiator collecting shards from stewards)
-  Future<void> addRecoveryShard(String recoveryRequestId, ShardData shardData) async {
+  Future<void> addRecoveryShard(
+    String recoveryRequestId,
+    ShardData shardData,
+  ) async {
     await initialize();
 
     // Validate shard data
@@ -499,7 +521,10 @@ class VaultShareService {
   }
 
   /// Check if we have sufficient recovery shards for a recovery request
-  Future<bool> hasSufficientRecoveryShards(String recoveryRequestId, int threshold) async {
+  Future<bool> hasSufficientRecoveryShards(
+    String recoveryRequestId,
+    int threshold,
+  ) async {
     await initialize();
 
     final shards = _cachedRecoveryShards![recoveryRequestId];
@@ -557,7 +582,9 @@ class VaultShareService {
       try {
         Log.debug('Key holder removed event content: ${event.content}');
         payload = json.decode(event.content) as Map<String, dynamic>;
-        Log.debug('Key holder removed event payload keys: ${payload.keys.toList()}');
+        Log.debug(
+          'Key holder removed event payload keys: ${payload.keys.toList()}',
+        );
       } catch (e) {
         Log.error('Error parsing steward removed event JSON', e);
         throw Exception(
@@ -568,10 +595,14 @@ class VaultShareService {
       // Extract vault ID from payload
       final vaultId = payload['vault_id'] as String?;
       if (vaultId == null || vaultId.isEmpty) {
-        throw ArgumentError('Missing vault_id in steward removed event payload');
+        throw ArgumentError(
+          'Missing vault_id in steward removed event payload',
+        );
       }
 
-      Log.info('Processing steward removal for vault: ${vaultId.substring(0, 8)}...');
+      Log.info(
+        'Processing steward removal for vault: ${vaultId.substring(0, 8)}...',
+      );
 
       // Get the vault
       final vault = await repository.getVault(vaultId);

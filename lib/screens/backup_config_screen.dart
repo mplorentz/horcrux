@@ -651,22 +651,18 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
     try {
       final invitationService = ref.read(invitationServiceProvider);
-      final invitation = await invitationService.generateInvitationLink(
+      final result = await invitationService.generateInvitationLink(
         vaultId: widget.vaultId,
         inviteeName: inviteeName,
         relayUrls: relayUrls,
       );
 
       if (mounted) {
-        // Create invited steward and add to list
-        final invitedSteward = createInvitedSteward(
-          name: inviteeName,
-          inviteCode: invitation.inviteCode,
-        );
-
+        // Use the steward returned from the service (same ID as stored in backup config)
+        // This ensures _mergeStewards() can match by ID when saving
         setState(() {
-          _stewards.add(invitedSteward);
-          _invitationLinksByInviteeName[inviteeName] = invitation;
+          _stewards.add(result.steward);
+          _invitationLinksByInviteeName[inviteeName] = result.invitation;
           // Apply default threshold logic for new plans (only if not manually changed)
           if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
             _threshold = _calculateDefaultThreshold(_stewards.length);
@@ -1065,7 +1061,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       // Generate new invitation link
       final relayUrls = oldInvitation.relayUrls;
-      final newInvitation = await invitationService.generateInvitationLink(
+      final result = await invitationService.generateInvitationLink(
         vaultId: widget.vaultId,
         inviteeName: steward.name!,
         relayUrls: relayUrls,
@@ -1073,7 +1069,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (mounted) {
         setState(() {
-          _invitationLinksByInviteeName[steward.name!] = newInvitation;
+          _invitationLinksByInviteeName[steward.name!] = result.invitation;
           _hasUnsavedChanges = true;
         });
 
@@ -1113,9 +1109,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete Vault'),
             ),
           ],
@@ -1134,9 +1128,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         // Navigate to vault list screen
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const VaultListScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const VaultListScreen()),
             (route) => false,
           );
         }
@@ -1266,9 +1258,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       // If user confirmed, auto-distribute
       if (shouldAutoDistribute) {
         // Reload config to get updated version
-        final updatedConfig = await repository.getBackupConfig(
-          widget.vaultId,
-        );
+        final updatedConfig = await repository.getBackupConfig(widget.vaultId);
         if (updatedConfig != null && updatedConfig.canDistribute) {
           try {
             await backupService.createAndDistributeBackup(

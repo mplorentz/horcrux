@@ -10,10 +10,7 @@ import '../services/logger.dart';
 class AccountCreatedScreen extends ConsumerStatefulWidget {
   final String nsec;
 
-  const AccountCreatedScreen({
-    super.key,
-    required this.nsec,
-  });
+  const AccountCreatedScreen({super.key, required this.nsec});
 
   @override
   ConsumerState<AccountCreatedScreen> createState() => _AccountCreatedScreenState();
@@ -35,9 +32,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     await Clipboard.setData(ClipboardData(text: widget.nsec));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nostr key copied to clipboard'),
-        ),
+        const SnackBar(content: Text('Nostr key copied to clipboard')),
       );
     }
   }
@@ -160,7 +155,9 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                        color: theme.colorScheme.errorContainer.withValues(
+                          alpha: 0.3,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
