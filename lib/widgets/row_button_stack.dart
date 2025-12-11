@@ -32,7 +32,8 @@ class RowButtonStack extends StatelessWidget {
 
     // Get theme colors for text - all buttons use onSurface for outlined style
     final theme = Theme.of(context);
-    final buttonTextColor = theme.colorScheme.onSurface; // Use onSurface for all buttons
+    final buttonTextColor =
+        theme.colorScheme.onSurface; // Use onSurface for all buttons
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -42,9 +43,12 @@ class RowButtonStack extends StatelessWidget {
             onPressed: buttons[i].onPressed,
             icon: buttons[i].icon,
             text: buttons[i].text,
-            backgroundColor: colors[i], // This controls the border color in outlined style
-            foregroundColor: buttonTextColor, // All buttons use onSurface for contrast
-            addBottomSafeArea: i == buttons.length - 1, // Only add safe area to bottom button
+            backgroundColor:
+                colors[i], // This controls the border color in outlined style
+            foregroundColor:
+                buttonTextColor, // All buttons use onSurface for contrast
+            addBottomSafeArea:
+                i == buttons.length - 1, // Only add safe area to bottom button
           ),
       ],
     );

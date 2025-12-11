@@ -36,19 +36,23 @@ void main() {
       );
     });
 
-    const testSecret = 'This is a test secret that we want to protect with Shamir Secret Sharing!';
-    const testCreatorPubkey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+    const testSecret =
+        'This is a test secret that we want to protect with Shamir Secret Sharing!';
+    const testCreatorPubkey =
+        '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
     const testVaultId = 'test-vault-123';
     const testVaultName = 'Test Vault';
     // Note: peers list excludes the creator
     const testPeers = [
       {
         'name': 'Peer 1',
-        'pubkey': 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
+        'pubkey':
+            'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
       },
       {
         'name': 'Peer 2',
-        'pubkey': 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+        'pubkey':
+            'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
       },
     ];
 
@@ -227,21 +231,25 @@ void main() {
         content: 'Different secret',
         threshold: 2,
         totalShards: 3,
-        creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
+        creatorPubkey:
+            'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
         vaultId: 'different-vault',
         vaultName: 'Different Vault',
         peers: [
           {
             'name': 'Peer A',
-            'pubkey': 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
+            'pubkey':
+                'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
           },
           {
             'name': 'Peer B',
-            'pubkey': '1111111111111111111111111111111111111111111111111111111111111111',
+            'pubkey':
+                '1111111111111111111111111111111111111111111111111111111111111111',
           },
           {
             'name': 'Peer C',
-            'pubkey': '2222222222222222222222222222222222222222222222222222222222222222',
+            'pubkey':
+                '2222222222222222222222222222222222222222222222222222222222222222',
           },
         ],
       );
@@ -330,7 +338,8 @@ void main() {
       );
 
       // Create tampered shares with an invalid prime modulus
-      const invalidPrimeMod = 'aW52YWxpZFByaW1lTW9kdWx1cw=='; // "invalidPrimeModulus" in base64
+      const invalidPrimeMod =
+          'aW52YWxpZFByaW1lTW9kdWx1cw=='; // "invalidPrimeModulus" in base64
 
       // Create tampered shares with an invalid prime modulus
       final tamperedShares = validShares.map((share) {

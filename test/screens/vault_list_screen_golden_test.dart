@@ -21,40 +21,36 @@ void main() {
   final Map<String, dynamic> sharedPreferencesStore = {};
 
   setUpAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      sharedPreferencesChannel,
-      (call) async {
-        final args = call.arguments as Map? ?? {};
-        if (call.method == 'getAll') {
-          return Map<String, dynamic>.from(sharedPreferencesStore);
-        } else if (call.method == 'setString') {
-          sharedPreferencesStore[args['key']] = args['value'];
-          return true;
-        } else if (call.method == 'getString') {
-          return sharedPreferencesStore[args['key']];
-        } else if (call.method == 'remove') {
-          sharedPreferencesStore.remove(args['key']);
-          return true;
-        } else if (call.method == 'getStringList') {
-          final value = sharedPreferencesStore[args['key']];
-          return value is List ? value : null;
-        } else if (call.method == 'setStringList') {
-          sharedPreferencesStore[args['key']] = args['value'];
-          return true;
-        } else if (call.method == 'clear') {
-          sharedPreferencesStore.clear();
-          return true;
-        }
-        return null;
-      },
-    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
+          final args = call.arguments as Map? ?? {};
+          if (call.method == 'getAll') {
+            return Map<String, dynamic>.from(sharedPreferencesStore);
+          } else if (call.method == 'setString') {
+            sharedPreferencesStore[args['key']] = args['value'];
+            return true;
+          } else if (call.method == 'getString') {
+            return sharedPreferencesStore[args['key']];
+          } else if (call.method == 'remove') {
+            sharedPreferencesStore.remove(args['key']);
+            return true;
+          } else if (call.method == 'getStringList') {
+            final value = sharedPreferencesStore[args['key']];
+            return value is List ? value : null;
+          } else if (call.method == 'setStringList') {
+            sharedPreferencesStore[args['key']] = args['value'];
+            return true;
+          } else if (call.method == 'clear') {
+            sharedPreferencesStore.clear();
+            return true;
+          }
+          return null;
+        });
   });
 
   tearDownAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      sharedPreferencesChannel,
-      null,
-    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(sharedPreferencesChannel, null);
   });
 
   // Sample test data
@@ -151,12 +147,18 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           // Mock provider to throw an error
-          vaultListProvider.overrideWith((ref) => Stream.error('Failed to load vaults')),
+          vaultListProvider.overrideWith(
+            (ref) => Stream.error('Failed to load vaults'),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
 
-      await pumpGoldenWidget(tester, const VaultListScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
 
       await screenMatchesGolden(tester, 'vault_list_screen_error');
 
@@ -171,7 +173,11 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(tester, const VaultListScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
 
       await screenMatchesGolden(tester, 'vault_list_screen_single_owned');
 
@@ -181,12 +187,18 @@ void main() {
     testGoldens('single steward vault', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultListProvider.overrideWith((ref) => Stream.value([keyHolderVault])),
+          vaultListProvider.overrideWith(
+            (ref) => Stream.value([keyHolderVault]),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
 
-      await pumpGoldenWidget(tester, const VaultListScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
 
       await screenMatchesGolden(tester, 'vault_list_screen_single_key_holder');
 
@@ -196,14 +208,23 @@ void main() {
     testGoldens('single awaiting key vault', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultListProvider.overrideWith((ref) => Stream.value([awaitingKeyVault])),
+          vaultListProvider.overrideWith(
+            (ref) => Stream.value([awaitingKeyVault]),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
 
-      await pumpGoldenWidget(tester, const VaultListScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
 
-      await screenMatchesGolden(tester, 'vault_list_screen_single_awaiting_key');
+      await screenMatchesGolden(
+        tester,
+        'vault_list_screen_single_awaiting_key',
+      );
 
       container.dispose();
     });
@@ -216,7 +237,11 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(tester, const VaultListScreen(), container: container);
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
 
       await screenMatchesGolden(tester, 'vault_list_screen_multiple');
 
@@ -239,8 +264,10 @@ void main() {
 
       await tester.pumpDeviceBuilder(
         builder,
-        wrapper: (child) =>
-            goldenMaterialAppWrapperWithProviders(child: child, container: container),
+        wrapper: (child) => goldenMaterialAppWrapperWithProviders(
+          child: child,
+          container: container,
+        ),
       );
 
       await screenMatchesGolden(tester, 'vault_list_screen_multiple_devices');

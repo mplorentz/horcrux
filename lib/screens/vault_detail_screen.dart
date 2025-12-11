@@ -55,11 +55,7 @@ class VaultDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildVaultDetail(
-    BuildContext context,
-    WidgetRef ref,
-    Vault vault,
-  ) {
+  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, Vault vault) {
     return Scaffold(
       appBar: AppBar(
         title: Text(vault.name),

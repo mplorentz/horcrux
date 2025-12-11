@@ -33,7 +33,8 @@ void main() {
       creatorPubkey: testPubkey,
       vaultId: vaultId,
       vaultName: vaultName,
-      peers: peers ??
+      peers:
+          peers ??
           [
             {'name': 'Peer 1', 'pubkey': otherPubkey},
             {'name': 'Peer 2', 'pubkey': thirdPubkey},
@@ -64,9 +65,7 @@ void main() {
     testGoldens('loading state', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(null)),
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -255,10 +254,7 @@ void main() {
         waitForSettle: false,
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_metadata_section_user_loading',
-      );
+      await screenMatchesGolden(tester, 'vault_metadata_section_user_loading');
 
       container.dispose();
     });

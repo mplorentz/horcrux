@@ -55,13 +55,16 @@ class VaultStatusBanner extends ConsumerWidget {
       data: (currentPubkey) {
         final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
         final isSteward =
-            currentPubkey != null && !vault.isOwned(currentPubkey) && vault.shards.isNotEmpty;
+            currentPubkey != null &&
+            !vault.isOwned(currentPubkey) &&
+            vault.shards.isNotEmpty;
 
         // Handle recovery status - for owners: only when active, for stewards: only if they initiated it
         final hasNonArchivedRecovery = vault.recoveryRequests.any(
           (request) => request.status != RecoveryRequestStatus.archived,
         );
-        final stewardInitiatedRecovery = isSteward &&
+        final stewardInitiatedRecovery =
+            isSteward &&
             hasNonArchivedRecovery &&
             vault.recoveryRequests.any(
               (request) =>
@@ -121,7 +124,8 @@ class VaultStatusBanner extends ConsumerWidget {
         context,
         const _StatusData(
           headline: 'Recovery not set up',
-          subtext: 'Step 1 of 3: Choose stewards and rules in your Recovery Plan.',
+          subtext:
+              'Step 1 of 3: Choose stewards and rules in your Recovery Plan.',
           icon: Icons.info_outline,
           accentColor: Color(0xFF676F62), // Secondary text color
           variant: _StatusVariant.noPlan,
@@ -134,12 +138,14 @@ class VaultStatusBanner extends ConsumerWidget {
     // Plan exists but not ready
     if (!backupConfig.isReady) {
       // Plan is invalid or inactive
-      if (!backupConfig.isValid || backupConfig.status == BackupStatus.inactive) {
+      if (!backupConfig.isValid ||
+          backupConfig.status == BackupStatus.inactive) {
         return _buildBanner(
           context,
           const _StatusData(
             headline: 'Recovery plan needs attention',
-            subtext: 'Fix your stewards, relays, or rules in the Recovery Plan.',
+            subtext:
+                'Fix your stewards, relays, or rules in the Recovery Plan.',
             icon: Icons.warning_amber,
             accentColor: Color(0xFFBA1A1A), // Error color
             variant: _StatusVariant.planNeedsAttention,
@@ -150,9 +156,10 @@ class VaultStatusBanner extends ConsumerWidget {
       }
 
       // Waiting for stewards to join
-      if ((backupConfig.pendingInvitationsCount > 0 || !backupConfig.canDistribute) &&
+      final pendingCount = backupConfig.pendingInvitationsCount;
+      final canDistribute = backupConfig.canDistribute;
+      if ((pendingCount > 0 || !canDistribute) &&
           backupConfig.lastRedistribution == null) {
-        final pendingCount = backupConfig.pendingInvitationsCount;
         return _buildBanner(
           context,
           _StatusData(
@@ -177,7 +184,8 @@ class VaultStatusBanner extends ConsumerWidget {
           context,
           const _StatusData(
             headline: 'Keys not distributed',
-            subtext: 'Step 2 of 3: Generate and distribute keys to stewards from this screen.',
+            subtext:
+                'Step 2 of 3: Generate and distribute keys to stewards from this screen.',
             icon: Icons.send,
             accentColor: Color(0xFF7A4A2F), // Umber
             variant: _StatusVariant.keysNotDistributed,
@@ -190,7 +198,8 @@ class VaultStatusBanner extends ConsumerWidget {
       // Almost ready - waiting for confirmations
       if (backupConfig.status == BackupStatus.active &&
           backupConfig.acknowledgedStewardsCount < backupConfig.threshold) {
-        final needed = backupConfig.threshold - backupConfig.acknowledgedStewardsCount;
+        final needed =
+            backupConfig.threshold - backupConfig.acknowledgedStewardsCount;
         return _buildBanner(
           context,
           _StatusData(
@@ -276,7 +285,8 @@ class VaultStatusBanner extends ConsumerWidget {
     }
 
     // Key holder with active backup
-    if (vault.state == VaultState.steward && backupConfig?.status == BackupStatus.active) {
+    if (vault.state == VaultState.steward &&
+        backupConfig?.status == BackupStatus.active) {
       return _buildBanner(
         context,
         const _StatusData(
@@ -302,7 +312,8 @@ class VaultStatusBanner extends ConsumerWidget {
         context,
         const _StatusData(
           headline: 'Your key may not be usable yet',
-          subtext: 'The owner must finish or fix their recovery plan before recovery can proceed.',
+          subtext:
+              'The owner must finish or fix their recovery plan before recovery can proceed.',
           icon: Icons.warning_amber,
           accentColor: Color(0xFFBA1A1A), // Error color
           variant: _StatusVariant.stewardBlocked,

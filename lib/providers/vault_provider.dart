@@ -117,7 +117,8 @@ class VaultRepository {
   bool _isInitialized = false;
 
   // Stream controller for notifying listeners when vaults change
-  final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
+  final StreamController<List<Vault>> _vaultsController =
+      StreamController<List<Vault>>.broadcast();
 
   // Regular constructor - Riverpod manages the singleton behavior
   VaultRepository(this._loginService);
@@ -157,7 +158,9 @@ class VaultRepository {
       final List<dynamic> jsonList = json.decode(decryptedJson);
       Log.info('Decrypted ${jsonList.length} vaults');
 
-      _cachedVaults = jsonList.map((json) => Vault.fromJson(json as Map<String, dynamic>)).toList();
+      _cachedVaults = jsonList
+          .map((json) => Vault.fromJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       Log.error('Error decrypting vaults', e);
       _cachedVaults = [];
@@ -179,7 +182,9 @@ class VaultRepository {
         Log.debug('  - Name: ${vault.name}');
         Log.debug('  - Owner: ${vault.ownerPubkey}');
         Log.debug('  - Shards count: ${vault.shards.length}');
-        Log.debug('  - Recovery requests count: ${vault.recoveryRequests.length}');
+        Log.debug(
+          '  - Recovery requests count: ${vault.recoveryRequests.length}',
+        );
 
         try {
           final vaultJson = vault.toJson();
@@ -191,8 +196,12 @@ class VaultRepository {
           // Try to identify which recovery request is causing the issue
           for (var j = 0; j < vault.recoveryRequests.length; j++) {
             final request = vault.recoveryRequests[j];
-            Log.debug('    - Recovery request $j: id=${request.id}, status=${request.status.name}');
-            Log.debug('      stewardResponses count: ${request.stewardResponses.length}');
+            Log.debug(
+              '    - Recovery request $j: id=${request.id}, status=${request.status.name}',
+            );
+            Log.debug(
+              '      stewardResponses count: ${request.stewardResponses.length}',
+            );
 
             // Check each response
             for (var entry in request.stewardResponses.entries) {
@@ -206,19 +215,33 @@ class VaultRepository {
                 final shard = response.shardData!;
                 Log.debug('          ShardData details:');
                 Log.debug('            shard type: ${shard.shard.runtimeType}');
-                Log.debug('            threshold type: ${shard.threshold.runtimeType}');
-                Log.debug('            shardIndex type: ${shard.shardIndex.runtimeType}');
-                Log.debug('            totalShards type: ${shard.totalShards.runtimeType}');
-                Log.debug('            primeMod type: ${shard.primeMod.runtimeType}');
-                Log.debug('            creatorPubkey type: ${shard.creatorPubkey.runtimeType}');
-                Log.debug('            createdAt type: ${shard.createdAt.runtimeType}');
+                Log.debug(
+                  '            threshold type: ${shard.threshold.runtimeType}',
+                );
+                Log.debug(
+                  '            shardIndex type: ${shard.shardIndex.runtimeType}',
+                );
+                Log.debug(
+                  '            totalShards type: ${shard.totalShards.runtimeType}',
+                );
+                Log.debug(
+                  '            primeMod type: ${shard.primeMod.runtimeType}',
+                );
+                Log.debug(
+                  '            creatorPubkey type: ${shard.creatorPubkey.runtimeType}',
+                );
+                Log.debug(
+                  '            createdAt type: ${shard.createdAt.runtimeType}',
+                );
                 Log.debug(
                   '            vaultId: ${shard.vaultId} (type: ${shard.vaultId?.runtimeType})',
                 );
                 Log.debug(
                   '            vaultName: ${shard.vaultName} (type: ${shard.vaultName?.runtimeType})',
                 );
-                Log.debug('            peers: ${shard.peers} (type: ${shard.peers?.runtimeType})');
+                Log.debug(
+                  '            peers: ${shard.peers} (type: ${shard.peers?.runtimeType})',
+                );
                 Log.debug(
                   '            recipientPubkey: ${shard.recipientPubkey} (type: ${shard.recipientPubkey?.runtimeType})',
                 );
@@ -242,7 +265,9 @@ class VaultRepository {
       // Save to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_vaultsKey, encryptedData);
-      Log.info('Saved ${jsonList.length} encrypted vaults to SharedPreferences');
+      Log.info(
+        'Saved ${jsonList.length} encrypted vaults to SharedPreferences',
+      );
 
       // Notify listeners that vaults have changed
       final vaultsList = List<Vault>.unmodifiable(_cachedVaults!);
@@ -298,7 +323,10 @@ class VaultRepository {
     final index = _cachedVaults!.indexWhere((lb) => lb.id == id);
     if (index != -1) {
       final existingVault = _cachedVaults![index];
-      _cachedVaults![index] = existingVault.copyWith(name: name, content: content);
+      _cachedVaults![index] = existingVault.copyWith(
+        name: name,
+        content: content,
+      );
       await _saveVaults();
     }
   }
@@ -377,7 +405,9 @@ class VaultRepository {
     }
 
     // Find and update the steward
-    final stewardIndex = backupConfig.stewards.indexWhere((h) => h.pubkey == pubkey);
+    final stewardIndex = backupConfig.stewards.indexWhere(
+      (h) => h.pubkey == pubkey,
+    );
     if (stewardIndex == -1) {
       throw ArgumentError('Steward $pubkey not found in vault $vaultId');
     }
@@ -391,7 +421,10 @@ class VaultRepository {
       acknowledgedDistributionVersion: acknowledgedDistributionVersion,
     );
 
-    final updatedConfig = copyBackupConfig(backupConfig, stewards: updatedStewards);
+    final updatedConfig = copyBackupConfig(
+      backupConfig,
+      stewards: updatedStewards,
+    );
     await updateBackupConfig(vaultId, updatedConfig);
 
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
@@ -413,7 +446,9 @@ class VaultRepository {
 
     _cachedVaults![index] = vault.copyWith(shards: updatedShards);
     await _saveVaults();
-    Log.info('Added shard to vault $vaultId (total shards: ${updatedShards.length})');
+    Log.info(
+      'Added shard to vault $vaultId (total shards: ${updatedShards.length})',
+    );
   }
 
   /// Get all shards for a vault
@@ -457,7 +492,10 @@ class VaultRepository {
   // ========== Recovery Request Management Methods ==========
 
   /// Add a recovery request to a vault
-  Future<void> addRecoveryRequestToVault(String vaultId, RecoveryRequest request) async {
+  Future<void> addRecoveryRequestToVault(
+    String vaultId,
+    RecoveryRequest request,
+  ) async {
     await initialize();
 
     final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
@@ -466,7 +504,8 @@ class VaultRepository {
     }
 
     final vault = _cachedVaults![index];
-    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests)..add(request);
+    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests)
+      ..add(request);
 
     _cachedVaults![index] = vault.copyWith(recoveryRequests: updatedRequests);
     await _saveVaults();
@@ -487,7 +526,9 @@ class VaultRepository {
     }
 
     final vault = _cachedVaults![index];
-    final requestIndex = vault.recoveryRequests.indexWhere((r) => r.id == requestId);
+    final requestIndex = vault.recoveryRequests.indexWhere(
+      (r) => r.id == requestId,
+    );
 
     if (requestIndex == -1) {
       throw ArgumentError('Recovery request not found: $requestId');
@@ -502,7 +543,9 @@ class VaultRepository {
   }
 
   /// Get all recovery requests for a vault
-  Future<List<RecoveryRequest>> getRecoveryRequestsForVault(String vaultId) async {
+  Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
+    String vaultId,
+  ) async {
     await initialize();
 
     final vault = _cachedVaults!.firstWhere(

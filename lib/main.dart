@@ -104,13 +104,15 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> {
       home: _isInitializing
           ? const _InitializingScreen()
           : _initError != null
-              ? _ErrorScreen(error: _initError!)
-              : isLoggedInAsync.when(
-                  data: (isLoggedIn) =>
-                      isLoggedIn ? const VaultListScreen() : const OnboardingScreen(),
-                  loading: () => const _InitializingScreen(),
-                  error: (_, __) => const VaultListScreen(), // Fallback to main screen on error
-                ),
+          ? _ErrorScreen(error: _initError!)
+          : isLoggedInAsync.when(
+              data: (isLoggedIn) => isLoggedIn
+                  ? const VaultListScreen()
+                  : const OnboardingScreen(),
+              loading: () => const _InitializingScreen(),
+              error: (_, __) =>
+                  const VaultListScreen(), // Fallback to main screen on error
+            ),
     );
   }
 }

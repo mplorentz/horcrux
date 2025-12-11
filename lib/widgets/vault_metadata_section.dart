@@ -39,8 +39,8 @@ class VaultMetadataSection extends ConsumerWidget {
                   Text(
                     'Vault Information',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).primaryColor,
-                        ),
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
                 ],
               ),
@@ -76,7 +76,8 @@ class VaultMetadataSection extends ConsumerWidget {
               child: Text('Error loading user info: $error'),
             ),
           ),
-          data: (currentPubkey) => _buildMetadataContent(context, vault, currentPubkey),
+          data: (currentPubkey) =>
+              _buildMetadataContent(context, vault, currentPubkey),
         );
       },
     );
@@ -124,8 +125,8 @@ class VaultMetadataSection extends ConsumerWidget {
                     child: Text(
                       'You have a key to this vault',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],

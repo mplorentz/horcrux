@@ -32,7 +32,9 @@ void main() {
         vaultId: id,
         threshold: 2,
         totalKeys: stewardPubkeys.length,
-        stewards: stewardPubkeys.map((pubkey) => createSteward(pubkey: pubkey)).toList(),
+        stewards: stewardPubkeys
+            .map((pubkey) => createSteward(pubkey: pubkey))
+            .toList(),
         relays: ['wss://relay.example.com'],
       ),
     );

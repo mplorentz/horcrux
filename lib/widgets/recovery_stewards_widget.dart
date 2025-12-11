@@ -93,15 +93,14 @@ class RecoveryStewardsWidget extends ConsumerWidget {
   }
 
   /// Extract all stewards from vault, merge with responses
-  List<_StewardInfo> _extractStewards(
-    Vault? vault,
-    RecoveryRequest request,
-  ) {
+  List<_StewardInfo> _extractStewards(Vault? vault, RecoveryRequest request) {
     if (vault == null) return [];
 
     // Get stewards with names from backupConfig if available
     if (vault.backupConfig?.stewards.isNotEmpty == true) {
-      return vault.backupConfig!.stewards.where((kh) => kh.pubkey != null).map((kh) {
+      return vault.backupConfig!.stewards.where((kh) => kh.pubkey != null).map((
+        kh,
+      ) {
         final response = request.stewardResponses[kh.pubkey];
         return _StewardInfo(
           pubkey: kh.pubkey!,

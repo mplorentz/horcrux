@@ -53,7 +53,9 @@ class LoginService {
       await _storage.write(key: _nostrPrivateKeyKey, value: privateKey);
       _cachedKeyPair = keyPair;
 
-      Log.info('Successfully imported Nostr key with public key: $publicKeyBech32');
+      Log.info(
+        'Successfully imported Nostr key with public key: $publicKeyBech32',
+      );
       return keyPair;
     } catch (e) {
       Log.error('Error importing nsec key', e);
@@ -73,13 +75,20 @@ class LoginService {
       final privateKeyBech32 = Helpers.encodeBech32(hexPrivateKey, 'nsec');
       final publicKeyBech32 = Helpers.encodeBech32(publicKey, 'npub');
 
-      final keyPair = KeyPair(hexPrivateKey, publicKey, privateKeyBech32, publicKeyBech32);
+      final keyPair = KeyPair(
+        hexPrivateKey,
+        publicKey,
+        privateKeyBech32,
+        publicKeyBech32,
+      );
 
       // Store the private key
       await _storage.write(key: _nostrPrivateKeyKey, value: hexPrivateKey);
       _cachedKeyPair = keyPair;
 
-      Log.info('Successfully imported Nostr key with public key: $publicKeyBech32');
+      Log.info(
+        'Successfully imported Nostr key with public key: $publicKeyBech32',
+      );
       return keyPair;
     } catch (e) {
       Log.error('Error importing hex private key', e);

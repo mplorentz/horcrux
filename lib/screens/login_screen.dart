@@ -95,17 +95,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ImportSuccessScreen(
-              nsec: privateKey,
-            ),
+            builder: (context) => ImportSuccessScreen(nsec: privateKey),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorText =
-              e.toString().replaceAll('Exception: ', '').replaceAll('UnimplementedError: ', '');
+          _errorText = e
+              .toString()
+              .replaceAll('Exception: ', '')
+              .replaceAll('UnimplementedError: ', '');
           _isLoading = false;
         });
       }
@@ -163,7 +163,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       'Your key will be stored securely on this device',
                       style: textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                   ],

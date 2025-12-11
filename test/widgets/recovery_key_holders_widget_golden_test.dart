@@ -42,7 +42,8 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: status == RecoveryResponseStatus.approved,
-      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt:
+          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
     );
   }
 
@@ -61,7 +62,9 @@ void main() {
         vaultId: id,
         threshold: 2,
         totalKeys: stewardPubkeys.length,
-        stewards: stewardPubkeys.map((pubkey) => createSteward(pubkey: pubkey)).toList(),
+        stewards: stewardPubkeys
+            .map((pubkey) => createSteward(pubkey: pubkey))
+            .toList(),
         relays: ['wss://relay.example.com'],
       ),
     );
@@ -149,10 +152,7 @@ void main() {
         useScaffold: true,
       );
 
-      await screenMatchesGolden(
-        tester,
-        'recovery_stewards_widget_all_pending',
-      );
+      await screenMatchesGolden(tester, 'recovery_stewards_widget_all_pending');
 
       container.dispose();
     });

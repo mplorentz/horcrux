@@ -48,11 +48,13 @@ class InvitationService {
   final RelayScanService _relayScanService;
 
   // Stream controller for notifying listeners when invitations change
-  final StreamController<void> _invitationsChangedController = StreamController<void>.broadcast();
+  final StreamController<void> _invitationsChangedController =
+      StreamController<void>.broadcast();
 
   // SharedPreferences keys
   static String _invitationKey(String inviteCode) => 'invitation_$inviteCode';
-  static String _vaultInvitationsKey(String vaultId) => 'vault_invitations_$vaultId';
+  static String _vaultInvitationsKey(String vaultId) =>
+      'vault_invitations_$vaultId';
 
   InvitationService(
     this.repository,
@@ -64,7 +66,8 @@ class InvitationService {
 
   /// Stream that emits whenever invitations change
   /// UI providers listen to this to automatically update
-  Stream<void> get invitationsChangedStream => _invitationsChangedController.stream;
+  Stream<void> get invitationsChangedStream =>
+      _invitationsChangedController.stream;
 
   /// Notify listeners that invitations have changed
   void _notifyInvitationsChanged() {
@@ -82,7 +85,8 @@ class InvitationService {
   /// Generates cryptographically secure invite code.
   /// Creates InvitationLink and stores in SharedPreferences.
   /// Returns invitation link with URL.
-  Future<({InvitationLink invitation, Steward steward})> generateInvitationLink({
+  Future<({InvitationLink invitation, Steward steward})>
+  generateInvitationLink({
     required String vaultId,
     required String inviteeName,
     required List<String> relayUrls,
@@ -93,7 +97,9 @@ class InvitationService {
     }
 
     if (!areValidRelayUrls(relayUrls)) {
-      throw ArgumentError('Invalid relay URLs: must be 1-3 valid WebSocket URLs');
+      throw ArgumentError(
+        'Invalid relay URLs: must be 1-3 valid WebSocket URLs',
+      );
     }
 
     // Get current user's pubkey
@@ -145,7 +151,9 @@ class InvitationService {
     try {
       await _relayScanService.syncRelaysFromUrls(relayUrls);
       await _relayScanService.ensureScanningStarted();
-      Log.info('Synced ${relayUrls.length} relay(s) from invitation to RelayScanService');
+      Log.info(
+        'Synced ${relayUrls.length} relay(s) from invitation to RelayScanService',
+      );
     } catch (e) {
       Log.error('Error syncing relays from invitation to RelayScanService', e);
       // Don't fail invitation generation if relay sync fails
@@ -161,19 +169,26 @@ class InvitationService {
         inviteeName: inviteeName.trim(),
         relayUrls: relayUrls,
       );
-      Log.info('Added invited steward placeholder for $inviteeName to backup config');
+      Log.info(
+        'Added invited steward placeholder for $inviteeName to backup config',
+      );
     } catch (e) {
       Log.error('Error adding invited steward to backup config', e);
       // Don't fail invitation generation if this fails
     }
 
     // If we couldn't add to backup config, create a fallback steward for UI consistency
-    createdSteward ??= createInvitedSteward(name: inviteeName.trim(), inviteCode: inviteCode);
+    createdSteward ??= createInvitedSteward(
+      name: inviteeName.trim(),
+      inviteCode: inviteCode,
+    );
 
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info('Generated invitation link for vault $vaultId, invitee: $inviteeName');
+    Log.info(
+      'Generated invitation link for vault $vaultId, invitee: $inviteeName',
+    );
 
     return (invitation: pendingInvitation, steward: createdSteward);
   }
@@ -197,8 +212,11 @@ class InvitationService {
     }
 
     // Filter to pending status and sort by creation date
-    final pending = invitations.where((inv) => inv.status == InvitationStatus.pending).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final pending =
+        invitations
+            .where((inv) => inv.status == InvitationStatus.pending)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     return pending;
   }
@@ -264,7 +282,9 @@ class InvitationService {
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info('Created received invitation record for inviteCode=$inviteCode, vaultId=$vaultId');
+    Log.info(
+      'Created received invitation record for inviteCode=$inviteCode, vaultId=$vaultId',
+    );
   }
 
   /// Processes invitation redemption when invitee accepts
@@ -288,7 +308,9 @@ class InvitationService {
 
     // Validate invitee pubkey format
     if (!isValidHexPubkey(inviteePubkey)) {
-      throw ArgumentError('Invalid invitee pubkey format: must be 64 hex characters');
+      throw ArgumentError(
+        'Invalid invitee pubkey format: must be 64 hex characters',
+      );
     }
 
     // Load invitation
@@ -303,11 +325,16 @@ class InvitationService {
     }
 
     if (invitation.status == InvitationStatus.invalidated) {
-      throw InvitationInvalidatedException(inviteCode, 'Invitation has been invalidated');
+      throw InvitationInvalidatedException(
+        inviteCode,
+        'Invitation has been invalidated',
+      );
     }
 
     if (!invitation.status.canRedeem) {
-      throw ArgumentError('Invitation cannot be redeemed in current status: ${invitation.status}');
+      throw ArgumentError(
+        'Invitation cannot be redeemed in current status: ${invitation.status}',
+      );
     }
 
     // Check if user is trying to redeem their own invitation (vault owner)
@@ -324,7 +351,10 @@ class InvitationService {
     if (vault != null) {
       final backupConfig = vault.backupConfig;
       final isAlreadyKeyHolder =
-          backupConfig?.stewards.any((holder) => holder.pubkey == inviteePubkey) ?? false;
+          backupConfig?.stewards.any(
+            (holder) => holder.pubkey == inviteePubkey,
+          ) ??
+          false;
 
       if (isAlreadyKeyHolder) {
         throw ArgumentError(
@@ -354,7 +384,9 @@ class InvitationService {
       );
 
       await repository.addVault(vaultStub);
-      Log.info('Created vault stub for invitee: ${invitation.vaultId} (${invitation.vaultName})');
+      Log.info(
+        'Created vault stub for invitee: ${invitation.vaultId} (${invitation.vaultName})',
+      );
     }
 
     // Update invitation status to redeemed
@@ -387,7 +419,9 @@ class InvitationService {
       Log.error('Error sending RSVP event for invitation $inviteCode', e);
       // Re-throw so the UI can handle it appropriately
       // The invitation is already marked as redeemed, but RSVP failed
-      throw Exception('Invitation was accepted locally, but failed to notify the owner: $e');
+      throw Exception(
+        'Invitation was accepted locally, but failed to notify the owner: $e',
+      );
     }
 
     // NOW sync relays from invitation and start scanning so invitee can receive shards
@@ -399,7 +433,10 @@ class InvitationService {
         'Synced ${invitation.relayUrls.length} relay(s) from invitation to RelayScanService (invitee side)',
       );
     } catch (e) {
-      Log.error('Error syncing relays from invitation to RelayScanService (invitee side)', e);
+      Log.error(
+        'Error syncing relays from invitation to RelayScanService (invitee side)',
+        e,
+      );
       // Don't fail invitation redemption if relay sync fails
     }
 
@@ -415,7 +452,10 @@ class InvitationService {
   /// Updates invitation status to denied.
   /// Sends denial event via InvitationSendingService.
   /// Invalidates invitation code.
-  Future<void> denyInvitation({required String inviteCode, String? reason}) async {
+  Future<void> denyInvitation({
+    required String inviteCode,
+    String? reason,
+  }) async {
     // Validate invite code format first
     if (!isValidInviteCodeFormat(inviteCode)) {
       throw ArgumentError(
@@ -435,11 +475,16 @@ class InvitationService {
     }
 
     if (invitation.status == InvitationStatus.invalidated) {
-      throw InvitationInvalidatedException(inviteCode, 'Invitation has been invalidated');
+      throw InvitationInvalidatedException(
+        inviteCode,
+        'Invitation has been invalidated',
+      );
     }
 
     if (!invitation.status.canRedeem) {
-      throw ArgumentError('Invitation cannot be denied in current status: ${invitation.status}');
+      throw ArgumentError(
+        'Invitation cannot be denied in current status: ${invitation.status}',
+      );
     }
 
     // Update invitation status to denied
@@ -462,7 +507,9 @@ class InvitationService {
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info('Denied invitation $inviteCode${reason != null ? ", reason: $reason" : ""}');
+    Log.info(
+      'Denied invitation $inviteCode${reason != null ? ", reason: $reason" : ""}',
+    );
   }
 
   /// Invalidates an invitation (e.g., when invitee removed from backup config)
@@ -470,7 +517,10 @@ class InvitationService {
   /// Updates invitation status to invalidated.
   /// Sends invalid event via InvitationSendingService if invitee already accepted.
   /// Removes invitation from tracking.
-  Future<void> invalidateInvitation({required String inviteCode, required String reason}) async {
+  Future<void> invalidateInvitation({
+    required String inviteCode,
+    required String reason,
+  }) async {
     // Load invitation
     final invitation = await _loadInvitation(inviteCode);
     if (invitation == null) {
@@ -478,11 +528,14 @@ class InvitationService {
     }
 
     // Update invitation status to invalidated
-    final invalidatedInvitation = invitation.updateStatus(InvitationStatus.invalidated);
+    final invalidatedInvitation = invitation.updateStatus(
+      InvitationStatus.invalidated,
+    );
     await _saveInvitation(invalidatedInvitation);
 
     // If invitation was already redeemed, send invalid event to notify invitee
-    if (invitation.status == InvitationStatus.redeemed && invitation.redeemedBy != null) {
+    if (invitation.status == InvitationStatus.redeemed &&
+        invitation.redeemedBy != null) {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
@@ -549,7 +602,9 @@ class InvitationService {
     }
 
     if (inviteePubkey != event.pubKey) {
-      throw ArgumentError('Invitee pubkey mismatch: event pubkey != payload pubkey');
+      throw ArgumentError(
+        'Invitee pubkey mismatch: event pubkey != payload pubkey',
+      );
     }
 
     // Load invitation
@@ -589,16 +644,30 @@ class InvitationService {
         if (stewardIndex != -1) {
           final steward = backupConfig.stewards[stewardIndex];
           if (steward.status == StewardStatus.invited) {
-            // Update status to awaitingKey
+            // Check if steward already has acknowledgment data (should be holdingKey)
+            final hasAcknowledgment =
+                steward.acknowledgedAt != null ||
+                steward.acknowledgmentEventId != null;
+            final newStatus = hasAcknowledgment
+                ? StewardStatus.holdingKey
+                : StewardStatus.awaitingKey;
             final updatedStewards = List<Steward>.from(backupConfig.stewards);
-            updatedStewards[stewardIndex] = copySteward(steward, status: StewardStatus.awaitingKey);
+            updatedStewards[stewardIndex] = copySteward(
+              steward,
+              status: newStatus,
+            );
             final updatedConfig = copyBackupConfig(
               backupConfig,
               stewards: updatedStewards,
               lastUpdated: DateTime.now(),
             );
-            await repository.updateBackupConfig(invitation.vaultId, updatedConfig);
-            Log.info('Updated steward $inviteePubkey status from invited to awaitingKey');
+            await repository.updateBackupConfig(
+              invitation.vaultId,
+              updatedConfig,
+            );
+            Log.info(
+              'Updated steward $inviteePubkey status from invited to ${newStatus.toString()}',
+            );
           }
         }
       }
@@ -610,7 +679,9 @@ class InvitationService {
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info('Processed RSVP event for invitation $inviteCode from invitee $inviteePubkey');
+    Log.info(
+      'Processed RSVP event for invitation $inviteCode from invitee $inviteePubkey',
+    );
   }
 
   /// Processes denial event received from invitee
@@ -747,13 +818,16 @@ class InvitationService {
       final newSteward = createSteward(pubkey: pubkey, name: name);
       backupConfig = createBackupConfig(
         vaultId: vaultId,
-        threshold: 1, // Start with 1-of-1, will be updated when more stewards are added
+        threshold:
+            1, // Start with 1-of-1, will be updated when more stewards are added
         totalKeys: 1, // Will be updated when more stewards are added
         stewards: [newSteward],
         relays: relayUrls, // Use relay URLs from invitation
       );
       await repository.updateBackupConfig(vaultId, backupConfig);
-      Log.info('Created new backup config for vault $vaultId with steward $pubkey');
+      Log.info(
+        'Created new backup config for vault $vaultId with steward $pubkey',
+      );
 
       // Sync relays from backup config to RelayScanService
       await _syncRelaysFromBackupConfig(backupConfig);
@@ -762,7 +836,9 @@ class InvitationService {
       // This must be checked BEFORE checking for existing pubkey, otherwise we'll miss
       // updating invited stewards when RSVP comes in
       if (inviteCode != null) {
-        Log.debug('Looking for invited steward with invite code: "$inviteCode"');
+        Log.debug(
+          'Looking for invited steward with invite code: "$inviteCode"',
+        );
 
         final invitedStewardIndex = backupConfig.stewards.indexWhere(
           (steward) =>
@@ -772,12 +848,20 @@ class InvitationService {
         );
 
         if (invitedStewardIndex != -1) {
-          // Update the invited steward with pubkey and change status to awaitingKey
+          // Update the invited steward with pubkey
+          final invitedSteward = backupConfig.stewards[invitedStewardIndex];
+          // Check if steward already has acknowledgment data (should be holdingKey)
+          final hasAcknowledgment =
+              invitedSteward.acknowledgedAt != null ||
+              invitedSteward.acknowledgmentEventId != null;
+          final newStatus = hasAcknowledgment
+              ? StewardStatus.holdingKey
+              : StewardStatus.awaitingKey;
           final updatedStewards = List<Steward>.from(backupConfig.stewards);
           updatedStewards[invitedStewardIndex] = copySteward(
             updatedStewards[invitedStewardIndex],
             pubkey: pubkey,
-            status: StewardStatus.awaitingKey,
+            status: newStatus,
             // Keep inviteCode for reference, but it's no longer needed after acceptance
           );
 
@@ -852,7 +936,10 @@ class InvitationService {
         'Synced ${backupConfig.relays.length} relay(s) from backup config to RelayScanService',
       );
     } catch (e) {
-      Log.error('Error syncing relays from backup config to RelayScanService', e);
+      Log.error(
+        'Error syncing relays from backup config to RelayScanService',
+        e,
+      );
       // Don't fail the operation if relay sync fails
     }
   }
@@ -873,7 +960,10 @@ class InvitationService {
     var backupConfig = await repository.getBackupConfig(vaultId);
 
     // Create the invited steward
-    final invitedSteward = createInvitedSteward(name: inviteeName, inviteCode: inviteCode);
+    final invitedSteward = createInvitedSteward(
+      name: inviteeName,
+      inviteCode: inviteCode,
+    );
 
     if (backupConfig == null) {
       // Create new backup config with just this invited steward
@@ -894,7 +984,9 @@ class InvitationService {
           .toList();
 
       if (existingWithCode.isNotEmpty) {
-        Log.info('Invited steward with invite code $inviteCode already exists, skipping');
+        Log.info(
+          'Invited steward with invite code $inviteCode already exists, skipping',
+        );
         return existingWithCode.first;
       }
 
@@ -908,7 +1000,9 @@ class InvitationService {
         lastUpdated: DateTime.now(),
       );
       await repository.updateBackupConfig(vaultId, updatedConfig);
-      Log.info('Added invited steward for $inviteeName to existing backup config');
+      Log.info(
+        'Added invited steward for $inviteeName to existing backup config',
+      );
 
       // Sync relays from updated backup config
       await _syncRelaysFromBackupConfig(updatedConfig);

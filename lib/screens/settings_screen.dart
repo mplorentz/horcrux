@@ -32,10 +32,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: theme.colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.person,
-                color: theme.colorScheme.onSurface,
-              ),
+              child: Icon(Icons.person, color: theme.colorScheme.onSurface),
             ),
             title: const Text('Account Management'),
             subtitle: const Text('View your Nostr ID and manage your account'),
@@ -57,10 +54,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: theme.colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.wifi,
-                color: theme.colorScheme.onSurface,
-              ),
+              child: Icon(Icons.wifi, color: theme.colorScheme.onSurface),
             ),
             title: const Text('Relay Management'),
             subtitle: const Text('Configure and manage Nostr relays'),
@@ -68,7 +62,9 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const RelayManagementScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const RelayManagementScreen(),
+                ),
               );
             },
           ),
