@@ -497,7 +497,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Your shard will be preserved, allowing you to initiate recovery later to restore the content.',
+              'Your backup configuration will be preserved, allowing you to initiate recovery later to restore the content.',
             ),
             const SizedBox(height: 12),
             Container(
@@ -544,7 +544,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Local copy deleted. You can recover it later using your shards.'),
+              content: Text('Local copy deleted. You can recover it later using your stewards.'),
               backgroundColor: Colors.green,
             ),
           );

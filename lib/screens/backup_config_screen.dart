@@ -334,7 +334,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                                   ?.copyWith(fontWeight: FontWeight.w500),
                                             ),
                                             Text(
-                                              'Keep one shard for yourself',
+                                              'Keep one key for yourself',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall

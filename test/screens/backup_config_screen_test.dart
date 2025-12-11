@@ -89,7 +89,7 @@ void main() {
 
       // Verify the self-shard toggle is displayed
       expect(find.text('Include yourself as a steward'), findsOneWidget);
-      expect(find.text('Keep one shard for yourself'), findsOneWidget);
+      expect(find.text('Keep one key for yourself'), findsOneWidget);
       expect(find.byType(Switch), findsOneWidget);
 
       container.dispose();
