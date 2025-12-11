@@ -4,22 +4,26 @@ import 'package:horcrux/utils/validators.dart';
 void main() {
   group('isValidHexPubkey', () {
     test('validates correct 64-character hex pubkey (lowercase)', () {
-      const pubkey = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       expect(isValidHexPubkey(pubkey), isTrue);
     });
 
     test('validates correct 64-character hex pubkey (uppercase)', () {
-      const pubkey = 'AB1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCD'; // 64 chars
+      const pubkey =
+          'AB1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCD'; // 64 chars
       expect(isValidHexPubkey(pubkey), isTrue);
     });
 
     test('validates correct 64-character hex pubkey (mixed case)', () {
-      const pubkey = '3bF0c63Fcb93463407aF97a5e5Ee64fa883d107eF9e558472c4eb9aaaefa459D';
+      const pubkey =
+          '3bF0c63Fcb93463407aF97a5e5Ee64fa883d107eF9e558472c4eb9aaaefa459D';
       expect(isValidHexPubkey(pubkey), isTrue);
     });
 
     test('rejects pubkey with wrong length (too short)', () {
-      const pubkey = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459'; // 63 chars
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459'; // 63 chars
       expect(isValidHexPubkey(pubkey), isFalse);
     });
 
@@ -36,7 +40,8 @@ void main() {
     });
 
     test('rejects pubkey with 0x prefix', () {
-      const pubkey = '0x3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const pubkey =
+          '0x3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       expect(isValidHexPubkey(pubkey), isFalse);
     });
 
@@ -45,14 +50,16 @@ void main() {
     });
 
     test('rejects pubkey with special characters', () {
-      const pubkey = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459-';
+      const pubkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459-';
       expect(isValidHexPubkey(pubkey), isFalse);
     });
   });
 
   group('isValidHexPrivkey', () {
     test('validates correct 64-character hex privkey', () {
-      const privkey = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const privkey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       expect(isValidHexPrivkey(privkey), isTrue);
     });
 
@@ -63,7 +70,8 @@ void main() {
 
     test('delegates to isValidHexPubkey', () {
       // Should behave identically to isValidHexPubkey
-      const validKey = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const validKey =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       const invalidKey = 'invalid';
 
       expect(isValidHexPrivkey(validKey), equals(isValidHexPubkey(validKey)));
@@ -76,7 +84,8 @@ void main() {
 
   group('isValidEventId', () {
     test('validates correct 64-character hex event ID', () {
-      const eventId = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const eventId =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       expect(isValidEventId(eventId), isTrue);
     });
 
@@ -87,7 +96,8 @@ void main() {
 
     test('delegates to isValidHexPubkey', () {
       // Should behave identically to isValidHexPubkey
-      const validId = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const validId =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       const invalidId = 'invalid';
 
       expect(isValidEventId(validId), equals(isValidHexPubkey(validId)));
@@ -188,7 +198,8 @@ void main() {
 
   group('isValidInviteCode', () {
     test('validates correct Base64URL invite code', () {
-      const code = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+      const code =
+          '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
       expect(isValidInviteCode(code), isTrue);
     });
 

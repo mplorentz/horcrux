@@ -27,9 +27,7 @@ class VaultListScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
             },
             tooltip: 'Settings',
@@ -69,7 +67,9 @@ class VaultListScreen extends ConsumerWidget {
                           ElevatedButton(
                             onPressed: () => ref.refresh(vaultListProvider),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.secondary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.secondary,
                               foregroundColor: Colors.white,
                             ),
                             child: const Text('Retry'),
@@ -95,7 +95,9 @@ class VaultListScreen extends ConsumerWidget {
                             Text('No vaults yet', style: textTheme.titleLarge),
                             const SizedBox(height: 8),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                              ),
                               child: Text(
                                 'Tap + to create a vault or if you received an invitation link open it now to join their vault.',
                                 style: textTheme.bodySmall,
@@ -108,9 +110,13 @@ class VaultListScreen extends ConsumerWidget {
                     }
 
                     return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       itemCount: vaults.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final vault = vaults[index];
                         return VaultCard(key: ValueKey(vault.id), vault: vault);

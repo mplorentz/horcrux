@@ -11,17 +11,15 @@ class AccountChoiceScreen extends ConsumerStatefulWidget {
   const AccountChoiceScreen({super.key});
 
   @override
-  ConsumerState<AccountChoiceScreen> createState() => _AccountChoiceScreenState();
+  ConsumerState<AccountChoiceScreen> createState() =>
+      _AccountChoiceScreenState();
 }
 
 class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Setup'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Setup'), centerTitle: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -54,9 +52,8 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
 
                   navigator.push(
                     MaterialPageRoute(
-                      builder: (context) => AccountCreatedScreen(
-                        nsec: keyPair.privateKeyBech32!,
-                      ),
+                      builder: (context) =>
+                          AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
                     ),
                   );
                 },
@@ -71,7 +68,9 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginScreen(),
+                    ),
                   );
                 },
               ),
@@ -117,7 +116,9 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
 
                   // Navigate to main app, clear onboarding stack
                   navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const VaultListScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const VaultListScreen(),
+                    ),
                     (route) => false,
                   );
                 },
@@ -144,20 +145,13 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: theme.colorScheme.primary,
-            width: 0.5,
-          ),
+          border: Border.all(color: theme.colorScheme.primary, width: 0.5),
           borderRadius: BorderRadius.circular(8),
           color: theme.colorScheme.surface,
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 32,
-              color: theme.colorScheme.onSurface,
-            ),
+            Icon(icon, size: 32, color: theme.colorScheme.onSurface),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -170,10 +164,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: textTheme.bodyMedium,
-                  ),
+                  Text(description, style: textTheme.bodyMedium),
                 ],
               ),
             ),

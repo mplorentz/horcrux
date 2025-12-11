@@ -23,7 +23,8 @@ class VaultCreateScreen extends ConsumerStatefulWidget {
   ConsumerState<VaultCreateScreen> createState() => _VaultCreateScreenState();
 }
 
-class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with VaultContentSaveMixin {
+class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen>
+    with VaultContentSaveMixin {
   final _nameController = TextEditingController();
   final _contentController = TextEditingController();
   final _ownerNameController = TextEditingController();
@@ -85,7 +86,9 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
       formKey: _formKey,
       name: _nameController.text,
       content: _contentController.text,
-      ownerName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
+      ownerName: _ownerNameController.text.trim().isEmpty
+          ? null
+          : _ownerNameController.text.trim(),
     );
 
     if (vaultId != null && mounted) {
@@ -112,9 +115,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
     if (widget.isOnboarding) {
       // After onboarding flow completes, take the user to the vault list
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const VaultListScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const VaultListScreen()),
         (route) => false,
       );
       ScaffoldMessenger.of(context).showSnackBar(

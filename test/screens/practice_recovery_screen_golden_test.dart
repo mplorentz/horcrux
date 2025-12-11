@@ -35,7 +35,8 @@ void main() {
       lastSeen: null,
       keyShare: null,
       giftWrapEventId: null,
-      acknowledgedAt: acknowledgedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
+      acknowledgedAt:
+          acknowledgedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
       acknowledgmentEventId: null,
       acknowledgedDistributionVersion: 1,
       isOwner: false,
@@ -116,9 +117,9 @@ void main() {
     testGoldens('error state', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith(
-            (ref) => Stream.error('Failed to load vault'),
-          ),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -174,7 +175,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -201,7 +204,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -239,7 +244,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -277,7 +284,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -294,7 +303,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('stewards not ready - waiting for confirmations', (tester) async {
+    testGoldens('stewards not ready - waiting for confirmations', (
+      tester,
+    ) async {
       final vault = createTestVault(
         id: 'test-vault',
         name: 'My Important Vault',
@@ -327,7 +338,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );
@@ -363,7 +376,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
       );

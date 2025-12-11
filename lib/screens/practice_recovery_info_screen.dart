@@ -32,7 +32,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       ),
       body: vaultAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error loading vault: $error')),
+        error: (error, stack) =>
+            Center(child: Text('Error loading vault: $error')),
         data: (vault) {
           if (vault == null) {
             return const Center(child: Text('Vault not found'));
@@ -40,7 +41,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
 
           return currentPubkeyAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error loading user: $error')),
+            error: (error, stack) =>
+                Center(child: Text('Error loading user: $error')),
             data: (currentPubkey) {
               // Verify user is owner
               if (currentPubkey == null || !vault.isOwned(currentPubkey)) {
@@ -111,7 +113,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
                   context,
                   stepNumber: 1,
                   title: 'Initiate Recovery',
-                  description: 'You (or a steward) send a recovery request to all other stewards.',
+                  description:
+                      'You (or a steward) send a recovery request to all other stewards.',
                 ),
                 const SizedBox(height: 8),
                 _buildStepCard(
@@ -133,14 +136,19 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // How Practice Mode Works
-                Text('How Practice Mode Works', style: theme.textTheme.titleMedium),
+                Text(
+                  'How Practice Mode Works',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +191,11 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotReadyMessage(BuildContext context, String title, String message) {
+  Widget _buildNotReadyMessage(
+    BuildContext context,
+    String title,
+    String message,
+  ) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -193,11 +205,22 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           children: [
             Icon(Icons.warning_amber, size: 64, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: theme.textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            Text(message, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+            Text(
+              message,
+              style: theme.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
-            ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Go Back')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Go Back'),
+            ),
           ],
         ),
       ),
@@ -223,11 +246,16 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
             child: Center(
               child: Text(
                 '$stepNumber',
-                style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onPrimary),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
               ),
             ),
           ),
@@ -261,7 +289,11 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _startPracticeRecovery(BuildContext context, WidgetRef ref, Vault vault) async {
+  Future<void> _startPracticeRecovery(
+    BuildContext context,
+    WidgetRef ref,
+    Vault vault,
+  ) async {
     // Show full-screen loading dialog
     if (!context.mounted) return;
     showDialog(
@@ -285,7 +317,10 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 24),
-                      Text('Sending recovery requests...', style: TextStyle(fontSize: 16)),
+                      Text(
+                        'Sending recovery requests...',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ],
                   ),
                 ),
@@ -320,7 +355,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
+              builder: (context) =>
+                  RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
             ),
           );
         }
@@ -329,9 +365,9 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
