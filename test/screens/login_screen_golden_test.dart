@@ -66,10 +66,7 @@ void main() {
       );
 
       // Enter invalid text to trigger error
-      await tester.enterText(
-        find.byType(TextField),
-        'invalid_key',
-      );
+      await tester.enterText(find.byType(TextField), 'invalid_key');
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'login_screen_with_error');

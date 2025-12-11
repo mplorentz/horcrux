@@ -48,11 +48,13 @@ class InvitationService {
   final RelayScanService _relayScanService;
 
   // Stream controller for notifying listeners when invitations change
-  final StreamController<void> _invitationsChangedController = StreamController<void>.broadcast();
+  final StreamController<void> _invitationsChangedController =
+      StreamController<void>.broadcast();
 
   // SharedPreferences keys
   static String _invitationKey(String inviteCode) => 'invitation_$inviteCode';
-  static String _vaultInvitationsKey(String vaultId) => 'vault_invitations_$vaultId';
+  static String _vaultInvitationsKey(String vaultId) =>
+      'vault_invitations_$vaultId';
 
   InvitationService(
     this.repository,
@@ -64,7 +66,8 @@ class InvitationService {
 
   /// Stream that emits whenever invitations change
   /// UI providers listen to this to automatically update
-  Stream<void> get invitationsChangedStream => _invitationsChangedController.stream;
+  Stream<void> get invitationsChangedStream =>
+      _invitationsChangedController.stream;
 
   /// Notify listeners that invitations have changed
   void _notifyInvitationsChanged() {
@@ -82,7 +85,8 @@ class InvitationService {
   /// Generates cryptographically secure invite code.
   /// Creates InvitationLink and stores in SharedPreferences.
   /// Returns invitation link with URL.
-  Future<InvitationLink> generateInvitationLink({
+  Future<({InvitationLink invitation, Steward steward})>
+  generateInvitationLink({
     required String vaultId,
     required String inviteeName,
     required List<String> relayUrls,
@@ -157,8 +161,9 @@ class InvitationService {
 
     // Add invited steward placeholder to backup config immediately
     // This allows the RSVP handler to find and update it when the invitee accepts
+    Steward? createdSteward;
     try {
-      await _addInvitedKeyHolderToBackupConfig(
+      createdSteward = await _addInvitedKeyHolderToBackupConfig(
         vaultId: vaultId,
         inviteCode: inviteCode,
         inviteeName: inviteeName.trim(),
@@ -172,6 +177,12 @@ class InvitationService {
       // Don't fail invitation generation if this fails
     }
 
+    // If we couldn't add to backup config, create a fallback steward for UI consistency
+    createdSteward ??= createInvitedSteward(
+      name: inviteeName.trim(),
+      inviteCode: inviteCode,
+    );
+
     // Notify listeners
     _notifyInvitationsChanged();
 
@@ -179,7 +190,7 @@ class InvitationService {
       'Generated invitation link for vault $vaultId, invitee: $inviteeName',
     );
 
-    return pendingInvitation;
+    return (invitation: pendingInvitation, steward: createdSteward);
   }
 
   /// Retrieves all pending invitations for a vault
@@ -201,8 +212,11 @@ class InvitationService {
     }
 
     // Filter to pending status and sort by creation date
-    final pending = invitations.where((inv) => inv.status == InvitationStatus.pending).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final pending =
+        invitations
+            .where((inv) => inv.status == InvitationStatus.pending)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     return pending;
   }
@@ -336,7 +350,8 @@ class InvitationService {
     final vault = await repository.getVault(invitation.vaultId);
     if (vault != null) {
       final backupConfig = vault.backupConfig;
-      final isAlreadyKeyHolder = backupConfig?.stewards.any(
+      final isAlreadyKeyHolder =
+          backupConfig?.stewards.any(
             (holder) => holder.pubkey == inviteePubkey,
           ) ??
           false;
@@ -519,7 +534,8 @@ class InvitationService {
     await _saveInvitation(invalidatedInvitation);
 
     // If invitation was already redeemed, send invalid event to notify invitee
-    if (invitation.status == InvitationStatus.redeemed && invitation.redeemedBy != null) {
+    if (invitation.status == InvitationStatus.redeemed &&
+        invitation.redeemedBy != null) {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
@@ -620,9 +636,7 @@ class InvitationService {
     // This handles the case where the steward was added to the backup config
     // but the UI hasn't saved yet
     try {
-      final backupConfig = await repository.getBackupConfig(
-        invitation.vaultId,
-      );
+      final backupConfig = await repository.getBackupConfig(invitation.vaultId);
       if (backupConfig != null) {
         final stewardIndex = backupConfig.stewards.indexWhere(
           (steward) => steward.pubkey == inviteePubkey,
@@ -630,13 +644,17 @@ class InvitationService {
         if (stewardIndex != -1) {
           final steward = backupConfig.stewards[stewardIndex];
           if (steward.status == StewardStatus.invited) {
-            // Update status to awaitingKey
-            final updatedStewards = List<Steward>.from(
-              backupConfig.stewards,
-            );
+            // Check if steward already has acknowledgment data (should be holdingKey)
+            final hasAcknowledgment =
+                steward.acknowledgedAt != null ||
+                steward.acknowledgmentEventId != null;
+            final newStatus = hasAcknowledgment
+                ? StewardStatus.holdingKey
+                : StewardStatus.awaitingKey;
+            final updatedStewards = List<Steward>.from(backupConfig.stewards);
             updatedStewards[stewardIndex] = copySteward(
               steward,
-              status: StewardStatus.awaitingKey,
+              status: newStatus,
             );
             final updatedConfig = copyBackupConfig(
               backupConfig,
@@ -648,7 +666,7 @@ class InvitationService {
               updatedConfig,
             );
             Log.info(
-              'Updated steward $inviteePubkey status from invited to awaitingKey',
+              'Updated steward $inviteePubkey status from invited to ${newStatus.toString()}',
             );
           }
         }
@@ -800,7 +818,8 @@ class InvitationService {
       final newSteward = createSteward(pubkey: pubkey, name: name);
       backupConfig = createBackupConfig(
         vaultId: vaultId,
-        threshold: 1, // Start with 1-of-1, will be updated when more stewards are added
+        threshold:
+            1, // Start with 1-of-1, will be updated when more stewards are added
         totalKeys: 1, // Will be updated when more stewards are added
         stewards: [newSteward],
         relays: relayUrls, // Use relay URLs from invitation
@@ -829,14 +848,20 @@ class InvitationService {
         );
 
         if (invitedStewardIndex != -1) {
-          // Update the invited steward with pubkey and change status to awaitingKey
-          final updatedStewards = List<Steward>.from(
-            backupConfig.stewards,
-          );
+          // Update the invited steward with pubkey
+          final invitedSteward = backupConfig.stewards[invitedStewardIndex];
+          // Check if steward already has acknowledgment data (should be holdingKey)
+          final hasAcknowledgment =
+              invitedSteward.acknowledgedAt != null ||
+              invitedSteward.acknowledgmentEventId != null;
+          final newStatus = hasAcknowledgment
+              ? StewardStatus.holdingKey
+              : StewardStatus.awaitingKey;
+          final updatedStewards = List<Steward>.from(backupConfig.stewards);
           updatedStewards[invitedStewardIndex] = copySteward(
             updatedStewards[invitedStewardIndex],
             pubkey: pubkey,
-            status: StewardStatus.awaitingKey,
+            status: newStatus,
             // Keep inviteCode for reference, but it's no longer needed after acceptance
           );
 
@@ -854,17 +879,16 @@ class InvitationService {
           await _syncRelaysFromBackupConfig(updatedConfig);
           return;
         } else {
-          Log.debug(
-            'No invited steward found with invite code "$inviteCode"',
-          );
+          Log.debug('No invited steward found with invite code "$inviteCode"');
         }
       } else {
         Log.debug('No invite code provided, skipping invited steward check');
       }
 
       // SECOND: Check if steward with this pubkey already exists
-      final existingByPubkey =
-          backupConfig.stewards.where((holder) => holder.pubkey == pubkey).toList();
+      final existingByPubkey = backupConfig.stewards
+          .where((holder) => holder.pubkey == pubkey)
+          .toList();
       if (existingByPubkey.isNotEmpty) {
         // Check if this steward needs status update (e.g., was invited, now accepting)
         final existingHolder = existingByPubkey.first;
@@ -891,9 +915,7 @@ class InvitationService {
         lastUpdated: DateTime.now(),
       );
       await repository.updateBackupConfig(vaultId, updatedConfig);
-      Log.info(
-        'Added steward $pubkey to backup config for vault $vaultId',
-      );
+      Log.info('Added steward $pubkey to backup config for vault $vaultId');
 
       // Sync relays from backup config to RelayScanService
       await _syncRelaysFromBackupConfig(updatedConfig);
@@ -927,7 +949,9 @@ class InvitationService {
   /// This is called when an invitation is generated, before the invitee has accepted.
   /// It creates a steward with null pubkey and invited status, which will be
   /// updated when the RSVP is received.
-  Future<void> _addInvitedKeyHolderToBackupConfig({
+  ///
+  /// Returns the created steward so the UI can use the same instance (with same ID).
+  Future<Steward> _addInvitedKeyHolderToBackupConfig({
     required String vaultId,
     required String inviteCode,
     required String inviteeName,
@@ -951,19 +975,19 @@ class InvitationService {
         relays: relayUrls,
       );
       await repository.updateBackupConfig(vaultId, backupConfig);
-      Log.info(
-        'Created backup config with invited steward for $inviteeName',
-      );
+      Log.info('Created backup config with invited steward for $inviteeName');
+      return invitedSteward;
     } else {
       // Check if this invite code already exists (avoid duplicates)
-      final existingWithCode =
-          backupConfig.stewards.where((holder) => holder.inviteCode == inviteCode).toList();
+      final existingWithCode = backupConfig.stewards
+          .where((holder) => holder.inviteCode == inviteCode)
+          .toList();
 
       if (existingWithCode.isNotEmpty) {
         Log.info(
           'Invited steward with invite code $inviteCode already exists, skipping',
         );
-        return;
+        return existingWithCode.first;
       }
 
       // Add the invited steward
@@ -982,6 +1006,8 @@ class InvitationService {
 
       // Sync relays from updated backup config
       await _syncRelaysFromBackupConfig(updatedConfig);
+
+      return invitedSteward;
     }
   }
 

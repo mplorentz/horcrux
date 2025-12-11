@@ -29,11 +29,17 @@ class DebugInfoSheet extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.bug_report, size: 24, color: theme.colorScheme.primary),
+              Icon(
+                Icons.bug_report,
+                size: 24,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 12),
               Text(
                 'Debug Information',
-                style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const Spacer(),
               IconButton(
@@ -47,10 +53,14 @@ class DebugInfoSheet extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.1,
+              ),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
                 width: 1,
               ),
             ),
@@ -60,7 +70,8 @@ class DebugInfoSheet extends ConsumerWidget {
                 // Bech32 key
                 publicKeyBech32Async.when(
                   loading: () => Text('Loading...', style: textTheme.bodySmall),
-                  error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
+                  error: (err, _) =>
+                      Text('Error: $err', style: textTheme.bodySmall),
                   data: (npub) => _KeyDisplay(
                     label: 'Npub (bech32):',
                     value: npub ?? 'Not available',
@@ -71,7 +82,8 @@ class DebugInfoSheet extends ConsumerWidget {
                 // Hex key
                 publicKeyAsync.when(
                   loading: () => Text('Loading...', style: textTheme.bodySmall),
-                  error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
+                  error: (err, _) =>
+                      Text('Error: $err', style: textTheme.bodySmall),
                   data: (pubkey) => _KeyDisplay(
                     label: 'Public Key (hex):',
                     value: pubkey ?? 'Not available',
@@ -90,10 +102,14 @@ class DebugInfoSheet extends ConsumerWidget {
                 Navigator.pop(context); // Close the debug sheet first
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const HorcruxGallery()),
+                  MaterialPageRoute(
+                    builder: (context) => const HorcruxGallery(),
+                  ),
                 );
               },
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               icon: const Icon(Icons.palette),
               label: const Text('View Design Gallery'),
             ),
@@ -110,7 +126,11 @@ class _KeyDisplay extends StatelessWidget {
   final String value;
   final String tooltipLabel;
 
-  const _KeyDisplay({required this.label, required this.value, required this.tooltipLabel});
+  const _KeyDisplay({
+    required this.label,
+    required this.value,
+    required this.tooltipLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -122,11 +142,19 @@ class _KeyDisplay extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                label,
+                style: textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace', fontSize: 10),
+                style: textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -134,7 +162,11 @@ class _KeyDisplay extends StatelessWidget {
           ),
         ),
         IconButton(
-          icon: Icon(Icons.copy, size: 16, color: Theme.of(context).colorScheme.primary),
+          icon: Icon(
+            Icons.copy,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           onPressed: value != 'Not available' && value != 'Loading...'

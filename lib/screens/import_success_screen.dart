@@ -7,10 +7,7 @@ import '../screens/vault_list_screen.dart';
 class ImportSuccessScreen extends StatelessWidget {
   final String nsec;
 
-  const ImportSuccessScreen({
-    super.key,
-    required this.nsec,
-  });
+  const ImportSuccessScreen({super.key, required this.nsec});
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +66,9 @@ class ImportSuccessScreen extends StatelessWidget {
                             child: Text(
                               'Backing up your key in a Horcrux Vault means you won\'t '
                               'lose access to your Nostr identity even if you lose this device.',
-                              style: textTheme.bodyMedium?.copyWith(height: 1.5),
+                              style: textTheme.bodyMedium?.copyWith(
+                                height: 1.5,
+                              ),
                             ),
                           ),
                         ],

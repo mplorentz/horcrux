@@ -97,8 +97,9 @@ class RecoveryStatus {
       respondedCount: json['respondedCount'] as int,
       approvedCount: json['approvedCount'] as int,
       deniedCount: json['deniedCount'] as int,
-      collectedShardIds:
-          (json['collectedShardIds'] as List<dynamic>).map((e) => e as String).toList(),
+      collectedShardIds: (json['collectedShardIds'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
       threshold: json['threshold'] as int,
       canRecover: json['canRecover'] as bool,
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),

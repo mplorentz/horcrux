@@ -35,12 +35,14 @@ BackupConfig createBackupConfig({
   String? contentHash,
 }) {
   // Validate inputs
-  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+  if (threshold < VaultBackupConstraints.minThreshold ||
+      threshold > totalKeys) {
     throw ArgumentError(
       'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
     );
   }
-  if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
+  if (totalKeys < threshold ||
+      totalKeys > VaultBackupConstraints.maxTotalKeys) {
     throw ArgumentError(
       'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
     );
@@ -60,7 +62,10 @@ BackupConfig createBackupConfig({
 
   // Validate stewards with pubkeys have unique npubs
   final stewardsWithPubkeys = stewards.where((h) => h.pubkey != null).toList();
-  final npubs = stewardsWithPubkeys.map((h) => h.npub).where((n) => n != null).toSet();
+  final npubs = stewardsWithPubkeys
+      .map((h) => h.npub)
+      .where((n) => n != null)
+      .toSet();
   if (npubs.length != stewardsWithPubkeys.length) {
     throw ArgumentError('All stewards with pubkeys must have unique npubs');
   }
@@ -132,10 +137,12 @@ extension BackupConfigExtension on BackupConfig {
   /// Check if this backup configuration is valid
   bool get isValid {
     try {
-      if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+      if (threshold < VaultBackupConstraints.minThreshold ||
+          threshold > totalKeys) {
         return false;
       }
-      if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
+      if (totalKeys < threshold ||
+          totalKeys > VaultBackupConstraints.maxTotalKeys) {
         return false;
       }
       if (stewards.length != totalKeys) return false;
@@ -146,8 +153,13 @@ extension BackupConfigExtension on BackupConfig {
       if (ids.length != stewards.length) return false;
 
       // Check for unique npubs (only for stewards with pubkeys)
-      final stewardsWithPubkeys = stewards.where((h) => h.pubkey != null).toList();
-      final npubs = stewardsWithPubkeys.map((h) => h.npub).where((n) => n != null).toSet();
+      final stewardsWithPubkeys = stewards
+          .where((h) => h.pubkey != null)
+          .toList();
+      final npubs = stewardsWithPubkeys
+          .map((h) => h.npub)
+          .where((n) => n != null)
+          .toSet();
       if (npubs.length != stewardsWithPubkeys.length) {
         return false;
       }
@@ -185,7 +197,8 @@ extension BackupConfigExtension on BackupConfig {
 
   /// Check if backup is ready (all stewards acknowledged)
   bool get isReady {
-    return status == BackupStatus.active && acknowledgedStewardsCount >= threshold;
+    return status == BackupStatus.active &&
+        acknowledgedStewardsCount >= threshold;
   }
 
   /// Check if all stewards are ready for distribution (have pubkeys)
@@ -195,7 +208,9 @@ extension BackupConfigExtension on BackupConfig {
 
   /// Get the number of stewards still pending (invited but not accepted)
   int get pendingInvitationsCount {
-    return stewards.where((h) => h.status == StewardStatus.invited && h.pubkey == null).length;
+    return stewards
+        .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
+        .length;
   }
 
   /// Check if redistribution is needed (config changed but not redistributed)
@@ -270,8 +285,9 @@ BackupConfig backupConfigFromJson(Map<String, dynamic> json) {
     specVersion: json['specVersion'] as String,
     threshold: json['threshold'] as int,
     totalKeys: json['totalKeys'] as int,
-    stewards:
-        (json['stewards'] as List).map((h) => stewardFromJson(h as Map<String, dynamic>)).toList(),
+    stewards: (json['stewards'] as List)
+        .map((h) => stewardFromJson(h as Map<String, dynamic>))
+        .toList(),
     relays: (json['relays'] as List).cast<String>(),
     instructions: json['instructions'] as String?,
     createdAt: DateTime.parse(json['createdAt'] as String),
@@ -288,7 +304,8 @@ BackupConfig backupConfigFromJson(Map<String, dynamic> json) {
       orElse: () => BackupStatus.pending,
     ),
     distributionVersion:
-        json['distributionVersion'] as int? ?? 1, // Default to 1 for backward compatibility
+        json['distributionVersion'] as int? ??
+        1, // Default to 1 for backward compatibility
   );
 }
 

@@ -124,7 +124,9 @@ ShardEvent shardEventFromJson(Map<String, dynamic> json) {
     backupConfigId: json['backupConfigId'] as String,
     shardIndex: json['shardIndex'] as int,
     createdAt: DateTime.parse(json['createdAt'] as String),
-    publishedAt: json['publishedAt'] != null ? DateTime.parse(json['publishedAt'] as String) : null,
+    publishedAt: json['publishedAt'] != null
+        ? DateTime.parse(json['publishedAt'] as String)
+        : null,
     status: EventStatus.values.firstWhere(
       (s) => s.name == json['status'],
       orElse: () => EventStatus.created,

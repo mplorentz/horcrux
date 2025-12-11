@@ -17,10 +17,12 @@ class RecoveryRequestDetailScreen extends ConsumerStatefulWidget {
   const RecoveryRequestDetailScreen({super.key, required this.recoveryRequest});
 
   @override
-  ConsumerState<RecoveryRequestDetailScreen> createState() => _RecoveryRequestDetailScreenState();
+  ConsumerState<RecoveryRequestDetailScreen> createState() =>
+      _RecoveryRequestDetailScreenState();
 }
 
-class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDetailScreen> {
+class _RecoveryRequestDetailScreenState
+    extends ConsumerState<RecoveryRequestDetailScreen> {
   bool _isLoading = false;
   String? _currentPubkey;
 
@@ -60,7 +62,9 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
       final approved = status == RecoveryResponseStatus.approved;
 
       // Use the convenience method that handles shard retrieval and Nostr sending
-      await ref.read(recoveryServiceProvider).respondToRecoveryRequestWithShard(
+      await ref
+          .read(recoveryServiceProvider)
+          .respondToRecoveryRequestWithShard(
             widget.recoveryRequest.id,
             _currentPubkey!,
             approved,
@@ -68,9 +72,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
 
       if (mounted) {
         // Invalidate the recovery status provider to force a refresh when navigating back
-        ref.invalidate(
-          recoveryStatusProvider(widget.recoveryRequest.vaultId),
-        );
+        ref.invalidate(recoveryStatusProvider(widget.recoveryRequest.vaultId));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -169,7 +171,8 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
           ? const Center(child: CircularProgressIndicator())
           : vaultAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error loading vault: $error')),
+              error: (error, stack) =>
+                  Center(child: Text('Error loading vault: $error')),
               data: (vault) => _buildContent(context, request, vault),
             ),
     );
@@ -263,16 +266,22 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                               children: [
                                 Text(
                                   'Practice Request',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onTertiary,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiary,
                                       ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'This is a practice request. No vault data will be shared.',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onTertiaryContainer,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onTertiaryContainer,
                                       ),
                                 ),
                               ],
@@ -298,9 +307,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                         Expanded(
                           child: Text(
                             'Someone is requesting recovery of a vault you have a key for',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -394,7 +401,10 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                                   if (initiatorName != null)
                                     Text(
                                       initiatorName,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
                                             fontWeight: FontWeight.bold,
                                           ),
                                     ),
