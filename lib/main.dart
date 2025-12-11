@@ -97,9 +97,7 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'Horcrux',
-      theme: horcrux3Light,
-      darkTheme: horcrux3Dark,
-      themeMode: ThemeMode.system,
+      theme: horcrux3Dark,
       debugShowCheckedModeBanner: false,
       home: _isInitializing
           ? const _InitializingScreen()
