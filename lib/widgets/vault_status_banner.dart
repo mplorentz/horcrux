@@ -327,12 +327,7 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildBanner(
-    BuildContext context,
-    _StatusData statusData,
-    bool isOwner,
-    bool isSteward,
-  ) {
+  Widget _buildBanner(BuildContext context, _StatusData statusData, bool isOwner, bool isSteward) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -351,11 +346,7 @@ class VaultStatusBanner extends ConsumerWidget {
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              statusData.icon,
-              size: 20,
-              color: colorScheme.onSurface,
-            ),
+            child: Icon(statusData.icon, size: 20, color: colorScheme.onSurface),
           ),
           const SizedBox(width: 12),
           // Text content

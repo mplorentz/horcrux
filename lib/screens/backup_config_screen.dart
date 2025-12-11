@@ -212,7 +212,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _isEditingExistingPlan = true; // We're editing an existing plan
           _thresholdManuallyChanged = true; // Existing plan means threshold was already set
           // Check if owner is already included as a steward
-          _includeSelfAsSteward = hasOwnerSteward(existingConfig);        });
+          _includeSelfAsSteward = hasOwnerSteward(existingConfig);
+        });
 
         // Load existing invitations and match them to stewards
         await _loadExistingInvitations();
@@ -327,12 +328,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                           children: [
                                             Text(
                                               'Include yourself as a steward',
-                                              style: Theme.of(context).textTheme.bodyMedium
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
                                                   ?.copyWith(fontWeight: FontWeight.w500),
                                             ),
                                             Text(
                                               'Keep one shard for yourself',
-                                              style: Theme.of(context).textTheme.bodySmall
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
                                                   ?.copyWith(
                                                     color: Theme.of(
                                                       context,
@@ -374,8 +379,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                           Text(
                                             'Add your first steward to get started',
                                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                            ),                                            textAlign: TextAlign.center,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                            textAlign: TextAlign.center,
                                           ),
                                         ],
                                       ),
@@ -950,8 +959,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     Text(
                       'Share this invitation with ${steward.name ?? steward.displayName}:',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                            ),                    ),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [

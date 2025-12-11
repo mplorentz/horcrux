@@ -170,4 +170,3 @@ class _MockVaultRepository extends VaultRepository {
     return _backupConfig;
   }
 }
-

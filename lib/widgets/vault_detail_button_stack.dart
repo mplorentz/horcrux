@@ -44,9 +44,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
             // Watch vault for Generate and Distribute Keys button
             final vaultAsync = ref.watch(vaultProvider(vaultId));
             // Watch recovery status for recovery buttons
-            final recoveryStatusAsync = ref.watch(
-              recoveryStatusProvider(vaultId),
-            );
+            final recoveryStatusAsync = ref.watch(recoveryStatusProvider(vaultId));
 
             return vaultAsync.when(
               loading: () => const SizedBox.shrink(),
@@ -168,9 +166,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => RecoveryStatusScreen(
-                                    recoveryRequestId: activeRequest!.id,
-                                  ),
+                                  builder: (context) =>
+                                      RecoveryStatusScreen(recoveryRequestId: activeRequest!.id),
                                 ),
                               );
                             },
@@ -189,9 +186,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                 context: context,
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
-                                builder: (context) => PracticeRecoveryInfoScreen(
-                                  vaultId: vaultId,
-                                ),
+                                builder: (context) => PracticeRecoveryInfoScreen(vaultId: vaultId),
                               );
                             },
                             icon: Icons.school,
@@ -203,8 +198,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
                     // Owner-steward state: owner has deleted content but kept shards
                     // Show special buttons for recovery
-                    final isOwnerSteward =
-                        isOwned && currentVault != null && currentVault.content == null && currentVault.shards.isNotEmpty;
+                    final isOwnerSteward = isOwned &&
+                        currentVault != null &&
+                        currentVault.content == null &&
+                        currentVault.shards.isNotEmpty;
 
                     if (isOwnerSteward) {
                       // Show "You are the owner" indicator and recovery options
@@ -301,17 +298,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
     return null;
   }
 
-  Future<void> _distributeKeys(
-    BuildContext context,
-    WidgetRef ref,
-    Vault vault,
-  ) async {
+  Future<void> _distributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {
     if (vault.backupConfig == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recovery plan not found'),
-          backgroundColor: Colors.orange,
-        ),
+        const SnackBar(content: Text('Recovery plan not found'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -359,14 +349,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
         title: Text(title),
         content: Text(contentMessage),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(action),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(action)),
         ],
       ),
     );
@@ -430,12 +414,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
           ),
         );
       }
@@ -443,11 +422,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
   }
 
   /// Show warning dialog before creating new content for owner-steward vault (T016, T020)
-  Future<void> _showUpdateContentWarning(
-    BuildContext context,
-    WidgetRef ref,
-    Vault vault,
-  ) async {
+  Future<void> _showUpdateContentWarning(BuildContext context, WidgetRef ref, Vault vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -461,9 +436,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Creating new content will:',
-            ),
+            const Text('Creating new content will:'),
             const SizedBox(height: 8),
             const Text('• Replace any existing backup'),
             const Text('• Require redistributing keys to stewards'),
@@ -491,10 +464,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Create New Content'),
@@ -506,19 +476,13 @@ class VaultDetailButtonStack extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => EditVaultScreen(vaultId: vault.id),
-        ),
+        MaterialPageRoute(builder: (context) => EditVaultScreen(vaultId: vault.id)),
       );
     }
   }
 
   /// Show confirmation dialog for deleting vault content (T011 stub, T013 implements)
-  Future<void> _showDeleteContentDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Vault vault,
-  ) async {
+  Future<void> _showDeleteContentDialog(BuildContext context, WidgetRef ref, Vault vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -559,10 +523,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
@@ -594,21 +555,14 @@ class VaultDetailButtonStack extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete local copy: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Failed to delete local copy: $e'), backgroundColor: Colors.red),
           );
         }
       }
     }
   }
 
-  Future<void> _initiateRecovery(
-    BuildContext context,
-    WidgetRef ref,
-    String vaultId,
-  ) async {
+  Future<void> _initiateRecovery(BuildContext context, WidgetRef ref, String vaultId) async {
     // Show full-screen loading dialog
     if (!context.mounted) return;
     showDialog(
@@ -632,10 +586,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 24),
-                      Text(
-                        'Sending recovery requests...',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      Text('Sending recovery requests...', style: TextStyle(fontSize: 16)),
                     ],
                   ),
                 ),
@@ -656,9 +607,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
       if (context.mounted) {
         Navigator.pop(context);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recovery request initiated and sent')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recovery request initiated and sent')));
 
         ref.invalidate(recoveryStatusProvider(vaultId));
 
@@ -675,9 +626,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
