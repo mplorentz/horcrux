@@ -27,8 +27,7 @@ void main() {
     });
 
     testGoldens('import success screen - default state', (tester) async {
-      const testNsec =
-          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+      const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
       final container = ProviderContainer();
 
@@ -47,8 +46,7 @@ void main() {
     testGoldens('import success screen - multiple device sizes', (
       tester,
     ) async {
-      const testNsec =
-          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+      const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
       final container = ProviderContainer();
 

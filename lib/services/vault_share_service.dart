@@ -35,7 +35,7 @@ class VaultShareService {
 
   // Shards collected during recovery (multiple per recovery request)
   static Map<String, List<ShardData>>?
-  _cachedRecoveryShards; // recoveryRequestId -> List<ShardData>
+      _cachedRecoveryShards; // recoveryRequestId -> List<ShardData>
 
   static bool _isInitialized = false;
 
@@ -141,9 +141,7 @@ class VaultShareService {
         recoveryRequestId,
         shardList,
       ) {
-        final shardListJson = shardList
-            .map((shard) => shardDataToJson(shard))
-            .toList();
+        final shardListJson = shardList.map((shard) => shardDataToJson(shard)).toList();
         return MapEntry(recoveryRequestId, shardListJson);
       });
       final jsonString = json.encode(jsonMap);
@@ -337,8 +335,7 @@ class VaultShareService {
         createdAt: DateTime.fromMillisecondsSinceEpoch(
           shardData.createdAt * 1000,
         ),
-        ownerPubkey:
-            shardData.creatorPubkey, // Owner is the creator of the shard
+        ownerPubkey: shardData.creatorPubkey, // Owner is the creator of the shard
         ownerName: shardData.ownerName, // Set owner name from shard data
       );
 

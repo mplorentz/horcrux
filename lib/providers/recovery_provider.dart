@@ -34,9 +34,7 @@ final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, Strin
       RecoveryRequest? manageableRequest;
       final manageableRequests = vault.recoveryRequests
           .where(
-            (r) =>
-                r.status.isActive ||
-                r.status == RecoveryRequestStatus.completed,
+            (r) => r.status.isActive || r.status == RecoveryRequestStatus.completed,
           )
           .toList();
 
@@ -49,14 +47,12 @@ final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, Strin
       }
 
       // Check if we can recover (has sufficient shards)
-      final canRecover =
-          manageableRequest != null &&
+      final canRecover = manageableRequest != null &&
           manageableRequest.approvedCount >= manageableRequest.threshold;
 
       // Check if current user is the initiator
       final currentPubkey = currentPubkeyAsync.value;
-      final isInitiator =
-          manageableRequest != null &&
+      final isInitiator = manageableRequest != null &&
           currentPubkey != null &&
           manageableRequest.initiatorPubkey == currentPubkey;
 
@@ -93,49 +89,46 @@ class RecoveryStatus {
 /// This watches the vault stream and extracts the recovery request, so it updates automatically
 // TODO: This should probably be a StreamProvider? I don't really understand the point of
 // providers that don't live update.
-final recoveryRequestByIdProvider =
-    Provider.family<AsyncValue<RecoveryRequest?>, String>((
-      ref,
-      recoveryRequestId,
-    ) {
-      // We need to find which vault contains this recovery request
-      // Since we don't know the vault ID upfront, we get it from the service once
-      // then watch that vault's stream
-      return ref
-          .watch(_recoveryRequestVaultIdProvider(recoveryRequestId))
-          .when(
-            data: (vaultId) {
-              if (vaultId == null) {
+final recoveryRequestByIdProvider = Provider.family<AsyncValue<RecoveryRequest?>, String>((
+  ref,
+  recoveryRequestId,
+) {
+  // We need to find which vault contains this recovery request
+  // Since we don't know the vault ID upfront, we get it from the service once
+  // then watch that vault's stream
+  return ref.watch(_recoveryRequestVaultIdProvider(recoveryRequestId)).when(
+        data: (vaultId) {
+          if (vaultId == null) {
+            return const AsyncValue.data(null);
+          }
+
+          // Now watch the vault stream and extract the recovery request
+          final vaultAsync = ref.watch(vaultProvider(vaultId));
+
+          return vaultAsync.when(
+            data: (vault) {
+              if (vault == null) {
                 return const AsyncValue.data(null);
               }
 
-              // Now watch the vault stream and extract the recovery request
-              final vaultAsync = ref.watch(vaultProvider(vaultId));
-
-              return vaultAsync.when(
-                data: (vault) {
-                  if (vault == null) {
-                    return const AsyncValue.data(null);
-                  }
-
-                  // Find the recovery request in the vault
-                  try {
-                    final request = vault.recoveryRequests.firstWhere(
-                      (r) => r.id == recoveryRequestId,
-                    );
-                    return AsyncValue.data(request);
-                  } catch (e) {
-                    return const AsyncValue.data(null);
-                  }
-                },
-                loading: () => const AsyncValue.loading(),
-                error: (error, stack) => AsyncValue.error(error, stack),
-              );
+              // Find the recovery request in the vault
+              try {
+                final request = vault.recoveryRequests.firstWhere(
+                  (r) => r.id == recoveryRequestId,
+                );
+                return AsyncValue.data(request);
+              } catch (e) {
+                return const AsyncValue.data(null);
+              }
             },
             loading: () => const AsyncValue.loading(),
             error: (error, stack) => AsyncValue.error(error, stack),
           );
-    });
+        },
+        loading: () => const AsyncValue.loading(),
+        error: (error, stack) => AsyncValue.error(error, stack),
+      );
+});
 
 /// Helper provider to get the vault ID for a recovery request
 /// This only needs to be called once since recovery requests don't move between vaults
@@ -152,45 +145,45 @@ final _recoveryRequestVaultIdProvider = FutureProvider.family<String?, String>((
 /// This watches the recovery request and computes the status automatically
 final recoveryStatusByIdProvider =
     Provider.family<AsyncValue<recovery_status.RecoveryStatus?>, String>((
-      ref,
-      recoveryRequestId,
-    ) {
-      final requestAsync = ref.watch(
-        recoveryRequestByIdProvider(recoveryRequestId),
+  ref,
+  recoveryRequestId,
+) {
+  final requestAsync = ref.watch(
+    recoveryRequestByIdProvider(recoveryRequestId),
+  );
+
+  return requestAsync.when(
+    data: (request) {
+      if (request == null) return const AsyncValue.data(null);
+
+      // Compute recovery status from the request
+      final collectedShardIds = request.stewardResponses.values
+          .where((r) => r.shardData != null)
+          .map((r) => r.pubkey)
+          .toList();
+
+      final threshold = request.threshold;
+      final totalStewards = request.totalStewards;
+      final respondedCount = request.respondedCount;
+      final approvedCount = request.approvedCount;
+      final deniedCount = request.deniedCount;
+      final canRecover = approvedCount >= threshold;
+
+      return AsyncValue.data(
+        recovery_status.RecoveryStatus(
+          recoveryRequestId: recoveryRequestId,
+          totalStewards: totalStewards,
+          respondedCount: respondedCount,
+          approvedCount: approvedCount,
+          deniedCount: deniedCount,
+          collectedShardIds: collectedShardIds,
+          threshold: threshold,
+          canRecover: canRecover,
+          lastUpdated: DateTime.now(),
+        ),
       );
-
-      return requestAsync.when(
-        data: (request) {
-          if (request == null) return const AsyncValue.data(null);
-
-          // Compute recovery status from the request
-          final collectedShardIds = request.stewardResponses.values
-              .where((r) => r.shardData != null)
-              .map((r) => r.pubkey)
-              .toList();
-
-          final threshold = request.threshold;
-          final totalStewards = request.totalStewards;
-          final respondedCount = request.respondedCount;
-          final approvedCount = request.approvedCount;
-          final deniedCount = request.deniedCount;
-          final canRecover = approvedCount >= threshold;
-
-          return AsyncValue.data(
-            recovery_status.RecoveryStatus(
-              recoveryRequestId: recoveryRequestId,
-              totalStewards: totalStewards,
-              respondedCount: respondedCount,
-              approvedCount: approvedCount,
-              deniedCount: deniedCount,
-              collectedShardIds: collectedShardIds,
-              threshold: threshold,
-              canRecover: canRecover,
-              lastUpdated: DateTime.now(),
-            ),
-          );
-        },
-        loading: () => const AsyncValue.loading(),
-        error: (error, stack) => AsyncValue.error(error, stack),
-      );
-    });
+    },
+    loading: () => const AsyncValue.loading(),
+    error: (error, stack) => AsyncValue.error(error, stack),
+  );
+});

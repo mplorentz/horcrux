@@ -39,8 +39,8 @@ class StewardList extends ConsumerWidget {
                   Text(
                     'Stewards',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).primaryColor,
-                    ),
+                          color: Theme.of(context).primaryColor,
+                        ),
                   ),
                 ],
               ),
@@ -76,8 +76,7 @@ class StewardList extends ConsumerWidget {
               child: Text('Error loading user info: $error'),
             ),
           ),
-          data: (currentPubkey) =>
-              _buildKeyHolderContent(context, ref, vault, currentPubkey),
+          data: (currentPubkey) => _buildKeyHolderContent(context, ref, vault, currentPubkey),
         );
       },
     );
@@ -120,8 +119,7 @@ class StewardList extends ConsumerWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            BackupConfigScreen(vaultId: vault.id),
+                        builder: (context) => BackupConfigScreen(vaultId: vault.id),
                       ),
                     );
                   },
@@ -257,11 +255,8 @@ class StewardList extends ConsumerWidget {
     // NEW: Try backupConfig first (owner will have this)
     if (vault.backupConfig != null) {
       final stewards = vault.backupConfig!.stewards.map((s) {
-        final isCurrentUser =
-            currentPubkey != null && s.pubkey == currentPubkey;
-        final displayName = isCurrentUser
-            ? 'You (${s.displayName})'
-            : s.displayName;
+        final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
+        final displayName = isCurrentUser ? 'You (${s.displayName})' : s.displayName;
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
@@ -290,11 +285,8 @@ class StewardList extends ConsumerWidget {
 
     // Add owner first if ownerName is available
     if (shard.ownerName != null) {
-      final isCurrentUser =
-          currentPubkey != null && shard.creatorPubkey == currentPubkey;
-      final ownerDisplayName = isCurrentUser
-          ? 'You (${shard.ownerName})'
-          : shard.ownerName;
+      final isCurrentUser = currentPubkey != null && shard.creatorPubkey == currentPubkey;
+      final ownerDisplayName = isCurrentUser ? 'You (${shard.ownerName})' : shard.ownerName;
       stewards.add(
         StewardInfo(
           pubkey: shard.creatorPubkey,
@@ -312,19 +304,15 @@ class StewardList extends ConsumerWidget {
         final peerName = peer['name'];
         if (peerPubkey == null) continue;
 
-        final isCurrentUser =
-            currentPubkey != null && peerPubkey == currentPubkey;
-        final displayName = isCurrentUser && peerName != null
-            ? 'You ($peerName)'
-            : peerName;
+        final isCurrentUser = currentPubkey != null && peerPubkey == currentPubkey;
+        final displayName = isCurrentUser && peerName != null ? 'You ($peerName)' : peerName;
 
         stewards.add(
           StewardInfo(
             pubkey: peerPubkey,
             displayName: displayName,
             isOwner: peerPubkey == vault.ownerPubkey,
-            status:
-                StewardStatus.holdingKey, // Default for stewards with shards
+            status: StewardStatus.holdingKey, // Default for stewards with shards
           ),
         );
       }

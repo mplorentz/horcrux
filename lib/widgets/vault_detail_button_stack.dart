@@ -37,12 +37,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),
           data: (currentPubkey) {
-            final isOwned =
-                currentPubkey != null && vault.isOwned(currentPubkey);
+            final isOwned = currentPubkey != null && vault.isOwned(currentPubkey);
             final isSteward =
-                currentPubkey != null &&
-                !vault.isOwned(currentPubkey) &&
-                vault.shards.isNotEmpty;
+                currentPubkey != null && !vault.isOwned(currentPubkey) && vault.shards.isNotEmpty;
 
             // Watch vault for Generate and Distribute Keys button
             final vaultAsync = ref.watch(vaultProvider(vaultId));
@@ -85,8 +82,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    EditVaultScreen(vaultId: vaultId),
+                                builder: (context) => EditVaultScreen(vaultId: vaultId),
                               ),
                             );
                           },
@@ -102,8 +98,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    BackupConfigScreen(vaultId: vaultId),
+                                builder: (context) => BackupConfigScreen(vaultId: vaultId),
                               ),
                             );
                           },
@@ -115,16 +110,13 @@ class VaultDetailButtonStack extends ConsumerWidget {
                       // Distribute Keys Button - shown when distribution is needed
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
-                        if (backupConfig != null &&
-                            backupConfig.stewards.isNotEmpty) {
+                        if (backupConfig != null && backupConfig.stewards.isNotEmpty) {
                           final needsDistribution =
-                              backupConfig.needsRedistribution ||
-                              backupConfig.hasVersionMismatch;
+                              backupConfig.needsRedistribution || backupConfig.hasVersionMismatch;
 
                           if (!backupConfig.canDistribute) {
                             // Show "Waiting for stewards" button (disabled)
-                            final pendingCount =
-                                backupConfig.pendingInvitationsCount;
+                            final pendingCount = backupConfig.pendingInvitationsCount;
                             buttons.add(
                               RowButtonConfig(
                                 onPressed: null, // Disabled
@@ -137,8 +129,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             // Show "Distribute Keys" button (enabled)
                             buttons.add(
                               RowButtonConfig(
-                                onPressed: () =>
-                                    _distributeKeys(context, ref, currentVault),
+                                onPressed: () => _distributeKeys(context, ref, currentVault),
                                 icon: Icons.send,
                                 text: 'Distribute Keys',
                               ),
@@ -150,10 +141,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
                       // Practice Recovery Button (only for owners)
                       // Check if there's an active practice recovery (not canceled/archived)
                       // Canceled recoveries are filtered out by recoveryStatusProvider (only isActive or completed are included)
-                      final activeRequest =
-                          recoveryStatus.activeRecoveryRequest;
-                      final hasActivePracticeRecovery =
-                          recoveryStatus.hasActiveRecovery &&
+                      final activeRequest = recoveryStatus.activeRecoveryRequest;
+                      final hasActivePracticeRecovery = recoveryStatus.hasActiveRecovery &&
                           activeRequest?.isPractice == true &&
                           recoveryStatus.isInitiator;
 
@@ -186,10 +175,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                 context: context,
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
-                                builder: (context) =>
-                                    PracticeRecoveryInfoScreen(
-                                      vaultId: vaultId,
-                                    ),
+                                builder: (context) => PracticeRecoveryInfoScreen(
+                                  vaultId: vaultId,
+                                ),
                               );
                             },
                             icon: Icons.school,
@@ -202,8 +190,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
                     if (!isOwned) {
                       // Show "Manage Recovery" if user initiated active recovery
-                      if (recoveryStatus.hasActiveRecovery &&
-                          recoveryStatus.isInitiator) {
+                      if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
@@ -211,9 +198,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => RecoveryStatusScreen(
-                                    recoveryRequestId: recoveryStatus
-                                        .activeRecoveryRequest!
-                                        .id,
+                                    recoveryRequestId: recoveryStatus.activeRecoveryRequest!.id,
                                   ),
                                 ),
                               );
@@ -226,8 +211,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         // Show "Initiate Recovery" if no active recovery or user didn't initiate it
                         buttons.add(
                           RowButtonConfig(
-                            onPressed: () =>
-                                _initiateRecovery(context, ref, vaultId),
+                            onPressed: () => _initiateRecovery(context, ref, vaultId),
                             icon: Icons.restore,
                             text: 'Initiate Recovery',
                           ),
@@ -299,14 +283,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
     final action = isRedistribution ? 'Redistribute' : 'Distribute';
 
     // Build warning message for redistribution
-    String contentMessage =
-        'This will generate ${config.totalKeys} key shares '
+    String contentMessage = 'This will generate ${config.totalKeys} key shares '
         'and distribute them to ${config.stewards.length} steward${config.stewards.length > 1 ? 's' : ''}.\n\n'
         'Threshold: ${config.threshold} (minimum keys needed for recovery)';
 
     if (isRedistribution) {
-      contentMessage +=
-          '\n\n⚠️ This will invalidate previously distributed keys. '
+      contentMessage += '\n\n⚠️ This will invalidate previously distributed keys. '
           'All stewards will receive new keys.';
     }
 
@@ -462,8 +444,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
+              builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
             ),
           );
         }

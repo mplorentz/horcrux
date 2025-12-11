@@ -73,9 +73,7 @@ class RecoveryProgressWidget extends ConsumerWidget {
             final canRecover = approvedCount >= threshold;
 
             // Calculate progress based on threshold
-            final progress = threshold > 0
-                ? (approvedCount / threshold * 100).clamp(0, 100)
-                : 0.0;
+            final progress = threshold > 0 ? (approvedCount / threshold * 100).clamp(0, 100) : 0.0;
 
             return Card(
               child: Padding(
@@ -92,9 +90,7 @@ class RecoveryProgressWidget extends ConsumerWidget {
                       value: progress / 100,
                       backgroundColor: Colors.grey[300],
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        canRecover
-                            ? Colors.green
-                            : Theme.of(context).primaryColor,
+                        canRecover ? Colors.green : Theme.of(context).primaryColor,
                       ),
                     ),
                     const SizedBox(height: 8),

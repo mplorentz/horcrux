@@ -16,27 +16,26 @@ import 'logger.dart';
 
 /// Provider for RecoveryService
 /// This service depends on VaultRepository for recovery operations
-final Provider<RecoveryService> recoveryServiceProvider =
-    Provider<RecoveryService>((ref) {
-      final repository = ref.watch(vaultRepositoryProvider);
-      final backupService = ref.read(backupServiceProvider);
-      // Use ref.read() to break circular dependency with NdkService
-      final NdkService ndkService = ref.read(ndkServiceProvider);
-      final vaultShareService = ref.read(vaultShareServiceProvider);
-      final service = RecoveryService(
-        repository,
-        backupService,
-        ndkService,
-        vaultShareService,
-      );
+final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryService>((ref) {
+  final repository = ref.watch(vaultRepositoryProvider);
+  final backupService = ref.read(backupServiceProvider);
+  // Use ref.read() to break circular dependency with NdkService
+  final NdkService ndkService = ref.read(ndkServiceProvider);
+  final vaultShareService = ref.read(vaultShareServiceProvider);
+  final service = RecoveryService(
+    repository,
+    backupService,
+    ndkService,
+    vaultShareService,
+  );
 
-      // Clean up streams when disposed
-      ref.onDispose(() {
-        service.dispose();
-      });
+  // Clean up streams when disposed
+  ref.onDispose(() {
+    service.dispose();
+  });
 
-      return service;
-    });
+  return service;
+});
 
 /// Service for managing vault recovery operations
 /// Includes notification tracking for incoming recovery requests
@@ -46,23 +45,18 @@ class RecoveryService {
   final NdkService _ndkService;
   final VaultShareService _vaultShareService;
 
-  static const String _viewedNotificationIdsKey =
-      'viewed_recovery_notification_ids';
+  static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
 
   // Stream for real-time notification updates
-  final _notificationController =
-      StreamController<List<RecoveryRequest>>.broadcast();
-  Stream<List<RecoveryRequest>> get notificationStream =>
-      _notificationController.stream;
+  final _notificationController = StreamController<List<RecoveryRequest>>.broadcast();
+  Stream<List<RecoveryRequest>> get notificationStream => _notificationController.stream;
 
   // Stream for recovery request updates (for status screen)
-  final _recoveryRequestController =
-      StreamController<RecoveryRequest>.broadcast();
-  Stream<RecoveryRequest> get recoveryRequestStream =>
-      _recoveryRequestController.stream;
+  final _recoveryRequestController = StreamController<RecoveryRequest>.broadcast();
+  Stream<RecoveryRequest> get recoveryRequestStream => _recoveryRequestController.stream;
 
   RecoveryService(
     this.repository,
@@ -383,11 +377,9 @@ class RecoveryService {
       threshold = selectedShard.threshold;
 
       // Get relays from shard data (if available) or backup config
-      if (selectedShard.relayUrls != null &&
-          selectedShard.relayUrls!.isNotEmpty) {
+      if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
         relayUrls = selectedShard.relayUrls!;
-      } else if (vault.backupConfig != null &&
-          vault.backupConfig!.relays.isNotEmpty) {
+      } else if (vault.backupConfig != null && vault.backupConfig!.relays.isNotEmpty) {
         relayUrls = vault.backupConfig!.relays;
       } else {
         throw StateError(
@@ -449,9 +441,7 @@ class RecoveryService {
     final existingRequests = await repository.getRecoveryRequestsForVault(
       request.vaultId,
     );
-    final existingRequest = existingRequests
-        .where((r) => r.id == request.id)
-        .firstOrNull;
+    final existingRequest = existingRequests.where((r) => r.id == request.id).firstOrNull;
 
     if (existingRequest != null) {
       // Since events are immutable, skip processing if we already have this request locally
@@ -557,8 +547,7 @@ class RecoveryService {
     final existingResponse = request.stewardResponses[responderPubkey];
     if (existingResponse != null) {
       // Check if this is a duplicate by comparing nostrEventId if provided
-      if (nostrEventId != null &&
-          existingResponse.nostrEventId == nostrEventId) {
+      if (nostrEventId != null && existingResponse.nostrEventId == nostrEventId) {
         Log.info(
           'Ignoring duplicate recovery response for request $recoveryRequestId from $responderPubkey (nostrEventId: $nostrEventId)',
         );
@@ -593,9 +582,7 @@ class RecoveryService {
     }
 
     // Check if we have enough approvals to complete
-    final approvedCount = updatedResponses.values
-        .where((r) => r.approved)
-        .length;
+    final approvedCount = updatedResponses.values.where((r) => r.approved).length;
 
     if (approvedCount >= request.threshold) {
       newStatus = RecoveryRequestStatus.completed;
@@ -691,8 +678,7 @@ class RecoveryService {
           // 1. Backup config (if available, e.g., for owners)
           // 2. Shard data from steward's shards (for stewards)
           final vault = await repository.getVault(request.vaultId);
-          if (vault?.backupConfig != null &&
-              vault!.backupConfig!.relays.isNotEmpty) {
+          if (vault?.backupConfig != null && vault!.backupConfig!.relays.isNotEmpty) {
             relayUrls = vault.backupConfig!.relays;
             Log.info(
               'Using relay URLs from backup config for practice request',
@@ -710,8 +696,7 @@ class RecoveryService {
                 }
                 return a.createdAt > b.createdAt ? a : b;
               });
-              if (latestShard.relayUrls != null &&
-                  latestShard.relayUrls!.isNotEmpty) {
+              if (latestShard.relayUrls != null && latestShard.relayUrls!.isNotEmpty) {
                 relayUrls = latestShard.relayUrls!;
                 Log.info(
                   'Using relay URLs from shard data for practice request',

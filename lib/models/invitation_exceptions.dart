@@ -5,8 +5,7 @@ class InvitationNotFoundException implements Exception {
   InvitationNotFoundException(this.inviteCode);
 
   @override
-  String toString() =>
-      'InvitationNotFoundException: Invitation code not found: $inviteCode';
+  String toString() => 'InvitationNotFoundException: Invitation code not found: $inviteCode';
 }
 
 /// Exception thrown when an invitation code has already been redeemed

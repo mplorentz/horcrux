@@ -168,16 +168,16 @@ class HorcruxGallery extends StatelessWidget {
   }
 
   Widget _icon(BuildContext context) => Container(
-    width: 48,
-    height: 48,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Icon(
-      Icons.lock_outline,
-      color: Theme.of(context).colorScheme.onSurface,
-      size: 24,
-    ),
-  );
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          Icons.lock_outline,
+          color: Theme.of(context).colorScheme.onSurface,
+          size: 24,
+        ),
+      );
 }

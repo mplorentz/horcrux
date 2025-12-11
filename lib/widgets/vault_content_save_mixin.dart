@@ -9,8 +9,7 @@ import '../utils/backup_distribution_helper.dart';
 import '../utils/invite_code_utils.dart';
 
 /// Mixin for shared vault save logic between create and edit screens
-mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget>
-    on ConsumerState<T> {
+mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   /// Save a vault (create new or update existing)
   /// Returns the vault ID (newly created ID or the existing one)
   Future<String?> saveVault({
@@ -39,9 +38,7 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget>
 
         final contentChanged = existingVault.content != content;
         final nameChanged = existingVault.name != name.trim();
-        final newOwnerName = ownerName?.trim().isEmpty == true
-            ? null
-            : ownerName?.trim();
+        final newOwnerName = ownerName?.trim().isEmpty == true ? null : ownerName?.trim();
         final ownerNameChanged = existingVault.ownerName != newOwnerName;
 
         // Check if we need to show the regeneration alert
@@ -53,11 +50,11 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget>
           if (!mounted) return null;
           final shouldAutoDistributeResult =
               await BackupDistributionHelper.showRegenerationAlertIfNeeded(
-                context: context,
-                backupConfig: existingVault.backupConfig,
-                willChange: true,
-                mounted: mounted,
-              );
+            context: context,
+            backupConfig: existingVault.backupConfig,
+            willChange: true,
+            mounted: mounted,
+          );
 
           if (shouldAutoDistributeResult == false) {
             // User cancelled or widget disposed, don't save changes

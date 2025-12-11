@@ -12,12 +12,10 @@ class AccountManagementScreen extends ConsumerStatefulWidget {
   const AccountManagementScreen({super.key});
 
   @override
-  ConsumerState<AccountManagementScreen> createState() =>
-      _AccountManagementScreenState();
+  ConsumerState<AccountManagementScreen> createState() => _AccountManagementScreenState();
 }
 
-class _AccountManagementScreenState
-    extends ConsumerState<AccountManagementScreen> {
+class _AccountManagementScreenState extends ConsumerState<AccountManagementScreen> {
   bool _obscureNsec = true;
   String? _nsec;
 
@@ -172,16 +170,14 @@ class _AccountManagementScreenState
                     const SizedBox(height: 8),
                     publicKeyBech32Async.when(
                       loading: () => const CircularProgressIndicator(),
-                      error: (err, _) =>
-                          Text('Error: $err', style: textTheme.bodySmall),
+                      error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
                       data: (npub) => Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainer,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.3),
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -212,10 +208,10 @@ class _AccountManagementScreenState
                               ),
                               onPressed: npub != null
                                   ? () => _copyToClipboard(
-                                      context,
-                                      npub,
-                                      'Nostr ID',
-                                    )
+                                        context,
+                                        npub,
+                                        'Nostr ID',
+                                      )
                                   : null,
                               tooltip: 'Copy Nostr ID',
                             ),
@@ -238,8 +234,7 @@ class _AccountManagementScreenState
                         color: theme.colorScheme.surfaceContainer,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.3),
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -269,9 +264,7 @@ class _AccountManagementScreenState
                               const SizedBox(width: 8),
                               IconButton(
                                 icon: Icon(
-                                  _obscureNsec
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
+                                  _obscureNsec ? Icons.visibility : Icons.visibility_off,
                                   size: 20,
                                   color: theme.colorScheme.onSurface,
                                 ),
@@ -280,9 +273,7 @@ class _AccountManagementScreenState
                                     _obscureNsec = !_obscureNsec;
                                   });
                                 },
-                                tooltip: _obscureNsec
-                                    ? 'Show private key'
-                                    : 'Hide private key',
+                                tooltip: _obscureNsec ? 'Show private key' : 'Hide private key',
                               ),
                               IconButton(
                                 icon: Icon(
@@ -290,9 +281,7 @@ class _AccountManagementScreenState
                                   size: 20,
                                   color: theme.colorScheme.onSurface,
                                 ),
-                                onPressed: _nsec != null
-                                    ? _copyNsecWithWarning
-                                    : null,
+                                onPressed: _nsec != null ? _copyNsecWithWarning : null,
                                 tooltip: 'Copy private key',
                               ),
                             ],

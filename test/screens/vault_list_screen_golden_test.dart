@@ -23,29 +23,29 @@ void main() {
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-          final args = call.arguments as Map? ?? {};
-          if (call.method == 'getAll') {
-            return Map<String, dynamic>.from(sharedPreferencesStore);
-          } else if (call.method == 'setString') {
-            sharedPreferencesStore[args['key']] = args['value'];
-            return true;
-          } else if (call.method == 'getString') {
-            return sharedPreferencesStore[args['key']];
-          } else if (call.method == 'remove') {
-            sharedPreferencesStore.remove(args['key']);
-            return true;
-          } else if (call.method == 'getStringList') {
-            final value = sharedPreferencesStore[args['key']];
-            return value is List ? value : null;
-          } else if (call.method == 'setStringList') {
-            sharedPreferencesStore[args['key']] = args['value'];
-            return true;
-          } else if (call.method == 'clear') {
-            sharedPreferencesStore.clear();
-            return true;
-          }
-          return null;
-        });
+      final args = call.arguments as Map? ?? {};
+      if (call.method == 'getAll') {
+        return Map<String, dynamic>.from(sharedPreferencesStore);
+      } else if (call.method == 'setString') {
+        sharedPreferencesStore[args['key']] = args['value'];
+        return true;
+      } else if (call.method == 'getString') {
+        return sharedPreferencesStore[args['key']];
+      } else if (call.method == 'remove') {
+        sharedPreferencesStore.remove(args['key']);
+        return true;
+      } else if (call.method == 'getStringList') {
+        final value = sharedPreferencesStore[args['key']];
+        return value is List ? value : null;
+      } else if (call.method == 'setStringList') {
+        sharedPreferencesStore[args['key']] = args['value'];
+        return true;
+      } else if (call.method == 'clear') {
+        sharedPreferencesStore.clear();
+        return true;
+      }
+      return null;
+    });
   });
 
   tearDownAll(() {

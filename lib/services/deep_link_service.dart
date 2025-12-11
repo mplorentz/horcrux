@@ -145,8 +145,7 @@ class DeepLinkService {
       if (_navigatorKey?.currentContext != null) {
         Navigator.of(_navigatorKey!.currentContext!).push(
           MaterialPageRoute(
-            builder: (context) =>
-                InvitationAcceptanceScreen(inviteCode: linkData.inviteCode),
+            builder: (context) => InvitationAcceptanceScreen(inviteCode: linkData.inviteCode),
           ),
         );
         Log.info('Navigated to invitation acceptance screen');
@@ -189,9 +188,7 @@ class DeepLinkService {
   InvitationLinkData? parseInvitationLink(Uri uri) {
     try {
       // Validate scheme: https or horcrux
-      if (uri.scheme != 'https' &&
-          uri.scheme != 'horcrux' &&
-          uri.scheme != 'http') {
+      if (uri.scheme != 'https' && uri.scheme != 'horcrux' && uri.scheme != 'http') {
         throw InvalidInvitationLinkException(
           uri.toString(),
           'Unsupported URL scheme: ${uri.scheme}. Expected https:// or horcrux://',
@@ -295,9 +292,8 @@ class DeepLinkService {
       return (
         inviteCode: inviteCode,
         vaultId: vaultId,
-        vaultName: vaultName != null && vaultName.isNotEmpty
-            ? Uri.decodeComponent(vaultName)
-            : null,
+        vaultName:
+            vaultName != null && vaultName.isNotEmpty ? Uri.decodeComponent(vaultName) : null,
         ownerPubkey: ownerPubkey,
         relayUrls: relayUrls,
       );

@@ -45,10 +45,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   bool _isCreating = false;
   bool _isLoading = true;
   bool _hasUnsavedChanges = false;
-  bool _isEditingExistingPlan =
-      false; // Track if we're editing an existing plan
-  bool _thresholdManuallyChanged =
-      false; // Track if user manually changed threshold
+  bool _isEditingExistingPlan = false; // Track if we're editing an existing plan
+  bool _thresholdManuallyChanged = false; // Track if user manually changed threshold
   bool _showAdvancedSettings = false; // Track if advanced settings are visible
 
   // Instructions controller
@@ -99,8 +97,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _isLoading = false;
           _hasUnsavedChanges = false;
           _isEditingExistingPlan = true; // We're editing an existing plan
-          _thresholdManuallyChanged =
-              true; // Existing plan means threshold was already set
+          _thresholdManuallyChanged = true; // Existing plan means threshold was already set
         });
 
         // Load existing invitations and match them to stewards
@@ -235,10 +232,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                           const SizedBox(height: 8),
                                           Text(
                                             'Add your first steward to get started',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                   color: Theme.of(context)
                                                       .colorScheme
                                                       .onSurface
@@ -253,14 +247,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 else
                                   Column(
                                     children: [
-                                      for (
-                                        int i = 0;
-                                        i < _stewards.length;
-                                        i++
-                                      ) ...[
+                                      for (int i = 0; i < _stewards.length; i++) ...[
                                         _buildStewardListItem(_stewards[i]),
-                                        if (i < _stewards.length - 1)
-                                          const Divider(height: 1),
+                                        if (i < _stewards.length - 1) const Divider(height: 1),
                                       ],
                                     ],
                                   ),
@@ -273,9 +262,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                     onPressed: _showAddStewardDialog,
                                     icon: const Icon(Icons.person_add),
                                     label: Text(
-                                      _stewards.isEmpty
-                                          ? 'Add Steward'
-                                          : 'Add Another Steward',
+                                      _stewards.isEmpty ? 'Add Steward' : 'Add Another Steward',
                                     ),
                                   ),
                                 ),
@@ -292,8 +279,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                           onThresholdChanged: (newThreshold) {
                             setState(() {
                               _threshold = newThreshold;
-                              _thresholdManuallyChanged =
-                                  true; // Mark as manually changed
+                              _thresholdManuallyChanged = true; // Mark as manually changed
                               _hasUnsavedChanges = true;
                             });
                           },
@@ -344,9 +330,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                             });
                           },
                           icon: Icon(
-                            _showAdvancedSettings
-                                ? Icons.expand_more
-                                : Icons.chevron_right,
+                            _showAdvancedSettings ? Icons.expand_more : Icons.chevron_right,
                           ),
                           label: Text(
                             _showAdvancedSettings
@@ -809,9 +793,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   }
 
   Widget _buildStewardListItem(Steward steward) {
-    final invitation = steward.name != null
-        ? _invitationLinksByInviteeName[steward.name]
-        : null;
+    final invitation = steward.name != null ? _invitationLinksByInviteeName[steward.name] : null;
     final isInvited = steward.status == StewardStatus.invited;
 
     return Card(
@@ -884,10 +866,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     Text(
                       'Share this invitation with ${steward.name ?? steward.displayName}:',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -908,8 +890,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 18),
-                          onPressed: () =>
-                              _copyInvitationLinkForSteward(invitation),
+                          onPressed: () => _copyInvitationLinkForSteward(invitation),
                           tooltip: 'Copy invitation link',
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -1229,11 +1210,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (!mounted) return;
         final shouldAutoDistributeResult =
             await BackupDistributionHelper.showRegenerationAlertIfNeeded(
-              context: context,
-              backupConfig: existingConfig,
-              willChange: configWillChange,
-              mounted: mounted,
-            );
+          context: context,
+          backupConfig: existingConfig,
+          willChange: configWillChange,
+          mounted: mounted,
+        );
 
         if (shouldAutoDistributeResult == false) {
           // User cancelled or widget disposed, don't save changes
@@ -1332,9 +1313,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 .whereType<String>()
                 .toSet();
 
-            final addedInvitedCount = newInvitedNames
-                .difference(existingInvitedNames)
-                .length;
+            final addedInvitedCount = newInvitedNames.difference(existingInvitedNames).length;
 
             if (addedInvitedCount > 0) {
               shouldShowSuccessSnack = false;

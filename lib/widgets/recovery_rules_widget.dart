@@ -44,13 +44,12 @@ class RecoveryRulesWidget extends StatelessWidget {
               ),
               Slider(
                 value: threshold.toDouble().clamp(
-                  VaultBackupConstraints.minThreshold.toDouble(),
-                  stewardCount.toDouble(),
-                ),
+                      VaultBackupConstraints.minThreshold.toDouble(),
+                      stewardCount.toDouble(),
+                    ),
                 min: VaultBackupConstraints.minThreshold.toDouble(),
                 max: stewardCount.toDouble(),
-                divisions:
-                    stewardCount - VaultBackupConstraints.minThreshold > 0
+                divisions: stewardCount - VaultBackupConstraints.minThreshold > 0
                     ? stewardCount - VaultBackupConstraints.minThreshold
                     : null,
                 onChanged: (value) {

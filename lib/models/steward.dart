@@ -13,16 +13,14 @@ typedef Steward = ({
   String id, // Unique identifier for this steward
   String? pubkey, // Hex format - nullable for invited stewards
   String? name,
-  String?
-  inviteCode, // Invitation code for invited stewards (before they accept)
+  String? inviteCode, // Invitation code for invited stewards (before they accept)
   StewardStatus status,
   DateTime? lastSeen,
   String? keyShare,
   String? giftWrapEventId,
   DateTime? acknowledgedAt,
   String? acknowledgmentEventId,
-  int?
-  acknowledgedDistributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+  int? acknowledgedDistributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
   bool isOwner, // True when this steward is the vault owner
 });
 
@@ -100,11 +98,9 @@ Steward copySteward(
     keyShare: keyShare ?? steward.keyShare,
     giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
     acknowledgedAt: acknowledgedAt ?? steward.acknowledgedAt,
-    acknowledgmentEventId:
-        acknowledgmentEventId ?? steward.acknowledgmentEventId,
+    acknowledgmentEventId: acknowledgmentEventId ?? steward.acknowledgmentEventId,
     acknowledgedDistributionVersion:
-        acknowledgedDistributionVersion ??
-        steward.acknowledgedDistributionVersion,
+        acknowledgedDistributionVersion ?? steward.acknowledgedDistributionVersion,
     isOwner: isOwner ?? steward.isOwner,
   );
 }
@@ -128,8 +124,7 @@ extension StewardExtension on Steward {
     if (lastSeen == null) return false;
     final now = DateTime.now();
     final timeSinceLastSeen = now.difference(lastSeen!);
-    return timeSinceLastSeen.inHours <
-        24; // Consider responsive if seen within 24 hours
+    return timeSinceLastSeen.inHours < 24; // Consider responsive if seen within 24 hours
   }
 
   /// Check if this steward is invited (no pubkey yet)
@@ -190,38 +185,27 @@ Map<String, dynamic> stewardToJson(Steward steward) {
 /// Create from JSON
 Steward stewardFromJson(Map<String, dynamic> json) {
   return (
-    id:
-        json['id'] as String? ??
-        _uuid.v4(), // Generate ID if missing for backward compatibility
+    id: json['id'] as String? ?? _uuid.v4(), // Generate ID if missing for backward compatibility
     pubkey: json['pubkey'] as String?, // Hex format without 0x prefix, nullable
     name: json['name'] as String?,
-    inviteCode:
-        json['inviteCode'] as String?, // Nullable for backward compatibility
+    inviteCode: json['inviteCode'] as String?, // Nullable for backward compatibility
     status: StewardStatus.values.firstWhere(
       (s) => s.name == json['status'],
       orElse: () => StewardStatus.awaitingKey,
     ),
-    lastSeen: json['lastSeen'] != null
-        ? DateTime.parse(json['lastSeen'] as String)
-        : null,
+    lastSeen: json['lastSeen'] != null ? DateTime.parse(json['lastSeen'] as String) : null,
     keyShare: json['keyShare'] as String?,
     giftWrapEventId: json['giftWrapEventId'] as String?,
-    acknowledgedAt: json['acknowledgedAt'] != null
-        ? DateTime.parse(json['acknowledgedAt'] as String)
-        : null,
+    acknowledgedAt:
+        json['acknowledgedAt'] != null ? DateTime.parse(json['acknowledgedAt'] as String) : null,
     acknowledgmentEventId: json['acknowledgmentEventId'] as String?,
-    acknowledgedDistributionVersion:
-        json['acknowledgedDistributionVersion'] as int?,
-    isOwner:
-        json['isOwner'] as bool? ??
-        false, // Default to false for backward compatibility
+    acknowledgedDistributionVersion: json['acknowledgedDistributionVersion'] as int?,
+    isOwner: json['isOwner'] as bool? ?? false, // Default to false for backward compatibility
   );
 }
 
 /// String representation of Steward
 String stewardToString(Steward steward) {
-  final pubkeyPreview = steward.pubkey != null
-      ? '${steward.pubkey!.substring(0, 8)}...'
-      : 'null';
+  final pubkeyPreview = steward.pubkey != null ? '${steward.pubkey!.substring(0, 8)}...' : 'null';
   return 'Steward(id: ${steward.id}, pubkey: $pubkeyPreview, name: ${steward.name}, status: ${steward.status})';
 }

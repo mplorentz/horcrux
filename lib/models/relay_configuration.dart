@@ -78,9 +78,8 @@ class RelayConfiguration {
       url: json['url'] as String,
       name: json['name'] as String,
       isEnabled: json['isEnabled'] as bool? ?? true,
-      lastScanned: json['lastScanned'] != null
-          ? DateTime.parse(json['lastScanned'] as String)
-          : null,
+      lastScanned:
+          json['lastScanned'] != null ? DateTime.parse(json['lastScanned'] as String) : null,
       scanInterval: Duration(seconds: json['scanInterval'] as int? ?? 300),
       isTrusted: json['isTrusted'] as bool? ?? false,
     );
@@ -109,9 +108,7 @@ class RelayConfiguration {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RelayConfiguration &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      other is RelayConfiguration && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

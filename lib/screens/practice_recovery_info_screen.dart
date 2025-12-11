@@ -32,8 +32,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       ),
       body: vaultAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(child: Text('Error loading vault: $error')),
+        error: (error, stack) => Center(child: Text('Error loading vault: $error')),
         data: (vault) {
           if (vault == null) {
             return const Center(child: Text('Vault not found'));
@@ -41,8 +40,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
 
           return currentPubkeyAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) =>
-                Center(child: Text('Error loading user: $error')),
+            error: (error, stack) => Center(child: Text('Error loading user: $error')),
             data: (currentPubkey) {
               // Verify user is owner
               if (currentPubkey == null || !vault.isOwned(currentPubkey)) {
@@ -113,8 +111,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
                   context,
                   stepNumber: 1,
                   title: 'Initiate Recovery',
-                  description:
-                      'You (or a steward) send a recovery request to all other stewards.',
+                  description: 'You (or a steward) send a recovery request to all other stewards.',
                 ),
                 const SizedBox(height: 8),
                 _buildStepCard(
@@ -355,8 +352,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
+              builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
             ),
           );
         }

@@ -15,8 +15,7 @@ class EditVaultScreen extends ConsumerStatefulWidget {
   ConsumerState<EditVaultScreen> createState() => _EditVaultScreenState();
 }
 
-class _EditVaultScreenState extends ConsumerState<EditVaultScreen>
-    with VaultContentSaveMixin {
+class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultContentSaveMixin {
   final _nameController = TextEditingController();
   final _contentController = TextEditingController();
   final _ownerNameController = TextEditingController();
@@ -89,9 +88,7 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen>
       name: _nameController.text,
       content: _contentController.text,
       vaultId: widget.vaultId,
-      ownerName: _ownerNameController.text.trim().isEmpty
-          ? null
-          : _ownerNameController.text.trim(),
+      ownerName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
     );
 
     if (savedId != null && mounted) {

@@ -9,52 +9,52 @@ import '../services/logger.dart';
 /// Automatically refreshes when invitations change via stream.
 final pendingInvitationsProvider =
     StreamProvider.family<List<InvitationLink>, String>((ref, vaultId) {
-      final service = ref.watch(invitationServiceProvider);
+  final service = ref.watch(invitationServiceProvider);
 
-      // Return a stream that:
-      // 1. Loads initial data
-      // 2. Subscribes to updates from the service stream
-      return Stream.multi((controller) async {
-        // First, load and emit initial invitations
+  // Return a stream that:
+  // 1. Loads initial data
+  // 2. Subscribes to updates from the service stream
+  return Stream.multi((controller) async {
+    // First, load and emit initial invitations
+    try {
+      final initialInvitations = await service.getPendingInvitations(
+        vaultId,
+      );
+      controller.add(initialInvitations);
+    } catch (e) {
+      Log.error('Error loading initial invitations for vault $vaultId', e);
+      controller.addError(e);
+    }
+
+    // Then listen to the service stream for updates
+    final subscription = service.invitationsChangedStream.listen(
+      (_) async {
         try {
-          final initialInvitations = await service.getPendingInvitations(
-            vaultId,
-          );
-          controller.add(initialInvitations);
+          final invitations = await service.getPendingInvitations(vaultId);
+          controller.add(invitations);
         } catch (e) {
-          Log.error('Error loading initial invitations for vault $vaultId', e);
+          Log.error('Error reloading invitations for vault $vaultId', e);
           controller.addError(e);
         }
-
-        // Then listen to the service stream for updates
-        final subscription = service.invitationsChangedStream.listen(
-          (_) async {
-            try {
-              final invitations = await service.getPendingInvitations(vaultId);
-              controller.add(invitations);
-            } catch (e) {
-              Log.error('Error reloading invitations for vault $vaultId', e);
-              controller.addError(e);
-            }
-          },
-          onError: (error) {
-            Log.error(
-              'Error in invitationsChangedStream for vault $vaultId',
-              error,
-            );
-            controller.addError(error);
-          },
-          onDone: () {
-            controller.close();
-          },
+      },
+      onError: (error) {
+        Log.error(
+          'Error in invitationsChangedStream for vault $vaultId',
+          error,
         );
+        controller.addError(error);
+      },
+      onDone: () {
+        controller.close();
+      },
+    );
 
-        // Clean up when the provider is disposed
-        controller.onCancel = () {
-          subscription.cancel();
-        };
-      });
-    });
+    // Clean up when the provider is disposed
+    controller.onCancel = () {
+      subscription.cancel();
+    };
+  });
+});
 
 /// Provider for invitation lookup by code
 ///

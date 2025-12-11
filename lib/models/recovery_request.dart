@@ -119,9 +119,7 @@ class RecoveryResponse {
   RecoveryResponseStatus get status {
     if (errorMessage != null) return RecoveryResponseStatus.error;
     if (respondedAt == null) return RecoveryResponseStatus.pending;
-    return approved
-        ? RecoveryResponseStatus.approved
-        : RecoveryResponseStatus.denied;
+    return approved ? RecoveryResponseStatus.approved : RecoveryResponseStatus.denied;
   }
 
   /// Convert to JSON
@@ -141,9 +139,8 @@ class RecoveryResponse {
     return RecoveryResponse(
       pubkey: json['pubkey'] as String,
       approved: json['approved'] as bool? ?? false,
-      respondedAt: json['respondedAt'] != null
-          ? DateTime.parse(json['respondedAt'] as String)
-          : null,
+      respondedAt:
+          json['respondedAt'] != null ? DateTime.parse(json['respondedAt'] as String) : null,
       shardData: json['shardData'] != null
           ? shardDataFromJson(json['shardData'] as Map<String, dynamic>)
           : null,
@@ -245,8 +242,7 @@ class RecoveryRequest {
   int get totalStewards => stewardResponses.length;
 
   /// Get number of responses received
-  int get respondedCount =>
-      stewardResponses.values.where((r) => r.status.isResolved).length;
+  int get respondedCount => stewardResponses.values.where((r) => r.status.isResolved).length;
 
   /// Get number of approvals
   int get approvedCount => getResponseCount(RecoveryResponseStatus.approved);
@@ -276,8 +272,7 @@ class RecoveryRequest {
   /// Create from JSON
   factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
     final responsesJson = json['stewardResponses'] as Map<String, dynamic>?;
-    final responses =
-        responsesJson?.map(
+    final responses = responsesJson?.map(
           (key, value) => MapEntry(
             key,
             RecoveryResponse.fromJson(value as Map<String, dynamic>),
@@ -294,13 +289,10 @@ class RecoveryRequest {
         (e) => e.name == json['status'],
         orElse: () => RecoveryRequestStatus.pending,
       ),
-      threshold:
-          json['threshold'] as int? ??
+      threshold: json['threshold'] as int? ??
           1, // Default to 1 if not present (for backwards compatibility)
       nostrEventId: json['nostrEventId'] as String?,
-      expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'] as String)
-          : null,
+      expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
       stewardResponses: responses,
       errorMessage: json['errorMessage'] as String?,
       isPractice: json['isPractice'] as bool? ?? false,
@@ -338,9 +330,7 @@ class RecoveryRequest {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RecoveryRequest &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      other is RecoveryRequest && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

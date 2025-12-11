@@ -45,10 +45,8 @@ void main() {
     late NdkService ndkService;
     late VaultShareService vaultShareService;
     late RecoveryService recoveryService;
-    const testKeyHolder1 =
-        'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
-    const testKeyHolder2 =
-        'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
+    const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
+    const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
     const testVaultId = 'vault-test-123';
 
     setUp(() async {
@@ -559,8 +557,7 @@ void main() {
 
         // Assert: Verify the captured content does NOT contain shard data
         expect(capturedContent, isNotNull);
-        final decodedContent =
-            json.decode(capturedContent!) as Map<String, dynamic>;
+        final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
 
         // Should have the basic response fields
         expect(decodedContent['type'], 'recovery_response');
@@ -644,8 +641,7 @@ void main() {
 
       // Assert: Verify the captured content DOES contain shard data
       expect(capturedContent, isNotNull);
-      final decodedContent =
-          json.decode(capturedContent!) as Map<String, dynamic>;
+      final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
 
       // Should have the basic response fields
       expect(decodedContent['type'], 'recovery_response');
@@ -663,8 +659,7 @@ void main() {
       expect(decodedContent['shard_data'], isNotNull);
 
       // Verify shard data structure
-      final sentShardData =
-          decodedContent['shard_data'] as Map<String, dynamic>;
+      final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
       expect(sentShardData['shard'], 'real_shard_secret_BBB=');
       expect(sentShardData['threshold'], 1);
       expect(sentShardData['shardIndex'], 0);

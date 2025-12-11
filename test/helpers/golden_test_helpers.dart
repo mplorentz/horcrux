@@ -206,14 +206,14 @@ Future<void> pumpGoldenWidget(
   if (container != null) {
     if (useScaffold) {
       wrapper = (child) => goldenMaterialAppWrapperWithProvidersAndScaffold(
-        child: child,
-        container: container,
-      );
+            child: child,
+            container: container,
+          );
     } else {
       wrapper = (child) => goldenMaterialAppWrapperWithProviders(
-        child: child,
-        container: container,
-      );
+            child: child,
+            container: container,
+          );
     }
   } else {
     wrapper = goldenMaterialAppWrapper;

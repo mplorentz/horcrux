@@ -13,8 +13,7 @@ class AccountCreatedScreen extends ConsumerStatefulWidget {
   const AccountCreatedScreen({super.key, required this.nsec});
 
   @override
-  ConsumerState<AccountCreatedScreen> createState() =>
-      _AccountCreatedScreenState();
+  ConsumerState<AccountCreatedScreen> createState() => _AccountCreatedScreenState();
 }
 
 class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
@@ -174,8 +173,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
                             child: Text(
                               'Make sure to back up your key. If you lose it, you will not be able to recover your account.',
                               style: textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onErrorContainer
-                                    .withValues(alpha: 1.0),
+                                color: theme.colorScheme.onErrorContainer.withValues(alpha: 1.0),
                               ),
                             ),
                           ),
@@ -192,9 +190,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
                 RowButtonConfig(
                   onPressed: _isBackingUp ? null : _backupKeyInVault,
                   icon: Icons.lock,
-                  text: _isBackingUp
-                      ? 'Creating Vault...'
-                      : 'Back Up in Horcrux Vault',
+                  text: _isBackingUp ? 'Creating Vault...' : 'Back Up in Horcrux Vault',
                 ),
                 RowButtonConfig(
                   onPressed: _isBackingUp ? null : _skipBackup,

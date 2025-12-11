@@ -49,9 +49,7 @@ class ScanningStatus {
   factory ScanningStatus.fromJson(Map<String, dynamic> json) {
     return ScanningStatus(
       isActive: json['isActive'] as bool,
-      lastScan: json['lastScan'] != null
-          ? DateTime.parse(json['lastScan'] as String)
-          : null,
+      lastScan: json['lastScan'] != null ? DateTime.parse(json['lastScan'] as String) : null,
       totalRelays: json['totalRelays'] as int,
       activeRelays: json['activeRelays'] as int,
       sharesFound: json['sharesFound'] as int,
@@ -108,9 +106,7 @@ class RelayScanService {
       _isInitialized = true;
 
       // In debug mode with newly added localhost relay, start scanning automatically
-      if (kDebugMode &&
-          _cachedRelays!.length == 1 &&
-          _cachedRelays![0].id == 'localhost-debug') {
+      if (kDebugMode && _cachedRelays!.length == 1 && _cachedRelays![0].id == 'localhost-debug') {
         try {
           await startRelayScanning();
           Log.info('Auto-started scanning with localhost relay');
@@ -125,8 +121,7 @@ class RelayScanService {
           // Check if scanning was previously active (user didn't explicitly stop it)
           // If scanningStatus is null or isActive was true, auto-start
           // If isActive was false, respect the user's explicit stop
-          final shouldAutoStart =
-              _scanningStatus == null || _scanningStatus!.isActive;
+          final shouldAutoStart = _scanningStatus == null || _scanningStatus!.isActive;
 
           if (shouldAutoStart) {
             try {
@@ -283,9 +278,7 @@ class RelayScanService {
     }
 
     // Check for duplicate URL
-    final existingRelay = _cachedRelays!
-        .where((r) => r.url == relay.url)
-        .firstOrNull;
+    final existingRelay = _cachedRelays!.where((r) => r.url == relay.url).firstOrNull;
     if (existingRelay != null) {
       throw ArgumentError('Relay with URL ${relay.url} already exists');
     }
@@ -351,8 +344,7 @@ class RelayScanService {
 
     final relay = _cachedRelays!.firstWhere(
       (r) => r.id == relayId,
-      orElse: () =>
-          throw ArgumentError('Relay configuration not found: $relayId'),
+      orElse: () => throw ArgumentError('Relay configuration not found: $relayId'),
     );
 
     _cachedRelays!.removeWhere((r) => r.id == relayId);
@@ -602,9 +594,7 @@ class RelayScanService {
       }
 
       // Check if relay already exists by URL
-      final existingRelay = _cachedRelays!
-          .where((r) => r.url == relayUrl)
-          .firstOrNull;
+      final existingRelay = _cachedRelays!.where((r) => r.url == relayUrl).firstOrNull;
 
       if (existingRelay == null) {
         // Generate a name from the URL (hostname or full URL if hostname is empty)

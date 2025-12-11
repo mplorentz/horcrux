@@ -51,14 +51,12 @@ class BackupService {
     String? contentHash,
   }) async {
     // Validate inputs
-    if (threshold < VaultBackupConstraints.minThreshold ||
-        threshold > totalKeys) {
+    if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
       throw ArgumentError(
         'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
       );
     }
-    if (totalKeys < threshold ||
-        totalKeys > VaultBackupConstraints.maxTotalKeys) {
+    if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
       throw ArgumentError(
         'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
       );
@@ -380,13 +378,11 @@ class BackupService {
 
     // If distribution version incremented, reset all stewards with pubkeys to awaitingNewKey
     // (preserve invited stewards without pubkeys)
-    final finalStewards =
-        newDistributionVersion > existingConfig.distributionVersion
+    final finalStewards = newDistributionVersion > existingConfig.distributionVersion
         ? mergedStewards.map((steward) {
             // Reset to awaitingNewKey if they have a pubkey and were holding a key
             // Keep as awaitingKey if they were already awaiting (never received a key)
-            if (steward.pubkey != null &&
-                steward.status != StewardStatus.invited) {
+            if (steward.pubkey != null && steward.status != StewardStatus.invited) {
               final newStatus = steward.status == StewardStatus.holdingKey
                   ? StewardStatus.awaitingNewKey
                   : StewardStatus.awaitingKey;
@@ -493,9 +489,7 @@ class BackupService {
     // Add all updated stewards, preserving acknowledgments from existing
     for (final updatedSteward in updated) {
       // Find matching steward in existing list by id
-      final existingSteward = existing
-          .where((h) => h.id == updatedSteward.id)
-          .firstOrNull;
+      final existingSteward = existing.where((h) => h.id == updatedSteward.id).firstOrNull;
 
       if (existingSteward != null) {
         // Preserve important fields from existing (status, acknowledgments, pubkey, etc)
@@ -507,8 +501,7 @@ class BackupService {
             pubkey: existingSteward.pubkey ?? updatedSteward.pubkey,
             acknowledgedAt: existingSteward.acknowledgedAt,
             acknowledgmentEventId: existingSteward.acknowledgmentEventId,
-            acknowledgedDistributionVersion:
-                existingSteward.acknowledgedDistributionVersion,
+            acknowledgedDistributionVersion: existingSteward.acknowledgedDistributionVersion,
           ),
         );
       } else {

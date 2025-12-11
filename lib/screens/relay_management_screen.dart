@@ -10,8 +10,7 @@ class RelayManagementScreen extends ConsumerStatefulWidget {
   const RelayManagementScreen({super.key});
 
   @override
-  ConsumerState<RelayManagementScreen> createState() =>
-      _RelayManagementScreenState();
+  ConsumerState<RelayManagementScreen> createState() => _RelayManagementScreenState();
 }
 
 class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
@@ -28,15 +27,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
   Future<void> _loadData() async {
     try {
-      final relays = await ref
-          .read(relayScanServiceProvider)
-          .getRelayConfigurations();
-      final scanningStatus = await ref
-          .read(relayScanServiceProvider)
-          .getScanningStatus();
-      final isScanning = await ref
-          .read(relayScanServiceProvider)
-          .isScanningActive();
+      final relays = await ref.read(relayScanServiceProvider).getRelayConfigurations();
+      final scanningStatus = await ref.read(relayScanServiceProvider).getScanningStatus();
+      final isScanning = await ref.read(relayScanServiceProvider).isScanningActive();
 
       if (mounted) {
         setState(() {
@@ -95,9 +88,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   Future<void> _toggleRelay(RelayConfiguration relay) async {
     try {
       final updatedRelay = relay.copyWith(isEnabled: !relay.isEnabled);
-      await ref
-          .read(relayScanServiceProvider)
-          .updateRelayConfiguration(updatedRelay);
+      await ref.read(relayScanServiceProvider).updateRelayConfiguration(updatedRelay);
       await _loadData();
     } catch (e) {
       Log.error('Error toggling relay', e);
@@ -125,9 +116,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
     if (confirmed == true) {
       try {
-        await ref
-            .read(relayScanServiceProvider)
-            .removeRelayConfiguration(relay.id);
+        await ref.read(relayScanServiceProvider).removeRelayConfiguration(relay.id);
         await _loadData();
 
         if (mounted) {
@@ -225,9 +214,8 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _toggleScanning,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _isScanning
-                                ? Colors.red
-                                : Theme.of(context).primaryColor,
+                            backgroundColor:
+                                _isScanning ? Colors.red : Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                           ),
                           icon: Icon(
@@ -365,9 +353,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
               : Colors.grey[300],
           child: Icon(
             Icons.dns,
-            color: relay.isEnabled
-                ? Theme.of(context).primaryColor
-                : Colors.grey,
+            color: relay.isEnabled ? Theme.of(context).primaryColor : Colors.grey,
           ),
         ),
         title: Text(

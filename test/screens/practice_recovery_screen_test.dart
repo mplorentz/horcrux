@@ -193,8 +193,7 @@ void main() {
       );
 
       // User is not the owner
-      const nonOwnerPubkey =
-          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const nonOwnerPubkey = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
       final container = ProviderContainer(
         overrides: [
