@@ -17,7 +17,9 @@ void main() {
     const testVaultId = 'test-vault-id';
     final testPubkey = 'a' * 64; // 64-char hex pubkey
 
-    testGoldens('shows practice recovery content for ready vault', (tester) async {
+    testGoldens('shows practice recovery content for ready vault', (
+      tester,
+    ) async {
       // Create stewards with confirmed status
       final steward1 = createSteward(pubkey: 'b' * 64, name: 'Steward 1');
       final steward2 = createSteward(pubkey: 'c' * 64, name: 'Steward 2');
@@ -73,7 +75,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -102,7 +106,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -145,7 +151,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -185,12 +193,15 @@ void main() {
       );
 
       // User is not the owner
-      const nonOwnerPubkey = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      const nonOwnerPubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
       final container = ProviderContainer(
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => Future.value(nonOwnerPubkey)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(nonOwnerPubkey),
+          ),
         ],
       );
 
@@ -206,7 +217,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('shows practice recovery with different threshold (3 of 5)', (tester) async {
+    testGoldens('shows practice recovery with different threshold (3 of 5)', (
+      tester,
+    ) async {
       // Create 5 stewards with confirmed status
       final steward1 = createSteward(pubkey: 'b' * 64, name: 'Steward 1');
       final steward2 = createSteward(pubkey: 'c' * 64, name: 'Steward 2');
@@ -281,7 +294,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => Future.value(testPubkey)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 

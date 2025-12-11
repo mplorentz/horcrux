@@ -49,7 +49,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('account choice screen - multiple device sizes', (tester) async {
+    testGoldens('account choice screen - multiple device sizes', (
+      tester,
+    ) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
@@ -62,7 +64,10 @@ void main() {
         ..overrideDevicesForAllScenarios(
           devices: [Device.phone, Device.iphone11, Device.tabletPortrait],
         )
-        ..addScenario(widget: const AccountChoiceScreen(), name: 'account_choice');
+        ..addScenario(
+          widget: const AccountChoiceScreen(),
+          name: 'account_choice',
+        );
 
       await tester.pumpDeviceBuilder(
         builder,
@@ -72,7 +77,10 @@ void main() {
         ),
       );
 
-      await screenMatchesGolden(tester, 'account_choice_screen_multiple_devices');
+      await screenMatchesGolden(
+        tester,
+        'account_choice_screen_multiple_devices',
+      );
 
       container.dispose();
     });

@@ -116,7 +116,8 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: approved,
-      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt:
+          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
     );
   }
 
@@ -124,9 +125,9 @@ void main() {
     testGoldens('loading state', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123').overrideWith(
-            (ref) => const AsyncValue.loading(),
-          ),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => const AsyncValue.loading()),
         ],
       );
 
@@ -173,8 +174,9 @@ void main() {
     testGoldens('recovery request not found', (tester) async {
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => const AsyncValue.data(null)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => const AsyncValue.data(null)),
         ],
       );
 
@@ -190,7 +192,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('practice recovery - pending with no responses', (tester) async {
+    testGoldens('practice recovery - pending with no responses', (
+      tester,
+    ) async {
       final recoveryRequest = createTestRecoveryRequest(
         id: 'recovery-123',
         vaultId: 'test-vault',
@@ -199,8 +203,14 @@ void main() {
         status: RecoveryRequestStatus.pending,
         responses: {
           testPubkey: RecoveryResponse(pubkey: testPubkey, approved: false),
-          steward1Pubkey: RecoveryResponse(pubkey: steward1Pubkey, approved: false),
-          steward2Pubkey: RecoveryResponse(pubkey: steward2Pubkey, approved: false),
+          steward1Pubkey: RecoveryResponse(
+            pubkey: steward1Pubkey,
+            approved: false,
+          ),
+          steward2Pubkey: RecoveryResponse(
+            pubkey: steward2Pubkey,
+            approved: false,
+          ),
         },
         isPractice: true,
       );
@@ -224,9 +234,12 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
         ],
       );
 
@@ -242,7 +255,9 @@ void main() {
       container.dispose();
     });
 
-    testGoldens('practice recovery - in progress with partial responses', (tester) async {
+    testGoldens('practice recovery - in progress with partial responses', (
+      tester,
+    ) async {
       final recoveryRequest = createTestRecoveryRequest(
         id: 'recovery-123',
         vaultId: 'test-vault',
@@ -250,9 +265,18 @@ void main() {
         threshold: 2,
         status: RecoveryRequestStatus.inProgress,
         responses: {
-          testPubkey: createTestRecoveryResponse(pubkey: testPubkey, approved: true),
-          steward1Pubkey: RecoveryResponse(pubkey: steward1Pubkey, approved: false),
-          steward2Pubkey: RecoveryResponse(pubkey: steward2Pubkey, approved: false),
+          testPubkey: createTestRecoveryResponse(
+            pubkey: testPubkey,
+            approved: true,
+          ),
+          steward1Pubkey: RecoveryResponse(
+            pubkey: steward1Pubkey,
+            approved: false,
+          ),
+          steward2Pubkey: RecoveryResponse(
+            pubkey: steward2Pubkey,
+            approved: false,
+          ),
         },
         isPractice: true,
       );
@@ -275,9 +299,12 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
         ],
       );
 
@@ -301,9 +328,18 @@ void main() {
         threshold: 2,
         status: RecoveryRequestStatus.completed,
         responses: {
-          testPubkey: createTestRecoveryResponse(pubkey: testPubkey, approved: true),
-          steward1Pubkey: createTestRecoveryResponse(pubkey: steward1Pubkey, approved: true),
-          steward2Pubkey: RecoveryResponse(pubkey: steward2Pubkey, approved: false),
+          testPubkey: createTestRecoveryResponse(
+            pubkey: testPubkey,
+            approved: true,
+          ),
+          steward1Pubkey: createTestRecoveryResponse(
+            pubkey: steward1Pubkey,
+            approved: true,
+          ),
+          steward2Pubkey: RecoveryResponse(
+            pubkey: steward2Pubkey,
+            approved: false,
+          ),
         },
         isPractice: true,
       );
@@ -326,9 +362,12 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
         ],
       );
 
@@ -352,8 +391,14 @@ void main() {
         threshold: 2,
         status: RecoveryRequestStatus.inProgress,
         responses: {
-          testPubkey: createTestRecoveryResponse(pubkey: testPubkey, approved: true),
-          steward1Pubkey: RecoveryResponse(pubkey: steward1Pubkey, approved: false),
+          testPubkey: createTestRecoveryResponse(
+            pubkey: testPubkey,
+            approved: true,
+          ),
+          steward1Pubkey: RecoveryResponse(
+            pubkey: steward1Pubkey,
+            approved: false,
+          ),
         },
         isPractice: false, // Real recovery
       );
@@ -375,9 +420,12 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
         ],
       );
 
@@ -401,8 +449,14 @@ void main() {
         threshold: 2,
         status: RecoveryRequestStatus.inProgress,
         responses: {
-          testPubkey: createTestRecoveryResponse(pubkey: testPubkey, approved: true),
-          steward1Pubkey: RecoveryResponse(pubkey: steward1Pubkey, approved: false),
+          testPubkey: createTestRecoveryResponse(
+            pubkey: testPubkey,
+            approved: true,
+          ),
+          steward1Pubkey: RecoveryResponse(
+            pubkey: steward1Pubkey,
+            approved: false,
+          ),
         },
         isPractice: true,
       );
@@ -424,9 +478,12 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          recoveryRequestByIdProvider('recovery-123')
-              .overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          recoveryRequestByIdProvider(
+            'recovery-123',
+          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
         ],
       );
 

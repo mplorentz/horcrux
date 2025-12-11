@@ -31,11 +31,11 @@ class LogoutService {
     required RecoveryService recoveryService,
     required RelayScanService relayScanService,
     required LoginService loginService,
-  })  : _vaultRepository = vaultRepository,
-        _vaultShareService = vaultShareService,
-        _recoveryService = recoveryService,
-        _relayScanService = relayScanService,
-        _loginService = loginService;
+  }) : _vaultRepository = vaultRepository,
+       _vaultShareService = vaultShareService,
+       _recoveryService = recoveryService,
+       _relayScanService = relayScanService,
+       _loginService = loginService;
 
   Future<void> logout() async {
     Log.info('LogoutService: clearing all vault data and keys');

@@ -79,10 +79,7 @@ void main() {
         wrapper: goldenMaterialAppWrapper,
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_create_screen_multiple_devices',
-      );
+      await screenMatchesGolden(tester, 'vault_create_screen_multiple_devices');
     });
 
     testGoldens('filled content with character count', (tester) async {
@@ -100,10 +97,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      await screenMatchesGolden(
-        tester,
-        'vault_create_screen_with_char_count',
-      );
+      await screenMatchesGolden(tester, 'vault_create_screen_with_char_count');
     });
   });
 }

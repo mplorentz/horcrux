@@ -70,7 +70,8 @@ void main() {
     return RecoveryResponse(
       pubkey: pubkey,
       approved: approved,
-      respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
+      respondedAt:
+          respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
       shardData: approved
           ? createTestShard(
               shardIndex: 0,
@@ -142,9 +143,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           // Mock provider to return null (vault not found)
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(null)),
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
         ],
       );
 
@@ -193,10 +192,7 @@ void main() {
         ), // Increased height to handle overflow
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_detail_screen_owner_no_backup',
-      );
+      await screenMatchesGolden(tester, 'vault_detail_screen_owner_no_backup');
 
       container.dispose();
     });
@@ -395,7 +391,8 @@ void main() {
     testGoldens('shard holder - in recovery', (tester) async {
       final recoveryRequest = createTestRecoveryRequest(
         vaultId: 'test-vault',
-        initiatorPubkey: testPubkey, // testPubkey (shard holder) is the initiator
+        initiatorPubkey:
+            testPubkey, // testPubkey (shard holder) is the initiator
         status: RecoveryRequestStatus.inProgress,
         responses: {
           testPubkey: createTestRecoveryResponse(
@@ -570,10 +567,7 @@ void main() {
         ),
       );
 
-      await screenMatchesGolden(
-        tester,
-        'vault_detail_screen_multiple_devices',
-      );
+      await screenMatchesGolden(tester, 'vault_detail_screen_multiple_devices');
 
       container.dispose();
     });

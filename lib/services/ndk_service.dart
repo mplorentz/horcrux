@@ -69,18 +69,20 @@ class NdkService {
       StreamController<RecoveryResponseEvent>.broadcast();
 
   /// Stream of incoming recovery requests
-  Stream<RecoveryRequest> get recoveryRequestStream => _recoveryRequestController.stream;
+  Stream<RecoveryRequest> get recoveryRequestStream =>
+      _recoveryRequestController.stream;
 
   /// Stream of incoming recovery responses
-  Stream<RecoveryResponseEvent> get recoveryResponseStream => _recoveryResponseController.stream;
+  Stream<RecoveryResponseEvent> get recoveryResponseStream =>
+      _recoveryResponseController.stream;
 
   NdkService({
     required Ref ref,
     required LoginService loginService,
     required InvitationService Function() getInvitationService,
-  })  : _ref = ref,
-        _loginService = loginService,
-        _getInvitationService = getInvitationService;
+  }) : _ref = ref,
+       _loginService = loginService,
+       _getInvitationService = getInvitationService;
 
   /// Initialize NDK with current user's key and set up subscriptions
   Future<void> initialize() async {
@@ -290,14 +292,17 @@ class NdkService {
         initiatorPubkey: senderPubkey,
         requestedAt: DateTime.parse(requestData['requested_at'] as String),
         status: RecoveryRequestStatus.sent,
-        threshold: requestData['threshold'] as int? ?? 1, // Default to 1 if not present
+        threshold:
+            requestData['threshold'] as int? ??
+            1, // Default to 1 if not present
         nostrEventId: event.id,
         expiresAt: requestData['expires_at'] != null
             ? DateTime.parse(requestData['expires_at'] as String)
             : null,
         stewardResponses: {}, // Will be populated later
         isPractice:
-            requestData['is_practice'] as bool? ?? false, // Read is_practice from Nostr payload
+            requestData['is_practice'] as bool? ??
+            false, // Read is_practice from Nostr payload
       );
 
       // Emit recovery request to stream (RecoveryService will listen)
@@ -328,15 +333,13 @@ class NdkService {
 
       // If approved, extract and store the shard data FOR RECOVERY
       if (approved && responseData.containsKey('shard_data')) {
-        final shardDataJson = responseData['shard_data'] as Map<String, dynamic>;
+        final shardDataJson =
+            responseData['shard_data'] as Map<String, dynamic>;
         shardData = shardDataFromJson(shardDataJson);
 
         // Store as a recovery shard (not a steward shard)
         final vaultShareService = _ref.read(vaultShareServiceProvider);
-        await vaultShareService.addRecoveryShard(
-          recoveryRequestId,
-          shardData,
-        );
+        await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
 
         Log.info(
           'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',
@@ -607,7 +610,8 @@ class NdkService {
 
       // Calculate expiration timestamp: 7 days from now (NIP-40)
       final expirationTimestamp =
-          DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
+          DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/
+          1000;
 
       // Prepare tags with expiration tag prepended (only if not already present)
       final tagsList = tags ?? [];

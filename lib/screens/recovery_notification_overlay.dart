@@ -13,10 +13,12 @@ class RecoveryNotificationOverlay extends ConsumerStatefulWidget {
   const RecoveryNotificationOverlay({super.key});
 
   @override
-  ConsumerState<RecoveryNotificationOverlay> createState() => _RecoveryNotificationOverlayState();
+  ConsumerState<RecoveryNotificationOverlay> createState() =>
+      _RecoveryNotificationOverlayState();
 }
 
-class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificationOverlay> {
+class _RecoveryNotificationOverlayState
+    extends ConsumerState<RecoveryNotificationOverlay> {
   List<RecoveryRequest> _pendingNotifications = [];
   bool _isExpanded = false;
 
@@ -29,7 +31,9 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
 
   Future<void> _loadNotifications() async {
     try {
-      final notifications = await ref.read(recoveryServiceProvider).getPendingNotifications();
+      final notifications = await ref
+          .read(recoveryServiceProvider)
+          .getPendingNotifications();
       if (mounted) {
         setState(() {
           _pendingNotifications = notifications;
@@ -54,13 +58,16 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
 
   Future<void> _viewNotification(RecoveryRequest request) async {
     try {
-      await ref.read(recoveryServiceProvider).markNotificationAsViewed(request.id);
+      await ref
+          .read(recoveryServiceProvider)
+          .markNotificationAsViewed(request.id);
 
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+            builder: (context) =>
+                RecoveryRequestDetailScreen(recoveryRequest: request),
           ),
         );
       }
@@ -71,7 +78,9 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
 
   Future<void> _dismissNotification(RecoveryRequest request) async {
     try {
-      await ref.read(recoveryServiceProvider).markNotificationAsViewed(request.id);
+      await ref
+          .read(recoveryServiceProvider)
+          .markNotificationAsViewed(request.id);
     } catch (e) {
       Log.error('Error dismissing notification', e);
     }
@@ -182,10 +191,7 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
       ),
       data: (vault) {
         final vaultName = vault?.name ?? 'Unknown Vault';
-        final initiatorName = _getInitiatorName(
-          vault,
-          request.initiatorPubkey,
-        );
+        final initiatorName = _getInitiatorName(vault, request.initiatorPubkey);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
