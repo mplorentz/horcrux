@@ -51,7 +51,9 @@ jobs:
             pub-${{ runner.os }}-
       
       - name: Verify formatting
-        run: dart format --set-exit-if-changed --line-length=100 .
+        # dart format automatically reads analysis_options.yaml from the project root
+        # This ensures CI uses the same formatting settings (e.g., page_width: 100) as local development
+        run: dart format --set-exit-if-changed .
       
       - name: Analyze code
         run: flutter analyze
