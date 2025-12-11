@@ -260,7 +260,7 @@ class StewardList extends ConsumerWidget {
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
-          isOwner: s.pubkey != null && s.pubkey == vault.ownerPubkey,
+          isOwner: s.isOwner, // Use isOwner field from Steward model
           status: s.status, // Use actual status from Steward model
         );
       }).toList();

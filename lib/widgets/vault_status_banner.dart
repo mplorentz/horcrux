@@ -245,7 +245,7 @@ class VaultStatusBanner extends ConsumerWidget {
       const _StatusData(
         headline: 'Ready for recovery',
         subtext:
-            'Step 3 of 3: Your stewards have confirmed keys are stored. You can practice recovery anytime.',
+            'Your stewards have confirmed keys are stored. You or a steward can initiate recovery at any time.',
         icon: Icons.check_circle,
         accentColor: Color(0xFF2E7D32), // Deep green for success
         variant: _StatusVariant.ready,
@@ -327,12 +327,7 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildBanner(
-    BuildContext context,
-    _StatusData statusData,
-    bool isOwner,
-    bool isSteward,
-  ) {
+  Widget _buildBanner(BuildContext context, _StatusData statusData, bool isOwner, bool isSteward) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -351,11 +346,7 @@ class VaultStatusBanner extends ConsumerWidget {
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              statusData.icon,
-              size: 20,
-              color: colorScheme.onSurface,
-            ),
+            child: Icon(statusData.icon, size: 20, color: colorScheme.onSurface),
           ),
           const SizedBox(width: 12),
           // Text content

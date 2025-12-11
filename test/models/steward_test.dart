@@ -8,7 +8,7 @@ const _uuid = Uuid();
 void main() {
   group('KeyHolder', () {
     // Helper function to create KeyHolder records directly for testing
-    Steward createTestKeyHolder(String pubkey, {String? name}) {
+    Steward createTestKeyHolder(String pubkey, {String? name, bool isOwner = false}) {
       return (
         id: _uuid.v4(),
         pubkey: pubkey,
@@ -21,7 +21,7 @@ void main() {
         acknowledgedAt: null,
         acknowledgmentEventId: null,
         acknowledgedDistributionVersion: null,
-        isOwner: false,
+        isOwner: isOwner,
       );
     }
 
@@ -40,12 +40,7 @@ void main() {
       expect(npub.length, lessThan(70));
 
       // Verify it matches the expected npub
-      expect(
-        npub,
-        equals(
-          'npub16zsllwrkrwt5emz2805vhjewj6nsjrw0ge0latyrn2jv5gxf5k0q5l92l7',
-        ),
-      );
+      expect(npub, equals('npub16zsllwrkrwt5emz2805vhjewj6nsjrw0ge0latyrn2jv5gxf5k0q5l92l7'));
     });
 
     test('should return bech32 npub when pubkey is hex without 0x prefix', () {
@@ -63,12 +58,7 @@ void main() {
       expect(npub.length, lessThan(70));
 
       // Verify it matches the expected npub
-      expect(
-        npub,
-        equals(
-          'npub16zsllwrkrwt5emz2805vhjewj6nsjrw0ge0latyrn2jv5gxf5k0q5l92l7',
-        ),
-      );
+      expect(npub, equals('npub16zsllwrkrwt5emz2805vhjewj6nsjrw0ge0latyrn2jv5gxf5k0q5l92l7'));
     });
 
     test('displayName uses npub when name is null', () {
@@ -98,6 +88,97 @@ void main() {
 
       // Then: Should return the name, not npub
       expect(displayName, equals('Alice'));
+    });
+
+    // T026: Tests for isOwner field
+    group('isOwner field', () {
+      test('createSteward creates steward with isOwner false by default', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final steward = createSteward(pubkey: hexPubkey, name: 'Alice');
+
+        expect(steward.isOwner, isFalse);
+      });
+
+      test('createSteward can create steward with isOwner true', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final steward = createSteward(pubkey: hexPubkey, name: 'Me', isOwner: true);
+
+        expect(steward.isOwner, isTrue);
+      });
+
+      test('createOwnerSteward creates steward with isOwner true', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final steward = createOwnerSteward(pubkey: hexPubkey);
+
+        expect(steward.isOwner, isTrue);
+        expect(steward.name, equals('You')); // Default name for owner
+      });
+
+      test('createOwnerSteward accepts custom name', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final steward = createOwnerSteward(pubkey: hexPubkey, name: 'Me (Owner)');
+
+        expect(steward.isOwner, isTrue);
+        expect(steward.name, equals('Me (Owner)'));
+      });
+
+      test('createInvitedSteward creates steward with isOwner false', () {
+        final steward = createInvitedSteward(name: 'Bob', inviteCode: 'ABC123');
+
+        expect(steward.isOwner, isFalse);
+        expect(steward.pubkey, isNull);
+      });
+
+      test('copySteward preserves isOwner by default', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final original = createOwnerSteward(pubkey: hexPubkey);
+        final copy = copySteward(original, name: 'New Name');
+
+        expect(copy.isOwner, isTrue);
+        expect(copy.name, equals('New Name'));
+      });
+
+      test('copySteward can change isOwner', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final original = createOwnerSteward(pubkey: hexPubkey);
+        final copy = copySteward(original, isOwner: false);
+
+        expect(copy.isOwner, isFalse);
+      });
+
+      test('stewardToJson includes isOwner field', () {
+        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final steward = createOwnerSteward(pubkey: hexPubkey);
+        final json = stewardToJson(steward);
+
+        expect(json['isOwner'], isTrue);
+      });
+
+      test('stewardFromJson parses isOwner field', () {
+        final json = {
+          'id': 'test-id',
+          'pubkey': 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          'name': 'Owner',
+          'status': 'holdingKey',
+          'isOwner': true,
+        };
+        final steward = stewardFromJson(json);
+
+        expect(steward.isOwner, isTrue);
+      });
+
+      test('stewardFromJson defaults isOwner to false for backward compatibility', () {
+        final json = {
+          'id': 'test-id',
+          'pubkey': 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          'name': 'Old Steward',
+          'status': 'holdingKey',
+          // isOwner field is missing
+        };
+        final steward = stewardFromJson(json);
+
+        expect(steward.isOwner, isFalse);
+      });
     });
   });
 }

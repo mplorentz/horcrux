@@ -29,6 +29,7 @@ Steward createSteward({
   required String pubkey, // Takes hex format directly
   String? name,
   String? id, // Optional - will be generated if not provided
+  bool isOwner = false,
 }) {
   if (!isValidHexPubkey(pubkey)) {
     throw ArgumentError('Invalid hex pubkey format: $pubkey');
@@ -46,8 +47,17 @@ Steward createSteward({
     acknowledgedAt: null,
     acknowledgmentEventId: null,
     acknowledgedDistributionVersion: null,
-    isOwner: false,
+    isOwner: isOwner,
   );
+}
+
+/// Create a new Steward for the vault owner (convenience factory)
+Steward createOwnerSteward({
+  required String pubkey, // Takes hex format directly
+  String? name,
+  String? id, // Optional - will be generated if not provided
+}) {
+  return createSteward(pubkey: pubkey, name: name ?? 'You', id: id, isOwner: true);
 }
 
 /// Create a new Steward for an invited person (no pubkey yet)
