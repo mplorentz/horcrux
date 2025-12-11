@@ -51,7 +51,7 @@ jobs:
             pub-${{ runner.os }}-
       
       - name: Verify formatting
-        run: flutter format --set-exit-if-changed .
+        run: dart format --set-exit-if-changed --line-length=100 .
       
       - name: Analyze code
         run: flutter analyze
