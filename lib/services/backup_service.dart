@@ -470,13 +470,11 @@ class BackupService {
       final existingSteward = existing.where((h) => h.id == updatedSteward.id).firstOrNull;
 
       if (existingSteward != null) {
-        // Preserve important fields from existing (status, acknowledgments, pubkey, etc)
-        // Preserve pubkey from existing if it exists (should never be removed once set)
+        // Preserve important fields from existing (status, acknowledgments, etc)
         merged.add(
           copySteward(
             updatedSteward,
             status: existingSteward.status,
-            pubkey: existingSteward.pubkey ?? updatedSteward.pubkey,
             acknowledgedAt: existingSteward.acknowledgedAt,
             acknowledgmentEventId: existingSteward.acknowledgmentEventId,
             acknowledgedDistributionVersion: existingSteward.acknowledgedDistributionVersion,

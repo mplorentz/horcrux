@@ -150,9 +150,9 @@ class VaultStatusBanner extends ConsumerWidget {
       }
 
       // Waiting for stewards to join
-      final pendingCount = backupConfig.pendingInvitationsCount;
-      final canDistribute = backupConfig.canDistribute;
-      if ((pendingCount > 0 || !canDistribute) && backupConfig.lastRedistribution == null) {
+      if ((backupConfig.pendingInvitationsCount > 0 || !backupConfig.canDistribute) &&
+          backupConfig.lastRedistribution == null) {
+        final pendingCount = backupConfig.pendingInvitationsCount;
         return _buildBanner(
           context,
           _StatusData(
