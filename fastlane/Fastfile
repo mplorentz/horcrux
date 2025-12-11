@@ -7,15 +7,15 @@ Dotenv.load
 
 # Helper method to get App Store Connect API key using standard fastlane env vars
 # Standard fastlane environment variables:
-# - APP_STORE_CONNECT_API_KEY_KEY_ID
-# - APP_STORE_CONNECT_API_KEY_ISSUER_ID  
-# - APP_STORE_CONNECT_API_KEY_KEY_FILEPATH
+# - APP_STORE_KEY_ID
+# - APP_STORE_ISSUER_ID  
+# - APP_STORE_KEY_FILEPATH
 def get_api_key
-  if ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"]
+  if ENV["APP_STORE_KEY_FILEPATH"]
     app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
-      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      key_id: ENV["APP_STORE_KEY_ID"],
+      issuer_id: ENV["APP_STORE_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_KEY_FILEPATH"],
       duration: 1200,
       in_house: false
     )
@@ -73,7 +73,7 @@ platform :ios do
       
       # Update Xcode project build number
       increment_build_number(
-        xcodeproj: "../ios/Runner.xcworkspace",
+        xcodeproj: "ios/Runner.xcodeproj",
         build_number: new_version_code.to_s
       )
       
@@ -112,12 +112,12 @@ platform :ios do
   desc "Bump build number only"
   lane :bump_build do
     increment_build_number(
-      xcodeproj: "ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
     # Also update pubspec.yaml build number
-    current_version = get_version_number(xcodeproj: "../ios/Runner.xcworkspace")
-    build_number = get_build_number(xcodeproj: "../ios/Runner.xcworkspace")
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
     
     # Read pubspec.yaml
     pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
@@ -136,7 +136,7 @@ platform :ios do
   desc "Bump patch version (1.0.0 → 1.0.1)"
   lane :bump_patch do
     # Get current version
-    current_version = get_version_number(xcodeproj: "../ios/Runner.xcworkspace")
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
     version_parts = current_version.split(".")
     major = version_parts[0].to_i
     minor = version_parts[1].to_i
@@ -148,16 +148,16 @@ platform :ios do
     # Update version in Xcode project
     increment_version_number(
       version_number: new_version,
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
     # Reset build number to 1
     increment_build_number(
       build_number: "1",
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
-    build_number = get_build_number(xcodeproj: "../ios/Runner.xcworkspace")
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
     
     # Update pubspec.yaml
     pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
@@ -171,7 +171,7 @@ platform :ios do
 
   desc "Bump minor version (1.0.0 → 1.1.0)"
   lane :bump_minor do
-    current_version = get_version_number(xcodeproj: "../ios/Runner.xcworkspace")
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
     version_parts = current_version.split(".")
     major = version_parts[0].to_i
     minor = version_parts[1].to_i
@@ -180,15 +180,15 @@ platform :ios do
     
     increment_version_number(
       version_number: new_version,
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
     increment_build_number(
       build_number: "1",
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
-    build_number = get_build_number(xcodeproj: "../ios/Runner.xcworkspace")
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
     
     pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
     pubspec_content = File.read(pubspec_path)
@@ -201,7 +201,7 @@ platform :ios do
 
   desc "Bump major version (1.0.0 → 2.0.0)"
   lane :bump_major do
-    current_version = get_version_number(xcodeproj: "../ios/Runner.xcworkspace")
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
     version_parts = current_version.split(".")
     major = version_parts[0].to_i
     
@@ -209,15 +209,15 @@ platform :ios do
     
     increment_version_number(
       version_number: new_version,
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
     increment_build_number(
       build_number: "1",
-      xcodeproj: "../ios/Runner.xcworkspace"
+      xcodeproj: "ios/Runner.xcodeproj"
     )
     
-    build_number = get_build_number(xcodeproj: "../ios/Runner.xcworkspace")
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
     
     pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
     pubspec_content = File.read(pubspec_path)
