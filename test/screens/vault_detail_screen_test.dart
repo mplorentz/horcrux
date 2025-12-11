@@ -18,7 +18,7 @@ void main() {
 
   // T030: Widget test for owner-steward vault detail buttons
   group('Owner-steward vault detail buttons', () {
-    testWidgets('shows Recover Content and Create New Content for owner-steward state', (
+    testWidgets('shows Initiate Recovery and Create New Content for owner-steward state', (
       tester,
     ) async {
       // Owner-steward state: isOwner, content == null, shards.isNotEmpty
@@ -83,7 +83,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify owner-steward buttons are shown
-      expect(find.text('Recover Content'), findsOneWidget);
+      expect(find.text('Initiate Recovery'), findsOneWidget);
       expect(find.text('Create New Content'), findsOneWidget);
 
       container.dispose();
@@ -150,7 +150,9 @@ void main() {
       },
     );
 
-    testWidgets('does not show Delete Local Copy when no owner steward configured', (tester) async {
+    testWidgets('shows Delete Local Copy after distribution even without owner steward', (
+      tester,
+    ) async {
       // Only regular stewards, no owner steward
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
 
@@ -202,8 +204,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify Delete Local Copy button is NOT shown
-      expect(find.text('Delete Local Copy'), findsNothing);
+      // Verify Delete Local Copy button IS shown after distribution (owner steward not required)
+      expect(find.text('Delete Local Copy'), findsOneWidget);
 
       container.dispose();
     });

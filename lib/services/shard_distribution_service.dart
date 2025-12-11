@@ -69,44 +69,6 @@ class ShardDistributionService {
             distributionVersion: config.distributionVersion,
           );
 
-          // Handle owner steward specially - store shard locally instead of sending via Nostr
-          if (keyHolder.isOwner) {
-            Log.info('Storing owner shard locally for vault ${config.vaultId}');
-
-            // Store the shard locally in the vault
-            await _repository.addShardToVault(config.vaultId, shardWithRelays);
-
-            // Update owner steward status to holdingKey
-            await _repository.updateStewardStatus(
-              vaultId: config.vaultId,
-              pubkey: keyHolder.pubkey!,
-              status: StewardStatus.holdingKey,
-              acknowledgedAt: DateTime.now(),
-              acknowledgedDistributionVersion: config.distributionVersion,
-            );
-
-            // Create a synthetic ShardEvent for the owner (no actual Nostr event)
-            final ownerShardEvent = createShardEvent(
-              eventId: 'local_owner_shard_${config.vaultId}_$i',
-              recipientPubkey: keyHolder.pubkey!,
-              encryptedContent: '', // No encrypted content for local shard
-              backupConfigId: config.vaultId,
-              shardIndex: i,
-            );
-
-            final publishedOwnerShardEvent = copyShardEvent(
-              ownerShardEvent,
-              publishedAt: DateTime.now(),
-              status: EventStatus.published,
-            );
-
-            shardEvents.add(publishedOwnerShardEvent);
-            Log.info(
-              'Stored owner shard $i locally for ${keyHolder.name ?? keyHolder.id}',
-            );
-            continue;
-          }
-
           // Create shard data JSON
           final shardJson = shardDataToJson(shardWithRelays);
           final shardString = json.encode(shardJson);

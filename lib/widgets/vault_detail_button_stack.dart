@@ -136,10 +136,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             );
                           }
 
-                          // Delete Local Copy Button - shown after distribution when owner has a shard
-                          // Owner can delete vault content while keeping their shard for recovery
+                          // Delete Local Copy Button - shown after distribution
+                          // Owner can delete vault content while keeping recovery capability
                           if (backupConfig.lastRedistribution != null &&
-                              hasOwnerSteward(backupConfig) &&
                               currentVault.content != null) {
                             buttons.add(
                               RowButtonConfig(
@@ -233,7 +232,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           RowButtonConfig(
                             onPressed: () => _initiateRecovery(context, ref, vaultId),
                             icon: Icons.restore,
-                            text: 'Recover Content',
+                            text: 'Initiate Recovery',
                           ),
                         );
                       }
@@ -458,7 +457,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'You currently have a shard for this vault but no local content.',
+              'You currently have a key for this vault but no local content.',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -482,7 +481,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'If you want to recover the original content, use "Recover Content" instead.',
+                      'If you want to recover the original content, use "Initiate Recovery" instead.',
                       style: TextStyle(color: Colors.orange),
                     ),
                   ),
