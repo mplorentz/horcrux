@@ -52,7 +52,6 @@ jobs:
       
       - name: Verify formatting
         run: dart format --set-exit-if-changed .
-        continue-on-error: true
       
       - name: Analyze code
         run: flutter analyze
