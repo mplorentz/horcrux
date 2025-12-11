@@ -980,7 +980,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (mounted) {
         setState(() {
-          _invitationLinksByInviteeName[steward.name!] = newInvitation;
+          _invitationLinksByInviteeName[steward.name!] = newInvitation.invitation;
           _hasUnsavedChanges = true;
         });
 
