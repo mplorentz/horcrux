@@ -24,6 +24,13 @@ def get_api_key
   end
 end
 
+# Helper method to get Google Play service account JSON key filepath
+# Environment variable: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+# Should be the path to the service account JSON key file
+def get_google_play_json_key
+  ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+end
+
 # Default platform
 default_platform(:ios)
 
@@ -209,12 +216,23 @@ end
 platform :android do
   desc "Build and upload Android beta to Google Play Console (Internal Testing)"
   lane :android_beta do
+    # Check for Google Play service account credentials
+    json_key_path = get_google_play_json_key
+    if json_key_path.nil? || json_key_path.empty?
+      UI.user_error!("Google Play service account JSON key not configured. Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in .env file")
+    end
+    
+    unless File.exist?(json_key_path)
+      UI.user_error!("Google Play service account JSON key file not found at: #{json_key_path}")
+    end
+    
     # Build Android App Bundle
     sh("cd .. && flutter build appbundle --release")
     
     # Upload to Google Play Console Internal Testing track
     aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
     upload_to_play_store(
+      json_key: json_key_path,
       track: "internal",
       aab: aab_path,
       skip_upload_metadata: true,
