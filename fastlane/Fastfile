@@ -52,35 +52,12 @@ platform :ios do
       api_key: api_key_obj
     )
     
-    # Read current version from pubspec.yaml to update build number
-    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
-    pubspec_content = File.read(pubspec_path)
-    version_match = pubspec_content.match(/^version: (.+)$/)
-    
-    if version_match
-      version_string = version_match[1]
-      version_parts = version_string.split("+")
-      version_name = version_parts[0]
-      version_code = version_parts[1].to_i
-      
-      # Increment build number
-      new_version_code = version_code + 1
-      new_version_string = "#{version_name}+#{new_version_code}"
-      
-      # Update pubspec.yaml
-      pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
-      File.write(pubspec_path, pubspec_content)
-      
-      # Update Xcode project build number
-      increment_build_number(
-        xcodeproj: "ios/Runner.xcodeproj",
-        build_number: new_version_code.to_s
-      )
-      
-      UI.success("✅ Build number incremented to #{new_version_code}")
-    else
-      UI.user_error!("Could not find version in pubspec.yaml")
-    end
+    # Install CocoaPods dependencies
+    podfile_path = File.expand_path("../ios/Podfile", __dir__)
+    cocoapods(
+      podfile: podfile_path,
+      try_repo_update_on_error: true
+    )
     
     # Build the iOS app using Flutter
     sh("cd .. && flutter build ipa --release")
@@ -232,30 +209,6 @@ end
 platform :android do
   desc "Build and upload Android beta to Google Play Console (Internal Testing)"
   lane :android_beta do
-    # Read current version from pubspec.yaml
-    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
-    pubspec_content = File.read(pubspec_path)
-    version_match = pubspec_content.match(/^version: (.+)$/)
-    
-    if version_match
-      version_string = version_match[1]
-      version_parts = version_string.split("+")
-      version_name = version_parts[0]
-      version_code = version_parts[1].to_i
-      
-      # Increment version code
-      new_version_code = version_code + 1
-      new_version_string = "#{version_name}+#{new_version_code}"
-      
-      # Update pubspec.yaml
-      pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
-      File.write(pubspec_path, pubspec_content)
-      
-      UI.success("✅ Version code incremented to #{new_version_code}")
-    else
-      UI.user_error!("Could not find version in pubspec.yaml")
-    end
-    
     # Build Android App Bundle
     sh("cd .. && flutter build appbundle --release")
     
