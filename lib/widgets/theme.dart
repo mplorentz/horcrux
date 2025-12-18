@@ -625,6 +625,24 @@ ThemeData horcrux3(Brightness brightness) {
       }),
     ),
 
+    // Slider: high contrast for visibility
+    sliderTheme: SliderThemeData(
+      thumbColor:
+          isDark ? Colors.white : primaryText, // White in dark mode, primary text in light mode
+      activeTrackColor: isDark ? Colors.white : primaryText, // Active track matches thumb
+      inactiveTrackColor: isDark
+          ? const Color(0xFF555555)
+          : const Color(0xFFB0B0B0), // Inactive track with good contrast
+      overlayColor: (isDark ? Colors.white : primaryText)
+          .withValues(alpha: 0.1), // Subtle overlay when dragging
+      valueIndicatorColor: isDark ? Colors.white : primaryText, // Value indicator color
+      valueIndicatorTextStyle: TextStyle(
+        color: scaffoldBg, // Text color for value indicator
+        fontFamily: 'FiraSans',
+        fontSize: 12,
+      ),
+    ),
+
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 }
