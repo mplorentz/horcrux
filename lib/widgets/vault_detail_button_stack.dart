@@ -85,7 +85,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             );
                           },
                           icon: Icons.edit,
-                          text: 'Update Vault Contents',
+                          text: 'Change Vault Contents',
                         ),
                       );
 
@@ -101,7 +101,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             );
                           },
                           icon: Icons.settings,
-                          text: 'Recovery Plan',
+                          text: 'Change Recovery Plan',
                         ),
                       );
 
