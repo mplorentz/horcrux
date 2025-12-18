@@ -14,5 +14,9 @@
     "editor.wordWrapColumn": 100,
     "cmake.sourceDirectory": "/Users/matt/work/horcrux/horcrux_app/linux",
     "debug.selectedConfiguration": "Flutter: Run macOS",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "extensions.disabled": [
+        "sweetpad.sweetpad",
+        "sswg.swift-lang"
+    ]
 }
