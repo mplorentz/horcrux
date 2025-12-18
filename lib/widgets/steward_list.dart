@@ -256,7 +256,7 @@ class StewardList extends ConsumerWidget {
     if (vault.backupConfig != null) {
       final stewards = vault.backupConfig!.stewards.map((s) {
         final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
-        final displayName = isCurrentUser ? 'You (${s.displayName})' : s.displayName;
+        final displayName = isCurrentUser ? '${s.displayName} (You)' : s.displayName;
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,

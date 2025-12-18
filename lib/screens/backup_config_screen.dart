@@ -91,8 +91,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         return;
       }
 
+      // Get vault to retrieve owner name
+      final repository = ref.read(vaultRepositoryProvider);
+      final vault = await repository.getVault(widget.vaultId);
+      final ownerName = vault?.ownerName;
+
       // Create owner steward and add to list
-      final ownerSteward = createOwnerSteward(pubkey: currentPubkey);
+      final ownerSteward = createOwnerSteward(
+        pubkey: currentPubkey,
+        name: ownerName,
+      );
 
       setState(() {
         _includeSelfAsSteward = true;
@@ -131,14 +139,14 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'You won\'t be able to participate in vault recovery.',
+                    'You won\'t be able to participate in vault recovery. Only stewards who hold a key to the vault will be able to help you recover access.',
                   ),
                 ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Keep My Key'),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
@@ -881,6 +889,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     final invitation = steward.name != null ? _invitationLinksByInviteeName[steward.name] : null;
     final isInvited = steward.status == StewardStatus.invited;
 
+    // Check if this steward is the current user
+    final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
+    final isCurrentUser = currentPubkeyAsync.maybeWhen(
+      data: (currentPubkey) => currentPubkey != null && steward.pubkey == currentPubkey,
+      orElse: () => false,
+    );
+
+    // Format display name: "name (You)" if current user, otherwise just the name
+    final displayName = isCurrentUser ? '${steward.displayName} (You)' : steward.displayName;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -889,7 +907,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: Icon(isInvited ? Icons.mail_outline : Icons.person),
-            title: Text(steward.displayName),
+            title: Text(displayName),
             subtitle: Text(steward.displaySubtitle),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
