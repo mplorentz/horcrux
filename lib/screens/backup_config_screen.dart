@@ -45,7 +45,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   bool _isEditingExistingPlan = false; // Track if we're editing an existing plan
   bool _thresholdManuallyChanged = false; // Track if user manually changed threshold
   bool _showAdvancedSettings = false; // Track if advanced settings are visible
-  bool _includeSelfAsSteward = false; // Track if owner wants to hold their own shard
+  bool _includeSelfAsSteward = false; // Track if owner wants to hold their own key
 
   // Instructions controller
   final TextEditingController _instructionsController = TextEditingController();
@@ -64,10 +64,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     super.dispose();
   }
 
-  /// Handle toggling the self-shard option
-  Future<void> _handleSelfShardToggle(bool value) async {
+  /// Handle toggling the self-key option
+  Future<void> _handleSelfKeyToggle(bool value) async {
     if (value) {
-      // Enable self-shard: add owner as steward
+      // Enable self-key: add owner as steward
       final currentPubkey = await ref.read(currentPublicKeyProvider.future);
       if (currentPubkey == null) {
         if (mounted) {
@@ -106,7 +106,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _hasUnsavedChanges = true;
       });
     } else {
-      // Disable self-shard: remove owner steward from list
+      // Disable self-key: remove owner steward from list
       final ownerStewards = _stewards.where((s) => s.isOwner).toList();
       if (ownerStewards.isEmpty) {
         // No owner to remove
@@ -125,31 +125,20 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           final shouldContinue = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Remove Your Shard?'),
+              title: const Text('Remove Yourself?'),
               content: const Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'You already have a shard from a previous distribution.',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Disabling this option will remove you from the stewards list. '
-                    'Your existing shard will remain valid until keys are redistributed.',
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'After redistribution, you won\'t receive a new shard and won\'t be '
-                    'able to use the "Delete Local Copy" feature.',
+                    'You won\'t be able to participate in vault recovery.',
                   ),
                 ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Keep My Shard'),
+                  child: const Text('Keep My Key'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
@@ -308,7 +297,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 ),
                                 const SizedBox(height: 16),
 
-                                // Self-shard toggle
+                                // Self-key toggle
                                 Container(
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -327,14 +316,14 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Include yourself as a steward',
+                                              'Include yourself',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
                                                   ?.copyWith(fontWeight: FontWeight.w500),
                                             ),
                                             Text(
-                                              'Keep one key for yourself',
+                                              'You\'ll receive a key like your stewards, allowing you to participate in recovery.',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall
@@ -349,7 +338,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                       ),
                                       Switch(
                                         value: _includeSelfAsSteward,
-                                        onChanged: _handleSelfShardToggle,
+                                        onChanged: _handleSelfKeyToggle,
                                       ),
                                     ],
                                   ),
@@ -939,11 +928,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     ],
                   ),
                 ],
-                IconButton(
-                  icon: const Icon(Icons.remove_circle),
-                  onPressed: () => _showRemoveStewardConfirmation(steward),
-                  tooltip: 'Remove steward',
-                ),
+                if (!steward.isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle),
+                    onPressed: () => _showRemoveStewardConfirmation(steward),
+                    tooltip: 'Remove steward',
+                  ),
               ],
             ),
           ),
