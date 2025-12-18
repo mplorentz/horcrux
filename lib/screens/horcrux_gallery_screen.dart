@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
 
-class HorcruxGallery extends StatelessWidget {
+class HorcruxGallery extends StatefulWidget {
   const HorcruxGallery({super.key});
+
+  @override
+  State<HorcruxGallery> createState() => _HorcruxGalleryState();
+}
+
+class _HorcruxGalleryState extends State<HorcruxGallery> {
+  bool _switchValue = true;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +80,14 @@ class HorcruxGallery extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Switch(value: true, onChanged: (_) {}),
+                  Switch(
+                    value: _switchValue,
+                    onChanged: (value) {
+                      setState(() {
+                        _switchValue = value;
+                      });
+                    },
+                  ),
                   const SizedBox(width: 8),
                   const Text('Remember me'),
                 ],

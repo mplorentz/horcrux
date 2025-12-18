@@ -308,14 +308,21 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 // Self-key toggle
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    color: Theme.of(context).colorScheme.surface,
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   child: Row(
                                     children: [
                                       Icon(
-                                        Icons.person_pin,
+                                        Icons.badge,
                                         color: Theme.of(context).colorScheme.primary,
                                       ),
                                       const SizedBox(width: 12),
@@ -324,7 +331,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Include yourself',
+                                              'Include yourself?',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
