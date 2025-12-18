@@ -1,0 +1,289 @@
+# Fastfile for Horcrux iOS and Android Distribution
+# Documentation: https://docs.fastlane.tools
+
+# Load environment variables from .env file
+require 'dotenv'
+Dotenv.load
+
+# Helper method to get App Store Connect API key using standard fastlane env vars
+# Standard fastlane environment variables:
+# - APP_STORE_KEY_ID
+# - APP_STORE_ISSUER_ID  
+# - APP_STORE_KEY_FILEPATH
+def get_api_key
+  if ENV["APP_STORE_KEY_FILEPATH"]
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_KEY_ID"],
+      issuer_id: ENV["APP_STORE_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_KEY_FILEPATH"],
+      duration: 1200,
+      in_house: false
+    )
+  else
+    nil
+  end
+end
+
+# Helper method to get Google Play service account JSON key filepath
+# Environment variable: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+# Should be the path to the service account JSON key file
+def get_google_play_json_key
+  ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+end
+
+# Default platform
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync code signing certificates using API key"
+  lane :sync_certs do
+    api_key_obj = get_api_key
+    if api_key_obj
+      match(
+        type: "appstore",
+        readonly: false,
+        api_key: api_key_obj
+      )
+    else
+      UI.user_error!("API key not configured. Set APP_STORE_CONNECT_API_KEY_KEY_FILEPATH, APP_STORE_CONNECT_API_KEY_KEY_ID, and APP_STORE_CONNECT_API_KEY_ISSUER_ID in .env")
+    end
+  end
+
+  desc "Build and upload iOS beta to TestFlight"
+  lane :ios_beta do
+    # Sync certificates and provisioning profiles
+    api_key_obj = get_api_key
+    match(
+      type: "appstore",
+      readonly: false,
+      api_key: api_key_obj
+    )
+    
+    # Install CocoaPods dependencies
+    podfile_path = File.expand_path("../ios/Podfile", __dir__)
+    cocoapods(
+      podfile: podfile_path,
+      try_repo_update_on_error: true
+    )
+    
+    # Build the iOS app using Flutter
+    sh("cd .. && flutter build ipa --release")
+    
+    # Find the IPA file
+    ipa_path = File.expand_path("../build/ios/ipa/*.ipa", __dir__)
+    ipa_files = Dir[ipa_path]
+    
+    if ipa_files.empty?
+      UI.user_error!("IPA file not found. Build may have failed.")
+    end
+    
+    ipa_file = ipa_files.first
+    
+    # Upload to TestFlight
+    api_key_obj = get_api_key
+    upload_to_testflight(
+      ipa: ipa_file,
+      api_key: api_key_obj,
+      skip_waiting_for_build_processing: false,
+      skip_submission: true,
+      distribute_external: false,
+      notify_external_testers: false,
+      uses_non_exempt_encryption: false
+    )
+    
+    UI.success("✅ iOS beta uploaded to TestFlight")
+  end
+
+  desc "Bump build number only"
+  lane :bump_build do
+    increment_build_number(
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    # Also update pubspec.yaml build number
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
+    
+    # Read pubspec.yaml
+    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+    pubspec_content = File.read(pubspec_path)
+    
+    # Update version in pubspec.yaml (format: version: X.Y.Z+BUILD)
+    new_version = "#{current_version}+#{build_number}"
+    pubspec_content.gsub!(/^version: .*$/, "version: #{new_version}")
+    
+    File.write(pubspec_path, pubspec_content)
+    
+    UI.success("✅ Build number bumped to #{build_number}")
+    UI.success("✅ Updated pubspec.yaml version to #{new_version}")
+  end
+
+  desc "Bump patch version (1.0.0 → 1.0.1)"
+  lane :bump_patch do
+    # Get current version
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    version_parts = current_version.split(".")
+    major = version_parts[0].to_i
+    minor = version_parts[1].to_i
+    patch = version_parts[2].to_i
+    
+    # Increment patch
+    new_version = "#{major}.#{minor}.#{patch + 1}"
+    
+    # Update version in Xcode project
+    increment_version_number(
+      version_number: new_version,
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    # Reset build number to 1
+    increment_build_number(
+      build_number: "1",
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
+    
+    # Update pubspec.yaml
+    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+    pubspec_content = File.read(pubspec_path)
+    new_version_string = "#{new_version}+#{build_number}"
+    pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
+    File.write(pubspec_path, pubspec_content)
+    
+    UI.success("✅ Version bumped to #{new_version_string}")
+  end
+
+  desc "Bump minor version (1.0.0 → 1.1.0)"
+  lane :bump_minor do
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    version_parts = current_version.split(".")
+    major = version_parts[0].to_i
+    minor = version_parts[1].to_i
+    
+    new_version = "#{major}.#{minor + 1}.0"
+    
+    increment_version_number(
+      version_number: new_version,
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    increment_build_number(
+      build_number: "1",
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
+    
+    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+    pubspec_content = File.read(pubspec_path)
+    new_version_string = "#{new_version}+#{build_number}"
+    pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
+    File.write(pubspec_path, pubspec_content)
+    
+    UI.success("✅ Version bumped to #{new_version_string}")
+  end
+
+  desc "Bump major version (1.0.0 → 2.0.0)"
+  lane :bump_major do
+    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    version_parts = current_version.split(".")
+    major = version_parts[0].to_i
+    
+    new_version = "#{major + 1}.0.0"
+    
+    increment_version_number(
+      version_number: new_version,
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    increment_build_number(
+      build_number: "1",
+      xcodeproj: "ios/Runner.xcodeproj"
+    )
+    
+    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
+    
+    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+    pubspec_content = File.read(pubspec_path)
+    new_version_string = "#{new_version}+#{build_number}"
+    pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
+    File.write(pubspec_path, pubspec_content)
+    
+    UI.success("✅ Version bumped to #{new_version_string}")
+  end
+end
+
+platform :android do
+  desc "Build Android APK for distribution outside Google Play"
+  lane :build_apk do
+    sh("cd .. && flutter build apk --split-per-abi --release")
+    UI.success("✅ APK built successfully")
+    UI.message("📦 APK location: build/app/outputs/flutter-apk/")
+    
+    # List the generated APKs
+    apk_dir = File.expand_path("../build/app/outputs/flutter-apk", __dir__)
+    if Dir.exist?(apk_dir)
+      apks = Dir.glob("#{apk_dir}/*.apk")
+      if apks.any?
+        UI.message("Generated APKs:")
+        apks.each { |apk| UI.message("  - #{File.basename(apk)}") }
+      end
+    end
+  end
+
+  desc "Build and upload Android beta to Google Play Console (Internal Testing)"
+  lane :android_beta do
+    # Check for Google Play service account credentials
+    json_key_path = get_google_play_json_key
+    if json_key_path.nil? || json_key_path.empty?
+      UI.user_error!("Google Play service account JSON key not configured. Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in .env file")
+    end
+    
+    unless File.exist?(json_key_path)
+      UI.user_error!("Google Play service account JSON key file not found at: #{json_key_path}")
+    end
+    
+    # Build Android App Bundle
+    sh("cd .. && flutter build appbundle --release")
+    
+    # Upload to Google Play Console Internal Testing track
+    aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
+    upload_to_play_store(
+      json_key: json_key_path,
+      track: "internal",
+      aab: aab_path,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+    
+    UI.success("✅ Android beta uploaded to Google Play Console Internal Testing")
+  end
+
+  desc "Bump Android build number only"
+  lane :bump_build do
+    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+    pubspec_content = File.read(pubspec_path)
+    version_match = pubspec_content.match(/^version: (.+)$/)
+    
+    if version_match
+      version_string = version_match[1]
+      version_parts = version_string.split("+")
+      version_name = version_parts[0]
+      version_code = version_parts[1].to_i
+      
+      new_version_code = version_code + 1
+      new_version_string = "#{version_name}+#{new_version_code}"
+      
+      pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
+      File.write(pubspec_path, pubspec_content)
+      
+      UI.success("✅ Build number bumped to #{new_version_code}")
+      UI.success("✅ Updated pubspec.yaml version to #{new_version_string}")
+    else
+      UI.user_error!("Could not find version in pubspec.yaml")
+    end
+  end
+end
+

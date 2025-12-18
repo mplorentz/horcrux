@@ -1,0 +1,18 @@
+# Appfile for iOS and Android
+# Documentation: https://docs.fastlane.tools/advanced/#appfile
+
+# Load environment variables from .env file
+require 'dotenv'
+Dotenv.load
+
+# iOS Configuration
+app_identifier("com.singleoriginsoftware.horcrux")
+
+# Use App Store Connect API Key (recommended)
+# If not using API key, uncomment these:
+# apple_id(ENV["APPLE_ID"])
+# team_id(ENV["TEAM_ID"])
+
+# Android Configuration
+# Android package name is managed via pubspec.yaml and build.gradle
+

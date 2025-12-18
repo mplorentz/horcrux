@@ -33,7 +33,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>keydex</string>
+				<string>horcrux</string>
 			</array>
 		</dict>
 	</array>

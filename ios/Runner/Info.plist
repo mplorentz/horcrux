@@ -27,12 +27,12 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>keydex</string>
+				<string>horcrux</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<string>10</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
