@@ -232,6 +232,20 @@ extension BackupConfigExtension on BackupConfig {
     );
   }
 
+  /// Check if all stewards with pubkeys are holding the current distribution version
+  bool get allStewardsHoldingCurrentKey {
+    if (stewards.isEmpty) return false;
+
+    final stewardsWithPubkeys = stewards.where((s) => s.pubkey != null);
+    if (stewardsWithPubkeys.isEmpty) return false;
+
+    return stewardsWithPubkeys.every(
+      (s) =>
+          s.status == StewardStatus.holdingKey &&
+          s.acknowledgedDistributionVersion == distributionVersion,
+    );
+  }
+
   /// Check if config parameters differ from another config
   /// Compares threshold, relays, instructions, and steward IDs (not status/acknowledgments)
   bool configParamsDifferFrom(BackupConfig other) {

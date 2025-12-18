@@ -74,32 +74,59 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
                     // Edit Vault Button (only show if user owns the vault)
                     if (isOwned) {
+                      // Check if vault has content
+                      final hasContent = currentVault?.content != null;
+
                       buttons.add(
                         RowButtonConfig(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EditVaultScreen(vaultId: vaultId),
-                              ),
-                            );
+                            if (hasContent) {
+                              // Edit existing content
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditVaultScreen(vaultId: vaultId),
+                                ),
+                              );
+                            } else if (currentVault != null) {
+                              // Create new content (with warning if owner-steward)
+                              final isOwnerSteward =
+                                  currentVault.content == null && currentVault.shards.isNotEmpty;
+
+                              if (isOwnerSteward) {
+                                _showUpdateContentWarning(context, ref, currentVault);
+                              } else {
+                                // No content and no shards - just go to edit screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditVaultScreen(vaultId: vaultId),
+                                  ),
+                                );
+                              }
+                            }
                           },
                           icon: Icons.edit,
                           text: 'Change Vault Contents',
                         ),
                       );
 
-                      // Recovery Plan Section
+                      // Recovery Plan Section - only allow if vault has content
                       buttons.add(
                         RowButtonConfig(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => BackupConfigScreen(vaultId: vaultId),
-                              ),
-                            );
-                          },
+                          onPressed: hasContent
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BackupConfigScreen(vaultId: vaultId),
+                                    ),
+                                  );
+                                }
+                              : () {
+                                  // Show dialog offering to create content first
+                                  _showNoContentDialog(context, ref, vaultId);
+                                },
                           icon: Icons.settings,
                           text: 'Change Recovery Plan',
                         ),
@@ -136,8 +163,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
                           // Delete Local Copy Button - shown after distribution
                           // Owner can delete vault content while keeping recovery capability
+                          // Hide this button if "Distribute Keys" is showing
                           if (backupConfig.lastRedistribution != null &&
-                              currentVault.content != null) {
+                              currentVault.content != null &&
+                              !needsDistribution) {
                             buttons.add(
                               RowButtonConfig(
                                 onPressed: () =>
@@ -151,48 +180,56 @@ class VaultDetailButtonStack extends ConsumerWidget {
                       }
 
                       // Practice Recovery Button (only for owners)
-                      // Check if there's an active practice recovery (not canceled/archived)
-                      // Canceled recoveries are filtered out by recoveryStatusProvider (only isActive or completed are included)
-                      final activeRequest = recoveryStatus.activeRecoveryRequest;
-                      final hasActivePracticeRecovery = recoveryStatus.hasActiveRecovery &&
-                          activeRequest?.isPractice == true &&
-                          recoveryStatus.isInitiator;
+                      // Only show if all stewards are holding the current key
+                      final backupConfig = currentVault?.backupConfig;
+                      final allStewardsHoldingCurrentKey =
+                          backupConfig?.allStewardsHoldingCurrentKey ?? false;
 
-                      if (hasActivePracticeRecovery) {
-                        // Show "Manage Practice Recovery" if there's an active practice recovery
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
+                      if (allStewardsHoldingCurrentKey) {
+                        // Check if there's an active practice recovery (not canceled/archived)
+                        // Canceled recoveries are filtered out by recoveryStatusProvider (only isActive or completed are included)
+                        final activeRequest = recoveryStatus.activeRecoveryRequest;
+                        final hasActivePracticeRecovery = recoveryStatus.hasActiveRecovery &&
+                            activeRequest?.isPractice == true &&
+                            recoveryStatus.isInitiator;
+
+                        if (hasActivePracticeRecovery) {
+                          // Show "Manage Practice Recovery" if there's an active practice recovery
+                          buttons.add(
+                            RowButtonConfig(
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        RecoveryStatusScreen(recoveryRequestId: activeRequest!.id),
+                                  ),
+                                );
+                              },
+                              icon: Icons.school,
+                              text: 'Manage Practice Recovery',
+                            ),
+                          );
+                        } else {
+                          // Show "Practice Recovery" button when there's no active practice recovery
+                          // This includes when practice recovery was canceled, since canceled recoveries
+                          // are not considered "active" by the recoveryStatusProvider
+                          buttons.add(
+                            RowButtonConfig(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
                                   builder: (context) =>
-                                      RecoveryStatusScreen(recoveryRequestId: activeRequest!.id),
-                                ),
-                              );
-                            },
-                            icon: Icons.school,
-                            text: 'Manage Practice Recovery',
-                          ),
-                        );
-                      } else {
-                        // Show "Practice Recovery" button when there's no active practice recovery
-                        // This includes when practice recovery was canceled, since canceled recoveries
-                        // are not considered "active" by the recoveryStatusProvider
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (context) => PracticeRecoveryInfoScreen(vaultId: vaultId),
-                              );
-                            },
-                            icon: Icons.school,
-                            text: 'Practice Recovery',
-                          ),
-                        );
+                                      PracticeRecoveryInfoScreen(vaultId: vaultId),
+                                );
+                              },
+                              icon: Icons.school,
+                              text: 'Practice Recovery',
+                            ),
+                          );
+                        }
                       }
                     }
 
@@ -233,15 +270,6 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           ),
                         );
                       }
-
-                      // Show "Update Content" button with warning for owner-steward
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () => _showUpdateContentWarning(context, ref, currentVault),
-                          icon: Icons.edit,
-                          text: 'Create New Content',
-                        ),
-                      );
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
@@ -559,6 +587,50 @@ class VaultDetailButtonStack extends ConsumerWidget {
           );
         }
       }
+    }
+  }
+
+  /// Show dialog when trying to change recovery plan without content
+  Future<void> _showNoContentDialog(BuildContext context, WidgetRef ref, String vaultId) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('No Vault Content'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You cannot change the recovery plan without having the vault contents locally.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'You chose to delete the contents from this device. You can initiate recovery to get it back or recreate it from scratch. Would you like to recreate it now?',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Create Content'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      // Navigate to edit vault screen to create content
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditVaultScreen(vaultId: vaultId),
+        ),
+      );
     }
   }
 
