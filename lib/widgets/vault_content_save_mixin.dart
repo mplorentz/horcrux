@@ -83,6 +83,22 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
 
           // If user confirmed, auto-distribute
           if (shouldAutoDistribute) {
+            // Reload vault to ensure we have the latest version with saved content
+            final reloadedVault = await repository.getVault(vaultId);
+            if (reloadedVault == null || reloadedVault.content == null) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Failed to reload vault content. Please try again.',
+                    ),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+              return vaultId;
+            }
+
             // Reload config to get updated version
             final updatedConfig = await repository.getBackupConfig(vaultId);
             if (updatedConfig != null && updatedConfig.canDistribute) {

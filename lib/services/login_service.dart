@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
@@ -161,12 +163,61 @@ class LoginService {
 
   /// Encrypt text using NIP-44 (self-encryption)
   Future<String> encryptText(String plaintext) async {
+    // #region agent log
+    Log.error('DEBUG encryptText: plaintext.length = ${plaintext.length}');
+    Log.error('DEBUG encryptText: plaintext.isEmpty = ${plaintext.isEmpty}');
+    try {
+      final logFile = File('/Users/matt/work/horcrux/horcrux_app/.cursor/debug.log');
+      await logFile.writeAsString(
+          '${json.encode({
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "C",
+                "location": "login_service.dart:165",
+                "message": "encryptText entry",
+                "data": {
+                  "plaintextLength": plaintext.length,
+                  "plaintextIsEmpty": plaintext.isEmpty,
+                  "plaintextFirstChars":
+                      plaintext.length > 50 ? plaintext.substring(0, 50) : plaintext
+                },
+                "timestamp": DateTime.now().millisecondsSinceEpoch
+              })}\n',
+          mode: FileMode.append);
+    } catch (e) {
+      Log.error('DEBUG: Failed to write log file: $e');
+    }
+    // #endregion
     final keyPair = await getStoredNostrKey();
     if (keyPair?.privateKey == null || keyPair?.publicKey == null) {
       throw Exception('No key pair available for encryption');
     }
 
     // Use NIP-44 to encrypt to ourselves (same key for sender and recipient)
+    // #region agent log
+    Log.error(
+        'DEBUG encryptText: About to call Nip44.encryptMessage with length ${plaintext.length}');
+    try {
+      final logFile = File('/Users/matt/work/horcrux/horcrux_app/.cursor/debug.log');
+      await logFile.writeAsString(
+          '${json.encode({
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "C",
+                "location": "login_service.dart:190",
+                "message": "Before Nip44.encryptMessage",
+                "data": {
+                  "plaintextLength": plaintext.length,
+                  "hasPrivateKey": keyPair?.privateKey != null,
+                  "hasPublicKey": keyPair?.publicKey != null
+                },
+                "timestamp": DateTime.now().millisecondsSinceEpoch
+              })}\n',
+          mode: FileMode.append);
+    } catch (e) {
+      Log.error('DEBUG: Failed to write log file: $e');
+    }
+    // #endregion
     return await Nip44.encryptMessage(
       plaintext,
       keyPair!.privateKey!,
