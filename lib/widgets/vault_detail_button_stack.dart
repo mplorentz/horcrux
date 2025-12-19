@@ -467,7 +467,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
             const Text('Creating new content will:'),
             const SizedBox(height: 8),
             const Text('• Replace any existing backup'),
-            const Text('• Require redistributing keys to stewards'),
+            const Text('• Redistribute keys to stewards'),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
