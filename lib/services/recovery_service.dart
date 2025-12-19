@@ -359,7 +359,7 @@ class RecoveryService {
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
       );
 
-      // Use peers list for recovery
+      // Use peers list for recovery (includes owner if they have a shard)
       stewardPubkeys = <String>[];
       if (selectedShard.peers != null) {
         for (final peer in selectedShard.peers!) {
@@ -411,10 +411,10 @@ class RecoveryService {
       // even if sending failed
     }
 
-    // Auto-approve if the initiator is also a steward
+    // Auto-approve if the initiator is in the stewardPubkeys list (includes owner if they have a shard)
     if (stewardPubkeys.contains(initiatorPubkey)) {
       try {
-        Log.info('Initiator is a steward, auto-approving recovery request');
+        Log.info('Initiator is a steward (or owner with shard), auto-approving recovery request');
         await respondToRecoveryRequestWithShard(
           recoveryRequest.id,
           initiatorPubkey,

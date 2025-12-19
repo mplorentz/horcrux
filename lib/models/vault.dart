@@ -175,6 +175,25 @@ class Vault {
     );
   }
 
+  /// Create a copy with content explicitly cleared (set to null)
+  /// This preserves shards, backup config, and other data
+  Vault copyWithContentDeleted() {
+    return Vault(
+      id: id,
+      name: name,
+      content: null, // Explicitly clear content
+      createdAt: createdAt,
+      ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
+      shards: shards, // Preserve shards
+      recoveryRequests: recoveryRequests,
+      backupConfig: backupConfig, // Preserve backup config
+      isArchived: isArchived,
+      archivedAt: archivedAt,
+      archivedReason: archivedReason,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

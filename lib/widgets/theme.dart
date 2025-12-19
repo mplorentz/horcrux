@@ -605,6 +605,44 @@ ThemeData horcrux3(Brightness brightness) {
       ),
     ),
 
+    // Switch: high contrast for visibility
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          // When on, use primary text color for high contrast
+          return primaryText;
+        }
+        // When off, use a much lighter color for better visibility against dark backgrounds
+        return isDark ? const Color(0xFFAAAAAA) : const Color(0xFFE0E0E0);
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          // When on, use a darker color for the track
+          return isDark ? const Color(0xFF404040) : const Color(0xFF666666);
+        }
+        // When off, use a darker color that creates clear contrast with the light thumb
+        return isDark ? const Color(0xFF555555) : const Color(0xFFB0B0B0);
+      }),
+    ),
+
+    // Slider: high contrast for visibility
+    sliderTheme: SliderThemeData(
+      thumbColor:
+          isDark ? Colors.white : primaryText, // White in dark mode, primary text in light mode
+      activeTrackColor: isDark ? Colors.white : primaryText, // Active track matches thumb
+      inactiveTrackColor: isDark
+          ? const Color(0xFF555555)
+          : const Color(0xFFB0B0B0), // Inactive track with good contrast
+      overlayColor: (isDark ? Colors.white : primaryText)
+          .withValues(alpha: 0.1), // Subtle overlay when dragging
+      valueIndicatorColor: isDark ? Colors.white : primaryText, // Value indicator color
+      valueIndicatorTextStyle: TextStyle(
+        color: scaffoldBg, // Text color for value indicator
+        fontFamily: 'FiraSans',
+        fontSize: 12,
+      ),
+    ),
+
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 }

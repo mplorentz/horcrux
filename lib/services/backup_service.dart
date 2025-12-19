@@ -622,10 +622,10 @@ class BackupService {
       }
 
       // Step 5: Generate Shamir shares
-      // Note: peers list excludes the creator - recipients need to know OTHER stewards
       // Build peers list with name and pubkey maps
+      // Include all stewards with pubkeys (including owner if they have a shard)
       final peers = config.stewards
-          .where((kh) => kh.pubkey != null && kh.pubkey != creatorPubkey)
+          .where((kh) => kh.pubkey != null)
           .map((kh) => {'name': kh.name ?? 'Unknown', 'pubkey': kh.pubkey!})
           .toList();
       final shards = await generateShamirShares(
@@ -650,9 +650,15 @@ class BackupService {
       Log.info('Successfully distributed all shards');
 
       // Step 7: Update backup config with distribution timestamp and status
+      // IMPORTANT: Reload config to preserve any steward status updates that happened during distribution
+      // (e.g., owner's immediate acknowledgment)
+      final currentConfig = await _repository.getBackupConfig(vaultId);
+      if (currentConfig == null) {
+        throw Exception('Backup configuration not found after distribution');
+      }
       final now = DateTime.now();
       final updatedConfig = copyBackupConfig(
-        config,
+        currentConfig, // Use current config, not the stale one from step 2
         lastRedistribution: now,
         lastUpdated: now,
         status: BackupStatus.active,

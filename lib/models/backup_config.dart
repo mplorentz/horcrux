@@ -127,6 +127,20 @@ BackupConfig copyBackupConfig(
   );
 }
 
+/// Check if the backup config has an owner steward
+bool hasOwnerSteward(BackupConfig config) {
+  return config.stewards.any((s) => s.isOwner);
+}
+
+/// Get the owner steward from the backup config, if present
+Steward? getOwnerSteward(BackupConfig config) {
+  try {
+    return config.stewards.firstWhere((s) => s.isOwner);
+  } catch (e) {
+    return null;
+  }
+}
+
 /// Extension methods for BackupConfig
 extension BackupConfigExtension on BackupConfig {
   /// Check if this backup configuration is valid
@@ -215,6 +229,20 @@ extension BackupConfigExtension on BackupConfig {
       (h) =>
           h.acknowledgedDistributionVersion != null &&
           h.acknowledgedDistributionVersion != distributionVersion,
+    );
+  }
+
+  /// Check if all stewards with pubkeys are holding the current distribution version
+  bool get allStewardsHoldingCurrentKey {
+    if (stewards.isEmpty) return false;
+
+    final stewardsWithPubkeys = stewards.where((s) => s.pubkey != null);
+    if (stewardsWithPubkeys.isEmpty) return false;
+
+    return stewardsWithPubkeys.every(
+      (s) =>
+          s.status == StewardStatus.holdingKey &&
+          s.acknowledgedDistributionVersion == distributionVersion,
     );
   }
 
