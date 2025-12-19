@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
+import 'dart:io';
 
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/shard_data.dart';
@@ -13,6 +15,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final secureStorageMock = SecureStorageMock();
+  late Directory tempDocsDir;
+  const pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
 
   setUpAll(() {
     secureStorageMock.setUpAll();
@@ -25,6 +29,17 @@ void main() {
   setUp(() async {
     secureStorageMock.clear();
     SharedPreferences.setMockInitialValues({});
+
+    tempDocsDir = await Directory.systemTemp.createTemp('horcrux_vault_test_docs_');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      pathProviderChannel,
+      (call) async {
+        if (call.method == 'getApplicationDocumentsDirectory') {
+          return tempDocsDir.path;
+        }
+        return null;
+      },
+    );
 
     final loginService = LoginService();
     await loginService.clearStoredKeys();
@@ -40,9 +55,15 @@ void main() {
     await repository.clearAll();
     await loginService.clearStoredKeys();
     loginService.resetCacheForTest();
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathProviderChannel, null);
+    if (await tempDocsDir.exists()) {
+      await tempDocsDir.delete(recursive: true);
+    }
   });
 
-  test('add/get/update/delete vault persists via encrypted SharedPreferences', () async {
+  test('add/get/update/delete vault persists via encrypted per-vault file storage', () async {
     // Initialize key so encrypt/decrypt works
     final loginService = LoginService();
     final keyPair = await loginService.generateAndStoreNostrKey();
@@ -65,13 +86,18 @@ void main() {
 
     await repository.addVault(vault);
 
-    // Verify ciphertext stored, not plaintext
+    // Legacy SharedPreferences blob should not be written anymore
     final prefs = await SharedPreferences.getInstance();
     final encrypted = prefs.getString('encrypted_vaults');
-    expect(encrypted, isNotNull);
-    expect(encrypted!.isNotEmpty, isTrue);
-    expect(encrypted.contains('Top secret content'), isFalse);
-    expect(encrypted.contains('Secret'), isFalse); // name is inside JSON
+    expect(encrypted, isNull);
+
+    // Verify ciphertext stored in a per-vault file, not plaintext
+    final vaultFile = File('${tempDocsDir.path}/vaults/vault_abc.encrypted');
+    expect(await vaultFile.exists(), isTrue);
+    final ciphertext = await vaultFile.readAsString();
+    expect(ciphertext.isNotEmpty, isTrue);
+    expect(ciphertext.contains('Top secret content'), isFalse);
+    expect(ciphertext.contains('Secret'), isFalse); // name is inside JSON
 
     // Now load and ensure we can read back decrypted content via service
     final listAfterAdd = await repository.getAllVaults();
@@ -89,16 +115,16 @@ void main() {
     expect(fetched2!.name, 'Renamed');
     expect(fetched2.content, 'Still hidden');
 
-    // Ensure on disk string does not contain plaintext after update
-    final encrypted2 = prefs.getString('encrypted_vaults');
-    expect(encrypted2, isNotNull);
-    expect(encrypted2!.contains('Still hidden'), isFalse);
-    expect(encrypted2.contains('Renamed'), isFalse);
+    // Ensure on-disk file does not contain plaintext after update
+    final ciphertext2 = await vaultFile.readAsString();
+    expect(ciphertext2.contains('Still hidden'), isFalse);
+    expect(ciphertext2.contains('Renamed'), isFalse);
 
     // Delete
     await repository.deleteVault('abc');
     final afterDelete = await repository.getVault('abc');
     expect(afterDelete, isNull);
+    expect(await vaultFile.exists(), isFalse);
   });
 
   // T028: Test that deleteVaultContent preserves shards and backup config
