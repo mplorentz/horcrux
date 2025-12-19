@@ -256,7 +256,12 @@ class NdkService {
 
       // Parse the shard data from the unwrapped content
       final shardJson = json.decode(event.content) as Map<String, dynamic>;
-      final shardData = shardDataFromJson(shardJson);
+      var shardData = shardDataFromJson(shardJson);
+
+      // Set the nostrEventId from the unwrapped event ID
+      // This is needed for duplicate detection when the owner receives their own shard
+      shardData = copyShardData(shardData, nostrEventId: event.id);
+
       Log.debug('Shard data: $shardData');
 
       // Store the shard data and send confirmation event
