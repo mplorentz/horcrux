@@ -64,10 +64,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     super.dispose();
   }
 
-  /// Handle toggling the self-key option
-  Future<void> _handleSelfKeyToggle(bool value) async {
+  /// Handle toggling the self-steward option
+  Future<void> _handleSelfStewardToggle(bool value) async {
     if (value) {
-      // Enable self-key: add owner as steward
+      // Enable self-steward: add owner as steward
       final currentPubkey = await ref.read(currentPublicKeyProvider.future);
       if (currentPubkey == null) {
         if (mounted) {
@@ -114,7 +114,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _hasUnsavedChanges = true;
       });
     } else {
-      // Disable self-key: remove owner steward from list
+      // Disable self-steward: remove owner steward from list
       final ownerStewards = _stewards.where((s) => s.isOwner).toList();
       if (ownerStewards.isEmpty) {
         // No owner to remove
@@ -305,7 +305,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 ),
                                 const SizedBox(height: 16),
 
-                                // Self-key toggle
+                                // Self-steward toggle
                                 Container(
                                   decoration: BoxDecoration(
                                     color: Theme.of(context).colorScheme.surface,
@@ -353,7 +353,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                       ),
                                       Switch(
                                         value: _includeSelfAsSteward,
-                                        onChanged: _handleSelfKeyToggle,
+                                        onChanged: _handleSelfStewardToggle,
                                       ),
                                     ],
                                   ),
