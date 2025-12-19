@@ -87,9 +87,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify the self-shard toggle is displayed
-      expect(find.text('Include yourself as a steward'), findsOneWidget);
-      expect(find.text('Keep one key for yourself'), findsOneWidget);
+      // Verify the self-steward toggle is displayed
+      expect(find.text('Include yourself?'), findsOneWidget);
+      expect(
+        find.text(
+          'You\'ll receive a key like your stewards, allowing you to participate in recovery.',
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(Switch), findsOneWidget);
 
       container.dispose();
