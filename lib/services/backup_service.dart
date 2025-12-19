@@ -622,10 +622,10 @@ class BackupService {
       }
 
       // Step 5: Generate Shamir shares
-      // Note: peers list excludes the creator - recipients need to know OTHER stewards
       // Build peers list with name and pubkey maps
+      // Include all stewards with pubkeys (including owner if they have a shard)
       final peers = config.stewards
-          .where((kh) => kh.pubkey != null && kh.pubkey != creatorPubkey)
+          .where((kh) => kh.pubkey != null)
           .map((kh) => {'name': kh.name ?? 'Unknown', 'pubkey': kh.pubkey!})
           .toList();
       final shards = await generateShamirShares(

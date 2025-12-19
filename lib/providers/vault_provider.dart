@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vault.dart';
@@ -166,6 +167,26 @@ class VaultRepository {
 
   /// Save vaults to SharedPreferences with encryption
   Future<void> _saveVaults() async {
+    // #region agent log
+    try {
+      final logFile = File('/Users/matt/work/horcrux/horcrux_app/.cursor/debug.log');
+      await logFile.writeAsString('', mode: FileMode.append);
+      await logFile.writeAsString(
+          '${json.encode({
+                "sessionId": "debug-session",
+                "runId": "run1",
+                "hypothesisId": "A",
+                "location": "vault_provider.dart:168",
+                "message": "_saveVaults entry",
+                "data": {
+                  "cachedVaultsIsNull": _cachedVaults == null,
+                  "cachedVaultsLength": _cachedVaults?.length ?? -1
+                },
+                "timestamp": DateTime.now().millisecondsSinceEpoch
+              })}\n',
+          mode: FileMode.append);
+    } catch (_) {}
+    // #endregion
     if (_cachedVaults == null) return;
 
     try {
@@ -173,6 +194,22 @@ class VaultRepository {
 
       // Convert to JSON with detailed error tracking
       final jsonList = <Map<String, dynamic>>[];
+      // #region agent log
+      try {
+        final logFile = File('/Users/matt/work/horcrux/horcrux_app/.cursor/debug.log');
+        await logFile.writeAsString(
+            '${json.encode({
+                  "sessionId": "debug-session",
+                  "runId": "run1",
+                  "hypothesisId": "D",
+                  "location": "vault_provider.dart:175",
+                  "message": "Before JSON conversion loop",
+                  "data": {"vaultsCount": _cachedVaults!.length},
+                  "timestamp": DateTime.now().millisecondsSinceEpoch
+                })}\n',
+            mode: FileMode.append);
+      } catch (_) {}
+      // #endregion
       for (var i = 0; i < _cachedVaults!.length; i++) {
         final vault = _cachedVaults![i];
         Log.debug('Converting vault $i (id: ${vault.id}) to JSON');
@@ -182,6 +219,27 @@ class VaultRepository {
         Log.debug(
           '  - Recovery requests count: ${vault.recoveryRequests.length}',
         );
+        // #region agent log
+        try {
+          final logFile = File('/Users/matt/work/horcrux/horcrux_app/.cursor/debug.log');
+          await logFile.writeAsString(
+              '${json.encode({
+                    "sessionId": "debug-session",
+                    "runId": "run1",
+                    "hypothesisId": "D",
+                    "location": "vault_provider.dart:187",
+                    "message": "Vault before toJson",
+                    "data": {
+                      "vaultId": vault.id,
+                      "vaultName": vault.name,
+                      "contentIsNull": vault.content == null,
+                      "contentLength": vault.content?.length ?? -1
+                    },
+                    "timestamp": DateTime.now().millisecondsSinceEpoch
+                  })}\n',
+              mode: FileMode.append);
+        } catch (_) {}
+        // #endregion
 
         try {
           final vaultJson = vault.toJson();
@@ -253,8 +311,36 @@ class VaultRepository {
       }
 
       Log.debug('All vaults converted to JSON, encoding...');
+      // #region agent log
+      Log.error('DEBUG: jsonList.length = ${jsonList.length}');
+      Log.error('DEBUG: _cachedVaults!.length = ${_cachedVaults!.length}');
+      // Calculate size breakdown
+      int totalShards = 0;
+      int totalShardBytes = 0;
+      for (var vault in _cachedVaults!) {
+        totalShards += vault.shards.length;
+        for (var shard in vault.shards) {
+          final shardJson = shardDataToJson(shard);
+          final shardJsonString = json.encode(shardJson);
+          totalShardBytes += shardJsonString.length;
+          if (vault.shards.length > 10) {
+            Log.error('DEBUG: Vault ${vault.id} has ${vault.shards.length} shards');
+            Log.error('DEBUG: First shard JSON size: ${shardJsonString.length} chars');
+            Log.error(
+                'DEBUG: Shard fields: shard=${shard.shard.length}, primeMod=${shard.primeMod.length}, peers=${shard.peers?.length ?? 0}');
+          }
+        }
+      }
+      Log.error('DEBUG: Total shards across all vaults: $totalShards');
+      Log.error('DEBUG: Total shard JSON bytes: $totalShardBytes');
+      // #endregion
       final jsonString = json.encode(jsonList);
       Log.debug('JSON encoded successfully (${jsonString.length} characters)');
+      // #region agent log
+      Log.error('DEBUG: jsonString.length = ${jsonString.length}');
+      Log.error(
+          'DEBUG: Shards account for ${(totalShardBytes / jsonString.length * 100).toStringAsFixed(1)}% of total size');
+      // #endregion
 
       // Encrypt the JSON data using our Nostr key
       final encryptedData = await _loginService.encryptText(jsonString);
