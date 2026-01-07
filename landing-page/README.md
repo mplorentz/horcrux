@@ -1,6 +1,6 @@
 # Horcrux Landing Page
 
-Simple landing page that redirects `https://horcrux.app/invite/...` URLs to `horcrux://horcrux.app/invite/...` to open the Horcrux mobile app.
+Simple landing page that redirects `https://horcruxbackup.com/invite/...` URLs to `horcrux://horcruxbackup.com/invite/...` to open the Horcrux mobile app.
 
 ## Build and Run
 
@@ -47,7 +47,7 @@ If you're using nginx or another reverse proxy with SSL:
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name horcrux.app;
+    server_name horcruxbackup.com;
     
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
@@ -69,15 +69,15 @@ docker run -d --name horcrux-landing -p 8080:80 --restart unless-stopped horcrux
 
 ## How It Works
 
-1. User clicks `https://horcrux.app/invite/{code}?vault=...&owner=...&relays=...` in email/browser
-2. Landing page loads and immediately redirects to `horcrux://horcrux.app/invite/...`
+1. User clicks `https://horcruxbackup.com/invite/{code}?vault=...&owner=...&relays=...` in email/browser
+2. Landing page loads and immediately redirects to `horcrux://horcruxbackup.com/invite/...`
 3. If Horcrux app is installed, it opens automatically
 4. If not installed (or redirect fails), fallback UI is shown after 3 seconds
 
 ## Testing URLs
 
 The page preserves the full path and query parameters, so any of these work:
-- `https://horcrux.app/invite/abc123?vault=xyz&owner=pubkey&relays=wss://relay.com`
+- `https://horcruxbackup.com/invite/abc123?vault=xyz&owner=pubkey&relays=wss://relay.com`
 - `http://localhost:8080/invite/test?vault=v1&owner=key1&relays=wss://test.com`
 
 ## Customization
