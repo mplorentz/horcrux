@@ -11,6 +11,7 @@ import '../services/backup_service.dart';
 import '../services/invitation_service.dart';
 import '../services/invitation_sending_service.dart';
 import '../providers/vault_provider.dart';
+import '../providers/key_provider.dart';
 import '../utils/backup_distribution_helper.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
@@ -28,11 +29,7 @@ class BackupConfigScreen extends ConsumerStatefulWidget {
   final String vaultId;
   final bool isOnboarding;
 
-  const BackupConfigScreen({
-    super.key,
-    required this.vaultId,
-    this.isOnboarding = false,
-  });
+  const BackupConfigScreen({super.key, required this.vaultId, this.isOnboarding = false});
 
   @override
   ConsumerState<BackupConfigScreen> createState() => _BackupConfigScreenState();
@@ -48,6 +45,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   bool _isEditingExistingPlan = false; // Track if we're editing an existing plan
   bool _thresholdManuallyChanged = false; // Track if user manually changed threshold
   bool _showAdvancedSettings = false; // Track if advanced settings are visible
+  bool _includeSelfAsSteward = false; // Track if owner wants to hold their own key
 
   // Instructions controller
   final TextEditingController _instructionsController = TextEditingController();
@@ -64,6 +62,118 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   void dispose() {
     _instructionsController.dispose();
     super.dispose();
+  }
+
+  /// Handle toggling the self-steward option
+  Future<void> _handleSelfStewardToggle(bool value) async {
+    if (value) {
+      // Enable self-steward: add owner as steward
+      final currentPubkey = await ref.read(currentPublicKeyProvider.future);
+      if (currentPubkey == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unable to get your public key'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check if owner is already in stewards list
+      final existingOwner = _stewards.where((s) => s.isOwner).toList();
+      if (existingOwner.isNotEmpty) {
+        // Owner already exists, just update the toggle state
+        setState(() {
+          _includeSelfAsSteward = true;
+        });
+        return;
+      }
+
+      // Get vault to retrieve owner name
+      final repository = ref.read(vaultRepositoryProvider);
+      final vault = await repository.getVault(widget.vaultId);
+      final ownerName = vault?.ownerName;
+
+      // Create owner steward and add to list
+      final ownerSteward = createOwnerSteward(
+        pubkey: currentPubkey,
+        name: ownerName,
+      );
+
+      setState(() {
+        _includeSelfAsSteward = true;
+        _stewards.insert(0, ownerSteward); // Add at beginning
+        // Update threshold if needed for new plans
+        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
+          _threshold = _calculateDefaultThreshold(_stewards.length);
+        } else if (_threshold > _stewards.length) {
+          _threshold = _stewards.length;
+        }
+        _hasUnsavedChanges = true;
+      });
+    } else {
+      // Disable self-steward: remove owner steward from list
+      final ownerStewards = _stewards.where((s) => s.isOwner).toList();
+      if (ownerStewards.isEmpty) {
+        // No owner to remove
+        setState(() {
+          _includeSelfAsSteward = false;
+        });
+        return;
+      }
+
+      // T024: Warn if disabling after distribution has occurred
+      if (_isEditingExistingPlan) {
+        final repository = ref.read(vaultRepositoryProvider);
+        final existingConfig = await repository.getBackupConfig(widget.vaultId);
+        if (!mounted) return;
+        if (existingConfig != null && existingConfig.lastRedistribution != null) {
+          final shouldContinue = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Remove Yourself?'),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You won\'t be able to participate in vault recovery. Only stewards who hold a key to the vault will be able to help you recover access.',
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Remove Me'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldContinue != true || !mounted) return;
+        }
+      }
+
+      setState(() {
+        _includeSelfAsSteward = false;
+        _stewards.removeWhere((s) => s.isOwner);
+        // Update threshold if needed
+        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
+          _threshold = _calculateDefaultThreshold(_stewards.length);
+        } else if (_stewards.isEmpty) {
+          _threshold = VaultBackupConstraints.minThreshold;
+        } else if (_threshold > _stewards.length) {
+          _threshold = _stewards.length;
+        }
+        _hasUnsavedChanges = true;
+      });
+    }
   }
 
   /// Calculate default threshold based on steward count for new plans
@@ -98,6 +208,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _hasUnsavedChanges = false;
           _isEditingExistingPlan = true; // We're editing an existing plan
           _thresholdManuallyChanged = true; // Existing plan means threshold was already set
+          // Check if owner is already included as a steward
+          _includeSelfAsSteward = hasOwnerSteward(existingConfig);
         });
 
         // Load existing invitations and match them to stewards
@@ -137,9 +249,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Discard Changes?'),
-            content: const Text(
-              'You have unsaved changes. Are you sure you want to discard them?',
-            ),
+            content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -173,12 +283,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                       children: [
                         // Recovery Plan Overview
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            16.0,
-                            0,
-                            16.0,
-                            16.0,
-                          ),
+                          padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                           child: Text(
                             'Your recovery plan details how your vault can be opened and by whom.',
                             style: Theme.of(context).textTheme.bodyMedium,
@@ -192,12 +297,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Stewards',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                ),
+                                Text('Stewards', style: Theme.of(context).textTheme.headlineSmall),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Stewards are trusted contacts who will help you recover access. Each steward receives one key to your vault.',
@@ -205,29 +305,79 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 ),
                                 const SizedBox(height: 16),
 
+                                // Self-steward toggle
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.badge,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Include yourself?',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(fontWeight: FontWeight.w500),
+                                            ),
+                                            Text(
+                                              'You\'ll receive a key like your stewards, allowing you to participate in recovery.',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: _includeSelfAsSteward,
+                                        onChanged: _handleSelfStewardToggle,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
                                 // Stewards List
                                 if (_stewards.isEmpty)
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 24.0,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 24.0),
                                     child: Center(
                                       child: Column(
                                         children: [
                                           Icon(
                                             Icons.people_outline,
                                             size: 48,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5),
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                                           ),
                                           const SizedBox(height: 16),
                                           Text(
                                             'No stewards yet',
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.titleMedium,
+                                            style: Theme.of(context).textTheme.titleMedium,
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
@@ -295,9 +445,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                               children: [
                                 Text(
                                   'Recovery Instructions',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
+                                  style: Theme.of(context).textTheme.headlineSmall,
                                 ),
                                 const SizedBox(height: 16),
                                 TextField(
@@ -350,9 +498,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 children: [
                                   Text(
                                     'Relay Servers',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineSmall,
+                                    style: Theme.of(context).textTheme.headlineSmall,
                                   ),
                                   const SizedBox(height: 16),
                                   ..._relays.map(
@@ -383,9 +529,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                           ),
                         ],
 
-                        const SizedBox(
-                          height: 16,
-                        ), // Bottom padding inside scroll view
+                        const SizedBox(height: 16), // Bottom padding inside scroll view
                       ],
                     ),
                   ),
@@ -395,18 +539,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             // Fixed action buttons at bottom
             RowButtonStack(
               buttons: [
-                RowButtonConfig(
-                  onPressed: _handleCancel,
-                  icon: Icons.close,
-                  text: 'Cancel',
-                ),
+                RowButtonConfig(onPressed: _handleCancel, icon: Icons.close, text: 'Cancel'),
                 // Show Skip if no stewards, Save otherwise
                 if (_stewards.isEmpty)
-                  RowButtonConfig(
-                    onPressed: _handleSkip,
-                    icon: Icons.skip_next,
-                    text: 'Skip',
-                  )
+                  RowButtonConfig(onPressed: _handleSkip, icon: Icons.skip_next, text: 'Skip')
                 else
                   RowButtonConfig(
                     onPressed: !_isCreating ? _saveBackup : null,
@@ -453,14 +589,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Add'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Add')),
         ],
       ),
     );
@@ -491,10 +621,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Invalid relay URL: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Invalid relay URL: $e'), backgroundColor: Colors.red),
           );
         }
       }
@@ -506,9 +633,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     if (_relays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Please add at least one relay before adding a steward',
-          ),
+          content: Text('Please add at least one relay before adding a steward'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -523,10 +648,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Choose how you want to add this steward:',
-              style: TextStyle(fontSize: 14),
-            ),
+            const Text('Choose how you want to add this steward:', style: TextStyle(fontSize: 14)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => Navigator.pop(context, 'invite'),
@@ -565,12 +687,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))],
       ),
     );
 
@@ -597,10 +714,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Continue'),
@@ -626,9 +740,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     if (_stewards.any((steward) => steward.name == stewardName)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'A steward with the name "$stewardName" already exists',
-          ),
+          content: Text('A steward with the name "$stewardName" already exists'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -690,9 +802,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         } else {
           errorMessage = '$errorMessage: $e';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: Colors.red));
       }
     }
   }
@@ -708,10 +820,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Adding: $stewardName',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text('Adding: $stewardName', style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
             TextField(
               controller: npubController,
@@ -725,14 +834,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Add'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Add')),
         ],
       ),
     );
@@ -782,12 +885,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invalid steward: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Invalid steward: $e'), backgroundColor: Colors.red));
       }
     }
   }
@@ -796,18 +896,25 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     final invitation = steward.name != null ? _invitationLinksByInviteeName[steward.name] : null;
     final isInvited = steward.status == StewardStatus.invited;
 
+    // Check if this steward is the current user
+    final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
+    final isCurrentUser = currentPubkeyAsync.maybeWhen(
+      data: (currentPubkey) => currentPubkey != null && steward.pubkey == currentPubkey,
+      orElse: () => false,
+    );
+
+    // Format display name: "name (You)" if current user, otherwise just the name
+    final displayName = isCurrentUser ? '${steward.displayName} (You)' : steward.displayName;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: Icon(isInvited ? Icons.mail_outline : Icons.person),
-            title: Text(steward.displayName),
+            title: Text(displayName),
             subtitle: Text(steward.displaySubtitle),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -846,11 +953,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     ],
                   ),
                 ],
-                IconButton(
-                  icon: const Icon(Icons.remove_circle),
-                  onPressed: () => _showRemoveStewardConfirmation(steward),
-                  tooltip: 'Remove steward',
-                ),
+                if (!steward.isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle),
+                    onPressed: () => _showRemoveStewardConfirmation(steward),
+                    tooltip: 'Remove steward',
+                  ),
               ],
             ),
           ),
@@ -866,9 +974,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     Text(
                       'Share this invitation with ${steward.name ?? steward.displayName}:',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                     ),
                     const SizedBox(height: 8),
@@ -880,9 +986,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                             style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 11,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -927,9 +1031,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   Future<void> _loadExistingInvitations() async {
     try {
       final invitationService = ref.read(invitationServiceProvider);
-      final pendingInvitations = await invitationService.getPendingInvitations(
-        widget.vaultId,
-      );
+      final pendingInvitations = await invitationService.getPendingInvitations(widget.vaultId);
 
       // Match invitations to stewards by inviteeName
       final updatedInvitations = <String, InvitationLink>{};
@@ -961,10 +1063,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           'Are you sure you want to remove "${steward.name ?? 'this steward'}" from the recovery plan? ',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
@@ -1006,9 +1105,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         final repository = ref.read(vaultRepositoryProvider);
         final config = await repository.getBackupConfig(widget.vaultId);
         if (config != null && config.relays.isNotEmpty) {
-          final invitationSendingService = ref.read(
-            invitationSendingServiceProvider,
-          );
+          final invitationSendingService = ref.read(invitationSendingServiceProvider);
           await invitationSendingService.sendKeyHolderRemovalEvent(
             vaultId: widget.vaultId,
             removedStewardPubkey: steward.pubkey!,
@@ -1044,10 +1141,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     });
   }
 
-  Future<void> _regenerateInvitationLink(
-    Steward steward,
-    InvitationLink oldInvitation,
-  ) async {
+  Future<void> _regenerateInvitationLink(Steward steward, InvitationLink oldInvitation) async {
     if (steward.name == null) return;
 
     try {
@@ -1099,9 +1193,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Cancel Vault Creation?'),
-          content: const Text(
-            'This will delete the vault you just created. Are you sure?',
-          ),
+          content: const Text('This will delete the vault you just created. Are you sure?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -1140,9 +1232,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Discard Changes?'),
-            content: const Text(
-              'You have unsaved changes. Are you sure you want to discard them?',
-            ),
+            content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -1177,6 +1267,45 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
 
+    // T022: Warn about 1-of-1 owner-only backup
+    final onlyOwnerSteward = _stewards.length == 1 && _stewards.first.isOwner && _threshold == 1;
+    if (onlyOwnerSteward) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Single Owner Backup'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You\'re setting up a 1-of-1 backup with only yourself as the steward.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'This means if you lose access to your device, you won\'t be able to recover this vault.',
+              ),
+              SizedBox(height: 12),
+              Text('Consider adding additional stewards for better security.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Add More Stewards'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continue Anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldContinue != true || !mounted) return;
+    }
+
     try {
       final backupService = ref.read(backupServiceProvider);
       final repository = ref.read(vaultRepositoryProvider);
@@ -1202,9 +1331,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
 
         // Check if config parameters will change (will increment version)
-        final configWillChange = existingConfig.configParamsDifferFrom(
-          uiConfig,
-        );
+        final configWillChange = existingConfig.configParamsDifferFrom(uiConfig);
 
         // Show alert if needed and get user confirmation
         if (!mounted) return;
@@ -1261,15 +1388,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         final updatedConfig = await repository.getBackupConfig(widget.vaultId);
         if (updatedConfig != null && updatedConfig.canDistribute) {
           try {
-            await backupService.createAndDistributeBackup(
-              vaultId: widget.vaultId,
-            );
+            await backupService.createAndDistributeBackup(vaultId: widget.vaultId);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'Keys regenerated and distributed successfully!',
-                  ),
+                  content: Text('Keys regenerated and distributed successfully!'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -1298,17 +1421,13 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           // Check if we added new invited stewards to an existing plan with distributed keys
           if (!isNewConfig && existingConfig.lastRedistribution != null) {
             final existingInvitedNames = existingConfig.stewards
-                .where(
-                  (h) => h.status == StewardStatus.invited && h.pubkey == null,
-                )
+                .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
                 .map((h) => h.name)
                 .whereType<String>()
                 .toSet();
 
             final newInvitedNames = _stewards
-                .where(
-                  (h) => h.status == StewardStatus.invited && h.pubkey == null,
-                )
+                .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
                 .map((h) => h.name)
                 .whereType<String>()
                 .toSet();
@@ -1328,10 +1447,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     'To include the new steward${addedInvitedCount > 1 ? 's' : ''}, you\'ll need to redistribute keys from the vault detail screen once ${addedInvitedCount > 1 ? 'they' : 'the steward'} accept${addedInvitedCount > 1 ? '' : 's'} ${addedInvitedCount > 1 ? 'their invitations' : 'the invitation'}.',
                   ),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('OK'),
-                    ),
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
                   ],
                 ),
               );
@@ -1359,10 +1475,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save recovery plan: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Failed to save recovery plan: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

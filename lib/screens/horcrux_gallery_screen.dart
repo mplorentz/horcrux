@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
 
-class HorcruxGallery extends StatelessWidget {
+class HorcruxGallery extends StatefulWidget {
   const HorcruxGallery({super.key});
+
+  @override
+  State<HorcruxGallery> createState() => _HorcruxGalleryState();
+}
+
+class _HorcruxGalleryState extends State<HorcruxGallery> {
+  bool _switchValue = true;
+  double _sliderValue = 50.0;
 
   @override
   Widget build(BuildContext context) {
@@ -73,9 +81,44 @@ class HorcruxGallery extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Switch(value: true, onChanged: (_) {}),
+                  Switch(
+                    value: _switchValue,
+                    onChanged: (value) {
+                      setState(() {
+                        _switchValue = value;
+                      });
+                    },
+                  ),
                   const SizedBox(width: 8),
                   const Text('Remember me'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: _sliderValue,
+                      min: 0,
+                      max: 100,
+                      divisions: 10,
+                      label: _sliderValue.round().toString(),
+                      onChanged: (value) {
+                        setState(() {
+                          _sliderValue = value;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 50,
+                    child: Text(
+                      _sliderValue.round().toString(),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),

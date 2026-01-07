@@ -66,13 +66,15 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
           }
         }
 
-        // Update vault
-        await repository.updateVault(vaultId, name, content);
-
-        // Also update ownerName (even if null, to clear it)
-        await repository.saveVault(
-          existingVault.copyWith(ownerName: newOwnerName),
+        // Update vault with all changes at once
+        // Important: Use copyWith on existingVault but include the new content
+        // to avoid overwriting content that was just saved
+        final updatedVault = existingVault.copyWith(
+          name: name.trim(),
+          content: content,
+          ownerName: newOwnerName,
         );
+        await repository.saveVault(updatedVault);
 
         // If content, name, or ownerName changed, increment distributionVersion
         if (contentChanged || nameChanged || ownerNameChanged) {

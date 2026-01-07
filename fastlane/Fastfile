@@ -215,6 +215,23 @@ platform :ios do
 end
 
 platform :android do
+  desc "Build Android APK for distribution outside Google Play"
+  lane :build_apk do
+    sh("cd .. && flutter build apk --split-per-abi --release")
+    UI.success("✅ APK built successfully")
+    UI.message("📦 APK location: build/app/outputs/flutter-apk/")
+    
+    # List the generated APKs
+    apk_dir = File.expand_path("../build/app/outputs/flutter-apk", __dir__)
+    if Dir.exist?(apk_dir)
+      apks = Dir.glob("#{apk_dir}/*.apk")
+      if apks.any?
+        UI.message("Generated APKs:")
+        apks.each { |apk| UI.message("  - #{File.basename(apk)}") }
+      end
+    end
+  end
+
   desc "Build and upload Android beta to Google Play Console (Internal Testing)"
   lane :android_beta do
     # Check for Google Play service account credentials
