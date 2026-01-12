@@ -288,7 +288,11 @@ class StewardList extends ConsumerWidget {
       return [];
     }
 
-    final shard = vault.shards.first;
+    // Prefer the most recent shard so peers reflect the latest distribution
+    final shard = vault.mostRecentShard;
+    if (shard == null) {
+      return [];
+    }
     final stewardMap = <String, StewardInfo>{};
 
     void addSteward({
