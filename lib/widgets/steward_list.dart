@@ -251,16 +251,24 @@ class StewardList extends ConsumerWidget {
   }
 
   /// Extract stewards from vault shard data
+  /// Includes owner if they are also a steward (hold a shard)
   List<StewardInfo> _extractStewards(Vault vault, String? currentPubkey) {
     // NEW: Try backupConfig first (owner will have this)
     if (vault.backupConfig != null) {
-      final stewards = vault.backupConfig!.stewards.map((s) {
+      final stewards = vault.backupConfig!.stewards.where((s) {
+        // Include owner only if they are holding a key (are a steward)
+        if (s.isOwner) {
+          return s.status == StewardStatus.holdingKey;
+        }
+        // Include all non-owner stewards
+        return true;
+      }).map((s) {
         final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
         final displayName = isCurrentUser ? '${s.displayName} (You)' : s.displayName;
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
-          isOwner: s.isOwner, // Use isOwner field from Steward model
+          isOwner: s.isOwner, // Preserve owner flag
           status: s.status, // Use actual status from Steward model
         );
       }).toList();
@@ -292,7 +300,7 @@ class StewardList extends ConsumerWidget {
       final isCurrentUser = currentPubkey != null && pubkey == currentPubkey;
       final newDisplayName = isCurrentUser && name != null ? 'You ($name)' : name;
 
-      // Merge if we already have this pubkey (e.g., owner appears in peers)
+      // Merge if we already have this pubkey
       final existing = stewardMap[pubkey];
       final merged = StewardInfo(
         pubkey: pubkey,
@@ -303,26 +311,18 @@ class StewardList extends ConsumerWidget {
       stewardMap[pubkey] = merged;
     }
 
-    // Add owner first if ownerName is available
-    if (shard.ownerName != null) {
-      addSteward(
-        pubkey: shard.creatorPubkey,
-        name: shard.ownerName,
-        isOwner: true,
-      );
-    }
-
-    // Add peers (stewards) - now a list of maps with name and pubkey
+    // Add peers (stewards) - include owner if they appear in peers
     if (shard.peers != null) {
       for (final peer in shard.peers!) {
         final peerPubkey = peer['pubkey'];
         final peerName = peer['name'];
         if (peerPubkey == null) continue;
 
+        final isOwner = peerPubkey == vault.ownerPubkey;
         addSteward(
           pubkey: peerPubkey,
           name: peerName,
-          isOwner: peerPubkey == vault.ownerPubkey,
+          isOwner: isOwner,
         );
       }
     }

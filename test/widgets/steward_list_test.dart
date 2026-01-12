@@ -8,8 +8,8 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
 
 void main() {
-  testWidgets('deduplicates owner when shard peers include creator', (tester) async {
-    const vaultId = 'vault-dedupe';
+  testWidgets('includes owner in steward list when owner is in shard peers', (tester) async {
+    const vaultId = 'vault-owner-in-peers';
     final ownerPubkey = 'a' * 64;
     final stewardPubkeyB = 'b' * 64;
     final stewardPubkeyC = 'c' * 64;
@@ -22,7 +22,7 @@ void main() {
       primeMod: 'prime-mod',
       creatorPubkey: ownerPubkey,
       vaultId: vaultId,
-      vaultName: 'Vault Dedupe',
+      vaultName: 'Vault Owner In Peers',
       ownerName: 'Device A',
       peers: [
         {'name': 'Device A', 'pubkey': ownerPubkey}, // Owner included in peers
@@ -35,7 +35,7 @@ void main() {
 
     final vault = Vault(
       id: vaultId,
-      name: 'Vault Dedupe',
+      name: 'Vault Owner In Peers',
       content: null,
       createdAt: DateTime.now(),
       ownerPubkey: ownerPubkey,
@@ -64,7 +64,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Owner SHOULD appear in steward list when they're in shard peers
     expect(find.text('Device A'), findsOneWidget);
+    // All stewards should appear
     expect(find.text('Device B'), findsOneWidget);
     expect(find.text('You (Device C)'), findsOneWidget);
   });
