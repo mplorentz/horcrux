@@ -281,19 +281,34 @@ class StewardList extends ConsumerWidget {
     }
 
     final shard = vault.shards.first;
-    final stewards = <StewardInfo>[];
+    final stewardMap = <String, StewardInfo>{};
+
+    void addSteward({
+      required String pubkey,
+      String? name,
+      required bool isOwner,
+      StewardStatus status = StewardStatus.holdingKey,
+    }) {
+      final isCurrentUser = currentPubkey != null && pubkey == currentPubkey;
+      final newDisplayName = isCurrentUser && name != null ? 'You ($name)' : name;
+
+      // Merge if we already have this pubkey (e.g., owner appears in peers)
+      final existing = stewardMap[pubkey];
+      final merged = StewardInfo(
+        pubkey: pubkey,
+        displayName: newDisplayName ?? existing?.displayName,
+        isOwner: isOwner || (existing?.isOwner ?? false),
+        status: status,
+      );
+      stewardMap[pubkey] = merged;
+    }
 
     // Add owner first if ownerName is available
     if (shard.ownerName != null) {
-      final isCurrentUser = currentPubkey != null && shard.creatorPubkey == currentPubkey;
-      final ownerDisplayName = isCurrentUser ? 'You (${shard.ownerName})' : shard.ownerName;
-      stewards.add(
-        StewardInfo(
-          pubkey: shard.creatorPubkey,
-          displayName: ownerDisplayName,
-          isOwner: true,
-          status: StewardStatus.holdingKey,
-        ),
+      addSteward(
+        pubkey: shard.creatorPubkey,
+        name: shard.ownerName,
+        isOwner: true,
       );
     }
 
@@ -304,19 +319,15 @@ class StewardList extends ConsumerWidget {
         final peerName = peer['name'];
         if (peerPubkey == null) continue;
 
-        final isCurrentUser = currentPubkey != null && peerPubkey == currentPubkey;
-        final displayName = isCurrentUser && peerName != null ? 'You ($peerName)' : peerName;
-
-        stewards.add(
-          StewardInfo(
-            pubkey: peerPubkey,
-            displayName: displayName,
-            isOwner: peerPubkey == vault.ownerPubkey,
-            status: StewardStatus.holdingKey, // Default for stewards with shards
-          ),
+        addSteward(
+          pubkey: peerPubkey,
+          name: peerName,
+          isOwner: peerPubkey == vault.ownerPubkey,
         );
       }
     }
+
+    final stewards = stewardMap.values.toList();
 
     // Sort: owner first, then others
     stewards.sort((a, b) {
