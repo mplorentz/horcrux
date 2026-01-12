@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,16 +53,28 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   final TextEditingController _instructionsController = TextEditingController();
   // Map to track invitation links by invitee name
   final Map<String, InvitationLink> _invitationLinksByInviteeName = {};
+  BackupConfig? _initialBackupConfig;
+  StreamSubscription<void>? _invitationSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadExistingConfig();
+    // Set up invitation subscription after first frame when ref is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _invitationSubscription = ref
+            .read(invitationServiceProvider)
+            .invitationsChangedStream
+            .listen((_) => _syncStewardsFromRepository());
+      }
+    });
   }
 
   @override
   void dispose() {
     _instructionsController.dispose();
+    _invitationSubscription?.cancel();
     super.dispose();
   }
 
@@ -197,6 +211,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final existingConfig = await repository.getBackupConfig(widget.vaultId);
 
       if (existingConfig != null && mounted) {
+        _initialBackupConfig = backupConfigFromJson(backupConfigToJson(existingConfig));
         setState(() {
           _threshold = existingConfig.threshold;
           _stewards.clear();
@@ -215,6 +230,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         // Load existing invitations and match them to stewards
         await _loadExistingInvitations();
       } else {
+        _initialBackupConfig = null;
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -1054,6 +1070,74 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
+  Future<void> _syncStewardsFromRepository() async {
+    try {
+      final repository = ref.read(vaultRepositoryProvider);
+      final latestConfig = await repository.getBackupConfig(widget.vaultId);
+      if (!mounted || latestConfig == null) return;
+
+      setState(() {
+        _stewards
+          ..clear()
+          ..addAll(_mergeStewardLists(latestConfig.stewards, _stewards));
+      });
+    } catch (e) {
+      debugPrint('Error syncing stewards from repository: $e');
+    }
+  }
+
+  List<Steward> _mergeStewardLists(List<Steward> source, List<Steward> target) {
+    final merged = <Steward>[];
+
+    for (final draft in target) {
+      final match = _findMatchingSteward(source, draft);
+      if (match != null) {
+        merged.add(
+          copySteward(
+            draft,
+            pubkey: match.pubkey ?? draft.pubkey,
+            status: match.status,
+            acknowledgedAt: match.acknowledgedAt ?? draft.acknowledgedAt,
+            acknowledgmentEventId: match.acknowledgmentEventId ?? draft.acknowledgmentEventId,
+            acknowledgedDistributionVersion:
+                match.acknowledgedDistributionVersion ?? draft.acknowledgedDistributionVersion,
+            lastSeen: match.lastSeen ?? draft.lastSeen,
+            keyShare: match.keyShare ?? draft.keyShare,
+            giftWrapEventId: match.giftWrapEventId ?? draft.giftWrapEventId,
+          ),
+        );
+      } else {
+        merged.add(draft);
+      }
+    }
+
+    for (final steward in source) {
+      final exists = merged.any((s) => s.id == steward.id);
+      if (!exists) {
+        merged.add(steward);
+      }
+    }
+
+    return merged;
+  }
+
+  Steward? _findMatchingSteward(List<Steward> source, Steward target) {
+    for (final candidate in source) {
+      if (candidate.id == target.id) return candidate;
+    }
+    if (target.inviteCode != null) {
+      for (final candidate in source) {
+        if (candidate.inviteCode == target.inviteCode) return candidate;
+      }
+    }
+    if (target.pubkey != null) {
+      for (final candidate in source) {
+        if (candidate.pubkey == target.pubkey) return candidate;
+      }
+    }
+    return null;
+  }
+
   Future<void> _showRemoveStewardConfirmation(Steward steward) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1081,6 +1165,36 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
+  /// Send removal events for stewards who have accepted (have pubkeys)
+  /// This notifies them that they've been removed from the recovery plan
+  Future<void> _sendRemovalEventsForStewards(List<Steward> stewards) async {
+    final stewardsWithPubkeys = stewards.where((s) => s.pubkey != null).toList();
+    if (stewardsWithPubkeys.isEmpty) return;
+
+    try {
+      final repository = ref.read(vaultRepositoryProvider);
+      final config = await repository.getBackupConfig(widget.vaultId);
+      if (config == null || config.relays.isEmpty) return;
+
+      final invitationSendingService = ref.read(invitationSendingServiceProvider);
+      for (final steward in stewardsWithPubkeys) {
+        try {
+          await invitationSendingService.sendKeyHolderRemovalEvent(
+            vaultId: widget.vaultId,
+            removedStewardPubkey: steward.pubkey!,
+            relayUrls: config.relays,
+          );
+          debugPrint('Sent removal event for steward ${steward.pubkey}');
+        } catch (e) {
+          debugPrint('Error sending removal event for ${steward.pubkey}: $e');
+          // Continue with other stewards even if one fails
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting config for removal events: $e');
+    }
+  }
+
   Future<void> _removeSteward(Steward steward) async {
     // If this is an invited steward, invalidate their invitation
     if (steward.status == StewardStatus.invited && steward.name != null) {
@@ -1100,24 +1214,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
 
     // If steward has accepted (has pubkey), send removal event
-    if (steward.pubkey != null) {
-      try {
-        final repository = ref.read(vaultRepositoryProvider);
-        final config = await repository.getBackupConfig(widget.vaultId);
-        if (config != null && config.relays.isNotEmpty) {
-          final invitationSendingService = ref.read(invitationSendingServiceProvider);
-          await invitationSendingService.sendKeyHolderRemovalEvent(
-            vaultId: widget.vaultId,
-            removedStewardPubkey: steward.pubkey!,
-            relayUrls: config.relays,
-          );
-          debugPrint('Sent removal event for steward ${steward.pubkey}');
-        }
-      } catch (e) {
-        debugPrint('Error sending removal event: $e');
-        // Continue with removal even if event sending fails
-      }
-    }
+    await _sendRemovalEventsForStewards([steward]);
 
     setState(() {
       _stewards.remove(steward);
@@ -1186,6 +1283,54 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
+  Future<void> _restoreInitialConfig() async {
+    try {
+      final repository = ref.read(vaultRepositoryProvider);
+      
+      // Before restoring, check if any stewards accepted during this session
+      // and need to be notified of removal
+      final currentConfig = await repository.getBackupConfig(widget.vaultId);
+      if (currentConfig != null && _initialBackupConfig != null) {
+        // Find stewards that have pubkeys in current config but were invited/absent in initial
+        final initialStewardPubkeys = _initialBackupConfig!.stewards
+            .where((s) => s.pubkey != null)
+            .map((s) => s.pubkey!)
+            .toSet();
+        
+        final stewardsToNotify = currentConfig.stewards.where((steward) {
+          // Steward has a pubkey (accepted)
+          if (steward.pubkey == null) return false;
+          
+          // But wasn't in initial config with a pubkey (either wasn't there or was invited)
+          final wasInvitedInInitial = _initialBackupConfig!.stewards.any(
+            (s) => s.id == steward.id && s.pubkey == null && s.status == StewardStatus.invited,
+          );
+          final wasAbsentInInitial = !_initialBackupConfig!.stewards.any(
+            (s) => s.id == steward.id,
+          );
+          
+          return !initialStewardPubkeys.contains(steward.pubkey!) &&
+              (wasInvitedInInitial || wasAbsentInInitial);
+        }).toList();
+        
+        // Send removal events for stewards who accepted but are being rolled back
+        await _sendRemovalEventsForStewards(stewardsToNotify);
+      }
+      
+      if (_initialBackupConfig == null) {
+        final vault = await repository.getVault(widget.vaultId);
+        if (vault?.backupConfig != null) {
+          await repository.saveVault(vault!.copyWith(backupConfig: null));
+        }
+        return;
+      }
+
+      await repository.updateBackupConfig(widget.vaultId, _initialBackupConfig!);
+    } catch (e) {
+      debugPrint('Error restoring initial backup config: $e');
+    }
+  }
+
   Future<void> _handleCancel() async {
     // In onboarding mode, show different dialog
     if (widget.isOnboarding) {
@@ -1247,6 +1392,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
 
         if (shouldDiscard == true && mounted) {
+          await _restoreInitialConfig();
+          if (!mounted) return;
           // Pop with vaultId so the vault detail screen is shown
           Navigator.of(context).pop(widget.vaultId);
         }
