@@ -223,11 +223,10 @@ class VaultRepository {
   Future<void> _deleteVaultFile(String vaultId) async {
     try {
       await _deleteVault(vaultId);
+      _notifyVaultsChanged();
     } catch (e) {
       Log.error('Error deleting vault $vaultId', e);
       throw Exception('Failed to delete vault $vaultId: $e');
-    } finally {
-      _notifyVaultsChanged();
     }
   }
 
