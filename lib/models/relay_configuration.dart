@@ -6,7 +6,7 @@ part 'relay_configuration.freezed.dart';
 @freezed
 class RelayConfiguration with _$RelayConfiguration {
   const RelayConfiguration._();
-  
+
   const factory RelayConfiguration({
     required String id,
     required String url,
@@ -16,7 +16,7 @@ class RelayConfiguration with _$RelayConfiguration {
     Duration? scanInterval,
     @Default(false) bool isTrusted,
   }) = _RelayConfiguration;
-  
+
   /// Factory with default scanInterval
   factory RelayConfiguration.withDefaults({
     required String id,

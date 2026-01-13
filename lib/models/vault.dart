@@ -2,6 +2,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'shard_data.dart';
 import 'recovery_request.dart';
 import 'backup_config.dart';
+import 'backup_status.dart';
+import 'steward_status.dart';
 
 part 'vault.freezed.dart';
 
@@ -38,7 +40,8 @@ class Vault with _$Vault {
     required DateTime createdAt,
     required String ownerPubkey, // Hex format, 64 characters
     String? ownerName, // Name of the vault owner
-    @Default([]) List<ShardData> shards, // List of shards (single as steward, multiple during recovery)
+    @Default([])
+    List<ShardData> shards, // List of shards (single as steward, multiple during recovery)
     @Default([]) List<RecoveryRequest> recoveryRequests, // Embedded recovery requests
     BackupConfig? backupConfig, // Optional backup configuration
     @Default(false) bool isArchived, // Whether this vault is archived
