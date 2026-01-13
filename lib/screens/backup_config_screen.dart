@@ -1077,9 +1077,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       if (!mounted || latestConfig == null) return;
 
       setState(() {
+        // Capture local changes before clearing
+        final localStewards = List<Steward>.from(_stewards);
         _stewards
           ..clear()
-          ..addAll(_mergeStewardLists(latestConfig.stewards, _stewards));
+          ..addAll(_mergeStewardLists(latestConfig.stewards, localStewards));
       });
     } catch (e) {
       debugPrint('Error syncing stewards from repository: $e');
@@ -1286,7 +1288,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   Future<void> _restoreInitialConfig() async {
     try {
       final repository = ref.read(vaultRepositoryProvider);
-      
+
       // Before restoring, check if any stewards accepted during this session
       // and need to be notified of removal
       final currentConfig = await repository.getBackupConfig(widget.vaultId);
@@ -1296,11 +1298,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             .where((s) => s.pubkey != null)
             .map((s) => s.pubkey!)
             .toSet();
-        
+
         final stewardsToNotify = currentConfig.stewards.where((steward) {
           // Steward has a pubkey (accepted)
           if (steward.pubkey == null) return false;
-          
+
           // But wasn't in initial config with a pubkey (either wasn't there or was invited)
           final wasInvitedInInitial = _initialBackupConfig!.stewards.any(
             (s) => s.id == steward.id && s.pubkey == null && s.status == StewardStatus.invited,
@@ -1308,15 +1310,15 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           final wasAbsentInInitial = !_initialBackupConfig!.stewards.any(
             (s) => s.id == steward.id,
           );
-          
+
           return !initialStewardPubkeys.contains(steward.pubkey!) &&
               (wasInvitedInInitial || wasAbsentInInitial);
         }).toList();
-        
+
         // Send removal events for stewards who accepted but are being rolled back
         await _sendRemovalEventsForStewards(stewardsToNotify);
       }
-      
+
       if (_initialBackupConfig == null) {
         final vault = await repository.getVault(widget.vaultId);
         if (vault?.backupConfig != null) {
