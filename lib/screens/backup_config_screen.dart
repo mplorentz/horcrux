@@ -41,8 +41,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   int _threshold = VaultBackupConstraints.defaultThreshold;
   final List<Steward> _stewards = [];
   final List<String> _relays = ['wss://dev.horcruxbackup.com'];
-  // Tracks stewards removed locally (but not yet saved) so repository syncs don't resurrect them.
-  final Set<String> _locallyRemovedStewardKeys = <String>{};
   bool _isCreating = false;
   bool _isLoading = true;
   bool _hasUnsavedChanges = false;
@@ -178,10 +176,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       setState(() {
         _includeSelfAsSteward = false;
-        final ownerStewards = _stewards.where((s) => s.isOwner).toList();
-        for (final steward in ownerStewards) {
-          _markStewardLocallyRemoved(steward);
-        }
         _stewards.removeWhere((s) => s.isOwner);
         // Update threshold if needed
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
@@ -227,7 +221,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _instructionsController.text = existingConfig.instructions ?? '';
           _isLoading = false;
           _hasUnsavedChanges = false;
-          _locallyRemovedStewardKeys.clear();
           _isEditingExistingPlan = true; // We're editing an existing plan
           _thresholdManuallyChanged = true; // Existing plan means threshold was already set
           // Check if owner is already included as a steward
@@ -1095,32 +1088,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  String _stewardIdKey(Steward steward) => 'id:${steward.id}';
-
-  String? _stewardPubkeyKey(Steward steward) =>
-      steward.pubkey == null ? null : 'pubkey:${steward.pubkey}';
-
-  String? _stewardInviteCodeKey(Steward steward) =>
-      steward.inviteCode == null ? null : 'invite:${steward.inviteCode}';
-
-  void _markStewardLocallyRemoved(Steward steward) {
-    _locallyRemovedStewardKeys.add(_stewardIdKey(steward));
-    final pubkeyKey = _stewardPubkeyKey(steward);
-    if (pubkeyKey != null) _locallyRemovedStewardKeys.add(pubkeyKey);
-    final inviteKey = _stewardInviteCodeKey(steward);
-    if (inviteKey != null) _locallyRemovedStewardKeys.add(inviteKey);
-  }
-
-  bool _isStewardLocallyRemoved(Steward steward) {
-    if (!_hasUnsavedChanges) return false;
-    if (_locallyRemovedStewardKeys.contains(_stewardIdKey(steward))) return true;
-    final pubkeyKey = _stewardPubkeyKey(steward);
-    if (pubkeyKey != null && _locallyRemovedStewardKeys.contains(pubkeyKey)) return true;
-    final inviteKey = _stewardInviteCodeKey(steward);
-    if (inviteKey != null && _locallyRemovedStewardKeys.contains(inviteKey)) return true;
-    return false;
-  }
-
   List<Steward> _mergeStewardLists(List<Steward> source, List<Steward> target) {
     final merged = <Steward>[];
 
@@ -1143,13 +1110,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
       } else {
         merged.add(draft);
-      }
-    }
-
-    for (final steward in source) {
-      final exists = _findMatchingSteward(merged, steward) != null;
-      if (!exists && !_isStewardLocallyRemoved(steward)) {
-        merged.add(steward);
       }
     }
 
@@ -1252,7 +1212,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     await _sendRemovalEventsForStewards([steward]);
 
     setState(() {
-      _markStewardLocallyRemoved(steward);
       _stewards.remove(steward);
       if (steward.name != null) {
         _invitationLinksByInviteeName.remove(steward.name);
@@ -1596,7 +1555,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       if (mounted) {
         setState(() {
           _hasUnsavedChanges = false;
-          _locallyRemovedStewardKeys.clear();
         });
 
         bool shouldShowSuccessSnack = true;
