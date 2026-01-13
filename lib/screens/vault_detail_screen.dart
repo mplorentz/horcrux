@@ -5,6 +5,7 @@ import '../providers/vault_provider.dart';
 import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
 import '../widgets/vault_status_banner.dart';
+import '../widgets/vault_owner_display.dart';
 
 /// Detail/view screen for displaying a vault
 class VaultDetailScreen extends ConsumerWidget {
@@ -85,6 +86,8 @@ class VaultDetailScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Owner display above status banner
+          VaultOwnerDisplay(vault: vault),
           // Status banner showing recovery readiness
           VaultStatusBanner(vault: vault),
           // Scrollable content

@@ -343,17 +343,8 @@ class RecoveryService {
         );
       }
 
-      // Select the shard with the highest distributionVersion (most recent)
-      // If versions are equal or null, use the most recent createdAt timestamp
-      final selectedShard = shards.reduce((a, b) {
-        final aVersion = a.distributionVersion ?? 0;
-        final bVersion = b.distributionVersion ?? 0;
-        if (aVersion != bVersion) {
-          return aVersion > bVersion ? a : b;
-        }
-        // If versions are equal, use createdAt timestamp
-        return a.createdAt > b.createdAt ? a : b;
-      });
+      final selectedShard =
+          shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
@@ -642,16 +633,7 @@ class RecoveryService {
         throw ArgumentError('No shard data found for vault ${request.vaultId}');
       }
       // Select the shard with the highest distributionVersion (most recent)
-      // If versions are equal or null, use the most recent createdAt timestamp
-      shardData = shards.reduce((a, b) {
-        final aVersion = a.distributionVersion ?? 0;
-        final bVersion = b.distributionVersion ?? 0;
-        if (aVersion != bVersion) {
-          return aVersion > bVersion ? a : b;
-        }
-        // If versions are equal, use createdAt timestamp
-        return a.createdAt > b.createdAt ? a : b;
-      });
+      shardData = shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
       Log.info(
         'Selected shard with distributionVersion ${shardData.distributionVersion} for recovery request $recoveryRequestId',
       );
@@ -688,14 +670,8 @@ class RecoveryService {
             final shards = await repository.getShardsForVault(request.vaultId);
             if (shards.isNotEmpty) {
               // Get relay URLs from the most recent shard
-              final latestShard = shards.reduce((a, b) {
-                final aVersion = a.distributionVersion ?? 0;
-                final bVersion = b.distributionVersion ?? 0;
-                if (aVersion != bVersion) {
-                  return aVersion > bVersion ? a : b;
-                }
-                return a.createdAt > b.createdAt ? a : b;
-              });
+              final latestShard =
+                  shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
               if (latestShard.relayUrls != null && latestShard.relayUrls!.isNotEmpty) {
                 relayUrls = latestShard.relayUrls!;
                 Log.info(

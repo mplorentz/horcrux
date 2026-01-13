@@ -18,7 +18,7 @@ void main() {
 
   // T030: Widget test for owner-steward vault detail buttons
   group('Owner-steward vault detail buttons', () {
-    testWidgets('shows Initiate Recovery and Create New Content for owner-steward state', (
+    testWidgets('shows Initiate Recovery and Change Vault Contents for owner-steward state', (
       tester,
     ) async {
       // Owner-steward state: isOwner, content == null, shards.isNotEmpty
@@ -84,7 +84,7 @@ void main() {
 
       // Verify owner-steward buttons are shown
       expect(find.text('Initiate Recovery'), findsOneWidget);
-      expect(find.text('Create New Content'), findsOneWidget);
+      expect(find.text('Change Vault Contents'), findsOneWidget);
 
       container.dispose();
     });
@@ -95,6 +95,7 @@ void main() {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
 
+        final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
         final backupConfig = copyBackupConfig(
           createBackupConfig(
             vaultId: 'test-vault',
@@ -103,7 +104,9 @@ void main() {
             stewards: [ownerSteward, otherSteward],
             relays: ['wss://relay.example.com'],
           ),
-          lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
+          lastRedistribution: lastRedistributionTime,
+          lastUpdated:
+              lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
         );
 
         // Vault with content and owner steward configured (after distribution)
@@ -156,6 +159,7 @@ void main() {
       // Only regular stewards, no owner steward
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
 
+      final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
       final backupConfig = copyBackupConfig(
         createBackupConfig(
           vaultId: 'test-vault',
@@ -164,7 +168,9 @@ void main() {
           stewards: [steward1],
           relays: ['wss://relay.example.com'],
         ),
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
+        lastRedistribution: lastRedistributionTime,
+        lastUpdated:
+            lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
       );
 
       // Vault with content but no owner steward

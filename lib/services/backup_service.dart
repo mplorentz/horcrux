@@ -650,9 +650,15 @@ class BackupService {
       Log.info('Successfully distributed all shards');
 
       // Step 7: Update backup config with distribution timestamp and status
+      // IMPORTANT: Reload config to preserve any steward status updates that happened during distribution
+      // (e.g., owner's immediate acknowledgment)
+      final currentConfig = await _repository.getBackupConfig(vaultId);
+      if (currentConfig == null) {
+        throw Exception('Backup configuration not found after distribution');
+      }
       final now = DateTime.now();
       final updatedConfig = copyBackupConfig(
-        config,
+        currentConfig, // Use current config, not the stale one from step 2
         lastRedistribution: now,
         lastUpdated: now,
         status: BackupStatus.active,

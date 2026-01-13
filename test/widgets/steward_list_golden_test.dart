@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/backup_config.dart';
+import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
+import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
@@ -339,6 +343,194 @@ void main() {
         tester,
         'steward_list_user_loading',
       );
+
+      container.dispose();
+    });
+
+    testGoldens('owner as steward appears in list (backupConfig path)', (tester) async {
+      final ownerPubkey = testPubkey;
+      final stewardPubkeyB = otherPubkey;
+      final stewardPubkeyC = thirdPubkey;
+
+      // Create owner steward with holdingKey status (is a steward)
+      final ownerSteward = copySteward(
+        createOwnerSteward(pubkey: ownerPubkey, name: 'Device A'),
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        acknowledgedDistributionVersion: 1,
+      );
+
+      // Create regular stewards
+      final stewardB = copySteward(
+        createSteward(pubkey: stewardPubkeyB, name: 'Device B'),
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        acknowledgedDistributionVersion: 1,
+      );
+
+      final stewardC = copySteward(
+        createSteward(pubkey: stewardPubkeyC, name: 'Device C'),
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        acknowledgedDistributionVersion: 1,
+      );
+
+      // Create backup config with owner as steward
+      final backupConfig = copyBackupConfig(
+        createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [ownerSteward, stewardB, stewardC],
+          relays: ['wss://relay.example.com'],
+        ),
+        status: BackupStatus.active,
+        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
+        distributionVersion: 1,
+      );
+
+      final vault = Vault(
+        id: 'test-vault',
+        name: 'Test Vault',
+        content: 'secret content',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ownerPubkey: ownerPubkey,
+        ownerName: 'Device A',
+        backupConfig: backupConfig,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const StewardList(vaultId: 'test-vault'),
+        container: container,
+        surfaceSize: const Size(375, 400),
+        useScaffold: true,
+      );
+
+      await screenMatchesGolden(tester, 'steward_list_owner_as_steward_backup_config');
+
+      container.dispose();
+    });
+
+    testGoldens('owner not as steward excluded from list', (tester) async {
+      final ownerPubkey = testPubkey;
+      final stewardPubkeyB = otherPubkey;
+      final stewardPubkeyC = thirdPubkey;
+
+      // Create owner steward with awaitingKey status (NOT a steward yet)
+      final ownerSteward = copySteward(
+        createOwnerSteward(pubkey: ownerPubkey, name: 'Device A'),
+        status: StewardStatus.awaitingKey, // Not holding a key
+      );
+
+      // Create regular stewards
+      final stewardB = copySteward(
+        createSteward(pubkey: stewardPubkeyB, name: 'Device B'),
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        acknowledgedDistributionVersion: 1,
+      );
+
+      final stewardC = copySteward(
+        createSteward(pubkey: stewardPubkeyC, name: 'Device C'),
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        acknowledgedDistributionVersion: 1,
+      );
+
+      // Create backup config with owner NOT as steward
+      final backupConfig = copyBackupConfig(
+        createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [ownerSteward, stewardB, stewardC],
+          relays: ['wss://relay.example.com'],
+        ),
+        status: BackupStatus.active,
+        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
+        distributionVersion: 1,
+      );
+
+      final vault = Vault(
+        id: 'test-vault',
+        name: 'Test Vault',
+        content: 'secret content',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ownerPubkey: ownerPubkey,
+        ownerName: 'Device A',
+        backupConfig: backupConfig,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const StewardList(vaultId: 'test-vault'),
+        container: container,
+        surfaceSize: const Size(375, 350),
+        useScaffold: true,
+      );
+
+      await screenMatchesGolden(tester, 'steward_list_owner_not_steward');
+
+      container.dispose();
+    });
+
+    testGoldens('owner in shard peers appears in list (shard fallback path)', (tester) async {
+      final ownerPubkey = testPubkey;
+      final stewardPubkeyB = otherPubkey;
+      final stewardPubkeyC = thirdPubkey;
+
+      final shard = createTestShard(
+        shardIndex: 0,
+        recipientPubkey: stewardPubkeyC,
+        vaultId: 'test-vault',
+        peers: [
+          {'name': 'Device A', 'pubkey': ownerPubkey}, // Owner in peers
+          {'name': 'Device B', 'pubkey': stewardPubkeyB},
+          {'name': 'Device C', 'pubkey': stewardPubkeyC},
+        ],
+      );
+
+      final vault = Vault(
+        id: 'test-vault',
+        name: 'Test Vault',
+        content: null,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ownerPubkey: ownerPubkey,
+        ownerName: 'Device A',
+        shards: [shard],
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const StewardList(vaultId: 'test-vault'),
+        container: container,
+        surfaceSize: const Size(375, 400),
+        useScaffold: true,
+      );
+
+      await screenMatchesGolden(tester, 'steward_list_owner_in_shard_peers_fallback');
 
       container.dispose();
     });

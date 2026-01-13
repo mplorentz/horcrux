@@ -444,6 +444,7 @@ class VaultRepository {
   // ========== Shard Management Methods ==========
 
   /// Add a shard to a vault (supports multiple shards during recovery)
+  /// Checks for duplicate by nostrEventId to prevent adding the same shard twice
   Future<void> addShardToVault(String vaultId, ShardData shard) async {
     await initialize();
 
@@ -453,6 +454,22 @@ class VaultRepository {
     }
 
     final vault = _cachedVaults![index];
+
+    // Check if a shard with the same nostrEventId already exists
+    if (shard.nostrEventId != null) {
+      final existingIndex = vault.shards.indexWhere(
+        (s) => s.nostrEventId != null && s.nostrEventId == shard.nostrEventId,
+      );
+
+      if (existingIndex != -1) {
+        Log.info(
+          'Shard with event ID ${shard.nostrEventId} already exists for vault $vaultId, skipping duplicate',
+        );
+        return; // Already have this exact shard, skip adding
+      }
+    }
+
+    // Add new shard
     final updatedShards = List<ShardData>.from(vault.shards)..add(shard);
 
     final updatedVault = vault.copyWith(shards: updatedShards);

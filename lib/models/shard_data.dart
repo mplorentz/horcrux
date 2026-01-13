@@ -246,6 +246,21 @@ extension ShardDataExtension on ShardData {
   bool get isRecent {
     return ageInHours < 24.0;
   }
+
+  /// Check if this shard is more recent than [other].
+  /// Comparison logic:
+  /// 1. First compares distributionVersion (null treated as -1, meaning older)
+  /// 2. If versions are equal, compares createdAt timestamp
+  bool isMoreRecentThan(ShardData other) {
+    final thisVersion = distributionVersion ?? -1;
+    final otherVersion = other.distributionVersion ?? -1;
+
+    if (thisVersion != otherVersion) {
+      return thisVersion > otherVersion;
+    }
+
+    return createdAt > other.createdAt;
+  }
 }
 
 /// Convert to JSON for storage
