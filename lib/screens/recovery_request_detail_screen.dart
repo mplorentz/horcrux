@@ -181,20 +181,22 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     // Get initiator name from vault shard data
     String? initiatorName;
     if (vault != null) {
+      final latestShard =
+          vault.mostRecentShard ?? (vault.shards.isNotEmpty ? vault.shards.first : null);
+
       // First check vault ownerName
       if (vault.ownerPubkey == request.initiatorPubkey) {
         initiatorName = vault.ownerName;
       }
 
       // If not found and we have shards, check shard data
-      if (initiatorName == null && vault.shards.isNotEmpty) {
-        final firstShard = vault.shards.first;
+      if (initiatorName == null && latestShard != null) {
         // Check if initiator is the owner
-        if (firstShard.creatorPubkey == request.initiatorPubkey) {
-          initiatorName = firstShard.ownerName ?? vault.ownerName;
-        } else if (firstShard.peers != null) {
+        if (latestShard.creatorPubkey == request.initiatorPubkey) {
+          initiatorName = latestShard.ownerName ?? vault.ownerName;
+        } else if (latestShard.peers != null) {
           // Check if initiator is in peers
-          for (final peer in firstShard.peers!) {
+          for (final peer in latestShard.peers!) {
             if (peer['pubkey'] == request.initiatorPubkey) {
               initiatorName = peer['name'];
               break;
@@ -225,7 +227,8 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         instructions = vault.backupConfig!.instructions;
       } else if (vault.shards.isNotEmpty) {
         // Fallback to shard data
-        instructions = vault.shards.first.instructions;
+        instructions =
+            (vault.mostRecentShard ?? vault.shards.first).instructions;
       }
     }
 
