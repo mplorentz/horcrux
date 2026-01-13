@@ -12,6 +12,7 @@ import '../models/invitation_link.dart';
 import '../services/backup_service.dart';
 import '../services/invitation_service.dart';
 import '../services/invitation_sending_service.dart';
+import '../services/logger.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/backup_distribution_helper.dart';
@@ -1066,7 +1067,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     } catch (e) {
       // Log error but don't fail loading
-      debugPrint('Error loading existing invitations: $e');
+      Log.error('Error loading existing invitations', e);
     }
   }
 
@@ -1202,7 +1203,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             reason: 'Steward removed from recovery plan',
           );
         } catch (e) {
-          debugPrint('Error invalidating invitation: $e');
+          Log.error('Error invalidating invitation', e);
           // Continue with removal even if invalidation fails
         }
       }
@@ -1354,7 +1355,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           final repository = ref.read(vaultRepositoryProvider);
           await repository.deleteVault(widget.vaultId);
         } catch (e) {
-          debugPrint('Error deleting vault during onboarding cancel: $e');
+          Log.error('Error deleting vault during onboarding cancel', e);
         }
 
         // Navigate to vault list screen

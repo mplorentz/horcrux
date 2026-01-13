@@ -42,7 +42,7 @@ void main() {
     loginService.resetCacheForTest();
   });
 
-  test('add/get/update/delete vault persists via encrypted SharedPreferences', () async {
+  test('add/get/update/delete vault persists via encrypted per-vault file storage', () async {
     // Initialize key so encrypt/decrypt works
     final loginService = LoginService();
     final keyPair = await loginService.generateAndStoreNostrKey();
@@ -65,13 +65,17 @@ void main() {
 
     await repository.addVault(vault);
 
-    // Verify ciphertext stored, not plaintext
+    // Legacy SharedPreferences blob should not be written anymore
     final prefs = await SharedPreferences.getInstance();
     final encrypted = prefs.getString('encrypted_vaults');
-    expect(encrypted, isNotNull);
-    expect(encrypted!.isNotEmpty, isTrue);
-    expect(encrypted.contains('Top secret content'), isFalse);
-    expect(encrypted.contains('Secret'), isFalse); // name is inside JSON
+    expect(encrypted, isNull);
+
+    // Verify ciphertext stored in SharedPreferences, not plaintext
+    final encryptedData = prefs.getString('vault_abc');
+    expect(encryptedData, isNotNull);
+    expect(encryptedData!.isNotEmpty, isTrue);
+    expect(encryptedData.contains('Top secret content'), isFalse);
+    expect(encryptedData.contains('Secret'), isFalse); // name is inside JSON
 
     // Now load and ensure we can read back decrypted content via service
     final listAfterAdd = await repository.getAllVaults();
@@ -89,16 +93,19 @@ void main() {
     expect(fetched2!.name, 'Renamed');
     expect(fetched2.content, 'Still hidden');
 
-    // Ensure on disk string does not contain plaintext after update
-    final encrypted2 = prefs.getString('encrypted_vaults');
-    expect(encrypted2, isNotNull);
-    expect(encrypted2!.contains('Still hidden'), isFalse);
-    expect(encrypted2.contains('Renamed'), isFalse);
+    // Ensure stored data does not contain plaintext after update
+    final prefs2 = await SharedPreferences.getInstance();
+    final encryptedData2 = prefs2.getString('vault_abc');
+    expect(encryptedData2, isNotNull);
+    expect(encryptedData2!.contains('Still hidden'), isFalse);
+    expect(encryptedData2.contains('Renamed'), isFalse);
 
     // Delete
     await repository.deleteVault('abc');
     final afterDelete = await repository.getVault('abc');
     expect(afterDelete, isNull);
+    final prefs3 = await SharedPreferences.getInstance();
+    expect(prefs3.containsKey('vault_abc'), isFalse);
   });
 
   // T028: Test that deleteVaultContent preserves shards and backup config

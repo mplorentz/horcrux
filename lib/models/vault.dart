@@ -87,7 +87,17 @@ class Vault {
     if (shards.isEmpty) {
       return null;
     }
-    return shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
+    return shards.reduce((current, next) {
+      // Compare distributionVersion (null treated as -1, meaning older)
+      final currentVersion = current.distributionVersion ?? -1;
+      final nextVersion = next.distributionVersion ?? -1;
+
+      if (currentVersion != nextVersion) {
+        return nextVersion > currentVersion ? next : current;
+      }
+
+      return next.createdAt > current.createdAt ? next : current;
+    });
   }
 
   /// Check if this vault has an active recovery request
