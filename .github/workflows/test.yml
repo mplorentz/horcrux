@@ -53,6 +53,14 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       
+      - name: Verify Freezed/Mockito codegen is up to date
+        run: |
+          flutter pub run build_runner build --delete-conflicting-outputs
+          if ! git diff --exit-code; then
+            echo "::error ::Generated files are out of date. Run 'flutter pub run build_runner build --delete-conflicting-outputs' and commit the updated *.freezed.dart / *.mocks.dart outputs."
+            exit 1
+          fi
+      
       - name: Verify formatting
         # dart format automatically reads analysis_options.yaml from the project root
         # This ensures CI uses the same formatting settings (e.g., page_width: 100) as local development
