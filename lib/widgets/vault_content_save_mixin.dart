@@ -90,7 +90,7 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Failed to reload vault content. Please try again.',
+                      'Failed to load vault content. Please try again.',
                     ),
                     backgroundColor: Colors.orange,
                   ),
