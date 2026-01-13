@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'shard_data.dart';
+
+part 'recovery_request.freezed.dart';
 
 /// Recovery request status enum
 enum RecoveryRequestStatus {
@@ -78,23 +81,35 @@ extension RecoveryResponseStatusExtension on RecoveryResponseStatus {
 }
 
 /// Represents a steward's response to a recovery request
-class RecoveryResponse {
-  final String pubkey; // hex format, 64 characters
-  final bool approved; // Whether the steward approved the request
-  final DateTime? respondedAt;
-  final ShardData? shardData; // Actual shard data for reassembly (if approved)
-  final String? nostrEventId;
-  final String? errorMessage; // Error message if status is error
+@freezed
+class RecoveryResponse with _$RecoveryResponse {
+  const factory RecoveryResponse({
+    required String pubkey, // hex format, 64 characters
+    required bool approved, // Whether the steward approved the request
+    DateTime? respondedAt,
+    ShardData? shardData, // Actual shard data for reassembly (if approved)
+    String? nostrEventId,
+    String? errorMessage, // Error message if status is error
+  }) = _RecoveryResponse;
 
-  const RecoveryResponse({
-    required this.pubkey,
-    required this.approved,
-    this.respondedAt,
-    this.shardData,
-    this.nostrEventId,
-    this.errorMessage,
-  });
+  /// Create from JSON
+  factory RecoveryResponse.fromJson(Map<String, dynamic> json) {
+    return RecoveryResponse(
+      pubkey: json['pubkey'] as String,
+      approved: json['approved'] as bool? ?? false,
+      respondedAt:
+          json['respondedAt'] != null ? DateTime.parse(json['respondedAt'] as String) : null,
+      shardData: json['shardData'] != null
+          ? shardDataFromJson(json['shardData'] as Map<String, dynamic>)
+          : null,
+      nostrEventId: json['nostrEventId'] as String?,
+      errorMessage: json['errorMessage'] as String?,
+    );
+  }
+}
 
+/// Extension methods for RecoveryResponse
+extension RecoveryResponseExtension on RecoveryResponse {
   /// Validate the recovery response
   bool get isValid {
     // Pubkey must be valid hex format (64 characters)
@@ -133,74 +148,58 @@ class RecoveryResponse {
       'errorMessage': errorMessage,
     };
   }
-
-  /// Create from JSON
-  factory RecoveryResponse.fromJson(Map<String, dynamic> json) {
-    return RecoveryResponse(
-      pubkey: json['pubkey'] as String,
-      approved: json['approved'] as bool? ?? false,
-      respondedAt:
-          json['respondedAt'] != null ? DateTime.parse(json['respondedAt'] as String) : null,
-      shardData: json['shardData'] != null
-          ? shardDataFromJson(json['shardData'] as Map<String, dynamic>)
-          : null,
-      nostrEventId: json['nostrEventId'] as String?,
-      errorMessage: json['errorMessage'] as String?,
-    );
-  }
-
-  RecoveryResponse copyWith({
-    String? pubkey,
-    bool? approved,
-    DateTime? respondedAt,
-    ShardData? shardData,
-    String? nostrEventId,
-    String? errorMessage,
-  }) {
-    return RecoveryResponse(
-      pubkey: pubkey ?? this.pubkey,
-      approved: approved ?? this.approved,
-      respondedAt: respondedAt ?? this.respondedAt,
-      shardData: shardData ?? this.shardData,
-      nostrEventId: nostrEventId ?? this.nostrEventId,
-      errorMessage: errorMessage ?? this.errorMessage,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'RecoveryResponse(pubkey: ${pubkey.substring(0, 8)}..., status: ${status.displayName})';
-  }
 }
 
 /// Represents a request to recover a vault
-class RecoveryRequest {
-  final String id;
-  final String vaultId;
-  final String initiatorPubkey; // hex format, 64 characters
-  final DateTime requestedAt;
-  final RecoveryRequestStatus status;
-  final String? nostrEventId;
-  final DateTime? expiresAt;
-  final int threshold; // Shamir threshold needed for recovery
-  final Map<String, RecoveryResponse> stewardResponses; // pubkey -> response
-  final String? errorMessage; // Error message if status is failed
-  final bool isPractice; // True for practice recovery sessions
+@freezed
+class RecoveryRequest with _$RecoveryRequest {
+  const factory RecoveryRequest({
+    required String id,
+    required String vaultId,
+    required String initiatorPubkey, // hex format, 64 characters
+    required DateTime requestedAt,
+    required RecoveryRequestStatus status,
+    required int threshold, // Shamir threshold needed for recovery
+    String? nostrEventId,
+    DateTime? expiresAt,
+    @Default({}) Map<String, RecoveryResponse> stewardResponses, // pubkey -> response
+    String? errorMessage, // Error message if status is failed
+    @Default(false) bool isPractice, // True for practice recovery sessions
+  }) = _RecoveryRequest;
 
-  const RecoveryRequest({
-    required this.id,
-    required this.vaultId,
-    required this.initiatorPubkey,
-    required this.requestedAt,
-    required this.status,
-    required this.threshold,
-    this.nostrEventId,
-    this.expiresAt,
-    this.stewardResponses = const {},
-    this.errorMessage,
-    this.isPractice = false,
-  });
+  /// Create from JSON
+  factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
+    final responsesJson = json['stewardResponses'] as Map<String, dynamic>?;
+    final responses = responsesJson?.map(
+          (key, value) => MapEntry(
+            key,
+            RecoveryResponse.fromJson(value as Map<String, dynamic>),
+          ),
+        ) ??
+        {};
 
+    return RecoveryRequest(
+      id: json['id'] as String,
+      vaultId: json['vaultId'] as String,
+      initiatorPubkey: json['initiatorPubkey'] as String,
+      requestedAt: DateTime.parse(json['requestedAt'] as String),
+      status: RecoveryRequestStatus.values.firstWhere(
+        (e) => e.name == json['status'],
+        orElse: () => RecoveryRequestStatus.pending,
+      ),
+      threshold: json['threshold'] as int? ??
+          1, // Default to 1 if not present (for backwards compatibility)
+      nostrEventId: json['nostrEventId'] as String?,
+      expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
+      stewardResponses: responses,
+      errorMessage: json['errorMessage'] as String?,
+      isPractice: json['isPractice'] as bool? ?? false,
+    );
+  }
+}
+
+/// Extension methods for RecoveryRequest
+extension RecoveryRequestExtension on RecoveryRequest {
   /// Validate the recovery request
   bool get isValid {
     // ID must be non-empty
@@ -267,77 +266,6 @@ class RecoveryRequest {
       'errorMessage': errorMessage,
       'isPractice': isPractice,
     };
-  }
-
-  /// Create from JSON
-  factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
-    final responsesJson = json['stewardResponses'] as Map<String, dynamic>?;
-    final responses = responsesJson?.map(
-          (key, value) => MapEntry(
-            key,
-            RecoveryResponse.fromJson(value as Map<String, dynamic>),
-          ),
-        ) ??
-        {};
-
-    return RecoveryRequest(
-      id: json['id'] as String,
-      vaultId: json['vaultId'] as String,
-      initiatorPubkey: json['initiatorPubkey'] as String,
-      requestedAt: DateTime.parse(json['requestedAt'] as String),
-      status: RecoveryRequestStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => RecoveryRequestStatus.pending,
-      ),
-      threshold: json['threshold'] as int? ??
-          1, // Default to 1 if not present (for backwards compatibility)
-      nostrEventId: json['nostrEventId'] as String?,
-      expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
-      stewardResponses: responses,
-      errorMessage: json['errorMessage'] as String?,
-      isPractice: json['isPractice'] as bool? ?? false,
-    );
-  }
-
-  RecoveryRequest copyWith({
-    String? id,
-    String? vaultId,
-    String? initiatorPubkey,
-    DateTime? requestedAt,
-    RecoveryRequestStatus? status,
-    int? threshold,
-    String? nostrEventId,
-    DateTime? expiresAt,
-    Map<String, RecoveryResponse>? stewardResponses,
-    String? errorMessage,
-    bool? isPractice,
-  }) {
-    return RecoveryRequest(
-      id: id ?? this.id,
-      vaultId: vaultId ?? this.vaultId,
-      initiatorPubkey: initiatorPubkey ?? this.initiatorPubkey,
-      requestedAt: requestedAt ?? this.requestedAt,
-      status: status ?? this.status,
-      threshold: threshold ?? this.threshold,
-      nostrEventId: nostrEventId ?? this.nostrEventId,
-      expiresAt: expiresAt ?? this.expiresAt,
-      stewardResponses: stewardResponses ?? this.stewardResponses,
-      errorMessage: errorMessage ?? this.errorMessage,
-      isPractice: isPractice ?? this.isPractice,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecoveryRequest && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
-  String toString() {
-    return 'RecoveryRequest(id: $id, vaultId: $vaultId, status: ${status.displayName})';
   }
 }
 

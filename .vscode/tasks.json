@@ -192,6 +192,32 @@
             },
             "problemMatcher": [],
             "detail": "Build iOS app for release (requires configured signing)"
+        },
+        {
+            "label": "Codegen",
+            "type": "shell",
+            "command": "flutter",
+            "args": [
+                "pub",
+                "run",
+                "build_runner",
+                "build",
+                "--delete-conflicting-outputs"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Run code generation for Freezed models and Mockito mocks"
         }
     ]
 }
