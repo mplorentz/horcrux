@@ -336,15 +336,18 @@ class RecoveryService {
       }
     } else {
       // Real recovery: use shard data
-      final shards = await _vaultShareService.getVaultShares(vaultId);
-      if (shards.isEmpty) {
+      if (vault.shards.isEmpty) {
         throw StateError(
           'Cannot recover: you don\'t have a key to this vault.',
         );
       }
 
-      final selectedShard =
-          shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
+      final selectedShard = vault.mostRecentShard;
+      if (selectedShard == null) {
+        throw StateError(
+          'Cannot recover: you don\'t have a key to this vault.',
+        );
+      }
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
@@ -628,12 +631,14 @@ class RecoveryService {
     // If approving and NOT a practice request, get the shard data for this vault
     // Practice requests should not include shard data
     if (approved && !request.isPractice) {
-      final shards = await repository.getShardsForVault(request.vaultId);
-      if (shards.isEmpty) {
+      final vault = await repository.getVault(request.vaultId);
+      if (vault == null) {
+        throw ArgumentError('Vault not found: ${request.vaultId}');
+      }
+      shardData = vault.mostRecentShard;
+      if (shardData == null) {
         throw ArgumentError('No shard data found for vault ${request.vaultId}');
       }
-      // Select the shard with the highest distributionVersion (most recent)
-      shardData = shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
       Log.info(
         'Selected shard with distributionVersion ${shardData.distributionVersion} for recovery request $recoveryRequestId',
       );
@@ -667,17 +672,14 @@ class RecoveryService {
             );
           } else if (vault != null) {
             // Fall back to relay URLs from steward's shards
-            final shards = await repository.getShardsForVault(request.vaultId);
-            if (shards.isNotEmpty) {
-              // Get relay URLs from the most recent shard
-              final latestShard =
-                  shards.reduce((current, next) => next.isMoreRecentThan(current) ? next : current);
-              if (latestShard.relayUrls != null && latestShard.relayUrls!.isNotEmpty) {
-                relayUrls = latestShard.relayUrls!;
-                Log.info(
-                  'Using relay URLs from shard data for practice request',
-                );
-              }
+            final latestShard = vault.mostRecentShard;
+            if (latestShard != null &&
+                latestShard.relayUrls != null &&
+                latestShard.relayUrls!.isNotEmpty) {
+              relayUrls = latestShard.relayUrls!;
+              Log.info(
+                'Using relay URLs from shard data for practice request',
+              );
             }
           }
           if (relayUrls.isEmpty) {
