@@ -1,26 +1,23 @@
-/// Represents the current state of a recovery process
-class RecoveryStatus {
-  final String recoveryRequestId;
-  final int totalStewards;
-  final int respondedCount;
-  final int approvedCount;
-  final int deniedCount;
-  final List<String> collectedShardIds; // List of shard data IDs
-  final int threshold;
-  final bool canRecover;
-  final DateTime lastUpdated;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const RecoveryStatus({
-    required this.recoveryRequestId,
-    required this.totalStewards,
-    required this.respondedCount,
-    required this.approvedCount,
-    required this.deniedCount,
-    required this.collectedShardIds,
-    required this.threshold,
-    required this.canRecover,
-    required this.lastUpdated,
-  });
+part 'recovery_status.freezed.dart';
+
+/// Represents the current state of a recovery process
+@freezed
+class RecoveryStatus with _$RecoveryStatus {
+  const factory RecoveryStatus({
+    required String recoveryRequestId,
+    required int totalStewards,
+    required int respondedCount,
+    required int approvedCount,
+    required int deniedCount,
+    @Default([]) List<String> collectedShardIds, // List of shard data IDs
+    required int threshold,
+    required bool canRecover,
+    required DateTime lastUpdated,
+  }) = _RecoveryStatus;
+
+  const RecoveryStatus._();
 
   /// Validate the recovery status
   bool get isValid {
@@ -103,34 +100,5 @@ class RecoveryStatus {
       canRecover: json['canRecover'] as bool,
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),
     );
-  }
-
-  RecoveryStatus copyWith({
-    String? recoveryRequestId,
-    int? totalStewards,
-    int? respondedCount,
-    int? approvedCount,
-    int? deniedCount,
-    List<String>? collectedShardIds,
-    int? threshold,
-    bool? canRecover,
-    DateTime? lastUpdated,
-  }) {
-    return RecoveryStatus(
-      recoveryRequestId: recoveryRequestId ?? this.recoveryRequestId,
-      totalStewards: totalStewards ?? this.totalStewards,
-      respondedCount: respondedCount ?? this.respondedCount,
-      approvedCount: approvedCount ?? this.approvedCount,
-      deniedCount: deniedCount ?? this.deniedCount,
-      collectedShardIds: collectedShardIds ?? this.collectedShardIds,
-      threshold: threshold ?? this.threshold,
-      canRecover: canRecover ?? this.canRecover,
-      lastUpdated: lastUpdated ?? this.lastUpdated,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'RecoveryStatus(requestId: $recoveryRequestId, progress: ${recoveryProgress.toStringAsFixed(1)}%, canRecover: $canRecover)';
   }
 }
