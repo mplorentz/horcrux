@@ -86,7 +86,6 @@ class NdkService {
         _getInvitationService = getInvitationService {
     _publishQueueService = PublishQueueService(
       getNdk: getNdk,
-      getSenderPubkey: () async => (await _loginService.getStoredNostrKey())?.publicKey,
     );
     unawaited(_publishQueueService.initialize());
   }
@@ -613,13 +612,19 @@ class NdkService {
       final pubkeySnippet =
           recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
 
-      final result = await _publishQueueService.enqueueEncryptedEvent(
+      // Build the gift wrap event
+      final giftWrap = await _buildGiftWrapEvent(
         content: content,
         kind: kind,
         recipientPubkey: recipientPubkey,
-        relays: relays,
         tags: tags,
         customPubkey: customPubkey,
+      );
+
+      // Enqueue the signed event for publishing
+      final result = await _publishQueueService.enqueueEvent(
+        event: giftWrap,
+        relays: relays,
       );
 
       if (result.successfulRelays.isEmpty) {
@@ -646,6 +651,64 @@ class NdkService {
       Log.debug('Encrypted event enqueue stack', stackTrace);
       return null;
     }
+  }
+
+  /// Build a gift wrap event (rumor + gift wrap)
+  ///
+  /// Creates a rumor event with the given content and kind,
+  /// wraps it in a gift wrap for the recipient.
+  ///
+  /// Automatically adds NIP-40 expiration tag (7 days) to the rumor event,
+  /// unless an expiration tag is already present in the tags list.
+  ///
+  /// Returns the signed gift wrap event.
+  Future<Nip01Event> _buildGiftWrapEvent({
+    required String content,
+    required int kind,
+    required String recipientPubkey, // Hex format
+    List<List<String>>? tags,
+    String? customPubkey, // Hex format - if null, uses current user's pubkey
+  }) async {
+    if (!_isInitialized || _ndk == null) {
+      throw Exception('NDK not initialized');
+    }
+
+    final senderPubkey = customPubkey ?? await getCurrentPubkey();
+    if (senderPubkey == null) {
+      throw Exception('No sender pubkey available');
+    }
+
+    final tagsWithExpiration = _ensureExpirationTag(tags ?? []);
+    final rumor = await _ndk!.giftWrap.createRumor(
+      customPubkey: senderPubkey,
+      content: content,
+      kind: kind,
+      tags: tagsWithExpiration,
+    );
+
+    return _ndk!.giftWrap.toGiftWrap(
+      rumor: rumor,
+      recipientPubkey: recipientPubkey,
+    );
+  }
+
+  /// Ensure expiration tag is present in tags list
+  ///
+  /// Adds NIP-40 expiration tag (7 days) if not already present.
+  List<List<String>> _ensureExpirationTag(List<List<String>> tags) {
+    final hasExpiration = tags.any(
+      (tag) => tag.isNotEmpty && tag.first == 'expiration',
+    );
+
+    if (hasExpiration) return tags;
+
+    final expirationTimestamp =
+        DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
+
+    return [
+      ['expiration', expirationTimestamp.toString()],
+      ...tags,
+    ];
   }
 
   /// Publish an encrypted event to multiple recipients

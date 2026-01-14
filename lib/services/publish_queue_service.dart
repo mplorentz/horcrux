@@ -9,7 +9,6 @@ import 'package:uuid/uuid.dart';
 import 'logger.dart';
 
 typedef NdkSupplier = Future<Ndk> Function();
-typedef PubkeySupplier = Future<String?> Function();
 
 enum PublishRelayStatus { pending, success, failed }
 
@@ -65,59 +64,38 @@ class PublishRelayState {
 
 class PublishQueueItem {
   final String id;
-  final String content;
-  final int kind;
-  final String recipientPubkey;
+  final Nip01Event event;
   final List<String> relays;
-  final List<List<String>> tags;
-  final String? customPubkey;
   final DateTime createdAt;
   final Map<String, PublishRelayState> relayStates;
-  final String? eventId;
 
   const PublishQueueItem({
     required this.id,
-    required this.content,
-    required this.kind,
-    required this.recipientPubkey,
+    required this.event,
     required this.relays,
-    required this.tags,
     required this.createdAt,
     required this.relayStates,
-    this.customPubkey,
-    this.eventId,
   });
 
   PublishQueueItem copyWith({
-    String? eventId,
     Map<String, PublishRelayState>? relayStates,
   }) {
     return PublishQueueItem(
       id: id,
-      content: content,
-      kind: kind,
-      recipientPubkey: recipientPubkey,
+      event: event,
       relays: relays,
-      tags: tags,
       createdAt: createdAt,
       relayStates: relayStates ?? this.relayStates,
-      customPubkey: customPubkey,
-      eventId: eventId ?? this.eventId,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'content': content,
-      'kind': kind,
-      'recipientPubkey': recipientPubkey,
+      'event': event.toJson(),
       'relays': relays,
-      'tags': tags,
-      'customPubkey': customPubkey,
       'createdAt': createdAt.toIso8601String(),
       'relayStates': relayStates.map((key, value) => MapEntry(key, value.toJson())),
-      'eventId': eventId,
     };
   }
 
@@ -130,21 +108,15 @@ class PublishQueueItem {
       ),
     );
 
+    final eventJson = json['event'] as Map<String, dynamic>;
+    final event = Nip01Event.fromJson(eventJson);
+
     return PublishQueueItem(
       id: json['id'] as String,
-      content: json['content'] as String,
-      kind: json['kind'] as int,
-      recipientPubkey: json['recipientPubkey'] as String,
+      event: event,
       relays: (json['relays'] as List<dynamic>? ?? []).cast<String>(),
-      tags: (json['tags'] as List<dynamic>? ?? [])
-          .map(
-            (tag) => (tag as List<dynamic>).map((item) => item.toString()).toList(),
-          )
-          .toList(),
-      customPubkey: json['customPubkey'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       relayStates: relayStates,
-      eventId: json['eventId'] as String?,
     );
   }
 }
@@ -166,18 +138,15 @@ class PublishQueueResult {
 class PublishQueueService {
   PublishQueueService({
     required NdkSupplier getNdk,
-    required PubkeySupplier getSenderPubkey,
-  })  : _getNdk = getNdk,
-        _getSenderPubkey = getSenderPubkey;
+  }) : _getNdk = getNdk;
 
-  static const _storageKey = 'publish_queue_items_v1';
+  static const _storageKey = 'publish_queue_items_v2';
   static const _uuid = Uuid();
   static const _maxAttemptsPerRelay = 6;
   static const _baseBackoffSeconds = 2;
   static const _maxBackoff = Duration(minutes: 5);
 
   final NdkSupplier _getNdk;
-  final PubkeySupplier _getSenderPubkey;
 
   final Map<String, PublishQueueItem> _queue = {};
   final Map<String, Completer<PublishQueueResult>> _completers = {};
@@ -194,13 +163,9 @@ class PublishQueueService {
     Log.info('PublishQueueService initialized with ${_queue.length} pending item(s)');
   }
 
-  Future<PublishQueueResult> enqueueEncryptedEvent({
-    required String content,
-    required int kind,
-    required String recipientPubkey,
+  Future<PublishQueueResult> enqueueEvent({
+    required Nip01Event event,
     required List<String> relays,
-    List<List<String>>? tags,
-    String? customPubkey,
   }) async {
     await _ensureInitialized();
 
@@ -220,14 +185,10 @@ class PublishQueueService {
 
     final item = PublishQueueItem(
       id: _uuid.v4(),
-      content: content,
-      kind: kind,
-      recipientPubkey: recipientPubkey,
+      event: event,
       relays: dedupedRelays,
-      tags: tags ?? [],
       createdAt: DateTime.now(),
       relayStates: relayStates,
-      customPubkey: customPubkey,
     );
 
     final completer = Completer<PublishQueueResult>();
@@ -289,13 +250,12 @@ class PublishQueueService {
         final pendingRelays = item.relayStates.entries.where(
           (entry) {
             final state = entry.value;
-            if (state.status == PublishRelayStatus.success) return false;
-            if (state.status == PublishRelayStatus.failed) return false;
-            if (state.attempts >= _maxAttemptsPerRelay) return false;
-            if (state.nextAttemptAt != null && state.nextAttemptAt!.isAfter(now)) {
-              return false;
-            }
-            return true;
+            return switch (state.status) {
+              PublishRelayStatus.success => false,
+              PublishRelayStatus.failed => false,
+              PublishRelayStatus.pending => state.attempts < _maxAttemptsPerRelay &&
+                  (state.nextAttemptAt == null || !state.nextAttemptAt!.isAfter(now)),
+            };
           },
         ).toList();
 
@@ -306,30 +266,10 @@ class PublishQueueService {
           continue;
         }
 
-        Nip01Event? giftWrap;
-        try {
-          giftWrap = await _buildGiftWrap(item);
-          if (item.eventId != giftWrap.id) {
-            _queue[item.id] = item.copyWith(eventId: giftWrap.id);
-          }
-        } catch (e, stackTrace) {
-          Log.error('Failed to build gift wrap for queue item ${item.id}', e);
-          Log.debug('Gift wrap build stack', stackTrace);
-          for (final relayEntry in pendingRelays) {
-            _updateRelayState(
-              itemId: item.id,
-              relayUrl: relayEntry.key,
-              success: false,
-              error: 'Failed to prepare event: $e',
-            );
-          }
-          continue;
-        }
-
         for (final relayEntry in pendingRelays) {
           final relayUrl = relayEntry.key;
           final outcome = await _broadcastToRelay(
-            event: giftWrap!,
+            event: item.event,
             relayUrl: relayUrl,
           );
 
@@ -361,7 +301,7 @@ class PublishQueueService {
               .toList();
 
           final result = PublishQueueResult(
-            eventId: completedItem.eventId,
+            eventId: completedItem.event.id,
             successfulRelays: successfulRelays,
             failedRelays: failedRelays,
           );
@@ -380,28 +320,6 @@ class PublishQueueService {
     }
   }
 
-  Future<Nip01Event> _buildGiftWrap(PublishQueueItem item) async {
-    final ndk = await _getNdk();
-
-    final senderPubkey = item.customPubkey ?? await _getSenderPubkey();
-    if (senderPubkey == null) {
-      throw Exception('No sender pubkey available for publish queue item ${item.id}');
-    }
-
-    final tags = _ensureExpirationTag(item.tags);
-    final rumor = await ndk.giftWrap.createRumor(
-      customPubkey: senderPubkey,
-      content: item.content,
-      kind: item.kind,
-      tags: tags,
-    );
-
-    return ndk.giftWrap.toGiftWrap(
-      rumor: rumor,
-      recipientPubkey: item.recipientPubkey,
-    );
-  }
-
   Future<_RelayAttemptOutcome> _broadcastToRelay({
     required Nip01Event event,
     required String relayUrl,
@@ -414,10 +332,10 @@ class PublishQueueService {
       );
 
       final results = await response.broadcastDoneFuture;
-      final relayResult = results.firstWhere(
-        (result) => result.relayUrl == relayUrl,
-        orElse: () => results.isNotEmpty ? results.first : null,
-      );
+      final matchingResults = results.where((result) => result.relayUrl == relayUrl).toList();
+      final relayResult = matchingResults.isNotEmpty
+          ? matchingResults.first
+          : (results.isNotEmpty ? results.first : null);
 
       if (relayResult == null) {
         return _RelayAttemptOutcome(
@@ -510,22 +428,6 @@ class PublishQueueService {
     final delay = Duration(seconds: seconds.toInt());
     if (delay > _maxBackoff) return _maxBackoff;
     return delay;
-  }
-
-  List<List<String>> _ensureExpirationTag(List<List<String>> tags) {
-    final hasExpiration = tags.any(
-      (tag) => tag.isNotEmpty && tag.first == 'expiration',
-    );
-
-    if (hasExpiration) return tags;
-
-    final expirationTimestamp =
-        DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
-
-    return [
-      ['expiration', expirationTimestamp.toString()],
-      ...tags,
-    ];
   }
 
   Future<void> _persistQueue() async {
