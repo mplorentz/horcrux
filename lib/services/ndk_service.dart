@@ -588,14 +588,11 @@ class NdkService {
     return keyPair?.publicKey;
   }
 
-  /// Publish an expiring encrypted event (rumor + gift wrap)
+  /// Publish an encrypted event (rumor + gift wrap)
   ///
   /// Creates a rumor event with the given content and kind,
   /// wraps it in a gift wrap for the recipient,
   /// and broadcasts it to the specified relays.
-  ///
-  /// Automatically adds NIP-40 expiration tag (7 days) to the rumor event,
-  /// unless an expiration tag is already present in the tags list.
   ///
   /// Returns the gift wrap event ID.
   Future<String?> publishEncryptedEvent({
@@ -658,9 +655,6 @@ class NdkService {
   /// Creates a rumor event with the given content and kind,
   /// wraps it in a gift wrap for the recipient.
   ///
-  /// Automatically adds NIP-40 expiration tag (7 days) to the rumor event,
-  /// unless an expiration tag is already present in the tags list.
-  ///
   /// Returns the signed gift wrap event.
   Future<Nip01Event> _buildGiftWrapEvent({
     required String content,
@@ -678,12 +672,11 @@ class NdkService {
       throw Exception('No sender pubkey available');
     }
 
-    final tagsWithExpiration = _ensureExpirationTag(tags ?? []);
     final rumor = await _ndk!.giftWrap.createRumor(
       customPubkey: senderPubkey,
       content: content,
       kind: kind,
-      tags: tagsWithExpiration,
+      tags: tags ?? [],
     );
 
     return _ndk!.giftWrap.toGiftWrap(
@@ -692,32 +685,11 @@ class NdkService {
     );
   }
 
-  /// Ensure expiration tag is present in tags list
-  ///
-  /// Adds NIP-40 expiration tag (7 days) if not already present.
-  List<List<String>> _ensureExpirationTag(List<List<String>> tags) {
-    final hasExpiration = tags.any(
-      (tag) => tag.isNotEmpty && tag.first == 'expiration',
-    );
-
-    if (hasExpiration) return tags;
-
-    final expirationTimestamp =
-        DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
-
-    return [
-      ['expiration', expirationTimestamp.toString()],
-      ...tags,
-    ];
-  }
-
   /// Publish an encrypted event to multiple recipients
   ///
   /// Creates a rumor event with the given content and kind,
   /// wraps it in gift wraps for each recipient,
   /// and broadcasts them to the specified relays.
-  ///
-  /// Automatically adds NIP-40 expiration tag (7 days) to each rumor event.
   ///
   /// Returns list of gift wrap event IDs.
   Future<List<String>> publishEncryptedEventToMultiple({

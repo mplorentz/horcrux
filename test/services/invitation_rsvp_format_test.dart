@@ -447,8 +447,6 @@ void main() {
         expect(capturedRecipientPubkey, ownerPubkey);
         expect(capturedRelays, relayUrls);
         expect(capturedTags, isNotNull);
-        // Note: expiration tag is added inside publishEncryptedEvent, so we verify
-        // the custom tags passed to it (expiration will be prepended internally)
         expect(capturedTags!.length, 2);
         expect(capturedTags![0], ['d', 'invitation_rsvp_$inviteCode']);
         expect(capturedTags![1], ['invite', inviteCode]);
