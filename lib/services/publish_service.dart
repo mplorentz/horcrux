@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 import 'logger.dart';
 
@@ -144,7 +143,6 @@ class PublishService {
   }) : _getNdk = getNdk;
 
   static const _storageKey = 'publish_queue_items_v2';
-  static const _uuid = Uuid();
   static const _maxAttemptsPerRelay = 15;
   static const _baseBackoffSeconds = 2;
   static const _maxBackoff = Duration(days: 1);
@@ -201,7 +199,7 @@ class PublishService {
     };
 
     final item = PublishQueueItem(
-      id: _uuid.v4(),
+      id: event.id,
       event: event,
       relays: dedupedRelays,
       createdAt: DateTime.now(),
@@ -212,7 +210,7 @@ class PublishService {
     _queue[item.id] = item;
     _completers[item.id] = completer;
 
-    Log.trace('PublishService: Queue item ${item.id} created, queue size: ${_queue.length}');
+    Log.trace('PublishService: Queue item ${item.id.substring(0, 8)}... created, queue size: ${_queue.length}');
     await _persistQueue();
     _scheduleImmediateWork();
 
@@ -233,7 +231,7 @@ class PublishService {
       _queue[entry.key] = item.copyWith(relayStates: updatedRelayStates);
       updatedCount++;
       Log.trace(
-        'PublishService: Updated queue item ${item.id}: relay $relayUrl '
+        'PublishService: Updated queue item ${item.id.substring(0, 8)}...: relay $relayUrl '
         '(attempt ${state.attempts}, status ${state.status.name}) -> ready for retry',
       );
     }
