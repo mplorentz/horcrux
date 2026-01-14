@@ -9,7 +9,7 @@ import 'vault_share_service.dart';
 import 'invitation_service.dart';
 import 'shard_distribution_service.dart';
 import 'logger.dart';
-import 'publish_queue_service.dart';
+import 'publish_service.dart';
 import '../models/nostr_kinds.dart';
 import '../models/shard_data.dart';
 import '../models/recovery_request.dart';
@@ -63,7 +63,7 @@ class NdkService {
   final List<String> _activeRelays = [];
   StreamSubscription<Nip01Event>? _giftWrapStreamSub;
 
-  late final PublishQueueService _publishQueueService;
+  late final PublishService _publishService;
 
   // Event streams for recovery-related events (breaking circular dependency)
   final StreamController<RecoveryRequest> _recoveryRequestController =
@@ -84,10 +84,10 @@ class NdkService {
   })  : _ref = ref,
         _loginService = loginService,
         _getInvitationService = getInvitationService {
-    _publishQueueService = PublishQueueService(
+    _publishService = PublishService(
       getNdk: getNdk,
     );
-    unawaited(_publishQueueService.initialize());
+    unawaited(_publishService.initialize());
   }
 
   /// Initialize NDK with current user's key and set up subscriptions
@@ -153,7 +153,7 @@ class NdkService {
 
       // Restart subscriptions to include new relay
       await _setupSubscriptions();
-      _publishQueueService.onRelayReconnected(relayUrl);
+      _publishService.onRelayReconnected(relayUrl);
     } catch (e) {
       Log.error('Error adding relay $relayUrl', e);
       _activeRelays.remove(relayUrl);
@@ -622,7 +622,7 @@ class NdkService {
       );
 
       // Enqueue the signed event for publishing
-      final result = await _publishQueueService.enqueueEvent(
+      final result = await _publishService.enqueueEvent(
         event: giftWrap,
         relays: relays,
       );
@@ -781,7 +781,7 @@ class NdkService {
     await _closeSubscriptions();
     await _recoveryRequestController.close();
     await _recoveryResponseController.close();
-    await _publishQueueService.dispose();
+    await _publishService.dispose();
     _activeRelays.clear();
     _ndk = null;
     _isInitialized = false;

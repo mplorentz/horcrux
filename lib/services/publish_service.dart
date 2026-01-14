@@ -303,7 +303,8 @@ class PublishService {
 
         if (pendingRelays.isEmpty) {
           if (_isFinished(item)) {
-            Log.trace('PublishService: Queue item ${item.id} is finished, marking for completion');
+            Log.trace(
+                'PublishService: Queue item ${item.id} is finished, marking for completion');
             completedIds.add(item.id);
           }
           continue;
@@ -382,7 +383,8 @@ class PublishService {
     } finally {
       await _persistQueue();
       _isProcessing = false;
-      Log.trace('PublishService: Queue processing cycle complete, queue size: ${_queue.length}');
+      Log.trace(
+          'PublishService: Queue processing cycle complete, queue size: ${_queue.length}');
     }
   }
 
