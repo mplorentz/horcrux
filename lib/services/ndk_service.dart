@@ -9,6 +9,7 @@ import 'vault_share_service.dart';
 import 'invitation_service.dart';
 import 'shard_distribution_service.dart';
 import 'logger.dart';
+import 'publish_service.dart';
 import '../models/nostr_kinds.dart';
 import '../models/shard_data.dart';
 import '../models/recovery_request.dart';
@@ -62,6 +63,8 @@ class NdkService {
   final List<String> _activeRelays = [];
   StreamSubscription<Nip01Event>? _giftWrapStreamSub;
 
+  late final PublishService _publishService;
+
   // Event streams for recovery-related events (breaking circular dependency)
   final StreamController<RecoveryRequest> _recoveryRequestController =
       StreamController<RecoveryRequest>.broadcast();
@@ -80,7 +83,12 @@ class NdkService {
     required InvitationService Function() getInvitationService,
   })  : _ref = ref,
         _loginService = loginService,
-        _getInvitationService = getInvitationService;
+        _getInvitationService = getInvitationService {
+    _publishService = PublishService(
+      getNdk: getNdk,
+    );
+    unawaited(_publishService.initialize());
+  }
 
   /// Initialize NDK with current user's key and set up subscriptions
   Future<void> initialize() async {
@@ -145,6 +153,7 @@ class NdkService {
 
       // Restart subscriptions to include new relay
       await _setupSubscriptions();
+      _publishService.onRelayReconnected(relayUrl);
     } catch (e) {
       Log.error('Error adding relay $relayUrl', e);
       _activeRelays.remove(relayUrl);
@@ -579,14 +588,11 @@ class NdkService {
     return keyPair?.publicKey;
   }
 
-  /// Publish an expiring encrypted event (rumor + gift wrap)
+  /// Publish an encrypted event (rumor + gift wrap)
   ///
   /// Creates a rumor event with the given content and kind,
   /// wraps it in a gift wrap for the recipient,
   /// and broadcasts it to the specified relays.
-  ///
-  /// Automatically adds NIP-40 expiration tag (7 days) to the rumor event,
-  /// unless an expiration tag is already present in the tags list.
   ///
   /// Returns the gift wrap event ID.
   Future<String?> publishEncryptedEvent({
@@ -600,93 +606,83 @@ class NdkService {
     await _ensureInitialized();
 
     try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair == null) {
-        throw Exception('No key pair available');
-      }
+      final pubkeySnippet =
+          recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
 
-      final senderPubkey = customPubkey ?? keyPair.publicKey;
-
-      // Calculate expiration timestamp: 7 days from now (NIP-40)
-      final expirationTimestamp =
-          DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
-
-      // Prepare tags with expiration tag prepended (only if not already present)
-      final tagsList = tags ?? [];
-      final hasExpirationTag = tagsList.any(
-        (tag) => tag.isNotEmpty && tag[0] == 'expiration',
-      );
-
-      final tagsWithExpiration = <List<String>>[
-        if (!hasExpirationTag) ['expiration', expirationTimestamp.toString()],
-        ...tagsList,
-      ];
-
-      // Create rumor event
-      final rumor = await _ndk!.giftWrap.createRumor(
-        customPubkey: senderPubkey,
+      // Build the gift wrap event
+      final giftWrap = await _buildGiftWrapEvent(
         content: content,
         kind: kind,
-        tags: tagsWithExpiration,
-      );
-
-      Log.debug(
-        'Created rumor event: kind=$kind, content length=${content.length}, content preview=${content.length > 100 ? content.substring(0, 100) : content}',
-      );
-
-      // Wrap the rumor in a gift wrap for the recipient
-      final giftWrap = await _ndk!.giftWrap.toGiftWrap(
-        rumor: rumor,
         recipientPubkey: recipientPubkey,
+        tags: tags,
+        customPubkey: customPubkey,
       );
 
-      // Broadcast the gift wrap event and await the result
-      final broadcastResponse = _ndk!.broadcast.broadcast(
-        nostrEvent: giftWrap,
-        specificRelays: relays,
+      // Enqueue the signed event for publishing
+      final result = await _publishService.enqueueEvent(
+        event: giftWrap,
+        relays: relays,
       );
 
-      Log.info(
-        'Publishing encrypted event (kind $kind) addressed to ${recipientPubkey.substring(0, 8)}... to relays ${relays.join(', ')} (event: ${giftWrap.id.substring(0, 8)}...)',
-      );
-
-      // Await broadcast results and log any errors
-      try {
-        final results = await broadcastResponse.broadcastDoneFuture;
-        final failed = results.where((r) => !r.broadcastSuccessful).toList();
-        final successful = results.where((r) => r.broadcastSuccessful).toList();
-
-        if (failed.isNotEmpty) {
-          Log.warning(
-            'Broadcast completed with ${failed.length} failed relay(s) out of ${results.length} total',
-          );
-          for (final failure in failed) {
-            Log.warning(
-              'Relay ${failure.relayUrl} failed: ${failure.msg.isNotEmpty ? failure.msg : "No response"}',
-            );
-          }
-        } else {
-          Log.info('Broadcast successful to all ${results.length} relay(s)');
-        }
-
-        // Return null if all relays failed, otherwise return event ID
-        if (successful.isEmpty && results.isNotEmpty) {
-          // Only return null if we got results and all failed
-          // If results is empty, it might be an NDK bug, so we'll return the event ID anyway
-          Log.error('All relays failed to publish event ${giftWrap.id}');
-          return null;
-        }
-      } catch (e, stackTrace) {
-        Log.error('Error awaiting broadcast results', e);
-        Log.debug('Broadcast error stack trace', stackTrace);
+      if (result.successfulRelays.isEmpty) {
+        Log.error(
+          'Failed to publish encrypted event (kind $kind) to $pubkeySnippet after retries',
+        );
         return null;
       }
 
-      return giftWrap.id;
-    } catch (e) {
-      Log.error('Error publishing encrypted event', e);
+      if (result.failedRelays.isNotEmpty) {
+        Log.warning(
+          'Encrypted event published with partial success (event ${result.eventId}): '
+          'successful relays=${result.successfulRelays.length}, failed=${result.failedRelays.length}',
+        );
+      } else {
+        Log.info(
+          'Encrypted event published to all relays: ${result.eventId}',
+        );
+      }
+
+      return result.eventId;
+    } catch (e, stackTrace) {
+      Log.error('Error enqueuing encrypted event', e);
+      Log.debug('Encrypted event enqueue stack', stackTrace);
       return null;
     }
+  }
+
+  /// Build a gift wrap event (rumor + gift wrap)
+  ///
+  /// Creates a rumor event with the given content and kind,
+  /// wraps it in a gift wrap for the recipient.
+  ///
+  /// Returns the signed gift wrap event.
+  Future<Nip01Event> _buildGiftWrapEvent({
+    required String content,
+    required int kind,
+    required String recipientPubkey, // Hex format
+    List<List<String>>? tags,
+    String? customPubkey, // Hex format - if null, uses current user's pubkey
+  }) async {
+    if (!_isInitialized || _ndk == null) {
+      throw Exception('NDK not initialized');
+    }
+
+    final senderPubkey = customPubkey ?? await getCurrentPubkey();
+    if (senderPubkey == null) {
+      throw Exception('No sender pubkey available');
+    }
+
+    final rumor = await _ndk!.giftWrap.createRumor(
+      customPubkey: senderPubkey,
+      content: content,
+      kind: kind,
+      tags: tags ?? [],
+    );
+
+    return _ndk!.giftWrap.toGiftWrap(
+      rumor: rumor,
+      recipientPubkey: recipientPubkey,
+    );
   }
 
   /// Publish an encrypted event to multiple recipients
@@ -694,8 +690,6 @@ class NdkService {
   /// Creates a rumor event with the given content and kind,
   /// wraps it in gift wraps for each recipient,
   /// and broadcasts them to the specified relays.
-  ///
-  /// Automatically adds NIP-40 expiration tag (7 days) to each rumor event.
   ///
   /// Returns list of gift wrap event IDs.
   Future<List<String>> publishEncryptedEventToMultiple({
@@ -759,6 +753,7 @@ class NdkService {
     await _closeSubscriptions();
     await _recoveryRequestController.close();
     await _recoveryResponseController.close();
+    await _publishService.dispose();
     _activeRelays.clear();
     _ndk = null;
     _isInitialized = false;
