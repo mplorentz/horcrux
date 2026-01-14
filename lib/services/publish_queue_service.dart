@@ -56,9 +56,8 @@ class PublishRelayState {
         orElse: () => PublishRelayStatus.pending,
       ),
       attempts: json['attempts'] as int? ?? 0,
-      nextAttemptAt: json['nextAttemptAt'] != null
-          ? DateTime.tryParse(json['nextAttemptAt'] as String)
-          : null,
+      nextAttemptAt:
+          json['nextAttemptAt'] != null ? DateTime.tryParse(json['nextAttemptAt'] as String) : null,
       lastError: json['lastError'] as String?,
     );
   }
@@ -485,12 +484,12 @@ class PublishQueueService {
     }
 
     final attempts = existing.attempts + 1;
-    final nextAttempt = attempts >= _maxAttemptsPerRelay
-        ? null
-        : DateTime.now().add(_backoffForAttempt(attempts));
+    final nextAttempt =
+        attempts >= _maxAttemptsPerRelay ? null : DateTime.now().add(_backoffForAttempt(attempts));
 
     item.relayStates[relayUrl] = existing.copyWith(
-      status: attempts >= _maxAttemptsPerRelay ? PublishRelayStatus.failed : PublishRelayStatus.pending,
+      status:
+          attempts >= _maxAttemptsPerRelay ? PublishRelayStatus.failed : PublishRelayStatus.pending,
       attempts: attempts,
       nextAttemptAt: nextAttempt,
       lastError: error,
