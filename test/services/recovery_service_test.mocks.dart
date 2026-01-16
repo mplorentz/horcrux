@@ -2073,11 +2073,11 @@ class MockVaultShareService extends _i1.Mock implements _i13.VaultShareService {
 
   @override
   _i5.Future<String?> sendShardConfirmationEvent({
+    required String? vaultId,
+    required int? shardIndex,
+    required String? ownerPubkey,
+    required List<String>? relayUrls,
     int? distributionVersion,
-    required String vaultId,
-    required int shardIndex,
-    required String ownerPubkey,
-    required List<String> relayUrls,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -2088,6 +2088,7 @@ class MockVaultShareService extends _i1.Mock implements _i13.VaultShareService {
             #shardIndex: shardIndex,
             #ownerPubkey: ownerPubkey,
             #relayUrls: relayUrls,
+            #distributionVersion: distributionVersion,
           },
         ),
         returnValue: _i5.Future<String?>.value(),
