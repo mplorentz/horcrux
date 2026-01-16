@@ -29,11 +29,6 @@ After modifying any `@freezed` class or `@GenerateMocks` annotation, run code ge
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
-### What Gets Generated
-
-- **Freezed models**: `.freezed.dart` files containing `==`, `hashCode`, `copyWith`, `toString`
-- **Mockito mocks**: `.mocks.dart` files containing mock implementations for testing
-
 ### Important Notes
 
 - Always run codegen after modifying `@freezed` classes or `@GenerateMocks` annotations
