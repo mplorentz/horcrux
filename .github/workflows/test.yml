@@ -65,7 +65,8 @@ jobs:
         # dart format automatically reads analysis_options.yaml from the project root
         # This ensures CI uses the same formatting settings (e.g., page_width: 100) as local development
         # Note: flutter pub get must run first to resolve package dependencies referenced in analysis_options.yaml
-        run: dart format --set-exit-if-changed .
+        # Exclude generated files (*.freezed.dart, *.g.dart, *.mocks.dart) from formatting
+        run: find . -name '*.dart' ! -name '*.freezed.dart' ! -name '*.g.dart' ! -name '*.mocks.dart' -type f -exec dart format --set-exit-if-changed {} +
       
       - name: Analyze code
         run: flutter analyze
