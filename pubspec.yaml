@@ -21,6 +21,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   logger: ^2.4.0
   meta: ^1.11.0
+  freezed_annotation: ^2.4.1
   ntcdcrypto: ^0.4.0
   flutter_riverpod: ^2.6.1
   app_links: ^5.0.0
@@ -32,6 +33,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   mockito: ^5.4.4
+  freezed: ^2.4.7
   build_runner: ^2.4.12
   flutter_lints: ^4.0.0
   golden_toolkit: ^0.15.0

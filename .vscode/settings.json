@@ -1,5 +1,10 @@
 {
     "dart.lineLength": 100,
+    "dart.doNotFormat": [
+        "**/*.freezed.dart",
+        "**/*.g.dart",
+        "**/*.mocks.dart"
+    ],
     "[dart]": {
         "editor.rulers": [
             100

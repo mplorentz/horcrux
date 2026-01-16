@@ -1,6 +1,12 @@
-import 'shard_data.dart';
-import 'recovery_request.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'backup_config.dart';
+import 'backup_status.dart';
+import 'recovery_request.dart';
+import 'shard_data.dart';
+import 'steward_status.dart';
+
+part 'vault.freezed.dart';
 
 /// Backup configuration constraints
 class VaultBackupConstraints {
@@ -26,34 +32,25 @@ enum VaultState {
 }
 
 /// Data model for a secure vault containing encrypted text content
-class Vault {
-  final String id;
-  final String name;
-  final String? content; // Nullable - null when content is not decrypted
-  final DateTime createdAt;
-  final String ownerPubkey; // Hex format, 64 characters
-  final String? ownerName; // Name of the vault owner
-  final List<ShardData> shards; // List of shards (single as steward, multiple during recovery)
-  final List<RecoveryRequest> recoveryRequests; // Embedded recovery requests
-  final BackupConfig? backupConfig; // Optional backup configuration
-  final bool isArchived; // Whether this vault is archived
-  final DateTime? archivedAt; // When the vault was archived
-  final String? archivedReason; // Reason for archiving
+@freezed
+class Vault with _$Vault {
+  const factory Vault({
+    required String id,
+    required String name,
+    String? content, // Nullable - null when content is not decrypted
+    required DateTime createdAt,
+    required String ownerPubkey, // Hex format, 64 characters
+    String? ownerName, // Name of the vault owner
+    @Default([])
+    List<ShardData> shards, // List of shards (single as steward, multiple during recovery)
+    @Default([]) List<RecoveryRequest> recoveryRequests, // Embedded recovery requests
+    BackupConfig? backupConfig, // Optional backup configuration
+    @Default(false) bool isArchived, // Whether this vault is archived
+    DateTime? archivedAt, // When the vault was archived
+    String? archivedReason, // Reason for archiving
+  }) = _Vault;
 
-  Vault({
-    required this.id,
-    required this.name,
-    required this.content,
-    required this.createdAt,
-    required this.ownerPubkey,
-    this.ownerName,
-    this.shards = const [],
-    this.recoveryRequests = const [],
-    this.backupConfig,
-    this.isArchived = false,
-    this.archivedAt,
-    this.archivedReason,
-  });
+  const Vault._();
 
   /// Get the state of this vault based on priority:
   /// 1. Recovery (if has active recovery request)
@@ -164,66 +161,9 @@ class Vault {
     );
   }
 
-  /// Create a copy with updated fields
-  Vault copyWith({
-    String? id,
-    String? name,
-    String? content,
-    DateTime? createdAt,
-    String? ownerPubkey,
-    String? ownerName,
-    List<ShardData>? shards,
-    List<RecoveryRequest>? recoveryRequests,
-    BackupConfig? backupConfig,
-    bool? isArchived,
-    DateTime? archivedAt,
-    String? archivedReason,
-  }) {
-    return Vault(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      content: content ?? this.content,
-      createdAt: createdAt ?? this.createdAt,
-      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
-      ownerName: ownerName ?? this.ownerName,
-      shards: shards ?? this.shards,
-      recoveryRequests: recoveryRequests ?? this.recoveryRequests,
-      backupConfig: backupConfig ?? this.backupConfig,
-      isArchived: isArchived ?? this.isArchived,
-      archivedAt: archivedAt ?? this.archivedAt,
-      archivedReason: archivedReason ?? this.archivedReason,
-    );
-  }
-
   /// Create a copy with content explicitly cleared (set to null)
   /// This preserves shards, backup config, and other data
   Vault copyWithContentDeleted() {
-    return Vault(
-      id: id,
-      name: name,
-      content: null, // Explicitly clear content
-      createdAt: createdAt,
-      ownerPubkey: ownerPubkey,
-      ownerName: ownerName,
-      shards: shards, // Preserve shards
-      recoveryRequests: recoveryRequests,
-      backupConfig: backupConfig, // Preserve backup config
-      isArchived: isArchived,
-      archivedAt: archivedAt,
-      archivedReason: archivedReason,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Vault && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
-  String toString() {
-    return 'Vault{id: $id, name: $name, state: ${state.name}, createdAt: $createdAt}';
+    return copyWith(content: null); // Explicitly clear content
   }
 }

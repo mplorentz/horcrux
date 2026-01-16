@@ -1,22 +1,21 @@
-/// Represents a Nostr relay configuration for scanning
-class RelayConfiguration {
-  final String id;
-  final String url;
-  final String name;
-  final bool isEnabled;
-  final DateTime? lastScanned;
-  final Duration scanInterval;
-  final bool isTrusted;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const RelayConfiguration({
-    required this.id,
-    required this.url,
-    required this.name,
-    this.isEnabled = true,
-    this.lastScanned,
-    this.scanInterval = const Duration(minutes: 5),
-    this.isTrusted = false,
-  });
+part 'relay_configuration.freezed.dart';
+
+/// Represents a Nostr relay configuration for scanning
+@freezed
+class RelayConfiguration with _$RelayConfiguration {
+  const factory RelayConfiguration({
+    required String id,
+    required String url,
+    required String name,
+    @Default(true) bool isEnabled,
+    DateTime? lastScanned,
+    @Default(Duration(minutes: 5)) Duration scanInterval,
+    @Default(false) bool isTrusted,
+  }) = _RelayConfiguration;
+
+  const RelayConfiguration._();
 
   /// Validate the relay configuration
   bool get isValid {
@@ -83,39 +82,6 @@ class RelayConfiguration {
       scanInterval: Duration(seconds: json['scanInterval'] as int? ?? 300),
       isTrusted: json['isTrusted'] as bool? ?? false,
     );
-  }
-
-  RelayConfiguration copyWith({
-    String? id,
-    String? url,
-    String? name,
-    bool? isEnabled,
-    DateTime? lastScanned,
-    Duration? scanInterval,
-    bool? isTrusted,
-  }) {
-    return RelayConfiguration(
-      id: id ?? this.id,
-      url: url ?? this.url,
-      name: name ?? this.name,
-      isEnabled: isEnabled ?? this.isEnabled,
-      lastScanned: lastScanned ?? this.lastScanned,
-      scanInterval: scanInterval ?? this.scanInterval,
-      isTrusted: isTrusted ?? this.isTrusted,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RelayConfiguration && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
-  String toString() {
-    return 'RelayConfiguration(id: $id, name: $name, url: $url, enabled: $isEnabled)';
   }
 }
 
