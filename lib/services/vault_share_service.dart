@@ -27,7 +27,7 @@ class VaultShareService {
   final NdkService Function() _getNdkService;
 
   VaultShareService(this.repository, this._getNdkService);
-  static const String _shardDataKey = 'vault_shard_data';
+  static const String _shardDataKey = 'shard_data';
   static const String _recoveryShardDataKey = 'recovery_shard_data';
 
   // Shards we hold as a steward (one per vault)

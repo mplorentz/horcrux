@@ -192,6 +192,29 @@
             },
             "problemMatcher": [],
             "detail": "Build iOS app for release (requires configured signing)"
+        },
+        {
+            "label": "Dart: Format All Source Code",
+            "type": "shell",
+            "command": "dart",
+            "args": [
+                "format",
+                "."
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Format all Dart source code in the project"
         }
     ]
 }
