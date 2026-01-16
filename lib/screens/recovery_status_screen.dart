@@ -59,7 +59,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                   instructions = vault.backupConfig!.instructions;
                 } else if (vault.shards.isNotEmpty) {
                   // Fallback to shard data
-                  instructions = vault.shards.first.instructions;
+                  instructions = vault.mostRecentShard?.instructions;
                 }
               }
 

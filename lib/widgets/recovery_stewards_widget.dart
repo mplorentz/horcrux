@@ -111,35 +111,35 @@ class RecoveryStewardsWidget extends ConsumerWidget {
     }
 
     // Fallback: use peers from shards
-    if (vault.shards.isNotEmpty) {
-      final firstShard = vault.shards.first;
+    final shard = vault.mostRecentShard;
+    if (shard != null) {
       final stewards = <_StewardInfo>[];
 
       // Add owner if ownerName is present
       if (vault.ownerName != null) {
-        final response = request.stewardResponses[firstShard.creatorPubkey];
+        final response = request.stewardResponses[shard.creatorPubkey];
         stewards.add(
           _StewardInfo(
-            pubkey: firstShard.creatorPubkey,
+            pubkey: shard.creatorPubkey,
             name: vault.ownerName,
             response: response,
           ),
         );
-      } else if (firstShard.ownerName != null) {
+      } else if (shard.ownerName != null) {
         // Fallback to shard ownerName
-        final response = request.stewardResponses[firstShard.creatorPubkey];
+        final response = request.stewardResponses[shard.creatorPubkey];
         stewards.add(
           _StewardInfo(
-            pubkey: firstShard.creatorPubkey,
-            name: firstShard.ownerName,
+            pubkey: shard.creatorPubkey,
+            name: shard.ownerName,
             response: response,
           ),
         );
       }
 
       // Add peers (stewards) - now a list of maps with name and pubkey
-      if (firstShard.peers != null) {
-        for (final peer in firstShard.peers!) {
+      if (shard.peers != null) {
+        for (final peer in shard.peers!) {
           final peerPubkey = peer['pubkey'];
           final peerName = peer['name'];
           if (peerPubkey == null) continue;

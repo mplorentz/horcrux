@@ -273,20 +273,21 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
   String? _getInitiatorName(Vault? vault, String initiatorPubkey) {
     if (vault == null) return null;
 
+    final shard = vault.mostRecentShard;
+
     // First check vault ownerName
     if (vault.ownerPubkey == initiatorPubkey) {
       return vault.ownerName;
     }
 
     // If not found and we have shards, check shard data
-    if (vault.shards.isNotEmpty) {
-      final firstShard = vault.shards.first;
+    if (shard != null) {
       // Check if initiator is the owner
-      if (firstShard.creatorPubkey == initiatorPubkey) {
-        return firstShard.ownerName ?? vault.ownerName;
-      } else if (firstShard.peers != null) {
+      if (shard.creatorPubkey == initiatorPubkey) {
+        return shard.ownerName ?? vault.ownerName;
+      } else if (shard.peers != null) {
         // Check if initiator is in peers
-        for (final peer in firstShard.peers!) {
+        for (final peer in shard.peers!) {
           if (peer['pubkey'] == initiatorPubkey) {
             return peer['name'];
           }

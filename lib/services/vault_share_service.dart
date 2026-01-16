@@ -166,8 +166,8 @@ class VaultShareService {
   /// Get the share for a vault (returns first shard if multiple exist)
   /// Now delegates to VaultRepository
   Future<ShardData?> getVaultShare(String vaultId) async {
-    final shards = await repository.getShardsForVault(vaultId);
-    return shards.isNotEmpty ? shards.first : null;
+    final vault = await repository.getVault(vaultId);
+    return vault?.mostRecentShard;
   }
 
   /// Get a specific share by nostr event ID
