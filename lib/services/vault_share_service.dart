@@ -167,9 +167,7 @@ class VaultShareService {
   /// Now delegates to VaultRepository
   Future<ShardData?> getVaultShare(String vaultId) async {
     final vault = await repository.getVault(vaultId);
-    if (vault == null) return null;
-    // Prefer the most recent shard (latest distribution/version); no fallback to older shards
-    return vault.mostRecentShard;
+    return vault?.mostRecentShard;
   }
 
   /// Get a specific share by nostr event ID

@@ -320,9 +320,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
   }
 
   String? _getInstructions(Vault vault) {
-    final latestShard = vault.mostRecentShard;
-    if (latestShard != null) {
-      return latestShard.instructions;
+    final shard = vault.mostRecentShard;
+    if (shard != null) {
+      return shard.instructions;
     }
     return null;
   }
