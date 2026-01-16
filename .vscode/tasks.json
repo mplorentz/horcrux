@@ -29,7 +29,7 @@
         {
             "label": "Codegen",
             "type": "shell",
-            "command": "flutter pub run build_runner build --delete-conflicting-outputs && find . -name '*.dart' ! -name '*.freezed.dart' ! -name '*.g.dart' ! -name '*.mocks.dart' -type f -exec dart format {} +",
+            "command": "flutter pub run build_runner build --delete-conflicting-outputs && dart format .",
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -215,7 +215,11 @@
         {
             "label": "Dart: Format All Source Code",
             "type": "shell",
-            "command": "find . -name '*.dart' ! -name '*.freezed.dart' ! -name '*.g.dart' ! -name '*.mocks.dart' -type f -exec dart format {} +",
+            "command": "dart",
+            "args": [
+                "format",
+                "."
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
