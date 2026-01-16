@@ -180,8 +180,8 @@ class DeepLinkService {
 
   /// Parses invitation link URL and extracts parameters
   ///
-  /// Handles both Universal Links (`https://horcrux.app/invite/{code}`)
-  /// and custom URL scheme (`horcrux://horcrux.app/invite/{code}`) formats.
+  /// Handles both Universal Links (`https://horcruxbackup.com/invite/{code}`)
+  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`) formats.
   /// Extracts invite code from path (same path structure for both).
   /// Extracts owner pubkey and relay URLs from query params.
   /// Returns parsed data or throws InvalidInvitationLinkException if invalid.
@@ -195,13 +195,13 @@ class DeepLinkService {
         );
       }
 
-      // Validate host: horcrux.app (for Universal Links) or horcrux.app (for custom scheme)
+      // Validate host
       // Allow localhost for testing on web
-      final allowedHosts = ['horcrux.app', 'localhost'];
+      final allowedHosts = ['horcruxbackup.com', 'localhost'];
       if (!allowedHosts.contains(uri.host)) {
         throw InvalidInvitationLinkException(
           uri.toString(),
-          'Invalid host: ${uri.host}. Expected horcrux.app',
+          'Invalid host: ${uri.host}. Expected horcruxbackup.com',
         );
       }
 

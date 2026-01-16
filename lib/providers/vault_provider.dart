@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vault.dart';
 import '../models/shard_data.dart';
@@ -115,9 +113,7 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
 class VaultRepository {
   final LoginService _loginService;
   static const String _legacyVaultsKey = 'encrypted_vaults';
-  static const String _vaultsDirectoryName = 'vaults';
   static const String _vaultFilePrefix = 'vault_';
-  static const String _vaultFileExtension = '.encrypted';
   List<Vault>? _cachedVaults;
   bool _isInitialized = false;
 
@@ -150,40 +146,6 @@ class VaultRepository {
     _vaultsController.add(vaultsList);
   }
 
-  Future<Directory> _getVaultsDirectory() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final vaultsDir = Directory('${appDir.path}/$_vaultsDirectoryName');
-    if (!await vaultsDir.exists()) {
-      await vaultsDir.create(recursive: true);
-    }
-    return vaultsDir;
-  }
-
-  String _fileNameFromPath(String path) {
-    return path.split(Platform.pathSeparator).last;
-  }
-
-  bool _isVaultFilePath(String path) {
-    final name = _fileNameFromPath(path);
-    return name.startsWith(_vaultFilePrefix) && name.endsWith(_vaultFileExtension);
-  }
-
-  String _vaultIdFromFileName(String fileName) {
-    var id = fileName;
-    if (id.startsWith(_vaultFilePrefix)) {
-      id = id.substring(_vaultFilePrefix.length);
-    }
-    if (id.endsWith(_vaultFileExtension)) {
-      id = id.substring(0, id.length - _vaultFileExtension.length);
-    }
-    return id;
-  }
-
-  Future<File> _getVaultFile(String vaultId) async {
-    final vaultsDir = await _getVaultsDirectory();
-    return File('${vaultsDir.path}/$_vaultFilePrefix$vaultId$_vaultFileExtension');
-  }
-
   Future<void> _cleanupOldStorageFormat() async {
     final prefs = await SharedPreferences.getInstance();
     final oldEncryptedData = prefs.getString(_legacyVaultsKey);
@@ -196,64 +158,61 @@ class VaultRepository {
     Log.info('Cleared legacy SharedPreferences vault storage');
   }
 
-  /// Load vaults from individual encrypted files and decrypt them
+  /// Load vaults from storage and decrypt them
   Future<void> _loadVaults() async {
-    final vaultsDir = await _getVaultsDirectory();
     final vaults = <Vault>[];
 
-    final entities = await vaultsDir.list(followLinks: false).toList();
-    final vaultFiles = entities.whereType<File>().where((f) => _isVaultFilePath(f.path)).toList()
-      ..sort((a, b) => _fileNameFromPath(a.path).compareTo(_fileNameFromPath(b.path)));
+    try {
+      final vaultIds = await _getAllVaultIds();
 
-    if (vaultFiles.isEmpty) {
-      _cachedVaults = [];
-      Log.info('No vault files found in ${vaultsDir.path}');
-      return;
-    }
-
-    Log.info('Loading ${vaultFiles.length} encrypted vault files from ${vaultsDir.path}');
-
-    for (final file in vaultFiles) {
-      final fileName = _fileNameFromPath(file.path);
-      final vaultId = _vaultIdFromFileName(fileName);
-
-      try {
-        final encryptedData = await file.readAsString();
-        if (encryptedData.isEmpty) {
-          Log.error('Vault file is empty, skipping: ${file.path}');
-          continue;
-        }
-
-        final decryptedJson = await _loginService.decryptText(encryptedData);
-        final vaultJson = json.decode(decryptedJson) as Map<String, dynamic>;
-        final vault = Vault.fromJson(vaultJson);
-
-        // Defensive: ignore files that don't match their embedded vault ID.
-        if (vault.id != vaultId) {
-          Log.error(
-            'Vault ID mismatch for file ${file.path}: expected $vaultId, got ${vault.id}. Skipping.',
-          );
-          continue;
-        }
-
-        vaults.add(vault);
-      } catch (e) {
-        Log.error('Error loading vault $vaultId from ${file.path}', e);
-        // Isolated failure: skip corrupted/unreadable vault file
+      if (vaultIds.isEmpty) {
+        _cachedVaults = [];
+        Log.info('No vaults found in storage');
+        return;
       }
-    }
 
-    _cachedVaults = vaults;
+      Log.info('Loading ${vaultIds.length} encrypted vaults from storage');
+
+      for (final vaultId in vaultIds) {
+        try {
+          final encryptedData = await _readVault(vaultId);
+          if (encryptedData == null || encryptedData.isEmpty) {
+            Log.error('Vault data is empty, skipping: $vaultId');
+            continue;
+          }
+
+          final decryptedJson = await _loginService.decryptText(encryptedData);
+          final vaultJson = json.decode(decryptedJson) as Map<String, dynamic>;
+          final vault = Vault.fromJson(vaultJson);
+
+          // Defensive: ignore vaults that don't match their ID.
+          if (vault.id != vaultId) {
+            Log.error(
+              'Vault ID mismatch: expected $vaultId, got ${vault.id}. Skipping.',
+            );
+            continue;
+          }
+
+          vaults.add(vault);
+        } catch (e) {
+          Log.error('Error loading vault $vaultId', e);
+          // Isolated failure: skip corrupted/unreadable vault
+        }
+      }
+
+      _cachedVaults = vaults;
+    } catch (e) {
+      Log.error('Error loading vaults from storage', e);
+      _cachedVaults = [];
+    }
   }
 
-  /// Save a single vault to its own encrypted file
+  /// Save a single vault to storage
   Future<void> _saveVault(Vault vault) async {
     try {
-      final file = await _getVaultFile(vault.id);
       final jsonString = json.encode(vault.toJson());
       final encryptedData = await _loginService.encryptText(jsonString);
-      await file.writeAsString(encryptedData);
-      Log.info('Saved encrypted vault to ${file.path}');
+      await _writeVault(vault.id, encryptedData);
       _notifyVaultsChanged();
     } catch (e) {
       Log.error('Error encrypting and saving vault ${vault.id}', e);
@@ -263,16 +222,11 @@ class VaultRepository {
 
   Future<void> _deleteVaultFile(String vaultId) async {
     try {
-      final file = await _getVaultFile(vaultId);
-      if (await file.exists()) {
-        await file.delete();
-      }
-      Log.info('Deleted vault file for $vaultId');
-    } catch (e) {
-      Log.error('Error deleting vault file for $vaultId', e);
-      throw Exception('Failed to delete vault $vaultId: $e');
-    } finally {
+      await _deleteVault(vaultId);
       _notifyVaultsChanged();
+    } catch (e) {
+      Log.error('Error deleting vault $vaultId', e);
+      throw Exception('Failed to delete vault $vaultId: $e');
     }
   }
 
@@ -343,15 +297,12 @@ class VaultRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_legacyVaultsKey);
     try {
-      final vaultsDir = await _getVaultsDirectory();
-      final entities = await vaultsDir.list(followLinks: false).toList();
-      for (final entity in entities) {
-        if (entity is File && _isVaultFilePath(entity.path)) {
-          await entity.delete();
-        }
+      final vaultIds = await _getAllVaultIds();
+      for (final vaultId in vaultIds) {
+        await _deleteVault(vaultId);
       }
     } catch (e) {
-      Log.error('Error clearing vault files', e);
+      Log.error('Error clearing vaults', e);
     }
     _isInitialized = false;
   }
@@ -444,6 +395,7 @@ class VaultRepository {
   // ========== Shard Management Methods ==========
 
   /// Add a shard to a vault (supports multiple shards during recovery)
+  /// Checks for duplicate by nostrEventId to prevent adding the same shard twice
   Future<void> addShardToVault(String vaultId, ShardData shard) async {
     await initialize();
 
@@ -453,6 +405,22 @@ class VaultRepository {
     }
 
     final vault = _cachedVaults![index];
+
+    // Check if a shard with the same nostrEventId already exists
+    if (shard.nostrEventId != null) {
+      final existingIndex = vault.shards.indexWhere(
+        (s) => s.nostrEventId != null && s.nostrEventId == shard.nostrEventId,
+      );
+
+      if (existingIndex != -1) {
+        Log.info(
+          'Shard with event ID ${shard.nostrEventId} already exists for vault $vaultId, skipping duplicate',
+        );
+        return; // Already have this exact shard, skip adding
+      }
+    }
+
+    // Add new shard
     final updatedShards = List<ShardData>.from(vault.shards)..add(shard);
 
     final updatedVault = vault.copyWith(shards: updatedShards);
@@ -614,5 +582,72 @@ class VaultRepository {
   /// Dispose resources
   void dispose() {
     _vaultsController.close();
+  }
+
+  // ========== Storage Helper Methods ==========
+
+  /// Get all vault IDs that exist in storage
+  Future<List<String>> _getAllVaultIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys();
+      final vaultIds = <String>[];
+
+      for (final key in allKeys) {
+        if (key.startsWith(_vaultFilePrefix)) {
+          // Extract vault ID: "vault_<id>" -> "<id>"
+          final id = key.substring(_vaultFilePrefix.length);
+          vaultIds.add(id);
+        }
+      }
+
+      vaultIds.sort();
+      return vaultIds;
+    } catch (e) {
+      Log.error('Error getting vault IDs from SharedPreferences', e);
+      return [];
+    }
+  }
+
+  /// Read vault data by ID
+  Future<String?> _readVault(String vaultId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getStorageKey(vaultId);
+      return prefs.getString(key);
+    } catch (e) {
+      Log.error('Error reading vault $vaultId from SharedPreferences', e);
+      return null;
+    }
+  }
+
+  /// Write vault data by ID
+  Future<void> _writeVault(String vaultId, String encryptedData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getStorageKey(vaultId);
+      await prefs.setString(key, encryptedData);
+      Log.info('Saved encrypted vault $vaultId to SharedPreferences');
+    } catch (e) {
+      Log.error('Error writing vault $vaultId to SharedPreferences', e);
+      rethrow;
+    }
+  }
+
+  /// Delete vault data by ID
+  Future<void> _deleteVault(String vaultId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getStorageKey(vaultId);
+      await prefs.remove(key);
+      Log.info('Deleted vault $vaultId from SharedPreferences');
+    } catch (e) {
+      Log.error('Error deleting vault $vaultId from SharedPreferences', e);
+      rethrow;
+    }
+  }
+
+  String _getStorageKey(String vaultId) {
+    return '$_vaultFilePrefix$vaultId';
   }
 }

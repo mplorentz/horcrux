@@ -68,10 +68,10 @@ extension InvitationLinkExtension on InvitationLink {
 
   /// Generates an invitation URL from this InvitationLink
   ///
-  /// Format: horcrux://horcrux.app/invite/{inviteCode}?vault={vaultId}&name={vaultName}&owner={ownerPubkey}&relays={relayUrls}
+  /// Format: https://horcruxbackup.com/invite/{inviteCode}?vault={vaultId}&name={vaultName}&owner={ownerPubkey}&relays={relayUrls}
   /// Relay URLs are comma-separated and URL-encoded.
   String toUrl() {
-    final baseUrl = 'horcrux://horcrux.app/invite/$inviteCode';
+    final baseUrl = 'https://horcruxbackup.com/invite/$inviteCode';
     final params = <String>[];
 
     params.add('vault=${Uri.encodeComponent(vaultId)}');

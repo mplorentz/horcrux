@@ -89,6 +89,36 @@ class ShardDistributionService {
             throw Exception('Failed to publish shard event');
           }
 
+          // If this is the owner's own shard, immediately store it locally and acknowledge it
+          if (keyHolder.pubkey == ownerPubkey && keyHolder.isOwner) {
+            try {
+              // Update shard with event ID and recipient pubkey
+              final shardWithEventId = copyShardData(
+                shardWithRelays,
+                nostrEventId: eventId,
+                recipientPubkey: ownerPubkey,
+              );
+
+              // Store shard locally
+              await _repository.addShardToVault(config.vaultId, shardWithEventId);
+
+              // Immediately acknowledge with current distribution version
+              await _repository.updateStewardStatus(
+                vaultId: config.vaultId,
+                pubkey: ownerPubkey,
+                status: StewardStatus.holdingKey,
+                acknowledgedAt: DateTime.now(),
+                acknowledgmentEventId: eventId, // Use shard event ID as acknowledgment
+                acknowledgedDistributionVersion: config.distributionVersion,
+              );
+
+              Log.info('Owner shard stored locally and acknowledged immediately');
+            } catch (e) {
+              Log.error('Failed to store and acknowledge owner shard locally', e);
+              // Continue - shard was still published to Nostr
+            }
+          }
+
           // Create ShardEvent record
           final shardEvent = createShardEvent(
             eventId: eventId,
@@ -162,6 +192,11 @@ class ShardDistributionService {
           }
 
           if (isAcknowledged) {
+            // Get the backup config to get the current distribution version
+            final vault = await _repository.getVault(vaultId);
+            final backupConfig = vault?.backupConfig;
+            final currentDistributionVersion = backupConfig?.distributionVersion;
+
             // Update steward status to holdingKey (confirmed receipt)
             await _repository.updateStewardStatus(
               vaultId: vaultId,
@@ -169,6 +204,7 @@ class ShardDistributionService {
               status: StewardStatus.holdingKey,
               acknowledgedAt: DateTime.now(),
               acknowledgmentEventId: acknowledgmentEventId,
+              acknowledgedDistributionVersion: currentDistributionVersion,
             );
           } else {
             // Update steward status to awaitingKey (published but not acknowledged)

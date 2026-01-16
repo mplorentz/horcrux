@@ -52,7 +52,7 @@ class InvitationService {
 
   // SharedPreferences keys
   static String _invitationKey(String inviteCode) => 'invitation_$inviteCode';
-  static String _vaultInvitationsKey(String vaultId) => 'vault_invitations_$vaultId';
+  static String _vaultInvitationsKey(String vaultId) => 'invitations_$vaultId';
 
   InvitationService(
     this.repository,

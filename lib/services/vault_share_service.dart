@@ -27,7 +27,7 @@ class VaultShareService {
   final NdkService Function() _getNdkService;
 
   VaultShareService(this.repository, this._getNdkService);
-  static const String _shardDataKey = 'vault_shard_data';
+  static const String _shardDataKey = 'shard_data';
   static const String _recoveryShardDataKey = 'recovery_shard_data';
 
   // Shards we hold as a steward (one per vault)
@@ -204,14 +204,29 @@ class VaultShareService {
   /// Process a received vault share (invitation flow)
   ///
   /// This method handles the complete flow when an invitee receives a shard:
-  /// 1. Stores the shard via addVaultShare
-  /// 2. Sends a confirmation event to notify the owner
+  /// 1. Stores the shard via addVaultShare (skips if duplicate)
+  /// 2. Sends a confirmation event to notify the owner (only if shard was actually stored)
   ///
   /// Uses relay URLs from the shard data (included during distribution).
   Future<void> processVaultShare(String vaultId, ShardData shardData) async {
     // Validate shard data
     if (!shardData.isValid) {
       throw ArgumentError('Invalid shard data');
+    }
+
+    // Check if we already have this shard (by nostrEventId)
+    final existingVault = await repository.getVault(vaultId);
+    if (existingVault != null && shardData.nostrEventId != null) {
+      final hasDuplicate = existingVault.shards.any(
+        (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
+      );
+
+      if (hasDuplicate) {
+        Log.info(
+          'Shard with event ID ${shardData.nostrEventId} already exists for vault $vaultId, skipping processing',
+        );
+        return; // Already have this shard, skip storing and sending confirmation
+      }
     }
 
     // Store the shard first
@@ -225,12 +240,13 @@ class VaultShareService {
         final ownerPubkey = shardData.creatorPubkey;
         final shardIndex = shardData.shardIndex;
 
-        // Send confirmation event
+        // Send confirmation event with distribution version if available
         final eventId = await sendShardConfirmationEvent(
           vaultId: vaultId,
           shardIndex: shardIndex,
           ownerPubkey: ownerPubkey,
           relayUrls: shardData.relayUrls!,
+          distributionVersion: shardData.distributionVersion,
         );
 
         if (eventId != null) {
@@ -267,6 +283,7 @@ class VaultShareService {
     required int shardIndex,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
+    int? distributionVersion, // Optional distribution version
   }) async {
     try {
       final ndkService = _getNdkService();
@@ -280,18 +297,26 @@ class VaultShareService {
         'Sending shard confirmation event for vault: ${vaultId.substring(0, 8)}..., shard: $shardIndex',
       );
 
+      // Build tags list
+      final tags = [
+        ['vault_id', vaultId],
+        ['shard_index', shardIndex.toString()],
+        ['steward_pubkey', currentPubkey],
+        ['confirmed_at', DateTime.now().toIso8601String()],
+      ];
+
+      // Add distribution version if provided
+      if (distributionVersion != null) {
+        tags.add(['distribution_version', distributionVersion.toString()]);
+      }
+
       // Publish using NdkService with empty content, all data in tags
       return await ndkService.publishEncryptedEvent(
         content: '',
         kind: NostrKind.shardConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
-        tags: [
-          ['vault_id', vaultId],
-          ['shard_index', shardIndex.toString()],
-          ['steward_pubkey', currentPubkey],
-          ['confirmed_at', DateTime.now().toIso8601String()],
-        ],
+        tags: tags,
       );
     } catch (e) {
       Log.error('Error sending shard confirmation event', e);

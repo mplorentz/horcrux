@@ -77,6 +77,26 @@ class Vault with _$Vault {
   /// Check if we are a steward for this vault (have shards)
   bool get isSteward => shards.isNotEmpty;
 
+  /// Get the most recent shard from this vault's shards.
+  /// Returns null if there are no shards.
+  /// Prefers shards with higher distributionVersion, then newer createdAt timestamp.
+  ShardData? get mostRecentShard {
+    if (shards.isEmpty) {
+      return null;
+    }
+    return shards.reduce((current, next) {
+      // Compare distributionVersion (null treated as -1, meaning older)
+      final currentVersion = current.distributionVersion ?? -1;
+      final nextVersion = next.distributionVersion ?? -1;
+
+      if (currentVersion != nextVersion) {
+        return nextVersion > currentVersion ? next : current;
+      }
+
+      return next.createdAt > current.createdAt ? next : current;
+    });
+  }
+
   /// Check if this vault has an active recovery request
   bool get hasActiveRecovery {
     return recoveryRequests.any((request) => request.status.isActive);
