@@ -88,7 +88,7 @@ class VaultMetadataSection extends ConsumerWidget {
     String? currentPubkey,
   ) {
     final isOwner = currentPubkey == vault.ownerPubkey;
-    final threshold = vault.mostRecentShard?.threshold ?? vault.shards.firstOrNull?.threshold;
+    final threshold = vault.mostRecentShard?.threshold;
 
     return Card(
       child: Padding(

@@ -112,7 +112,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
 
     // Fallback: use peers from shards
     if (vault.shards.isNotEmpty) {
-      final latestShard = vault.mostRecentShard ?? vault.shards.first;
+      final latestShard = vault.mostRecentShard;
       final stewards = <_StewardInfo>[];
 
       // Add owner if ownerName is present

@@ -273,8 +273,7 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
   String? _getInitiatorName(Vault? vault, String initiatorPubkey) {
     if (vault == null) return null;
 
-    final latestShard =
-        vault.mostRecentShard ?? (vault.shards.isNotEmpty ? vault.shards.first : null);
+    final latestShard = vault.mostRecentShard;
 
     // First check vault ownerName
     if (vault.ownerPubkey == initiatorPubkey) {

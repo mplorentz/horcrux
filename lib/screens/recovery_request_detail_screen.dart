@@ -181,8 +181,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     // Get initiator name from vault shard data
     String? initiatorName;
     if (vault != null) {
-      final latestShard =
-          vault.mostRecentShard ?? (vault.shards.isNotEmpty ? vault.shards.first : null);
+      final latestShard = vault.mostRecentShard;
 
       // First check vault ownerName
       if (vault.ownerPubkey == request.initiatorPubkey) {
@@ -227,8 +226,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         instructions = vault.backupConfig!.instructions;
       } else if (vault.shards.isNotEmpty) {
         // Fallback to shard data
-        instructions =
-            (vault.mostRecentShard ?? vault.shards.first).instructions;
+        instructions = vault.mostRecentShard?.instructions;
       }
     }
 
