@@ -14,7 +14,6 @@ import '../services/invitation_sending_service.dart';
 import '../services/logger.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
-import '../utils/backup_distribution_helper.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import 'vault_list_screen.dart';
@@ -1388,45 +1387,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       // Check if this is the first save or an update
       final existingConfig = await repository.getBackupConfig(widget.vaultId);
       final isNewConfig = existingConfig == null;
-
-      // Check if we need to show the regeneration alert
-      // Show alert if config will change AND we've already distributed keys to at least one steward
-      // (i.e., at least one steward has a pubkey, meaning they've received keys)
-      bool shouldAutoDistribute = false;
-      if (!isNewConfig) {
-        // Create temporary config from UI state to compare with existing config
-        final uiConfig = copyBackupConfig(
-          existingConfig,
-          threshold: _threshold,
-          stewards: _stewards,
-          relays: _relays,
-          instructions: _instructionsController.text.trim().isEmpty
-              ? null
-              : _instructionsController.text.trim(),
-        );
-
-        // Check if config parameters will change (will increment version)
-        final configWillChange = existingConfig.configParamsDifferFrom(uiConfig);
-
-        // Show alert if needed and get user confirmation
-        if (!mounted) return;
-        final shouldAutoDistributeResult =
-            await BackupDistributionHelper.showRegenerationAlertIfNeeded(
-          context: context,
-          backupConfig: existingConfig,
-          willChange: configWillChange,
-          mounted: mounted,
-        );
-
-        if (shouldAutoDistributeResult == false) {
-          // User cancelled or widget disposed, don't save changes
-          return;
-        }
-
-        if (shouldAutoDistributeResult == true) {
-          shouldAutoDistribute = true;
-        }
-      }
+      final oldDistributionVersion = existingConfig?.distributionVersion ?? 0;
 
       setState(() {
         _isCreating = true;
@@ -1457,30 +1418,32 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
       }
 
-      // If user confirmed, auto-distribute
-      if (shouldAutoDistribute) {
-        // Reload config to get updated version
-        final updatedConfig = await repository.getBackupConfig(widget.vaultId);
-        if (updatedConfig != null && updatedConfig.canDistribute) {
-          try {
-            await backupService.createAndDistributeBackup(vaultId: widget.vaultId);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Keys regenerated and distributed successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to distribute keys: $e'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
+      // Automatically distribute keys if:
+      // 1. New config was created, OR
+      // 2. Config was updated and distribution version incremented
+      final updatedConfig = await repository.getBackupConfig(widget.vaultId);
+      final configChanged = isNewConfig ||
+          (updatedConfig != null && updatedConfig.distributionVersion > oldDistributionVersion);
+
+      if (configChanged && updatedConfig != null && updatedConfig.canDistribute) {
+        try {
+          await backupService.createAndDistributeBackup(vaultId: widget.vaultId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Keys distributed successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to distribute keys: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
           }
         }
       }
@@ -1490,54 +1453,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _hasUnsavedChanges = false;
         });
 
-        bool shouldShowSuccessSnack = true;
-
-        if (!shouldAutoDistribute) {
-          // Check if we added new invited stewards to an existing plan with distributed keys
-          if (!isNewConfig && existingConfig.lastRedistribution != null) {
-            final existingInvitedNames = existingConfig.stewards
-                .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
-                .map((h) => h.name)
-                .whereType<String>()
-                .toSet();
-
-            final newInvitedNames = _stewards
-                .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
-                .map((h) => h.name)
-                .whereType<String>()
-                .toSet();
-
-            final addedInvitedCount = newInvitedNames.difference(existingInvitedNames).length;
-
-            if (addedInvitedCount > 0) {
-              shouldShowSuccessSnack = false;
-              // Show alert explaining that keys need to be redistributed
-              await showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('New Stewards Added'),
-                  content: Text(
-                    'You\'ve added $addedInvitedCount new steward${addedInvitedCount > 1 ? 's' : ''} to your recovery plan. '
-                    'Keys have already been distributed to your existing stewards.\n\n'
-                    'To include the new steward${addedInvitedCount > 1 ? 's' : ''}, you\'ll need to redistribute keys from the vault detail screen once ${addedInvitedCount > 1 ? 'they' : 'the steward'} accept${addedInvitedCount > 1 ? '' : 's'} ${addedInvitedCount > 1 ? 'their invitations' : 'the invitation'}.',
-                  ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-                  ],
-                ),
-              );
-            }
-          }
-        }
-
-        if (shouldShowSuccessSnack && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Backup configuration saved successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backup configuration saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
 
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

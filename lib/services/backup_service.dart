@@ -360,9 +360,31 @@ class BackupService {
     List<Steward> mergedStewards;
     if (stewards != null) {
       mergedStewards = _mergeStewards(existingConfig.stewards, stewards);
-      // If steward list changed, it requires redistribution
-      if (mergedStewards.length != existingConfig.stewards.length) {
+      // If steward list changed (additions/removals), it requires redistribution
+      // Check by comparing steward IDs, not just length
+      final existingIds = existingConfig.stewards.map((s) => s.id).toSet();
+      final mergedIds = mergedStewards.map((s) => s.id).toSet();
+      if (existingIds.length != mergedIds.length ||
+          !existingIds.containsAll(mergedIds) ||
+          !mergedIds.containsAll(existingIds)) {
         configParamsChanged = true;
+      } else {
+        // Check if steward properties changed (name or pubkey/contact info)
+        // This requires redistribution because the shard metadata includes steward info
+        for (final mergedSteward in mergedStewards) {
+          final existingSteward =
+              existingConfig.stewards.where((s) => s.id == mergedSteward.id).firstOrNull;
+          if (existingSteward != null) {
+            // Check if name, pubkey, or contactInfo changed
+            // This requires redistribution because the shard metadata includes steward info
+            if (existingSteward.name != mergedSteward.name ||
+                existingSteward.pubkey != mergedSteward.pubkey ||
+                existingSteward.contactInfo != mergedSteward.contactInfo) {
+              configParamsChanged = true;
+              break;
+            }
+          }
+        }
       }
     } else {
       mergedStewards = existingConfig.stewards;
