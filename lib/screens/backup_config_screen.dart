@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/steward.dart';
 import '../models/steward_status.dart';
 import '../models/backup_config.dart';
@@ -19,6 +18,7 @@ import '../utils/backup_distribution_helper.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import 'vault_list_screen.dart';
+import 'add_steward_screen.dart';
 
 /// Recovery plan screen for setting up distributed backup
 ///
@@ -645,111 +645,17 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Shows dialog to select method for adding a steward
+  /// Shows the add steward screen
   Future<void> _showAddStewardDialog() async {
-    if (_relays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one relay before adding a steward'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final method = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Steward'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Choose how you want to add this steward:', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context, 'invite'),
-              icon: const Icon(Icons.link),
-              label: const Text('Invite by Link'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                alignment: Alignment.centerLeft,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.only(left: 16, right: 16, bottom: 8),
-              child: Text(
-                'Send them a link they can use to join',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.pop(context, 'manual'),
-              icon: const Icon(Icons.person),
-              label: const Text('Add by Public Key'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                alignment: Alignment.centerLeft,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.only(left: 16, right: 16),
-              child: Text(
-                'If they already have a Nostr account',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          ],
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))],
-      ),
+    final result = await AddStewardScreen.show(
+      context,
+      relays: _relays,
     );
 
-    if (method == null || !mounted) return;
+    if (result == null || !mounted) return;
 
-    // Get steward name
-    final nameController = TextEditingController();
-    final nameResult = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(method == 'invite' ? 'Invite Steward' : 'Add Steward'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: "Steward's name",
-                hintText: 'Enter name for this steward',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
-
-    if (nameResult != true || !mounted) return;
-
-    final stewardName = nameController.text.trim();
+    final stewardName = result.name.trim();
     if (stewardName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a steward name'),
-          backgroundColor: Colors.orange,
-        ),
-      );
       return;
     }
 
@@ -764,17 +670,17 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       return;
     }
 
-    if (method == 'invite') {
+    if (result.method == AddStewardMode.invite) {
       // Generate invitation link
-      await _generateInvitationLinkForName(stewardName);
-    } else {
+      await _generateInvitationLinkForName(stewardName, result.contactInfo);
+    } else if (result.method == AddStewardMode.manual && result.npub != null) {
       // Add by public key
-      await _addKeyHolderByPublicKey(stewardName);
+      await _addKeyHolderByPublicKey(stewardName, result.contactInfo, result.npub!);
     }
   }
 
   /// Generates invitation link for a steward with the given name
-  Future<void> _generateInvitationLinkForName(String inviteeName) async {
+  Future<void> _generateInvitationLinkForName(String inviteeName, String? contactInfo) async {
     // Limit to first 3 relays as per design
     final relayUrls = _relays.take(3).toList();
 
@@ -789,8 +695,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       if (mounted) {
         // Use the steward returned from the service (same ID as stored in backup config)
         // This ensures _mergeStewards() can match by ID when saving
+        // Update steward with contact info if provided
+        final stewardWithContact = contactInfo != null
+            ? result.steward.copyWith(contactInfo: contactInfo)
+            : result.steward;
         setState(() {
-          _stewards.add(result.steward);
+          _stewards.add(stewardWithContact);
           _invitationLinksByInviteeName[inviteeName] = result.invitation;
           // Apply default threshold logic for new plans (only if not manually changed)
           if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
@@ -827,54 +737,18 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   }
 
   /// Adds a steward by their public key
-  Future<void> _addKeyHolderByPublicKey(String stewardName) async {
-    final npubController = TextEditingController();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Steward by Public Key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Adding: $stewardName', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 16),
-            TextField(
-              controller: npubController,
-              decoration: const InputDecoration(
-                labelText: 'Nostr Public Key (npub)',
-                hintText: 'npub1...',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Add')),
-        ],
-      ),
-    );
-
-    if (result != true || !mounted) return;
-
+  Future<void> _addKeyHolderByPublicKey(
+      String stewardName, String? contactInfo, String hexPubkey) async {
     try {
-      // Convert bech32 npub to hex pubkey
-      final npub = npubController.text.trim();
-      final decoded = Helpers.decodeBech32(npub);
-      if (decoded[0].isEmpty) {
-        throw Exception('Invalid npub format: $npub');
-      }
-
       // Check if steward with this pubkey already exists
-      if (_stewards.any((steward) => steward.pubkey == decoded[0])) {
+      if (_stewards.any((steward) => steward.pubkey == hexPubkey)) {
         throw Exception('A steward with this public key already exists');
       }
 
       final steward = createSteward(
-        pubkey: decoded[0], // Hex format
+        pubkey: hexPubkey, // Hex format
         name: stewardName,
+        contactInfo: contactInfo,
       );
 
       if (!mounted) return;
@@ -932,7 +806,25 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: Icon(isInvited ? Icons.mail_outline : Icons.person),
             title: Text(displayName),
-            subtitle: Text(steward.displaySubtitle),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  steward.displaySubtitle,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    steward.contactInfo!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                  ),
+                ],
+              ],
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -970,6 +862,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                     ],
                   ),
                 ],
+                if (!steward.isOwner)
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () => _editSteward(steward),
+                    tooltip: 'Edit steward',
+                  ),
                 if (!steward.isOwner)
                   IconButton(
                     icon: const Icon(Icons.remove_circle),
@@ -1026,6 +924,40 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         ],
       ),
     );
+  }
+
+  /// Edit an existing steward
+  Future<void> _editSteward(Steward steward) async {
+    final result = await AddStewardScreen.show(
+      context,
+      steward: steward,
+      relays: _relays,
+    );
+
+    if (result == null || !mounted) return;
+
+    if (result.method == AddStewardMode.edit) {
+      // Update the steward with new name and contact info
+      final updatedSteward = steward.copyWith(
+        name: result.name,
+        contactInfo: result.contactInfo,
+      );
+
+      setState(() {
+        final index = _stewards.indexWhere((s) => s.id == steward.id);
+        if (index != -1) {
+          _stewards[index] = updatedSteward;
+          _hasUnsavedChanges = true;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Steward updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   String _truncateUrl(String url) {
@@ -1096,8 +1028,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final match = _findMatchingSteward(source, draft);
       if (match != null) {
         merged.add(
-          copySteward(
-            draft,
+          draft.copyWith(
             pubkey: match.pubkey ?? draft.pubkey,
             status: match.status,
             acknowledgedAt: match.acknowledgedAt ?? draft.acknowledgedAt,
@@ -1107,6 +1038,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             lastSeen: match.lastSeen ?? draft.lastSeen,
             keyShare: match.keyShare ?? draft.keyShare,
             giftWrapEventId: match.giftWrapEventId ?? draft.giftWrapEventId,
+            contactInfo: match.contactInfo ?? draft.contactInfo,
           ),
         );
       } else {

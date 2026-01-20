@@ -28,18 +28,18 @@ void main() {
     required String vaultId,
     String vaultName = 'Test Vault',
     int threshold = 2,
-    List<Map<String, String>>? peers,
+    List<Map<String, String>>? stewards,
   }) {
     return createShardData(
       shard: 'test_shard_$shardIndex',
       threshold: threshold,
       shardIndex: shardIndex,
-      totalShards: peers?.length ?? 3,
+      totalShards: stewards?.length ?? 3,
       primeMod: 'test_prime_mod',
       creatorPubkey: testPubkey,
       vaultId: vaultId,
       vaultName: vaultName,
-      peers: peers ??
+      stewards: stewards ??
           [
             {'name': 'Peer 1', 'pubkey': otherPubkey},
             {'name': 'Peer 2', 'pubkey': thirdPubkey},
@@ -157,7 +157,7 @@ void main() {
             shardIndex: 0,
             recipientPubkey: otherPubkey,
             vaultId: 'test-vault',
-            peers: [
+            stewards: [
               {'name': 'Peer 1', 'pubkey': otherPubkey},
             ], // Only one peer
             threshold: 1, // Fix: threshold must be <= totalShards
@@ -196,7 +196,7 @@ void main() {
             shardIndex: 0,
             recipientPubkey: otherPubkey,
             vaultId: 'test-vault',
-            peers: [
+            stewards: [
               {'name': 'Peer 1', 'pubkey': otherPubkey},
               {'name': 'Peer 2', 'pubkey': thirdPubkey},
               {'name': 'Peer 3', 'pubkey': fourthPubkey},
@@ -236,7 +236,7 @@ void main() {
             shardIndex: 0,
             recipientPubkey: testPubkey, // Current user is recipient
             vaultId: 'test-vault',
-            peers: [
+            stewards: [
               {'name': 'Peer 1', 'pubkey': otherPubkey},
               {'name': 'Peer 2', 'pubkey': thirdPubkey},
             ], // Owner is in peers
@@ -275,7 +275,7 @@ void main() {
             shardIndex: 0,
             recipientPubkey: testPubkey, // Current user is recipient
             vaultId: 'test-vault',
-            peers: [
+            stewards: [
               {'name': 'Peer 1', 'pubkey': otherPubkey},
               {'name': 'Peer 2', 'pubkey': thirdPubkey},
             ], // Owner not in peers
@@ -353,23 +353,20 @@ void main() {
       final stewardPubkeyC = thirdPubkey;
 
       // Create owner steward with holdingKey status (is a steward)
-      final ownerSteward = copySteward(
-        createOwnerSteward(pubkey: ownerPubkey, name: 'Device A'),
+      final ownerSteward = createOwnerSteward(pubkey: ownerPubkey, name: 'Device A').copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
         acknowledgedDistributionVersion: 1,
       );
 
       // Create regular stewards
-      final stewardB = copySteward(
-        createSteward(pubkey: stewardPubkeyB, name: 'Device B'),
+      final stewardB = createSteward(pubkey: stewardPubkeyB, name: 'Device B').copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
         acknowledgedDistributionVersion: 1,
       );
 
-      final stewardC = copySteward(
-        createSteward(pubkey: stewardPubkeyC, name: 'Device C'),
+      final stewardC = createSteward(pubkey: stewardPubkeyC, name: 'Device C').copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
         acknowledgedDistributionVersion: 1,
@@ -425,21 +422,18 @@ void main() {
       final stewardPubkeyC = thirdPubkey;
 
       // Create owner steward with awaitingKey status (NOT a steward yet)
-      final ownerSteward = copySteward(
-        createOwnerSteward(pubkey: ownerPubkey, name: 'Device A'),
+      final ownerSteward = createOwnerSteward(pubkey: ownerPubkey, name: 'Device A').copyWith(
         status: StewardStatus.awaitingKey, // Not holding a key
       );
 
       // Create regular stewards
-      final stewardB = copySteward(
-        createSteward(pubkey: stewardPubkeyB, name: 'Device B'),
+      final stewardB = createSteward(pubkey: stewardPubkeyB, name: 'Device B').copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
         acknowledgedDistributionVersion: 1,
       );
 
-      final stewardC = copySteward(
-        createSteward(pubkey: stewardPubkeyC, name: 'Device C'),
+      final stewardC = createSteward(pubkey: stewardPubkeyC, name: 'Device C').copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
         acknowledgedDistributionVersion: 1,
@@ -498,7 +492,7 @@ void main() {
         shardIndex: 0,
         recipientPubkey: stewardPubkeyC,
         vaultId: 'test-vault',
-        peers: [
+        stewards: [
           {'name': 'Device A', 'pubkey': ownerPubkey}, // Owner in peers
           {'name': 'Device B', 'pubkey': stewardPubkeyB},
           {'name': 'Device C', 'pubkey': stewardPubkeyC},

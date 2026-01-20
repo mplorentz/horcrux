@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
-import '../models/steward.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -242,6 +241,15 @@ class StewardList extends ConsumerWidget {
                     ),
                   ),
                 ],
+                if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    steward.contactInfo!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -268,6 +276,7 @@ class StewardList extends ConsumerWidget {
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
+          contactInfo: s.contactInfo,
           isOwner: s.isOwner, // Preserve owner flag
           status: s.status, // Use actual status from Steward model
         );
@@ -309,23 +318,24 @@ class StewardList extends ConsumerWidget {
       final merged = StewardInfo(
         pubkey: pubkey,
         displayName: newDisplayName ?? existing?.displayName,
+        contactInfo: existing?.contactInfo,
         isOwner: isOwner || (existing?.isOwner ?? false),
         status: status,
       );
       stewardMap[pubkey] = merged;
     }
 
-    // Add peers (stewards) - include owner if they appear in peers
-    if (shard.peers != null) {
-      for (final peer in shard.peers!) {
-        final peerPubkey = peer['pubkey'];
-        final peerName = peer['name'];
-        if (peerPubkey == null) continue;
+    // Add stewards - include owner if they appear in stewards
+    if (shard.stewards != null) {
+      for (final steward in shard.stewards!) {
+        final stewardPubkey = steward['pubkey'];
+        final stewardName = steward['name'];
+        if (stewardPubkey == null) continue;
 
-        final isOwner = peerPubkey == vault.ownerPubkey;
+        final isOwner = stewardPubkey == vault.ownerPubkey;
         addSteward(
-          pubkey: peerPubkey,
-          name: peerName,
+          pubkey: stewardPubkey,
+          name: stewardName,
           isOwner: isOwner,
         );
       }
@@ -348,12 +358,14 @@ class StewardList extends ConsumerWidget {
 class StewardInfo {
   final String? pubkey; // Nullable for invited stewards
   final String? displayName;
+  final String? contactInfo;
   final bool isOwner;
   final StewardStatus? status; // Status from Steward model
 
   StewardInfo({
     this.pubkey,
     this.displayName,
+    this.contactInfo,
     required this.isOwner,
     this.status,
   });

@@ -24,7 +24,7 @@ void main() {
       vaultId: vaultId,
       vaultName: 'Vault Owner In Peers',
       ownerName: 'Device A',
-      peers: [
+      stewards: [
         {'name': 'Device A', 'pubkey': ownerPubkey}, // Owner included in peers
         {'name': 'Device B', 'pubkey': stewardPubkeyB},
         {'name': 'Device C', 'pubkey': stewardPubkeyC},

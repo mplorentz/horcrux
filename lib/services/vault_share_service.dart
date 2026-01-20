@@ -382,8 +382,7 @@ class VaultShareService {
     }
 
     // Update shard data with received information
-    final updatedShard = copyShardData(
-      shard,
+    final updatedShard = shard.copyWith(
       isReceived: true,
       receivedAt: DateTime.now(),
     );

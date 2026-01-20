@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
 import '../models/vault.dart';
-import '../models/steward.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 
@@ -98,19 +97,24 @@ class RecoveryStewardsWidget extends ConsumerWidget {
 
     // Get stewards with names from backupConfig if available
     if (vault.backupConfig?.stewards.isNotEmpty == true) {
-      return vault.backupConfig!.stewards.where((kh) => kh.pubkey != null).map((
-        kh,
-      ) {
-        final response = request.stewardResponses[kh.pubkey];
-        return _StewardInfo(
-          pubkey: kh.pubkey!,
-          name: kh.displayName,
-          response: response,
+      final result = <_StewardInfo>[];
+      for (final kh in vault.backupConfig!.stewards) {
+        final pubkey = kh.pubkey;
+        if (pubkey == null) continue;
+        final response = request.stewardResponses[pubkey];
+        result.add(
+          _StewardInfo(
+            pubkey: pubkey,
+            name: kh.displayName,
+            contactInfo: kh.contactInfo,
+            response: response,
+          ),
         );
-      }).toList();
+      }
+      return result;
     }
 
-    // Fallback: use peers from shards
+    // Fallback: use stewards from shards
     final shard = vault.mostRecentShard;
     if (shard != null) {
       final stewards = <_StewardInfo>[];
@@ -137,18 +141,20 @@ class RecoveryStewardsWidget extends ConsumerWidget {
         );
       }
 
-      // Add peers (stewards) - now a list of maps with name and pubkey
-      if (shard.peers != null) {
-        for (final peer in shard.peers!) {
-          final peerPubkey = peer['pubkey'];
-          final peerName = peer['name'];
-          if (peerPubkey == null) continue;
+      // Add stewards - now a list of maps with name, pubkey, and optionally contactInfo
+      if (shard.stewards != null) {
+        for (final steward in shard.stewards!) {
+          final stewardPubkey = steward['pubkey'];
+          final stewardName = steward['name'];
+          final stewardContactInfo = steward['contactInfo'];
+          if (stewardPubkey == null) continue;
 
-          final response = request.stewardResponses[peerPubkey];
+          final response = request.stewardResponses[stewardPubkey];
           stewards.add(
             _StewardInfo(
-              pubkey: peerPubkey,
-              name: peerName,
+              pubkey: stewardPubkey,
+              name: stewardName,
+              contactInfo: stewardContactInfo,
               response: response,
             ),
           );
@@ -202,6 +208,16 @@ class RecoveryStewardsWidget extends ConsumerWidget {
                       fontFamily: 'monospace',
                       fontSize: 11,
                       color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+                if (info.contactInfo != null && info.contactInfo!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    info.contactInfo!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
@@ -297,7 +313,13 @@ class RecoveryStewardsWidget extends ConsumerWidget {
 class _StewardInfo {
   final String pubkey;
   final String? name;
+  final String? contactInfo;
   final RecoveryResponse? response;
 
-  _StewardInfo({required this.pubkey, this.name, this.response});
+  _StewardInfo({
+    required this.pubkey,
+    this.name,
+    this.contactInfo,
+    this.response,
+  });
 }

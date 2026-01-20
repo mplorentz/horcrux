@@ -26,20 +26,17 @@ void main() {
       final steward3 = createSteward(pubkey: 'd' * 64, name: 'Steward 3');
 
       // Update stewards to holdingKey status with acknowledgment
-      final confirmedSteward1 = copySteward(
-        steward1,
+      final confirmedSteward1 = steward1.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward2 = copySteward(
-        steward2,
+      final confirmedSteward2 = steward2.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward3 = copySteward(
-        steward3,
+      final confirmedSteward3 = steward3.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
@@ -227,32 +224,27 @@ void main() {
       final steward5 = createSteward(pubkey: 'f' * 64, name: 'Steward 5');
 
       // Update stewards to holdingKey status with acknowledgment
-      final confirmedSteward1 = copySteward(
-        steward1,
+      final confirmedSteward1 = steward1.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward2 = copySteward(
-        steward2,
+      final confirmedSteward2 = steward2.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward3 = copySteward(
-        steward3,
+      final confirmedSteward3 = steward3.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward4 = copySteward(
-        steward4,
+      final confirmedSteward4 = steward4.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,
       );
-      final confirmedSteward5 = copySteward(
-        steward5,
+      final confirmedSteward5 = steward5.copyWith(
         status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime(2024, 1, 1),
         acknowledgedDistributionVersion: 1,

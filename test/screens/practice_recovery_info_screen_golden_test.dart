@@ -11,6 +11,7 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/practice_recovery_info_screen.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/steward_test_helpers.dart';
 
 void main() {
   // Sample test data
@@ -18,29 +19,6 @@ void main() {
   final steward1Pubkey = 'b' * 64;
   final steward2Pubkey = 'c' * 64;
   final steward3Pubkey = 'd' * 64;
-
-  // Helper to create steward (manually because createSteward doesn't accept status)
-  Steward createTestSteward({
-    required String pubkey,
-    String? name,
-    StewardStatus status = StewardStatus.holdingKey,
-    DateTime? acknowledgedAt,
-  }) {
-    return (
-      id: pubkey.substring(0, 16),
-      pubkey: pubkey,
-      name: name,
-      inviteCode: null,
-      status: status,
-      lastSeen: null,
-      keyShare: null,
-      giftWrapEventId: null,
-      acknowledgedAt: acknowledgedAt ?? DateTime.now().subtract(const Duration(hours: 1)),
-      acknowledgmentEventId: null,
-      acknowledgedDistributionVersion: 1,
-      isOwner: false,
-    );
-  }
 
   // Helper to create backup config (manually for full control)
   BackupConfig createTestBackupConfig({

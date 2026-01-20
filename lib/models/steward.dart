@@ -1,122 +1,48 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../utils/validators.dart';
 import 'steward_status.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 import 'package:uuid/uuid.dart';
 
+part 'steward.freezed.dart';
+
 const _uuid = Uuid();
+
+/// Maximum length for steward contact info
+const int maxContactInfoLength = 500;
+
+/// Validate contact info length
+bool isValidContactInfo(String? contactInfo) {
+  if (contactInfo == null) return true;
+  return contactInfo.length <= maxContactInfoLength;
+}
 
 /// Represents a trusted contact who holds a backup key
 ///
 /// This model contains information about a steward including
 /// their Nostr public key, status, and acknowledgment details.
-typedef Steward = ({
-  String id, // Unique identifier for this steward
-  String? pubkey, // Hex format - nullable for invited stewards
-  String? name,
-  String? inviteCode, // Invitation code for invited stewards (before they accept)
-  StewardStatus status,
-  DateTime? lastSeen,
-  String? keyShare,
-  String? giftWrapEventId,
-  DateTime? acknowledgedAt,
-  String? acknowledgmentEventId,
-  int? acknowledgedDistributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
-  bool isOwner, // True when this steward is the vault owner
-});
+@freezed
+class Steward with _$Steward {
+  const factory Steward({
+    required String id, // Unique identifier for this steward
+    String? pubkey, // Hex format - nullable for invited stewards
+    String? name,
+    String? inviteCode, // Invitation code for invited stewards (before they accept)
+    required StewardStatus status,
+    DateTime? lastSeen,
+    String? keyShare,
+    String? giftWrapEventId,
+    DateTime? acknowledgedAt,
+    String? acknowledgmentEventId,
+    int?
+        acknowledgedDistributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+    @Default(false) bool isOwner, // True when this steward is the vault owner
+    String? contactInfo, // Contact information for the steward (max 500 characters)
+  }) = _Steward;
 
-/// Create a new Steward with validation
-Steward createSteward({
-  required String pubkey, // Takes hex format directly
-  String? name,
-  String? id, // Optional - will be generated if not provided
-  bool isOwner = false,
-}) {
-  if (!isValidHexPubkey(pubkey)) {
-    throw ArgumentError('Invalid hex pubkey format: $pubkey');
-  }
+  const Steward._();
 
-  return (
-    id: id ?? _uuid.v4(),
-    pubkey: pubkey,
-    name: name,
-    inviteCode: null,
-    status: StewardStatus.awaitingKey,
-    lastSeen: null,
-    keyShare: null,
-    giftWrapEventId: null,
-    acknowledgedAt: null,
-    acknowledgmentEventId: null,
-    acknowledgedDistributionVersion: null,
-    isOwner: isOwner,
-  );
-}
-
-/// Create a new Steward for the vault owner (convenience factory)
-Steward createOwnerSteward({
-  required String pubkey, // Takes hex format directly
-  String? name,
-  String? id, // Optional - will be generated if not provided
-}) {
-  return createSteward(pubkey: pubkey, name: name ?? 'You', id: id, isOwner: true);
-}
-
-/// Create a new Steward for an invited person (no pubkey yet)
-Steward createInvitedSteward({
-  required String name,
-  required String inviteCode,
-  String? id, // Optional - will be generated if not provided
-}) {
-  return (
-    id: id ?? _uuid.v4(),
-    pubkey: null,
-    name: name,
-    inviteCode: inviteCode,
-    status: StewardStatus.invited,
-    lastSeen: null,
-    keyShare: null,
-    giftWrapEventId: null,
-    acknowledgedAt: null,
-    acknowledgmentEventId: null,
-    acknowledgedDistributionVersion: null,
-    isOwner: false,
-  );
-}
-
-/// Create a copy of this Steward with updated fields
-Steward copySteward(
-  Steward steward, {
-  String? id,
-  String? pubkey, // Hex format
-  String? name,
-  String? inviteCode,
-  StewardStatus? status,
-  DateTime? lastSeen,
-  String? keyShare,
-  String? giftWrapEventId,
-  DateTime? acknowledgedAt,
-  String? acknowledgmentEventId,
-  int? acknowledgedDistributionVersion,
-  bool? isOwner,
-}) {
-  return (
-    id: id ?? steward.id,
-    pubkey: pubkey ?? steward.pubkey,
-    name: name ?? steward.name,
-    inviteCode: inviteCode ?? steward.inviteCode,
-    status: status ?? steward.status,
-    lastSeen: lastSeen ?? steward.lastSeen,
-    keyShare: keyShare ?? steward.keyShare,
-    giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
-    acknowledgedAt: acknowledgedAt ?? steward.acknowledgedAt,
-    acknowledgmentEventId: acknowledgmentEventId ?? steward.acknowledgmentEventId,
-    acknowledgedDistributionVersion:
-        acknowledgedDistributionVersion ?? steward.acknowledgedDistributionVersion,
-    isOwner: isOwner ?? steward.isOwner,
-  );
-}
-
-/// Extension methods for Steward
-extension StewardExtension on Steward {
   /// Check if this steward is active
   bool get isActive {
     return status == StewardStatus.awaitingKey ||
@@ -172,6 +98,103 @@ extension StewardExtension on Steward {
     }
     return npub ?? 'No pubkey';
   }
+
+  /// Validate that this steward is valid
+  /// Returns true if all fields are valid, false otherwise
+  bool isValid() {
+    // Validate pubkey if present
+    if (pubkey != null && !isValidHexPubkey(pubkey!)) {
+      return false;
+    }
+
+    // Validate contact info length
+    if (!isValidContactInfo(contactInfo)) {
+      return false;
+    }
+
+    return true;
+  }
+}
+
+/// Create a new Steward with validation
+Steward createSteward({
+  required String pubkey, // Takes hex format directly
+  String? name,
+  String? id, // Optional - will be generated if not provided
+  bool isOwner = false,
+  String? contactInfo,
+}) {
+  if (!isValidHexPubkey(pubkey)) {
+    throw ArgumentError('Invalid hex pubkey format: $pubkey');
+  }
+
+  if (!isValidContactInfo(contactInfo)) {
+    throw ArgumentError(
+      'Contact info exceeds maximum length of $maxContactInfoLength characters',
+    );
+  }
+
+  return Steward(
+    id: id ?? _uuid.v4(),
+    pubkey: pubkey,
+    name: name,
+    inviteCode: null,
+    status: StewardStatus.awaitingKey,
+    lastSeen: null,
+    keyShare: null,
+    giftWrapEventId: null,
+    acknowledgedAt: null,
+    acknowledgmentEventId: null,
+    acknowledgedDistributionVersion: null,
+    isOwner: isOwner,
+    contactInfo: contactInfo,
+  );
+}
+
+/// Create a new Steward for the vault owner (convenience factory)
+Steward createOwnerSteward({
+  required String pubkey, // Takes hex format directly
+  String? name,
+  String? id, // Optional - will be generated if not provided
+  String? contactInfo,
+}) {
+  return createSteward(
+    pubkey: pubkey,
+    name: name ?? 'You',
+    id: id,
+    isOwner: true,
+    contactInfo: contactInfo,
+  );
+}
+
+/// Create a new Steward for an invited person (no pubkey yet)
+Steward createInvitedSteward({
+  required String name,
+  required String inviteCode,
+  String? id, // Optional - will be generated if not provided
+  String? contactInfo,
+}) {
+  if (!isValidContactInfo(contactInfo)) {
+    throw ArgumentError(
+      'Contact info exceeds maximum length of $maxContactInfoLength characters',
+    );
+  }
+
+  return Steward(
+    id: id ?? _uuid.v4(),
+    pubkey: null,
+    name: name,
+    inviteCode: inviteCode,
+    status: StewardStatus.invited,
+    lastSeen: null,
+    keyShare: null,
+    giftWrapEventId: null,
+    acknowledgedAt: null,
+    acknowledgmentEventId: null,
+    acknowledgedDistributionVersion: null,
+    isOwner: false,
+    contactInfo: contactInfo,
+  );
 }
 
 /// Convert to JSON for storage
@@ -189,12 +212,13 @@ Map<String, dynamic> stewardToJson(Steward steward) {
     'acknowledgmentEventId': steward.acknowledgmentEventId,
     'acknowledgedDistributionVersion': steward.acknowledgedDistributionVersion,
     'isOwner': steward.isOwner,
+    'contactInfo': steward.contactInfo,
   };
 }
 
 /// Create from JSON
 Steward stewardFromJson(Map<String, dynamic> json) {
-  return (
+  return Steward(
     id: json['id'] as String? ?? _uuid.v4(), // Generate ID if missing for backward compatibility
     pubkey: json['pubkey'] as String?, // Hex format without 0x prefix, nullable
     name: json['name'] as String?,
@@ -211,6 +235,7 @@ Steward stewardFromJson(Map<String, dynamic> json) {
     acknowledgmentEventId: json['acknowledgmentEventId'] as String?,
     acknowledgedDistributionVersion: json['acknowledgedDistributionVersion'] as int?,
     isOwner: json['isOwner'] as bool? ?? false, // Default to false for backward compatibility
+    contactInfo: json['contactInfo'] as String?, // Nullable for backward compatibility
   );
 }
 
