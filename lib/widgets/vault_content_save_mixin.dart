@@ -5,7 +5,6 @@ import '../models/backup_config.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
-import '../utils/backup_distribution_helper.dart';
 import '../utils/invite_code_utils.dart';
 
 /// Mixin for shared vault save logic between create and edit screens
@@ -41,31 +40,6 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
         final newOwnerName = ownerName?.trim().isEmpty == true ? null : ownerName?.trim();
         final ownerNameChanged = existingVault.ownerName != newOwnerName;
 
-        // Check if we need to show the regeneration alert
-        // Show alert if content/name/ownerName changed AND all stewards have accepted invitations
-        bool shouldAutoDistribute = false;
-        final willChange = contentChanged || nameChanged || ownerNameChanged;
-
-        if (willChange) {
-          if (!mounted) return null;
-          final shouldAutoDistributeResult =
-              await BackupDistributionHelper.showRegenerationAlertIfNeeded(
-            context: context,
-            backupConfig: existingVault.backupConfig,
-            willChange: true,
-            mounted: mounted,
-          );
-
-          if (shouldAutoDistributeResult == false) {
-            // User cancelled or widget disposed, don't save changes
-            return null;
-          }
-
-          if (shouldAutoDistributeResult == true) {
-            shouldAutoDistribute = true;
-          }
-        }
-
         // Update vault with all changes at once
         // Important: Use copyWith on existingVault but include the new content
         // to avoid overwriting content that was just saved
@@ -76,53 +50,32 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
         );
         await repository.saveVault(updatedVault);
 
-        // If content, name, or ownerName changed, increment distributionVersion
+        // If content, name, or ownerName changed, increment distributionVersion and auto-distribute
         if (contentChanged || nameChanged || ownerNameChanged) {
           final backupService = ref.read(backupServiceProvider);
           await backupService.handleContentChange(vaultId);
 
-          // If user confirmed, auto-distribute
-          if (shouldAutoDistribute) {
-            // Reload vault to ensure we have the latest version with saved content
-            final reloadedVault = await repository.getVault(vaultId);
-            if (reloadedVault == null || reloadedVault.content == null) {
+          // Automatically distribute keys if backup config exists and can distribute
+          final updatedConfig = await repository.getBackupConfig(vaultId);
+          if (updatedConfig != null && updatedConfig.canDistribute) {
+            try {
+              await backupService.createAndDistributeBackup(vaultId: vaultId);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      'Failed to load vault content. Please try again.',
-                    ),
-                    backgroundColor: Colors.orange,
+                    content: Text('Keys distributed successfully!'),
+                    backgroundColor: Colors.green,
                   ),
                 );
               }
-              return vaultId;
-            }
-
-            // Reload config to get updated version
-            final updatedConfig = await repository.getBackupConfig(vaultId);
-            if (updatedConfig != null && updatedConfig.canDistribute) {
-              try {
-                await backupService.createAndDistributeBackup(vaultId: vaultId);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Keys regenerated and distributed successfully!',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to distribute keys: $e'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to distribute keys: $e'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
               }
             }
           }

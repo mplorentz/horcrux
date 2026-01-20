@@ -23,6 +23,11 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
   void initState() {
     super.initState();
     _loadNsec();
+    // Refresh the provider when the screen initializes to ensure we have the latest key
+    // Use addPostFrameCallback because ref is not available in initState()
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(currentPublicKeyBech32Provider);
+    });
   }
 
   Future<void> _loadNsec() async {
@@ -144,6 +149,44 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final publicKeyBech32Async = ref.watch(currentPublicKeyBech32Provider);
+
+    // Listen to changes in the public key provider and reload private key when it changes
+    ref.listen<AsyncValue<String?>>(
+      currentPublicKeyBech32Provider,
+      (previous, next) {
+        // Handle data state
+        next.whenData((npub) {
+          if (npub != null) {
+            // We have a public key - reload private key if it changed or if we don't have nsec yet
+            if (previous?.valueOrNull != npub || _nsec == null) {
+              _loadNsec();
+            }
+          } else {
+            // No public key, clear private key
+            if (mounted && _nsec != null) {
+              setState(() {
+                _nsec = null;
+              });
+            }
+          }
+        });
+
+        // If provider was loading and now has data, load nsec
+        if (previous?.isLoading == true && next.hasValue && next.value != null) {
+          _loadNsec();
+        }
+      },
+    );
+
+    // Also reload nsec when the provider completes successfully
+    publicKeyBech32Async.whenData((npub) {
+      if (npub != null && _nsec == null) {
+        // Provider has a value but we don't have nsec yet, load it
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadNsec();
+        });
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(

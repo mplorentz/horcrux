@@ -16,7 +16,6 @@ enum _StatusVariant {
   planNeedsAttention,
   stewardWaitingKey,
   stewardReady,
-  stewardBlocked,
   recoveryInProgress,
   unknown,
 }
@@ -256,8 +255,6 @@ class VaultStatusBanner extends ConsumerWidget {
   }
 
   Widget _buildStewardStatus(BuildContext context, Vault vault) {
-    final backupConfig = vault.backupConfig;
-
     // Awaiting key
     if (vault.state == VaultState.awaitingKey) {
       return _buildBanner(
@@ -275,8 +272,10 @@ class VaultStatusBanner extends ConsumerWidget {
       );
     }
 
-    // Key holder with active backup
-    if (vault.state == VaultState.steward && backupConfig?.status == BackupStatus.active) {
+    // Key holder - stewards have received a shard
+    // Note: We don't check backupConfig.status because stewards can't read it
+    // (it's encrypted to the owner). If a steward has shards, they're ready to help.
+    if (vault.state == VaultState.steward) {
       return _buildBanner(
         context,
         const _StatusData(
@@ -292,27 +291,7 @@ class VaultStatusBanner extends ConsumerWidget {
       );
     }
 
-    // Key holder but plan not fully healthy
-    if (vault.state == VaultState.steward &&
-        backupConfig != null &&
-        (backupConfig.status == BackupStatus.pending ||
-            backupConfig.status == BackupStatus.inactive ||
-            backupConfig.status == BackupStatus.failed)) {
-      return _buildBanner(
-        context,
-        const _StatusData(
-          headline: 'Your key may not be usable yet',
-          subtext: 'The owner must finish or fix their recovery plan before recovery can proceed.',
-          icon: Icons.warning_amber,
-          accentColor: Color(0xFFBA1A1A), // Error color
-          variant: _StatusVariant.stewardBlocked,
-        ),
-        false,
-        true,
-      );
-    }
-
-    // Fallback for steward
+    // Fallback for steward (shouldn't normally reach here)
     return _buildBanner(
       context,
       const _StatusData(

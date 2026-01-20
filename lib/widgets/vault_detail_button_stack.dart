@@ -7,7 +7,6 @@ import '../providers/key_provider.dart';
 import '../providers/recovery_provider.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/instructions_dialog.dart';
-import '../services/backup_service.dart';
 import '../services/recovery_service.dart';
 import '../services/logger.dart';
 import '../screens/backup_config_screen.dart';
@@ -132,13 +131,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         ),
                       );
 
-                      // Distribute Keys Button - shown when distribution is needed
+                      // Waiting for stewards button - shown when stewards haven't accepted invitations
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
                         if (backupConfig != null && backupConfig.stewards.isNotEmpty) {
-                          final needsDistribution =
-                              backupConfig.needsRedistribution || backupConfig.hasVersionMismatch;
-
                           if (!backupConfig.canDistribute) {
                             // Show "Waiting for stewards" button (disabled)
                             final pendingCount = backupConfig.pendingInvitationsCount;
@@ -150,23 +146,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                     'Waiting for $pendingCount Steward${pendingCount > 1 ? 's' : ''}',
                               ),
                             );
-                          } else if (needsDistribution) {
-                            // Show "Distribute Keys" button (enabled)
-                            buttons.add(
-                              RowButtonConfig(
-                                onPressed: () => _distributeKeys(context, ref, currentVault),
-                                icon: Icons.send,
-                                text: 'Distribute Keys',
-                              ),
-                            );
                           }
 
                           // Delete Local Copy Button - shown after distribution
                           // Owner can delete vault content while keeping recovery capability
-                          // Hide this button if "Distribute Keys" is showing
                           if (backupConfig.lastRedistribution != null &&
-                              currentVault.content != null &&
-                              !needsDistribution) {
+                              currentVault.content != null) {
                             buttons.add(
                               RowButtonConfig(
                                 onPressed: () =>
@@ -325,129 +310,6 @@ class VaultDetailButtonStack extends ConsumerWidget {
       return shard.instructions;
     }
     return null;
-  }
-
-  Future<void> _distributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {
-    if (vault.backupConfig == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recovery plan not found'), backgroundColor: Colors.orange),
-      );
-      return;
-    }
-
-    final config = vault.backupConfig!;
-    if (config.stewards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No stewards in recovery plan'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    if (vault.content == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot backup: vault content is not available'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Determine if this is initial distribution or redistribution
-    final isRedistribution = config.lastRedistribution != null;
-    final title = isRedistribution ? 'Redistribute Keys?' : 'Distribute Keys?';
-    final action = isRedistribution ? 'Redistribute' : 'Distribute';
-
-    // Build warning message for redistribution
-    String contentMessage = 'This will generate ${config.totalKeys} key shares '
-        'and distribute them to ${config.stewards.length} steward${config.stewards.length > 1 ? 's' : ''}.\n\n'
-        'Threshold: ${config.threshold} (minimum keys needed for recovery)';
-
-    if (isRedistribution) {
-      contentMessage += '\n\n⚠️ This will invalidate previously distributed keys. '
-          'All stewards will receive new keys.';
-    }
-
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(contentMessage),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: Text(action)),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    if (!context.mounted) return;
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Expanded(child: Text('Distributing keys...')),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      final backupService = ref.read(backupServiceProvider);
-      await backupService.createAndDistributeBackup(vaultId: vault.id);
-
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Keys distributed successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Refresh vault data
-        ref.invalidate(vaultProvider(vault.id));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-
-        // Show detailed error with option to retry later
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Distribution Failed'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Failed to distribute keys. Your backup configuration has been saved, but keys were not sent to stewards.',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Text('Error: $e'),
-                const SizedBox(height: 12),
-                const Text(
-                  'You can retry distribution later from this screen. The "Distribute Keys" button will remain available.',
-                ),
-              ],
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-          ),
-        );
-      }
-    }
   }
 
   /// Show warning dialog before creating new content for owner-steward vault (T016, T020)
