@@ -25,7 +25,7 @@ void main() {
         ...validJsonFixture,
         'vaultId': 'vault-abc-456',
         'vaultName': 'Shared Vault Test',
-        'peers': [
+        'stewards': [
           {
             'name': 'Alice',
             'pubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
@@ -59,7 +59,7 @@ void main() {
       expect(shardData.createdAt, validJsonFixture['createdAt']);
       expect(shardData.vaultId, isNull);
       expect(shardData.vaultName, isNull);
-      expect(shardData.peers, isNull);
+      expect(shardData.stewards, isNull);
       expect(shardData.recipientPubkey, isNull);
       expect(shardData.isReceived, isNull);
       expect(shardData.receivedAt, isNull);
@@ -89,11 +89,11 @@ void main() {
         expect(shardData.createdAt, validJsonWithRecoveryMetadata['createdAt']);
         expect(shardData.vaultId, validJsonWithRecoveryMetadata['vaultId']);
         expect(shardData.vaultName, validJsonWithRecoveryMetadata['vaultName']);
-        expect(shardData.peers, isNotNull);
-        expect(shardData.peers!.length, 3);
-        expect(shardData.peers![0]['name'], 'Alice');
+        expect(shardData.stewards, isNotNull);
+        expect(shardData.stewards!.length, 3);
+        expect(shardData.stewards![0]['name'], 'Alice');
         expect(
-          shardData.peers![0]['pubkey'],
+          shardData.stewards![0]['pubkey'],
           'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         );
         expect(shardData.ownerName, 'Owner');
@@ -129,7 +129,7 @@ void main() {
       expect(json['createdAt'], validJsonFixture['createdAt']);
       expect(json.containsKey('vaultId'), isFalse);
       expect(json.containsKey('vaultName'), isFalse);
-      expect(json.containsKey('peers'), isFalse);
+      expect(json.containsKey('stewards'), isFalse);
       expect(json.containsKey('recipientPubkey'), isFalse);
       expect(json.containsKey('isReceived'), isFalse);
       expect(json.containsKey('receivedAt'), isFalse);
@@ -157,8 +157,8 @@ void main() {
         expect(json['createdAt'], validJsonWithRecoveryMetadata['createdAt']);
         expect(json['vaultId'], validJsonWithRecoveryMetadata['vaultId']);
         expect(json['vaultName'], validJsonWithRecoveryMetadata['vaultName']);
-        expect(json['peers'], isNotNull);
-        expect(json['peers'], isA<List>());
+        expect(json['stewards'], isNotNull);
+        expect(json['stewards'], isA<List>());
         expect(json['ownerName'], 'Owner');
         expect(
           json['recipientPubkey'],
@@ -189,8 +189,8 @@ void main() {
       expect(decodedShardData.createdAt, originalShardData.createdAt);
       expect(decodedShardData.vaultId, originalShardData.vaultId);
       expect(decodedShardData.vaultName, originalShardData.vaultName);
-      expect(decodedShardData.peers, isNotNull);
-      expect(decodedShardData.peers!.length, originalShardData.peers!.length);
+      expect(decodedShardData.stewards, isNotNull);
+      expect(decodedShardData.stewards!.length, originalShardData.stewards!.length);
       expect(decodedShardData.ownerName, originalShardData.ownerName);
       expect(
         decodedShardData.recipientPubkey,
@@ -439,7 +439,7 @@ void main() {
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
-      final copy = copyShardData(original, threshold: 3, shardIndex: 1);
+      final copy = original.copyWith(threshold: 3, shardIndex: 1);
 
       expect(copy.threshold, equals(3));
       expect(copy.shardIndex, equals(1));
@@ -451,7 +451,7 @@ void main() {
 
     test('ageInSeconds calculates correctly', () {
       final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
-      final ShardData shardData = (
+      final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
@@ -461,7 +461,7 @@ void main() {
         createdAt: pastTimestamp,
         vaultId: null,
         vaultName: null,
-        peers: null,
+        stewards: null,
         ownerName: null,
         instructions: null,
         recipientPubkey: null,
@@ -478,7 +478,7 @@ void main() {
 
     test('ageInHours calculates correctly', () {
       final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200; // 2 hours ago
-      final ShardData shardData = (
+      final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
@@ -488,7 +488,7 @@ void main() {
         createdAt: pastTimestamp,
         vaultId: null,
         vaultName: null,
-        peers: null,
+        stewards: null,
         ownerName: null,
         instructions: null,
         recipientPubkey: null,
@@ -505,7 +505,7 @@ void main() {
 
     test('isRecent returns true for recent shard', () {
       final recentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
-      final ShardData shardData = (
+      final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
@@ -515,7 +515,7 @@ void main() {
         createdAt: recentTimestamp,
         vaultId: null,
         vaultName: null,
-        peers: null,
+        stewards: null,
         ownerName: null,
         instructions: null,
         recipientPubkey: null,
@@ -532,7 +532,7 @@ void main() {
     test('isRecent returns false for old shard', () {
       final oldTimestamp =
           DateTime.now().millisecondsSinceEpoch ~/ 1000 - 86400 - 3600; // >24 hours ago
-      final ShardData shardData = (
+      final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
         shardIndex: 0,
@@ -542,7 +542,7 @@ void main() {
         createdAt: oldTimestamp,
         vaultId: null,
         vaultName: null,
-        peers: null,
+        stewards: null,
         ownerName: null,
         instructions: null,
         recipientPubkey: null,

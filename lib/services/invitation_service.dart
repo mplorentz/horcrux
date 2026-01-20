@@ -641,8 +641,7 @@ class InvitationService {
             final newStatus =
                 hasAcknowledgment ? StewardStatus.holdingKey : StewardStatus.awaitingKey;
             final updatedStewards = List<Steward>.from(backupConfig.stewards);
-            updatedStewards[stewardIndex] = copySteward(
-              steward,
+            updatedStewards[stewardIndex] = steward.copyWith(
               status: newStatus,
             );
             final updatedConfig = copyBackupConfig(
@@ -844,10 +843,10 @@ class InvitationService {
           final newStatus =
               hasAcknowledgment ? StewardStatus.holdingKey : StewardStatus.awaitingKey;
           final updatedStewards = List<Steward>.from(backupConfig.stewards);
-          updatedStewards[invitedStewardIndex] = copySteward(
-            updatedStewards[invitedStewardIndex],
+          updatedStewards[invitedStewardIndex] = updatedStewards[invitedStewardIndex].copyWith(
             pubkey: pubkey,
             status: newStatus,
+            // Preserve contactInfo when updating invited steward
             // Keep inviteCode for reference, but it's no longer needed after acceptance
           );
 

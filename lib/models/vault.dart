@@ -4,7 +4,7 @@ import 'backup_config.dart';
 import 'backup_status.dart';
 import 'recovery_request.dart';
 import 'shard_data.dart';
-import 'steward_status.dart';
+import 'steward.dart';
 
 part 'vault.freezed.dart';
 

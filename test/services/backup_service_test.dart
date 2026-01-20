@@ -5,7 +5,6 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/shard_distribution_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
-import 'package:horcrux/models/shard_data.dart';
 
 import 'backup_service_test.mocks.dart';
 
@@ -65,7 +64,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       // Assert
@@ -95,7 +94,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       // Assert - All shares should be unique
@@ -116,7 +115,7 @@ void main() {
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: testVaultName,
-          peers: testPeers,
+          stewards: testPeers,
         );
 
         // Act - Use exactly threshold number of shares
@@ -142,7 +141,7 @@ void main() {
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: testVaultName,
-          peers: testPeers,
+          stewards: testPeers,
         );
 
         // Act - Use more than threshold shares (all 4)
@@ -168,7 +167,7 @@ void main() {
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: testVaultName,
-          peers: testPeers,
+          stewards: testPeers,
         );
 
         // Act - Try different combinations of threshold shares
@@ -200,7 +199,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       // Act & Assert - Should throw when fewer than threshold shares provided
@@ -221,7 +220,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
       final shares2 = await backupService.generateShamirShares(
         content: 'Different secret',
@@ -230,7 +229,7 @@ void main() {
         creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
         vaultId: 'different-vault',
         vaultName: 'Different Vault',
-        peers: [
+        stewards: [
           {
             'name': 'Peer A',
             'pubkey': 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
@@ -277,7 +276,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       final reconstructed = await backupService.reconstructFromShares(
@@ -302,7 +301,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       final reconstructed = await backupService.reconstructFromShares(
@@ -326,7 +325,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: testVaultName,
-        peers: testPeers,
+        stewards: testPeers,
       );
 
       // Create tampered shares with an invalid prime modulus
@@ -334,8 +333,7 @@ void main() {
 
       // Create tampered shares with an invalid prime modulus
       final tamperedShares = validShares.map((share) {
-        return copyShardData(
-          share,
+        return share.copyWith(
           primeMod: invalidPrimeMod, // Replace with invalid prime
         );
       }).toList();

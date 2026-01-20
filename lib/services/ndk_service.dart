@@ -269,7 +269,7 @@ class NdkService {
 
       // Set the nostrEventId from the unwrapped event ID
       // This is needed for duplicate detection when the owner receives their own shard
-      shardData = copyShardData(shardData, nostrEventId: event.id);
+      shardData = shardData.copyWith(nostrEventId: event.id);
 
       Log.debug('Shard data: $shardData');
 

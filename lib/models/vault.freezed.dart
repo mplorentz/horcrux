@@ -23,29 +23,8 @@ mixin _$Vault {
   DateTime get createdAt => throw _privateConstructorUsedError;
   String get ownerPubkey => throw _privateConstructorUsedError; // Hex format, 64 characters
   String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner
-  List<
-          ({
-            int createdAt,
-            String creatorPubkey,
-            int? distributionVersion,
-            String? instructions,
-            bool? isReceived,
-            String? nostrEventId,
-            String? ownerName,
-            List<Map<String, String>>? peers,
-            String primeMod,
-            DateTime? receivedAt,
-            String? recipientPubkey,
-            List<String>? relayUrls,
-            String shard,
-            int shardIndex,
-            int threshold,
-            int totalShards,
-            String? vaultId,
-            String? vaultName
-          })>
-      get shards =>
-          throw _privateConstructorUsedError; // List of shards (single as steward, multiple during recovery)
+  List<ShardData> get shards =>
+      throw _privateConstructorUsedError; // List of shards (single as steward, multiple during recovery)
   List<RecoveryRequest> get recoveryRequests =>
       throw _privateConstructorUsedError; // Embedded recovery requests
   ({
@@ -59,21 +38,7 @@ mixin _$Vault {
     List<String> relays,
     String specVersion,
     BackupStatus status,
-    List<
-        ({
-          DateTime? acknowledgedAt,
-          int? acknowledgedDistributionVersion,
-          String? acknowledgmentEventId,
-          String? giftWrapEventId,
-          String id,
-          String? inviteCode,
-          bool isOwner,
-          String? keyShare,
-          DateTime? lastSeen,
-          String? name,
-          String? pubkey,
-          StewardStatus status
-        })> stewards,
+    List<Steward> stewards,
     int threshold,
     int totalKeys,
     String vaultId
@@ -97,28 +62,7 @@ abstract class $VaultCopyWith<$Res> {
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<
-              ({
-                int createdAt,
-                String creatorPubkey,
-                int? distributionVersion,
-                String? instructions,
-                bool? isReceived,
-                String? nostrEventId,
-                String? ownerName,
-                List<Map<String, String>>? peers,
-                String primeMod,
-                DateTime? receivedAt,
-                String? recipientPubkey,
-                List<String>? relayUrls,
-                String shard,
-                int shardIndex,
-                int threshold,
-                int totalShards,
-                String? vaultId,
-                String? vaultName
-              })>
-          shards,
+      List<ShardData> shards,
       List<RecoveryRequest> recoveryRequests,
       ({
         String? contentHash,
@@ -131,21 +75,7 @@ abstract class $VaultCopyWith<$Res> {
         List<String> relays,
         String specVersion,
         BackupStatus status,
-        List<
-            ({
-              DateTime? acknowledgedAt,
-              int? acknowledgedDistributionVersion,
-              String? acknowledgmentEventId,
-              String? giftWrapEventId,
-              String id,
-              String? inviteCode,
-              bool isOwner,
-              String? keyShare,
-              DateTime? lastSeen,
-              String? name,
-              String? pubkey,
-              StewardStatus status
-            })> stewards,
+        List<Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -208,27 +138,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
       shards: null == shards
           ? _value.shards
           : shards // ignore: cast_nullable_to_non_nullable
-              as List<
-                  ({
-                    int createdAt,
-                    String creatorPubkey,
-                    int? distributionVersion,
-                    String? instructions,
-                    bool? isReceived,
-                    String? nostrEventId,
-                    String? ownerName,
-                    List<Map<String, String>>? peers,
-                    String primeMod,
-                    DateTime? receivedAt,
-                    String? recipientPubkey,
-                    List<String>? relayUrls,
-                    String shard,
-                    int shardIndex,
-                    int threshold,
-                    int totalShards,
-                    String? vaultId,
-                    String? vaultName
-                  })>,
+              as List<ShardData>,
       recoveryRequests: null == recoveryRequests
           ? _value.recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -247,21 +157,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
               List<String> relays,
               String specVersion,
               BackupStatus status,
-              List<
-                  ({
-                    DateTime? acknowledgedAt,
-                    int? acknowledgedDistributionVersion,
-                    String? acknowledgmentEventId,
-                    String? giftWrapEventId,
-                    String id,
-                    String? inviteCode,
-                    bool isOwner,
-                    String? keyShare,
-                    DateTime? lastSeen,
-                    String? name,
-                    String? pubkey,
-                    StewardStatus status
-                  })> stewards,
+              List<Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -295,28 +191,7 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<
-              ({
-                int createdAt,
-                String creatorPubkey,
-                int? distributionVersion,
-                String? instructions,
-                bool? isReceived,
-                String? nostrEventId,
-                String? ownerName,
-                List<Map<String, String>>? peers,
-                String primeMod,
-                DateTime? receivedAt,
-                String? recipientPubkey,
-                List<String>? relayUrls,
-                String shard,
-                int shardIndex,
-                int threshold,
-                int totalShards,
-                String? vaultId,
-                String? vaultName
-              })>
-          shards,
+      List<ShardData> shards,
       List<RecoveryRequest> recoveryRequests,
       ({
         String? contentHash,
@@ -329,21 +204,7 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
         List<String> relays,
         String specVersion,
         BackupStatus status,
-        List<
-            ({
-              DateTime? acknowledgedAt,
-              int? acknowledgedDistributionVersion,
-              String? acknowledgmentEventId,
-              String? giftWrapEventId,
-              String id,
-              String? inviteCode,
-              bool isOwner,
-              String? keyShare,
-              DateTime? lastSeen,
-              String? name,
-              String? pubkey,
-              StewardStatus status
-            })> stewards,
+        List<Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -403,27 +264,7 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
       shards: null == shards
           ? _value._shards
           : shards // ignore: cast_nullable_to_non_nullable
-              as List<
-                  ({
-                    int createdAt,
-                    String creatorPubkey,
-                    int? distributionVersion,
-                    String? instructions,
-                    bool? isReceived,
-                    String? nostrEventId,
-                    String? ownerName,
-                    List<Map<String, String>>? peers,
-                    String primeMod,
-                    DateTime? receivedAt,
-                    String? recipientPubkey,
-                    List<String>? relayUrls,
-                    String shard,
-                    int shardIndex,
-                    int threshold,
-                    int totalShards,
-                    String? vaultId,
-                    String? vaultName
-                  })>,
+              as List<ShardData>,
       recoveryRequests: null == recoveryRequests
           ? _value._recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -442,21 +283,7 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
               List<String> relays,
               String specVersion,
               BackupStatus status,
-              List<
-                  ({
-                    DateTime? acknowledgedAt,
-                    int? acknowledgedDistributionVersion,
-                    String? acknowledgmentEventId,
-                    String? giftWrapEventId,
-                    String id,
-                    String? inviteCode,
-                    bool isOwner,
-                    String? keyShare,
-                    DateTime? lastSeen,
-                    String? name,
-                    String? pubkey,
-                    StewardStatus status
-                  })> stewards,
+              List<Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -487,28 +314,7 @@ class _$VaultImpl extends _Vault {
       required this.createdAt,
       required this.ownerPubkey,
       this.ownerName,
-      final List<
-              ({
-                int createdAt,
-                String creatorPubkey,
-                int? distributionVersion,
-                String? instructions,
-                bool? isReceived,
-                String? nostrEventId,
-                String? ownerName,
-                List<Map<String, String>>? peers,
-                String primeMod,
-                DateTime? receivedAt,
-                String? recipientPubkey,
-                List<String>? relayUrls,
-                String shard,
-                int shardIndex,
-                int threshold,
-                int totalShards,
-                String? vaultId,
-                String? vaultName
-              })>
-          shards = const [],
+      final List<ShardData> shards = const [],
       final List<RecoveryRequest> recoveryRequests = const [],
       this.backupConfig,
       this.isArchived = false,
@@ -533,51 +339,11 @@ class _$VaultImpl extends _Vault {
   @override
   final String? ownerName;
 // Name of the vault owner
-  final List<
-      ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })> _shards;
+  final List<ShardData> _shards;
 // Name of the vault owner
   @override
   @JsonKey()
-  List<
-      ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })> get shards {
+  List<ShardData> get shards {
     if (_shards is EqualUnmodifiableListView) return _shards;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_shards);
@@ -607,21 +373,7 @@ class _$VaultImpl extends _Vault {
     List<String> relays,
     String specVersion,
     BackupStatus status,
-    List<
-        ({
-          DateTime? acknowledgedAt,
-          int? acknowledgedDistributionVersion,
-          String? acknowledgmentEventId,
-          String? giftWrapEventId,
-          String id,
-          String? inviteCode,
-          bool isOwner,
-          String? keyShare,
-          DateTime? lastSeen,
-          String? name,
-          String? pubkey,
-          StewardStatus status
-        })> stewards,
+    List<Steward> stewards,
     int threshold,
     int totalKeys,
     String vaultId
@@ -693,28 +445,7 @@ abstract class _Vault extends Vault {
       required final DateTime createdAt,
       required final String ownerPubkey,
       final String? ownerName,
-      final List<
-              ({
-                int createdAt,
-                String creatorPubkey,
-                int? distributionVersion,
-                String? instructions,
-                bool? isReceived,
-                String? nostrEventId,
-                String? ownerName,
-                List<Map<String, String>>? peers,
-                String primeMod,
-                DateTime? receivedAt,
-                String? recipientPubkey,
-                List<String>? relayUrls,
-                String shard,
-                int shardIndex,
-                int threshold,
-                int totalShards,
-                String? vaultId,
-                String? vaultName
-              })>
-          shards,
+      final List<ShardData> shards,
       final List<RecoveryRequest> recoveryRequests,
       final ({
         String? contentHash,
@@ -727,21 +458,7 @@ abstract class _Vault extends Vault {
         List<String> relays,
         String specVersion,
         BackupStatus status,
-        List<
-            ({
-              DateTime? acknowledgedAt,
-              int? acknowledgedDistributionVersion,
-              String? acknowledgmentEventId,
-              String? giftWrapEventId,
-              String id,
-              String? inviteCode,
-              bool isOwner,
-              String? keyShare,
-              DateTime? lastSeen,
-              String? name,
-              String? pubkey,
-              StewardStatus status
-            })> stewards,
+        List<Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -764,27 +481,7 @@ abstract class _Vault extends Vault {
   @override // Hex format, 64 characters
   String? get ownerName;
   @override // Name of the vault owner
-  List<
-      ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })> get shards;
+  List<ShardData> get shards;
   @override // List of shards (single as steward, multiple during recovery)
   List<RecoveryRequest> get recoveryRequests;
   @override // Embedded recovery requests
@@ -799,21 +496,7 @@ abstract class _Vault extends Vault {
     List<String> relays,
     String specVersion,
     BackupStatus status,
-    List<
-        ({
-          DateTime? acknowledgedAt,
-          int? acknowledgedDistributionVersion,
-          String? acknowledgmentEventId,
-          String? giftWrapEventId,
-          String id,
-          String? inviteCode,
-          bool isOwner,
-          String? keyShare,
-          DateTime? lastSeen,
-          String? name,
-          String? pubkey,
-          StewardStatus status
-        })> stewards,
+    List<Steward> stewards,
     int threshold,
     int totalKeys,
     String vaultId

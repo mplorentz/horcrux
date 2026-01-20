@@ -5,7 +5,6 @@ import '../models/backup_config.dart';
 import '../models/nostr_kinds.dart';
 import '../models/shard_event.dart';
 import '../models/shard_data.dart';
-import '../models/steward.dart';
 import '../models/steward_status.dart';
 import '../models/event_status.dart';
 import '../providers/vault_provider.dart';
@@ -59,8 +58,7 @@ class ShardDistributionService {
 
         try {
           // Update shard with relay URLs and distribution version from backup config
-          final shardWithRelays = copyShardData(
-            shard,
+          final shardWithRelays = shard.copyWith(
             relayUrls: config.relays,
             distributionVersion: config.distributionVersion,
           );
@@ -93,8 +91,7 @@ class ShardDistributionService {
           if (keyHolder.pubkey == ownerPubkey && keyHolder.isOwner) {
             try {
               // Update shard with event ID and recipient pubkey
-              final shardWithEventId = copyShardData(
-                shardWithRelays,
+              final shardWithEventId = shardWithRelays.copyWith(
                 nostrEventId: eventId,
                 recipientPubkey: ownerPubkey,
               );

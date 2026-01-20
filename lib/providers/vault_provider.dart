@@ -375,8 +375,7 @@ class VaultRepository {
     }
 
     final updatedStewards = List<Steward>.from(backupConfig.stewards);
-    updatedStewards[stewardIndex] = copySteward(
-      updatedStewards[stewardIndex],
+    updatedStewards[stewardIndex] = updatedStewards[stewardIndex].copyWith(
       status: status,
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: acknowledgmentEventId,

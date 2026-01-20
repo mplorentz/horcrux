@@ -350,7 +350,7 @@ void main() {
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: 'Recovered Vault',
-        peers: [
+        stewards: [
           {'name': 'Steward 1', 'pubkey': testKeyHolder1},
         ],
       );

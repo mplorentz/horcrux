@@ -24,8 +24,7 @@ void main() {
       distributionVersion: 0,
     );
 
-    final newerShard = copyShardData(
-      olderShard,
+    final newerShard = olderShard.copyWith(
       shard: 'newer-shard',
       threshold: 2,
       shardIndex: 1,

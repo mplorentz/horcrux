@@ -353,11 +353,11 @@ class RecoveryService {
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
       );
 
-      // Use peers list for recovery (includes owner if they have a shard)
+      // Use stewards list for recovery (includes owner if they have a shard)
       stewardPubkeys = <String>[];
-      if (selectedShard.peers != null) {
-        for (final peer in selectedShard.peers!) {
-          final pubkey = peer['pubkey'];
+      if (selectedShard.stewards != null) {
+        for (final steward in selectedShard.stewards!) {
+          final pubkey = steward['pubkey'];
           if (pubkey != null) {
             stewardPubkeys.add(pubkey);
           }

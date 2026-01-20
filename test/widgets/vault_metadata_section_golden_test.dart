@@ -33,7 +33,7 @@ void main() {
       creatorPubkey: testPubkey,
       vaultId: vaultId,
       vaultName: vaultName,
-      peers: peers ??
+      stewards: peers ??
           [
             {'name': 'Peer 1', 'pubkey': otherPubkey},
             {'name': 'Peer 2', 'pubkey': thirdPubkey},

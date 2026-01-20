@@ -11,7 +11,9 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../fixtures/test_keys.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/steward_test_helpers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -54,25 +56,9 @@ void main() {
         .setMockMethodCallHandler(sharedPreferencesChannel, null);
   });
 
-  // Sample test data
-  final steward1Pubkey = 'b' * 64;
-  final steward2Pubkey = 'c' * 64;
-
-  // Helper to create stewards
-  Steward createTestSteward({
-    required String pubkey,
-    String? name,
-    StewardStatus status = StewardStatus.awaitingKey,
-  }) {
-    return createSteward(pubkey: pubkey, name: name);
-  }
-
-  Steward createTestInvitedSteward({
-    required String name,
-    required String inviteCode,
-  }) {
-    return createInvitedSteward(name: name, inviteCode: inviteCode);
-  }
+  // Use test fixtures for consistent test data
+  const steward1Pubkey = TestHexPubkeys.bob;
+  const steward2Pubkey = TestHexPubkeys.charlie;
 
   // Helper to create backup config
   BackupConfig createTestBackupConfig({
@@ -149,11 +135,13 @@ void main() {
           pubkey: steward1Pubkey,
           name: 'Alice',
           status: StewardStatus.awaitingKey,
+          contactInfo: 'alice@example.com',
         ),
         createTestSteward(
           pubkey: steward2Pubkey,
           name: 'Bob',
           status: StewardStatus.awaitingKey,
+          contactInfo: 'bob@example.com\nPhone: +1-555-123-4567',
         ),
       ];
 
@@ -192,8 +180,13 @@ void main() {
         createTestInvitedSteward(
           name: 'Charlie',
           inviteCode: 'invite-code-123',
+          contactInfo: 'charlie@example.com',
         ),
-        createTestInvitedSteward(name: 'Diana', inviteCode: 'invite-code-456'),
+        createTestInvitedSteward(
+          name: 'Diana',
+          inviteCode: 'invite-code-456',
+          contactInfo: 'diana@example.com\nSignal: diana_signal',
+        ),
       ];
 
       final backupConfig = createTestBackupConfig(
@@ -232,8 +225,13 @@ void main() {
           pubkey: steward1Pubkey,
           name: 'Eve',
           status: StewardStatus.holdingKey,
+          contactInfo: 'eve@example.com',
         ),
-        createTestInvitedSteward(name: 'Frank', inviteCode: 'invite-code-789'),
+        createTestInvitedSteward(
+          name: 'Frank',
+          inviteCode: 'invite-code-789',
+          contactInfo: 'frank@example.com',
+        ),
       ];
 
       final backupConfig = createTestBackupConfig(
@@ -272,7 +270,11 @@ void main() {
 
     testGoldens('with existing config - multiple relays', (tester) async {
       final stewards = [
-        createTestSteward(pubkey: steward1Pubkey, name: 'Grace'),
+        createTestSteward(
+          pubkey: steward1Pubkey,
+          name: 'Grace',
+          contactInfo: 'grace@example.com',
+        ),
       ];
 
       final backupConfig = createTestBackupConfig(
@@ -308,8 +310,16 @@ void main() {
 
     testGoldens('multiple device sizes', (tester) async {
       final stewards = [
-        createTestSteward(pubkey: steward1Pubkey, name: 'Henry'),
-        createTestSteward(pubkey: steward2Pubkey, name: 'Iris'),
+        createTestSteward(
+          pubkey: steward1Pubkey,
+          name: 'Henry',
+          contactInfo: 'henry@example.com',
+        ),
+        createTestSteward(
+          pubkey: steward2Pubkey,
+          name: 'Iris',
+          contactInfo: 'iris@example.com',
+        ),
       ];
 
       final backupConfig = createTestBackupConfig(

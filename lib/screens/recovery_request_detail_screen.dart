@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
 import '../models/vault.dart';
-import '../models/steward.dart';
 import '../services/recovery_service.dart';
 import '../providers/key_provider.dart';
 import '../services/logger.dart';
@@ -193,11 +192,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         // Check if initiator is the owner
         if (shard.creatorPubkey == request.initiatorPubkey) {
           initiatorName = shard.ownerName ?? vault.ownerName;
-        } else if (shard.peers != null) {
-          // Check if initiator is in peers
-          for (final peer in shard.peers!) {
-            if (peer['pubkey'] == request.initiatorPubkey) {
-              initiatorName = peer['name'];
+        } else if (shard.stewards != null) {
+          // Check if initiator is in stewards
+          for (final steward in shard.stewards!) {
+            if (steward['pubkey'] == request.initiatorPubkey) {
+              initiatorName = steward['name'];
               break;
             }
           }

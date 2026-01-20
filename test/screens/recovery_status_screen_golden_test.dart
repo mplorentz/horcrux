@@ -7,11 +7,11 @@ import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
-import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/screens/recovery_status_screen.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/steward_test_helpers.dart';
 
 void main() {
   // Sample test data
@@ -19,28 +19,6 @@ void main() {
   final initiatorPubkey = 'b' * 64;
   final steward1Pubkey = 'c' * 64;
   final steward2Pubkey = 'd' * 64;
-
-  // Helper to create steward (manually because createSteward doesn't accept status)
-  Steward createTestSteward({
-    required String pubkey,
-    String? name,
-    StewardStatus status = StewardStatus.holdingKey,
-  }) {
-    return (
-      id: pubkey.substring(0, 16),
-      pubkey: pubkey,
-      name: name,
-      inviteCode: null,
-      status: status,
-      lastSeen: null,
-      keyShare: null,
-      giftWrapEventId: null,
-      acknowledgedAt: DateTime.now().subtract(const Duration(hours: 1)),
-      acknowledgmentEventId: null,
-      acknowledgedDistributionVersion: 1,
-      isOwner: false,
-    );
-  }
 
   // Helper to create backup config (manually for full control)
   BackupConfig createTestBackupConfig({

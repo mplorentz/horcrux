@@ -1,5 +1,17 @@
 # Horcrux Cursor Rules
 
+## Project Documentation
+
+### Always Read README and CONTRIBUTING Guide
+**CRITICAL**: Before starting any work or making significant changes, AI assistants MUST:
+- Read `README.md` to understand the project overview, purpose, and current state
+- Read `CONTRIBUTING.md` to understand development workflows, code generation requirements, and contribution guidelines
+- Reference these documents when:
+  - Starting a new feature or task
+  - Encountering questions about project structure or conventions
+  - Needing to understand build processes or tooling
+  - Working with code generation (Freezed, build_runner, etc.)
+
 ## Service and Repository Architecture
 
 ### When to Use Repositories
@@ -406,19 +418,22 @@ The app uses the **horcrux3 theme** defined in `lib/widgets/theme.dart`
 
 **MANDATORY CHECKLIST** - Complete ALL items before opening/pushing PR:
 
-1. ✅ **Golden Tests**: If you created/modified any `*_golden_test.dart` files:
+1. ✅ **Code Generation**: If you modified any `@freezed` classes or `@GenerateMocks` annotations:
+   - **MUST run**: VS Code task "Codegen" or `flutter pub run build_runner build --delete-conflicting-outputs`
+
+2. ✅ **Golden Tests**: If you created/modified any `*_golden_test.dart` files, or any files imported by a golden test:
    - **MUST run**: `flutter test <test_file> --update-goldens`
    - **MUST commit**: The generated PNG files in `test/**/goldens/`
    - **MUST verify**: Tests pass after updating goldens
    - **DO NOT skip**: This will cause CI failures
 
-2. ✅ **All Tests Pass**: `flutter test` (0 failures required)
+3. ✅ **All Tests Pass**: `flutter test` (0 failures required)
 
-3. ✅ **Analyzer Clean**: `flutter analyze` (must show "No issues found!")
+4. ✅ **Analyzer Clean**: `flutter analyze` (must show "No issues found!")
 
-4. ✅ **Code Formatted**: `dart format .`
+5. ✅ **Code Formatted**: `dart format .`
 
-5. ✅ **Linter Clean**: Use ReadLints tool on modified files
+6. ✅ **Linter Clean**: Use ReadLints tool on modified files
 
 **If you skip any step, the PR will fail CI and waste reviewer time.**
 
@@ -470,19 +485,22 @@ Before opening a pull request, you MUST verify ALL of the following requirements
 Run these commands in sequence to verify all requirements:
 
 ```bash
-# 1. Format code
+# 1. Run codegen (if you modified @freezed classes or @GenerateMocks)
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# 2. Format code
 dart format .
 
-# 2. Run analyzer
+# 3. Run analyzer
 flutter analyze
 
-# 3. Update golden tests (if UI changes were made)
+# 4. Update golden tests (if UI changes were made)
 flutter test --update-goldens
 
-# 4. Run all tests
+# 5. Run all tests
 flutter test
 
-# 5. Verify no issues
+# 6. Verify no issues
 flutter analyze
 ```
 
@@ -492,22 +510,26 @@ All commands must complete successfully before opening a PR.
 **CRITICAL**: AI assistants MUST complete ALL steps below before opening or pushing a PR.
 
 **MANDATORY PRE-PR CHECKLIST** (must complete ALL items):
-1. ✅ **Format code**: `dart format .` (MUST run before every commit)
-2. ✅ **Run analyzer**: `flutter analyze` (must show "No issues found!")
-3. ✅ **Check for UI changes**: If you modified ANY `lib/screens/*.dart` or `lib/widgets/*.dart`:
+1. ✅ **Run codegen**: If you modified any `@freezed` classes or `@GenerateMocks` annotations:
+   - Run VS Code task "Codegen" or `flutter pub run build_runner build --delete-conflicting-outputs`
+   - Commit generated files with your changes
+2. ✅ **Format code**: `dart format .` (MUST run before every commit)
+3. ✅ **Run analyzer**: `flutter analyze` (must show "No issues found!")
+4. ✅ **Check for UI changes**: If you modified ANY `lib/screens/*.dart` or `lib/widgets/*.dart`:
    - Check if corresponding golden test exists
    - If golden test exists → Run `flutter test <test_file> --update-goldens`
    - Commit golden PNG files WITH the UI changes (same commit)
-4. ✅ **Check for golden test files**: If you created or modified any `*_golden_test.dart` files, you MUST:
+5. ✅ **Check for golden test files**: If you created or modified any `*_golden_test.dart` files, you MUST:
    - Run `flutter test <test_file_path> --update-goldens` to generate golden images
    - Verify golden images were created in `test/**/goldens/` directory
    - Commit the golden PNG files with your test code
    - Re-run tests to verify they pass: `flutter test <test_file_path>`
-5. ✅ **Run all tests**: `flutter test` (must pass with 0 failures)
-6. ✅ **Verify no linter errors**: Use ReadLints tool on modified files
-7. ✅ **Do NOT open/push PRs** until ALL above steps are complete
+6. ✅ **Run all tests**: `flutter test` (must pass with 0 failures)
+7. ✅ **Verify no linter errors**: Use ReadLints tool on modified files
+8. ✅ **Do NOT open/push PRs** until ALL above steps are complete
 
 **FOR EVERY COMMIT ON AN OPEN PR**:
+- ✅ Run codegen: If you modified any `@freezed` classes or `@GenerateMocks` annotations
 - ✅ Format code: `dart format .`
 - ✅ Check linter: ReadLints on modified files
 - ✅ Run analyzer: `flutter analyze` (must be clean)

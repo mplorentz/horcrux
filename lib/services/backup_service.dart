@@ -124,7 +124,7 @@ class BackupService {
     required String creatorPubkey,
     required String vaultId,
     required String vaultName,
-    required List<Map<String, String>> peers,
+    required List<Map<String, String>> stewards,
     String? ownerName,
     String? instructions,
   }) async {
@@ -167,7 +167,7 @@ class BackupService {
           creatorPubkey: creatorPubkey,
           vaultId: vaultId,
           vaultName: vaultName,
-          peers: peers,
+          stewards: stewards,
           ownerName: ownerName,
           instructions: instructions,
         );
@@ -283,11 +283,11 @@ class BackupService {
     // Find and update the steward
     final updatedStewards = config.stewards.map((steward) {
       if (steward.pubkey != null && steward.pubkey == pubkey) {
-        return copySteward(
-          steward,
+        return steward.copyWith(
           status: status,
           acknowledgedAt: acknowledgedAt,
           acknowledgmentEventId: acknowledgmentEventId,
+          // Preserve contactInfo when updating steward status
         );
       }
       return steward;
@@ -386,14 +386,14 @@ class BackupService {
               final newStatus = steward.status == StewardStatus.holdingKey
                   ? StewardStatus.awaitingNewKey
                   : StewardStatus.awaitingKey;
-              return copySteward(
-                steward,
+              return steward.copyWith(
                 status: newStatus,
                 acknowledgedAt: null,
                 acknowledgmentEventId: null,
                 acknowledgedDistributionVersion: null,
                 keyShare: null,
                 giftWrapEventId: null,
+                // Preserve contactInfo when resetting steward status
               );
             }
             return steward;
@@ -454,8 +454,7 @@ class BackupService {
         final newStatus = steward.status == StewardStatus.holdingKey
             ? StewardStatus.awaitingNewKey
             : StewardStatus.awaitingKey;
-        return copySteward(
-          steward,
+        return steward.copyWith(
           status: newStatus,
           acknowledgedAt: null,
           acknowledgmentEventId: null,
@@ -494,14 +493,15 @@ class BackupService {
       if (existingSteward != null) {
         // Preserve important fields from existing (status, acknowledgments, pubkey, etc)
         // Preserve pubkey from existing if it exists (should never be removed once set)
+        // Preserve contactInfo from updated if provided, otherwise keep existing
         merged.add(
-          copySteward(
-            updatedSteward,
+          updatedSteward.copyWith(
             status: existingSteward.status,
             pubkey: existingSteward.pubkey ?? updatedSteward.pubkey,
             acknowledgedAt: existingSteward.acknowledgedAt,
             acknowledgmentEventId: existingSteward.acknowledgmentEventId,
             acknowledgedDistributionVersion: existingSteward.acknowledgedDistributionVersion,
+            contactInfo: updatedSteward.contactInfo ?? existingSteward.contactInfo,
           ),
         );
       } else {
@@ -622,12 +622,18 @@ class BackupService {
       }
 
       // Step 5: Generate Shamir shares
-      // Build peers list with name and pubkey maps
+      // Build stewards list with name, pubkey, and contactInfo maps
       // Include all stewards with pubkeys (including owner if they have a shard)
-      final peers = config.stewards
-          .where((kh) => kh.pubkey != null)
-          .map((kh) => {'name': kh.name ?? 'Unknown', 'pubkey': kh.pubkey!})
-          .toList();
+      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((kh) {
+        final stewardMap = <String, String>{
+          'name': kh.name ?? 'Unknown',
+          'pubkey': kh.pubkey!,
+        };
+        if (kh.contactInfo != null && kh.contactInfo!.isNotEmpty) {
+          stewardMap['contactInfo'] = kh.contactInfo!;
+        }
+        return stewardMap;
+      }).toList();
       final shards = await generateShamirShares(
         content: content,
         threshold: config.threshold,
@@ -635,7 +641,7 @@ class BackupService {
         creatorPubkey: creatorPubkey,
         vaultId: vault.id,
         vaultName: vault.name,
-        peers: peers,
+        stewards: stewards,
         ownerName: vault.ownerName,
         instructions: config.instructions,
       );

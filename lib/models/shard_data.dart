@@ -1,5 +1,9 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'vault.dart';
 import '../services/logger.dart';
+
+part 'shard_data.freezed.dart';
 
 /// Represents the decrypted shard data contained within a ShardEvent
 ///
@@ -7,169 +11,34 @@ import '../services/logger.dart';
 /// and stored in the ShardEvent for distribution to stewards.
 ///
 /// Extended with optional recovery metadata for vault recovery feature.
-typedef ShardData = ({
-  String shard,
-  int threshold,
-  int shardIndex,
-  int totalShards,
-  String primeMod,
-  String creatorPubkey,
-  int createdAt,
-  // Recovery metadata (optional fields)
-  String? vaultId,
-  String? vaultName,
-  List<
-      Map<String,
-          String>>? peers, // List of maps with 'name' and 'pubkey' for OTHER stewards (excludes creatorPubkey)
-  String? ownerName, // Name of the vault owner (creator)
-  String? instructions, // Instructions for stewards
-  String? recipientPubkey,
-  bool? isReceived,
-  DateTime? receivedAt,
-  String? nostrEventId,
-  List<String>? relayUrls, // Relay URLs from backup config for sending confirmations
-  int? distributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
-});
+@freezed
+class ShardData with _$ShardData {
+  const factory ShardData({
+    required String shard,
+    required int threshold,
+    required int shardIndex,
+    required int totalShards,
+    required String primeMod,
+    required String creatorPubkey,
+    required int createdAt,
+    // Recovery metadata (optional fields)
+    String? vaultId,
+    String? vaultName,
+    List<Map<String, String>>?
+        stewards, // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
+    String? ownerName, // Name of the vault owner (creator)
+    String? instructions, // Instructions for stewards
+    String? recipientPubkey,
+    bool? isReceived,
+    DateTime? receivedAt,
+    String? nostrEventId,
+    List<String>? relayUrls, // Relay URLs from backup config for sending confirmations
+    int?
+        distributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+  }) = _ShardData;
 
-/// Create a new ShardData with validation
-ShardData createShardData({
-  required String shard,
-  required int threshold,
-  required int shardIndex,
-  required int totalShards,
-  required String primeMod,
-  required String creatorPubkey,
-  String? vaultId,
-  String? vaultName,
-  List<Map<String, String>>? peers,
-  String? ownerName,
-  String? instructions,
-  String? recipientPubkey,
-  bool? isReceived,
-  DateTime? receivedAt,
-  String? nostrEventId,
-  List<String>? relayUrls,
-  int? distributionVersion,
-}) {
-  if (shard.isEmpty) {
-    throw ArgumentError('Shard cannot be empty');
-  }
-  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalShards) {
-    throw ArgumentError(
-      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalShards',
-    );
-  }
-  if (shardIndex < 0 || shardIndex >= totalShards) {
-    throw ArgumentError('ShardIndex must be >= 0 and < totalShards');
-  }
-  if (primeMod.isEmpty) {
-    throw ArgumentError('PrimeMod cannot be empty');
-  }
-  if (creatorPubkey.isEmpty) {
-    throw ArgumentError('CreatorPubkey cannot be empty');
-  }
+  const ShardData._();
 
-  // Validate recovery metadata if provided
-  if (recipientPubkey != null && (recipientPubkey.length != 64 || !_isHexString(recipientPubkey))) {
-    throw ArgumentError(
-      'RecipientPubkey must be valid hex format (64 characters)',
-    );
-  }
-  if (isReceived == true && receivedAt != null && receivedAt.isAfter(DateTime.now())) {
-    throw ArgumentError('ReceivedAt must be in the past if isReceived is true');
-  }
-  if (peers != null) {
-    for (final peer in peers) {
-      if (!peer.containsKey('name') || !peer.containsKey('pubkey')) {
-        throw ArgumentError(
-          'All peers must have both "name" and "pubkey" keys',
-        );
-      }
-      final pubkey = peer['pubkey']!;
-      if (pubkey.length != 64 || !_isHexString(pubkey)) {
-        throw ArgumentError(
-          'All peer pubkeys must be valid hex format (64 characters): $pubkey',
-        );
-      }
-      if (peer['name'] == null || peer['name']!.isEmpty) {
-        throw ArgumentError('All peers must have a non-empty name');
-      }
-    }
-  }
-
-  return (
-    shard: shard,
-    threshold: threshold,
-    shardIndex: shardIndex,
-    totalShards: totalShards,
-    primeMod: primeMod,
-    creatorPubkey: creatorPubkey,
-    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unix timestamp
-    vaultId: vaultId,
-    vaultName: vaultName,
-    peers: peers,
-    ownerName: ownerName,
-    instructions: instructions,
-    recipientPubkey: recipientPubkey,
-    isReceived: isReceived,
-    receivedAt: receivedAt,
-    nostrEventId: nostrEventId,
-    relayUrls: relayUrls,
-    distributionVersion: distributionVersion,
-  );
-}
-
-/// Helper to validate hex strings
-bool _isHexString(String str) {
-  return RegExp(r'^[0-9a-fA-F]+$').hasMatch(str);
-}
-
-/// Create a copy of this ShardData with updated fields
-ShardData copyShardData(
-  ShardData shardData, {
-  String? shard,
-  int? threshold,
-  int? shardIndex,
-  int? totalShards,
-  String? primeMod,
-  String? creatorPubkey,
-  int? createdAt,
-  String? vaultId,
-  String? vaultName,
-  List<Map<String, String>>? peers,
-  String? ownerName,
-  String? instructions,
-  String? recipientPubkey,
-  bool? isReceived,
-  DateTime? receivedAt,
-  String? nostrEventId,
-  List<String>? relayUrls,
-  int? distributionVersion,
-}) {
-  return (
-    shard: shard ?? shardData.shard,
-    threshold: threshold ?? shardData.threshold,
-    shardIndex: shardIndex ?? shardData.shardIndex,
-    totalShards: totalShards ?? shardData.totalShards,
-    primeMod: primeMod ?? shardData.primeMod,
-    creatorPubkey: creatorPubkey ?? shardData.creatorPubkey,
-    createdAt: createdAt ?? shardData.createdAt,
-    vaultId: vaultId ?? shardData.vaultId,
-    vaultName: vaultName ?? shardData.vaultName,
-    peers: peers ?? shardData.peers,
-    ownerName: ownerName ?? shardData.ownerName,
-    instructions: instructions ?? shardData.instructions,
-    recipientPubkey: recipientPubkey ?? shardData.recipientPubkey,
-    isReceived: isReceived ?? shardData.isReceived,
-    receivedAt: receivedAt ?? shardData.receivedAt,
-    nostrEventId: nostrEventId ?? shardData.nostrEventId,
-    relayUrls: relayUrls ?? shardData.relayUrls,
-    distributionVersion: distributionVersion ?? shardData.distributionVersion,
-  );
-}
-
-/// Extension methods for ShardData
-extension ShardDataExtension on ShardData {
   /// Check if this shard data is valid
   bool get isValid {
     try {
@@ -224,6 +93,37 @@ extension ShardDataExtension on ShardData {
         return false;
       }
 
+      // Validate stewards if provided
+      if (stewards != null) {
+        for (final steward in stewards!) {
+          if (!steward.containsKey('name') || !steward.containsKey('pubkey')) {
+            Log.error(
+              'ShardData validation failed: All stewards must have both "name" and "pubkey" keys',
+            );
+            return false;
+          }
+          final pubkey = steward['pubkey']!;
+          if (pubkey.length != 64 || !_isHexString(pubkey)) {
+            Log.error(
+              'ShardData validation failed: All steward pubkeys must be valid hex format (64 characters): $pubkey',
+            );
+            return false;
+          }
+          if (steward['name'] == null || steward['name']!.isEmpty) {
+            Log.error('ShardData validation failed: All stewards must have a non-empty name');
+            return false;
+          }
+          // contactInfo is optional, but if present, validate length
+          final contactInfo = steward['contactInfo'];
+          if (contactInfo != null && contactInfo.length > 500) {
+            Log.error(
+              'ShardData validation failed: Steward contactInfo exceeds maximum length of 500 characters',
+            );
+            return false;
+          }
+        }
+      }
+
       return true;
     } catch (e) {
       Log.error('ShardData validation failed with exception', e);
@@ -248,6 +148,106 @@ extension ShardDataExtension on ShardData {
   }
 }
 
+/// Helper to validate hex strings
+bool _isHexString(String str) {
+  return RegExp(r'^[0-9a-fA-F]+$').hasMatch(str);
+}
+
+/// Create a new ShardData with validation
+ShardData createShardData({
+  required String shard,
+  required int threshold,
+  required int shardIndex,
+  required int totalShards,
+  required String primeMod,
+  required String creatorPubkey,
+  String? vaultId,
+  String? vaultName,
+  List<Map<String, String>>? stewards,
+  String? ownerName,
+  String? instructions,
+  String? recipientPubkey,
+  bool? isReceived,
+  DateTime? receivedAt,
+  String? nostrEventId,
+  List<String>? relayUrls,
+  int? distributionVersion,
+}) {
+  if (shard.isEmpty) {
+    throw ArgumentError('Shard cannot be empty');
+  }
+  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalShards) {
+    throw ArgumentError(
+      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalShards',
+    );
+  }
+  if (shardIndex < 0 || shardIndex >= totalShards) {
+    throw ArgumentError('ShardIndex must be >= 0 and < totalShards');
+  }
+  if (primeMod.isEmpty) {
+    throw ArgumentError('PrimeMod cannot be empty');
+  }
+  if (creatorPubkey.isEmpty) {
+    throw ArgumentError('CreatorPubkey cannot be empty');
+  }
+
+  // Validate recovery metadata if provided
+  if (recipientPubkey != null && (recipientPubkey.length != 64 || !_isHexString(recipientPubkey))) {
+    throw ArgumentError(
+      'RecipientPubkey must be valid hex format (64 characters)',
+    );
+  }
+  if (isReceived == true && receivedAt != null && receivedAt.isAfter(DateTime.now())) {
+    throw ArgumentError('ReceivedAt must be in the past if isReceived is true');
+  }
+  if (stewards != null) {
+    for (final steward in stewards) {
+      if (!steward.containsKey('name') || !steward.containsKey('pubkey')) {
+        throw ArgumentError(
+          'All stewards must have both "name" and "pubkey" keys',
+        );
+      }
+      final pubkey = steward['pubkey']!;
+      if (pubkey.length != 64 || !_isHexString(pubkey)) {
+        throw ArgumentError(
+          'All steward pubkeys must be valid hex format (64 characters): $pubkey',
+        );
+      }
+      if (steward['name'] == null || steward['name']!.isEmpty) {
+        throw ArgumentError('All stewards must have a non-empty name');
+      }
+      // contactInfo is optional, but if present, validate length
+      final contactInfo = steward['contactInfo'];
+      if (contactInfo != null && contactInfo.length > 500) {
+        throw ArgumentError(
+          'Steward contactInfo exceeds maximum length of 500 characters',
+        );
+      }
+    }
+  }
+
+  return ShardData(
+    shard: shard,
+    threshold: threshold,
+    shardIndex: shardIndex,
+    totalShards: totalShards,
+    primeMod: primeMod,
+    creatorPubkey: creatorPubkey,
+    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unix timestamp
+    vaultId: vaultId,
+    vaultName: vaultName,
+    stewards: stewards,
+    ownerName: ownerName,
+    instructions: instructions,
+    recipientPubkey: recipientPubkey,
+    isReceived: isReceived,
+    receivedAt: receivedAt,
+    nostrEventId: nostrEventId,
+    relayUrls: relayUrls,
+    distributionVersion: distributionVersion,
+  );
+}
+
 /// Convert to JSON for storage
 Map<String, dynamic> shardDataToJson(ShardData shardData) {
   return {
@@ -260,7 +260,7 @@ Map<String, dynamic> shardDataToJson(ShardData shardData) {
     'createdAt': shardData.createdAt,
     if (shardData.vaultId != null) 'vaultId': shardData.vaultId,
     if (shardData.vaultName != null) 'vaultName': shardData.vaultName,
-    if (shardData.peers != null) 'peers': shardData.peers,
+    if (shardData.stewards != null) 'stewards': shardData.stewards,
     if (shardData.ownerName != null) 'ownerName': shardData.ownerName,
     if (shardData.instructions != null) 'instructions': shardData.instructions,
     if (shardData.recipientPubkey != null) 'recipientPubkey': shardData.recipientPubkey,
@@ -274,7 +274,9 @@ Map<String, dynamic> shardDataToJson(ShardData shardData) {
 
 /// Create from JSON
 ShardData shardDataFromJson(Map<String, dynamic> json) {
-  return (
+  final stewardsData = json['stewards'];
+
+  return ShardData(
     shard: json['shard'] as String,
     threshold: json['threshold'] as int,
     shardIndex: json['shardIndex'] as int,
@@ -284,8 +286,8 @@ ShardData shardDataFromJson(Map<String, dynamic> json) {
     createdAt: json['createdAt'] as int,
     vaultId: json['vaultId'] as String?,
     vaultName: json['vaultName'] as String?,
-    peers: json['peers'] != null
-        ? (json['peers'] as List).map((e) => Map<String, String>.from(e as Map)).toList()
+    stewards: stewardsData != null
+        ? (stewardsData as List).map((e) => Map<String, String>.from(e as Map)).toList()
         : null,
     ownerName: json['ownerName'] as String?,
     instructions: json['instructions'] as String?,

@@ -20,26 +20,7 @@ mixin _$RecoveryResponse {
   bool get approved =>
       throw _privateConstructorUsedError; // Whether the steward approved the request
   DateTime? get respondedAt => throw _privateConstructorUsedError;
-  ({
-    int createdAt,
-    String creatorPubkey,
-    int? distributionVersion,
-    String? instructions,
-    bool? isReceived,
-    String? nostrEventId,
-    String? ownerName,
-    List<Map<String, String>>? peers,
-    String primeMod,
-    DateTime? receivedAt,
-    String? recipientPubkey,
-    List<String>? relayUrls,
-    String shard,
-    int shardIndex,
-    int threshold,
-    int totalShards,
-    String? vaultId,
-    String? vaultName
-  })? get shardData =>
+  ShardData? get shardData =>
       throw _privateConstructorUsedError; // Actual shard data for reassembly (if approved)
   String? get nostrEventId => throw _privateConstructorUsedError;
   String? get errorMessage => throw _privateConstructorUsedError;
@@ -57,28 +38,11 @@ abstract class $RecoveryResponseCopyWith<$Res> {
       {String pubkey,
       bool approved,
       DateTime? respondedAt,
-      ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })? shardData,
+      ShardData? shardData,
       String? nostrEventId,
       String? errorMessage});
+
+  $ShardDataCopyWith<$Res>? get shardData;
 }
 
 /// @nodoc
@@ -117,26 +81,7 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
       shardData: freezed == shardData
           ? _value.shardData
           : shardData // ignore: cast_nullable_to_non_nullable
-              as ({
-              int createdAt,
-              String creatorPubkey,
-              int? distributionVersion,
-              String? instructions,
-              bool? isReceived,
-              String? nostrEventId,
-              String? ownerName,
-              List<Map<String, String>>? peers,
-              String primeMod,
-              DateTime? receivedAt,
-              String? recipientPubkey,
-              List<String>? relayUrls,
-              String shard,
-              int shardIndex,
-              int threshold,
-              int totalShards,
-              String? vaultId,
-              String? vaultName
-            })?,
+              as ShardData?,
       nostrEventId: freezed == nostrEventId
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
@@ -146,6 +91,18 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
           : errorMessage // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  $ShardDataCopyWith<$Res>? get shardData {
+    if (_value.shardData == null) {
+      return null;
+    }
+
+    return $ShardDataCopyWith<$Res>(_value.shardData!, (value) {
+      return _then(_value.copyWith(shardData: value) as $Val);
+    });
   }
 }
 
@@ -160,28 +117,12 @@ abstract class _$$RecoveryResponseImplCopyWith<$Res> implements $RecoveryRespons
       {String pubkey,
       bool approved,
       DateTime? respondedAt,
-      ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })? shardData,
+      ShardData? shardData,
       String? nostrEventId,
       String? errorMessage});
+
+  @override
+  $ShardDataCopyWith<$Res>? get shardData;
 }
 
 /// @nodoc
@@ -218,26 +159,7 @@ class __$$RecoveryResponseImplCopyWithImpl<$Res>
       shardData: freezed == shardData
           ? _value.shardData
           : shardData // ignore: cast_nullable_to_non_nullable
-              as ({
-              int createdAt,
-              String creatorPubkey,
-              int? distributionVersion,
-              String? instructions,
-              bool? isReceived,
-              String? nostrEventId,
-              String? ownerName,
-              List<Map<String, String>>? peers,
-              String primeMod,
-              DateTime? receivedAt,
-              String? recipientPubkey,
-              List<String>? relayUrls,
-              String shard,
-              int shardIndex,
-              int threshold,
-              int totalShards,
-              String? vaultId,
-              String? vaultName
-            })?,
+              as ShardData?,
       nostrEventId: freezed == nostrEventId
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
@@ -271,26 +193,7 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
   @override
   final DateTime? respondedAt;
   @override
-  final ({
-    int createdAt,
-    String creatorPubkey,
-    int? distributionVersion,
-    String? instructions,
-    bool? isReceived,
-    String? nostrEventId,
-    String? ownerName,
-    List<Map<String, String>>? peers,
-    String primeMod,
-    DateTime? receivedAt,
-    String? recipientPubkey,
-    List<String>? relayUrls,
-    String shard,
-    int shardIndex,
-    int threshold,
-    int totalShards,
-    String? vaultId,
-    String? vaultName
-  })? shardData;
+  final ShardData? shardData;
 // Actual shard data for reassembly (if approved)
   @override
   final String? nostrEventId;
@@ -326,26 +229,7 @@ abstract class _RecoveryResponse extends RecoveryResponse {
       {required final String pubkey,
       required final bool approved,
       final DateTime? respondedAt,
-      final ({
-        int createdAt,
-        String creatorPubkey,
-        int? distributionVersion,
-        String? instructions,
-        bool? isReceived,
-        String? nostrEventId,
-        String? ownerName,
-        List<Map<String, String>>? peers,
-        String primeMod,
-        DateTime? receivedAt,
-        String? recipientPubkey,
-        List<String>? relayUrls,
-        String shard,
-        int shardIndex,
-        int threshold,
-        int totalShards,
-        String? vaultId,
-        String? vaultName
-      })? shardData,
+      final ShardData? shardData,
       final String? nostrEventId,
       final String? errorMessage}) = _$RecoveryResponseImpl;
   const _RecoveryResponse._() : super._();
@@ -357,26 +241,7 @@ abstract class _RecoveryResponse extends RecoveryResponse {
   @override // Whether the steward approved the request
   DateTime? get respondedAt;
   @override
-  ({
-    int createdAt,
-    String creatorPubkey,
-    int? distributionVersion,
-    String? instructions,
-    bool? isReceived,
-    String? nostrEventId,
-    String? ownerName,
-    List<Map<String, String>>? peers,
-    String primeMod,
-    DateTime? receivedAt,
-    String? recipientPubkey,
-    List<String>? relayUrls,
-    String shard,
-    int shardIndex,
-    int threshold,
-    int totalShards,
-    String? vaultId,
-    String? vaultName
-  })? get shardData;
+  ShardData? get shardData;
   @override // Actual shard data for reassembly (if approved)
   String? get nostrEventId;
   @override

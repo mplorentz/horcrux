@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
 import '../models/vault.dart';
-import '../models/steward.dart';
 import '../services/recovery_service.dart';
 import '../services/logger.dart';
 import '../providers/vault_provider.dart';
@@ -285,11 +284,11 @@ class _RecoveryNotificationOverlayState extends ConsumerState<RecoveryNotificati
       // Check if initiator is the owner
       if (shard.creatorPubkey == initiatorPubkey) {
         return shard.ownerName ?? vault.ownerName;
-      } else if (shard.peers != null) {
-        // Check if initiator is in peers
-        for (final peer in shard.peers!) {
-          if (peer['pubkey'] == initiatorPubkey) {
-            return peer['name'];
+      } else if (shard.stewards != null) {
+        // Check if initiator is in stewards
+        for (final steward in shard.stewards!) {
+          if (steward['pubkey'] == initiatorPubkey) {
+            return steward['name'];
           }
         }
       }
