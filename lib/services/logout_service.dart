@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'vault_share_service.dart';
@@ -45,6 +46,17 @@ class LogoutService {
     await _recoveryService.clearAll();
     await _relayScanService.clearAll();
     await _loginService.clearStoredKeys();
+
+    // Clear all SharedPreferences to ensure complete cleanup
+    // This removes any leftover vault files or other data from the previous account
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      Log.info('LogoutService: cleared all SharedPreferences');
+    } catch (e) {
+      Log.error('Error clearing SharedPreferences during logout', e);
+      // Don't throw - we've already cleared the main data stores
+    }
 
     Log.info('LogoutService: logout completed');
   }
