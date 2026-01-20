@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../main.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -256,11 +257,12 @@ class VaultDetailScreen extends ConsumerWidget {
   Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {
     if (!context.mounted) return;
 
-    // Show loading indicator
+    // Show loading indicator on root navigator (so it persists even if context becomes unmounted)
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
+      useRootNavigator: true,
+      builder: (dialogContext) => const AlertDialog(
         content: Row(
           children: [
             CircularProgressIndicator(),
@@ -275,8 +277,11 @@ class VaultDetailScreen extends ConsumerWidget {
       final backupService = ref.read(backupServiceProvider);
       await backupService.createAndDistributeBackup(vaultId: vault.id);
 
+      // Close dialog using root navigator key (works even if context is unmounted)
+      navigatorKey.currentState?.pop();
+
+      // Show success message if context is still mounted
       if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Keys distributed successfully!'),
@@ -288,8 +293,11 @@ class VaultDetailScreen extends ConsumerWidget {
         ref.invalidate(vaultProvider(vault.id));
       }
     } catch (e) {
+      // Close dialog using root navigator key (works even if context is unmounted)
+      navigatorKey.currentState?.pop();
+
+      // Show error message if context is still mounted
       if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to distribute keys: $e'),
