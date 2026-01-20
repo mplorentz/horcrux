@@ -16,7 +16,6 @@ enum _StatusVariant {
   planNeedsAttention,
   stewardWaitingKey,
   stewardReady,
-  stewardBlocked,
   recoveryInProgress,
   unknown,
 }
