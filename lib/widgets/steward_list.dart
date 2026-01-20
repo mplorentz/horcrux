@@ -169,13 +169,20 @@ class StewardList extends ConsumerWidget {
             ),
           ] else ...[
             // Steward list with dividers
-            Column(
-              children: [
-                for (int i = 0; i < stewards.length; i++) ...[
-                  _buildStewardItem(context, stewards[i]),
-                  if (i < stewards.length - 1) const Divider(height: 1),
-                ],
-              ],
+            // Only show steward status if current user is the owner
+            // Stewards can't read confirmation events from other stewards
+            Builder(
+              builder: (context) {
+                final isOwner = currentPubkey != null && currentPubkey == vault.ownerPubkey;
+                return Column(
+                  children: [
+                    for (int i = 0; i < stewards.length; i++) ...[
+                      _buildStewardItem(context, stewards[i], isOwner: isOwner),
+                      if (i < stewards.length - 1) const Divider(height: 1),
+                    ],
+                  ],
+                );
+              },
             ),
           ],
         ],
@@ -183,7 +190,11 @@ class StewardList extends ConsumerWidget {
     );
   }
 
-  Widget _buildStewardItem(BuildContext context, StewardInfo steward) {
+  Widget _buildStewardItem(
+    BuildContext context,
+    StewardInfo steward, {
+    required bool isOwner,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -233,7 +244,9 @@ class StewardList extends ConsumerWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ] else if (steward.status != null) ...[
+                ] else if (steward.status != null && isOwner) ...[
+                  // Only show steward status if current user is the owner
+                  // Stewards can't read confirmation events from other stewards
                   Text(
                     steward.status!.label,
                     style: theme.textTheme.bodySmall?.copyWith(
