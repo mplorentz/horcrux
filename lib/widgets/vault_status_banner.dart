@@ -76,7 +76,14 @@ class VaultStatusBanner extends ConsumerWidget {
             accentColor: Color(0xFF7A4A2F), // Umber
             variant: _StatusVariant.recoveryInProgress,
           );
-          return _buildBanner(context, statusData, isOwner, isSteward);
+          // Find the active recovery request to determine who initiated it
+          final activeRecovery = vault.activeRecoveryRequest ??
+              vault.recoveryRequests.firstWhere(
+                (request) => request.status != RecoveryRequestStatus.archived,
+              );
+          final recoveryInitiatorText = _getInitiatorText(vault, activeRecovery.initiatorPubkey);
+          return _buildBanner(context, statusData, isOwner, isSteward,
+              recoveryInitiatorText: recoveryInitiatorText);
         } else if (stewardInitiatedRecovery) {
           const statusData = _StatusData(
             headline: 'Recovery in progress',
@@ -85,7 +92,15 @@ class VaultStatusBanner extends ConsumerWidget {
             accentColor: Color(0xFF7A4A2F), // Umber
             variant: _StatusVariant.recoveryInProgress,
           );
-          return _buildBanner(context, statusData, isOwner, isSteward);
+          // Find the active recovery request to determine who initiated it
+          final activeRecovery = vault.recoveryRequests.firstWhere(
+            (request) =>
+                request.status != RecoveryRequestStatus.archived &&
+                request.initiatorPubkey == currentPubkey,
+          );
+          final recoveryInitiatorText = _getInitiatorText(vault, activeRecovery.initiatorPubkey);
+          return _buildBanner(context, statusData, isOwner, isSteward,
+              recoveryInitiatorText: recoveryInitiatorText);
         }
 
         if (isOwner) {
@@ -306,7 +321,13 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildBanner(BuildContext context, _StatusData statusData, bool isOwner, bool isSteward) {
+  Widget _buildBanner(
+    BuildContext context,
+    _StatusData statusData,
+    bool isOwner,
+    bool isSteward, {
+    String? recoveryInitiatorText,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -336,8 +357,15 @@ class VaultStatusBanner extends ConsumerWidget {
               children: [
                 // Headline
                 Text(statusData.headline, style: theme.textTheme.headlineSmall),
-                // Optional role context (only show if not obvious from context)
-                if (isOwner || isSteward) ...[
+                // Show initiator text for recovery in progress, otherwise show role context
+                if (statusData.variant == _StatusVariant.recoveryInProgress &&
+                    recoveryInitiatorText != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    recoveryInitiatorText,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ] else if (isOwner || isSteward) ...[
                   const SizedBox(height: 4),
                   Text(
                     isOwner ? 'You are the owner' : 'You are a steward',
@@ -353,5 +381,29 @@ class VaultStatusBanner extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Get the text describing who initiated the recovery
+  /// Returns null if the initiator cannot be determined
+  String? _getInitiatorText(Vault vault, String initiatorPubkey) {
+    // Check if the initiator is the owner
+    if (vault.isOwned(initiatorPubkey)) {
+      return 'Initiated by owner';
+    }
+
+    // Try to find the steward in backupConfig
+    if (vault.backupConfig != null) {
+      try {
+        final steward = vault.backupConfig!.stewards.firstWhere(
+          (s) => s.pubkey == initiatorPubkey,
+        );
+        return 'Initiated by ${steward.displayName}';
+      } catch (e) {
+        // Steward not found in backupConfig - return null to hide the text
+      }
+    }
+
+    // Return null if we can't determine who initiated it
+    return null;
   }
 }
