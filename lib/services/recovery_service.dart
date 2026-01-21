@@ -124,13 +124,16 @@ class RecoveryService {
 
     try {
       await _loadViewedNotificationIds();
-      _isInitialized = true;
-      Log.info('RecoveryService initialized');
     } catch (e) {
       Log.error('Error initializing RecoveryService', e);
       _viewedNotificationIds = {};
-      _isInitialized = true;
     }
+
+    _isInitialized = true;
+    Log.info('RecoveryService initialized');
+
+    // Emit existing recovery requests to the notification stream
+    await _emitNotificationUpdate();
   }
 
   /// Load viewed notification IDs from storage
