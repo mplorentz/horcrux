@@ -9,9 +9,22 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/screens/vault_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/shared_preferences_mock.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  final sharedPreferencesMock = SharedPreferencesMock();
+
+  setUpAll(() {
+    sharedPreferencesMock.setUpAll();
+  });
+
+  tearDownAll(() {
+    sharedPreferencesMock.tearDownAll();
+  });
   // Sample test data
   final testPubkey = 'a' * 64; // 64-char hex pubkey
   final otherPubkey = 'b' * 64;
@@ -82,6 +95,11 @@ void main() {
   }
 
   group('VaultDetailScreen Golden Tests', () {
+    setUp(() async {
+      sharedPreferencesMock.clear();
+      SharedPreferences.setMockInitialValues({});
+    });
+
     testGoldens('loading state', (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -566,6 +584,75 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'vault_detail_screen_multiple_devices');
+
+      container.dispose();
+    });
+
+    testGoldens('recovery notification', (tester) async {
+      // Create a recovery request initiated by someone else (not testPubkey)
+      final recoveryRequest = RecoveryRequest(
+        id: 'recovery-1',
+        vaultId: 'test-vault',
+        initiatorPubkey: otherPubkey, // Different from testPubkey
+        requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        status: RecoveryRequestStatus.inProgress,
+        threshold: 2,
+        stewardResponses: {},
+      );
+
+      final ownedVault = Vault(
+        id: 'test-vault',
+        name: 'My Private Keys',
+        content: null,
+        createdAt: DateTime(2024, 10, 1, 10, 30),
+        ownerPubkey: testPubkey,
+        shards: [
+          createTestShard(
+            shardIndex: 0,
+            recipientPubkey: otherPubkey,
+            vaultId: 'test-vault',
+          ),
+          createTestShard(
+            shardIndex: 1,
+            recipientPubkey: thirdPubkey,
+            vaultId: 'test-vault',
+          ),
+        ],
+        recoveryRequests: [],
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(ownedVault)),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+          recoveryStatusProvider.overrideWith((ref, vaultId) {
+            return const AsyncValue.data(
+              RecoveryStatus(
+                hasActiveRecovery: false,
+                canRecover: false,
+                activeRecoveryRequest: null,
+                isInitiator: false,
+              ),
+            );
+          }),
+          // Mock pending recovery requests provider to return the request
+          pendingRecoveryRequestsProvider.overrideWith(
+            (ref) => Stream.value([recoveryRequest]),
+          ),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        container: container,
+        surfaceSize: const Size(375, 1000),
+      );
+
+      await screenMatchesGolden(
+        tester,
+        'vault_detail_screen_with_banner',
+      );
 
       container.dispose();
     });

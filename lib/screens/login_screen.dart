@@ -5,6 +5,7 @@ import '../providers/key_provider.dart';
 import '../utils/validators.dart';
 import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 import '../screens/import_success_screen.dart';
 
 /// Screen for importing existing Nostr keys
@@ -115,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         title: const Text('Login with Nostr Key'),
         centerTitle: false,

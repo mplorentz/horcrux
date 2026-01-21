@@ -124,13 +124,16 @@ class RecoveryService {
 
     try {
       await _loadViewedNotificationIds();
-      _isInitialized = true;
-      Log.info('RecoveryService initialized');
     } catch (e) {
       Log.error('Error initializing RecoveryService', e);
       _viewedNotificationIds = {};
-      _isInitialized = true;
     }
+
+    _isInitialized = true;
+    Log.info('RecoveryService initialized');
+
+    // Emit existing recovery requests to the notification stream
+    await _emitNotificationUpdate();
   }
 
   /// Load viewed notification IDs from storage
@@ -186,20 +189,26 @@ class RecoveryService {
     // Get all recovery requests from vault repository
     final allRequests = await repository.getAllRecoveryRequests();
 
-    // Filter out viewed notifications and requests initiated by the current user
-    final unviewed = allRequests.where((req) {
-      // Exclude viewed notifications
-      if (_viewedNotificationIds!.contains(req.id)) return false;
-
+    // Filter out requests where the current user has already responded
+    // and requests initiated by the current user (steward's own requests)
+    final pendingRequests = allRequests.where((req) {
       // Exclude requests initiated by the current user (steward's own requests)
       if (currentPubkey != null && req.initiatorPubkey == currentPubkey) {
         return false;
       }
 
+      // Exclude requests where the current user has already responded
+      if (currentPubkey != null) {
+        final userResponse = req.stewardResponses[currentPubkey];
+        if (userResponse != null && userResponse.status.isResolved) {
+          return false;
+        }
+      }
+
       return true;
     }).toList();
 
-    _notificationController.add(unviewed);
+    _notificationController.add(pendingRequests);
   }
 
   /// Initiate recovery for a vault
@@ -603,6 +612,9 @@ class RecoveryService {
     // Emit update to stream for real-time UI updates
     _recoveryRequestController.add(updatedRequest);
 
+    // Emit notification update to refresh banner
+    await _emitNotificationUpdate();
+
     Log.info(
       'Updated recovery request $recoveryRequestId with response from ${responderPubkey.substring(0, 8)}... (approved: $approved)',
     );
@@ -654,44 +666,41 @@ class RecoveryService {
       shardData: shardData,
     );
 
-    // Send response via Nostr if approved
-    // For practice requests, we need to get relay URLs from backup config instead of shard data
-    if (approved) {
+    // Send response via Nostr (both approvals and denials)
+    // For denials, we need to get relay URLs from vault backup config or steward's shard data
+    // since we don't have shard data from the approval
+    {
       try {
         List<String> relayUrls = [];
 
-        if (request.isPractice) {
-          // For practice requests, try multiple sources for relay URLs:
-          // 1. Backup config (if available, e.g., for owners)
-          // 2. Shard data from steward's shards (for stewards)
+        // Try to get relay URLs from shard data first (for approvals)
+        if (shardData != null && shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
+          relayUrls = shardData.relayUrls!;
+          Log.info('Using relay URLs from shard data for recovery response');
+        } else {
+          // For denials or when shard data doesn't have relay URLs,
+          // get relay URLs from vault backup config or steward's shard data
           final vault = await repository.getVault(request.vaultId);
-          if (vault?.backupConfig != null && vault!.backupConfig!.relays.isNotEmpty) {
-            relayUrls = vault.backupConfig!.relays;
-            Log.info(
-              'Using relay URLs from backup config for practice request',
-            );
-          } else if (vault != null) {
-            // Fall back to relay URLs from steward's shards
-            final latestShard = vault.mostRecentShard;
-            if (latestShard != null &&
-                latestShard.relayUrls != null &&
-                latestShard.relayUrls!.isNotEmpty) {
-              relayUrls = latestShard.relayUrls!;
-              Log.info(
-                'Using relay URLs from shard data for practice request',
-              );
+          if (vault != null) {
+            // Try backup config first
+            if (vault.backupConfig != null && vault.backupConfig!.relays.isNotEmpty) {
+              relayUrls = vault.backupConfig!.relays;
+              Log.info('Using relay URLs from backup config for recovery response');
+            } else {
+              // Fall back to relay URLs from steward's shards
+              final latestShard = vault.mostRecentShard;
+              if (latestShard != null &&
+                  latestShard.relayUrls != null &&
+                  latestShard.relayUrls!.isNotEmpty) {
+                relayUrls = latestShard.relayUrls!;
+                Log.info('Using relay URLs from steward shard data for recovery response');
+              }
             }
           }
-          if (relayUrls.isEmpty) {
-            Log.warning(
-              'No relay URLs found for practice request (checked backup config and shards)',
-            );
-          }
-        } else if (shardData != null &&
-            shardData.relayUrls != null &&
-            shardData.relayUrls!.isNotEmpty) {
-          // For real recovery, use relay URLs from shard data
-          relayUrls = shardData.relayUrls!;
+        }
+
+        if (relayUrls.isEmpty) {
+          Log.warning('No relay URLs available for sending recovery response');
         }
 
         if (relayUrls.isNotEmpty) {
@@ -702,7 +711,7 @@ class RecoveryService {
             relays: relayUrls,
           );
           Log.info(
-            'Sent recovery response via Nostr for request $recoveryRequestId',
+            'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved)',
           );
         } else {
           Log.warning('No relay URLs available for sending recovery response');
@@ -1054,8 +1063,9 @@ class RecoveryService {
 
   // ========== Notification Methods ==========
 
-  /// Get pending (unviewed) recovery request notifications
+  /// Get pending (unresponded) recovery request notifications
   /// Excludes recovery requests initiated by the current user (steward's own requests)
+  /// and requests where the current user has already responded
   Future<List<RecoveryRequest>> getPendingNotifications() async {
     await initialize();
 
@@ -1064,12 +1074,17 @@ class RecoveryService {
 
     final allRequests = await repository.getAllRecoveryRequests();
     return allRequests.where((request) {
-      // Exclude viewed notifications
-      if (_viewedNotificationIds!.contains(request.id)) return false;
-
       // Exclude requests initiated by the current user (steward's own requests)
       if (currentPubkey != null && request.initiatorPubkey == currentPubkey) {
         return false;
+      }
+
+      // Exclude requests where the current user has already responded
+      if (currentPubkey != null) {
+        final userResponse = request.stewardResponses[currentPubkey];
+        if (userResponse != null && userResponse.status.isResolved) {
+          return false;
+        }
       }
 
       return true;

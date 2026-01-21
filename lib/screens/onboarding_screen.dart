@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 import 'account_choice_screen.dart';
 
 /// Onboarding screen shown when user is not logged in
@@ -9,7 +10,7 @@ class OnboardingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return HorcruxScaffold(
       body: SafeArea(
         bottom: false, // Exclude bottom safe area, let RowButton handle it
         child: Column(

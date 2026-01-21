@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
@@ -91,7 +92,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false, // No back button
         title: const Text('Account Created'),

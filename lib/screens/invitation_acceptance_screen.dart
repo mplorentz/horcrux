@@ -9,6 +9,7 @@ import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for accepting or denying an invitation link
 ///
@@ -34,7 +35,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     );
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(title: const Text('Invitation'), centerTitle: false),
       body: invitationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

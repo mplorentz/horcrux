@@ -9,6 +9,7 @@ import '../services/recovery_service.dart';
 import '../services/logger.dart';
 import '../screens/recovery_status_screen.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Screen to explain the processs for practicing recovery.
 /// This allows vault owners to initiate a practice recovery sesssion.
@@ -22,7 +23,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         title: const Text('Practice Recovery'),
         leading: IconButton(

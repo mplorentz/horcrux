@@ -9,6 +9,7 @@ import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
 import '../widgets/vault_status_banner.dart';
 import '../widgets/vault_owner_display.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Detail/view screen for displaying a vault
 class VaultDetailScreen extends ConsumerWidget {
@@ -62,7 +63,8 @@ class VaultDetailScreen extends ConsumerWidget {
   Widget _buildVaultDetail(BuildContext context, WidgetRef ref, Vault vault) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
-    return Scaffold(
+    return HorcruxScaffold(
+      showNotificationBanner: true,
       appBar: AppBar(
         title: Text(vault.name),
         centerTitle: false,
