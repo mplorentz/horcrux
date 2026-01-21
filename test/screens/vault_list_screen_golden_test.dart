@@ -8,6 +8,8 @@ import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/shard_data.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
+import 'package:horcrux/providers/recovery_provider.dart';
+import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/screens/vault_list_screen.dart';
 import '../helpers/golden_test_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -271,6 +273,40 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'vault_list_screen_multiple_devices');
+
+      container.dispose();
+    });
+
+    testGoldens('recovery notification', (tester) async {
+      // Create a recovery request initiated by someone else (not testPubkey)
+      final recoveryRequest = RecoveryRequest(
+        id: 'recovery-1',
+        vaultId: 'vault-1',
+        initiatorPubkey: otherPubkey, // Different from testPubkey
+        requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        status: RecoveryRequestStatus.inProgress,
+        threshold: 2,
+        stewardResponses: {},
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultListProvider.overrideWith((ref) => Stream.value([ownedVault])),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+          // Mock pending recovery requests provider to return the request
+          pendingRecoveryRequestsProvider.overrideWith(
+            (ref) => Stream.value([recoveryRequest]),
+          ),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
+
+      await screenMatchesGolden(tester, 'vault_list_screen_with_banner');
 
       container.dispose();
     });
