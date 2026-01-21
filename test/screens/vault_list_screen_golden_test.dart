@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
@@ -11,48 +8,21 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/screens/vault_list_screen.dart';
-import '../helpers/golden_test_helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/golden_test_helpers.dart';
+import '../helpers/shared_preferences_mock.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel sharedPreferencesChannel = MethodChannel(
-    'plugins.flutter.io/shared_preferences',
-  );
-  final Map<String, dynamic> sharedPreferencesStore = {};
+  final sharedPreferencesMock = SharedPreferencesMock();
 
   setUpAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-      final args = call.arguments as Map? ?? {};
-      if (call.method == 'getAll') {
-        return Map<String, dynamic>.from(sharedPreferencesStore);
-      } else if (call.method == 'setString') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'getString') {
-        return sharedPreferencesStore[args['key']];
-      } else if (call.method == 'remove') {
-        sharedPreferencesStore.remove(args['key']);
-        return true;
-      } else if (call.method == 'getStringList') {
-        final value = sharedPreferencesStore[args['key']];
-        return value is List ? value : null;
-      } else if (call.method == 'setStringList') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'clear') {
-        sharedPreferencesStore.clear();
-        return true;
-      }
-      return null;
-    });
+    sharedPreferencesMock.setUpAll();
   });
 
   tearDownAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, null);
+    sharedPreferencesMock.tearDownAll();
   });
 
   // Sample test data
@@ -115,7 +85,7 @@ void main() {
 
   group('VaultListScreen Golden Tests', () {
     setUp(() async {
-      sharedPreferencesStore.clear();
+      sharedPreferencesMock.clear();
       SharedPreferences.setMockInitialValues({});
     });
 

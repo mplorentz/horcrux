@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -14,6 +13,7 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import '../fixtures/test_keys.dart';
+import '../helpers/shared_preferences_mock.dart';
 
 import 'invitation_rsvp_format_test.mocks.dart';
 
@@ -27,42 +27,14 @@ import 'invitation_rsvp_format_test.mocks.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel sharedPreferencesChannel = MethodChannel(
-    'plugins.flutter.io/shared_preferences',
-  );
-  final Map<String, dynamic> sharedPreferencesStore = {};
+  final sharedPreferencesMock = SharedPreferencesMock();
 
   setUpAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-      final args = call.arguments as Map? ?? {};
-      if (call.method == 'getAll') {
-        return Map<String, dynamic>.from(sharedPreferencesStore);
-      } else if (call.method == 'setString') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'getString') {
-        return sharedPreferencesStore[args['key']];
-      } else if (call.method == 'remove') {
-        sharedPreferencesStore.remove(args['key']);
-        return true;
-      } else if (call.method == 'getStringList') {
-        final value = sharedPreferencesStore[args['key']];
-        return value is List ? value : null;
-      } else if (call.method == 'setStringList') {
-        sharedPreferencesStore[args['key']] = args['value'];
-        return true;
-      } else if (call.method == 'clear') {
-        sharedPreferencesStore.clear();
-        return true;
-      }
-      return null;
-    });
+    sharedPreferencesMock.setUpAll();
   });
 
   tearDownAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(sharedPreferencesChannel, null);
+    sharedPreferencesMock.tearDownAll();
   });
 
   group('RSVP Event Format Compatibility Tests', () {
@@ -90,7 +62,7 @@ void main() {
       );
 
       // Clear SharedPreferences before each test
-      sharedPreferencesStore.clear();
+      sharedPreferencesMock.clear();
     });
 
     test(
