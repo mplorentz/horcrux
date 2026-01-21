@@ -99,7 +99,6 @@ class VaultStatusBanner extends ConsumerWidget {
   }
 
   Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, Vault vault) {
-
     if (isOwner) {
       return _buildOwnerStatus(context, vault);
     } else if (isSteward) {
