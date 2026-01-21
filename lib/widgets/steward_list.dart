@@ -5,7 +5,6 @@ import '../models/vault.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
-import '../screens/backup_config_screen.dart';
 
 /// Widget for displaying list of stewards who have shards
 class StewardList extends ConsumerWidget {
@@ -110,33 +109,6 @@ class StewardList extends ConsumerWidget {
                   color: colorScheme.onSurface,
                 ),
               ),
-              const Spacer(),
-              // Only show settings button for owner
-              if (currentPubkey != null && currentPubkey == vault.ownerPubkey)
-                InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BackupConfigScreen(vaultId: vault.id),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurface.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      Icons.settings,
-                      color: colorScheme.onSurface,
-                      size: 20,
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 16),
