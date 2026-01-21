@@ -6,7 +6,8 @@ import '../services/recovery_service.dart';
 import 'key_provider.dart';
 
 /// Provider for pending recovery request notifications
-/// Streams live updates of unviewed recovery requests (excluding user's own requests)
+/// Streams live updates of unresponded recovery requests (excluding user's own requests)
+/// Requests remain visible until the current user has responded (approved or denied)
 final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((ref) {
   final service = ref.watch(recoveryServiceProvider);
   return service.notificationStream;
