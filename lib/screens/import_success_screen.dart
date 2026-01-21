@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
 
@@ -14,7 +15,7 @@ class ImportSuccessScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false, // No back button
         title: const Text(

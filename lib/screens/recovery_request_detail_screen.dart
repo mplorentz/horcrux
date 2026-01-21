@@ -8,6 +8,7 @@ import '../services/logger.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for viewing and responding to a recovery request
 class RecoveryRequestDetailScreen extends ConsumerStatefulWidget {
@@ -160,7 +161,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final request = widget.recoveryRequest;
     final vaultAsync = ref.watch(vaultProvider(request.vaultId));
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(title: const Text('Recovery Request'), centerTitle: false),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -6,6 +6,7 @@ import '../providers/vault_provider.dart';
 import '../services/logout_service.dart';
 import '../services/logger.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -188,7 +189,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       }
     });
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         title: const Text('Account Management'),
         centerTitle: false,

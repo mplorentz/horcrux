@@ -5,6 +5,13 @@ import 'vault_provider.dart';
 import '../services/recovery_service.dart';
 import 'key_provider.dart';
 
+/// Provider for pending recovery request notifications
+/// Streams live updates of unviewed recovery requests (excluding user's own requests)
+final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((ref) {
+  final service = ref.watch(recoveryServiceProvider);
+  return service.notificationStream;
+});
+
 /// Provider for recovery status of a specific vault
 /// This provides information about whether recovery is available and active recovery requests
 final recoveryStatusProvider = Provider.family<AsyncValue<RecoveryStatus>, String>((

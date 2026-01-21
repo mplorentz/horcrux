@@ -6,6 +6,7 @@ import '../providers/vault_provider.dart';
 import '../services/recovery_service.dart';
 import '../widgets/recovery_progress_widget.dart';
 import '../widgets/recovery_stewards_widget.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for displaying recovery request status and steward responses
 class RecoveryStatusScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
       recoveryRequestByIdProvider(widget.recoveryRequestId),
     );
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         title: requestAsync.when(
           data: (request) => Text(

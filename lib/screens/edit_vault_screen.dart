@@ -4,6 +4,7 @@ import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
+import '../widgets/horcrux_scaffold.dart';
 
 /// Edit existing vault screen
 class EditVaultScreen extends ConsumerStatefulWidget {
@@ -52,13 +53,13 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
   @override
   Widget build(BuildContext context) {
     if (_vault == null) {
-      return Scaffold(
+      return HorcruxScaffold(
         appBar: AppBar(title: const Text('Vault Not Found')),
         body: const Center(child: Text('This vault no longer exists.')),
       );
     }
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(
         title: const Text('Edit Vault'),
         centerTitle: false,

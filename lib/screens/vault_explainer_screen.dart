@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_scaffold.dart';
 import 'vault_create_screen.dart';
 
 /// Screen explaining vault terminology and setup process
@@ -20,7 +21,7 @@ class VaultExplainerScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(title: const Text('Create Vault'), centerTitle: false),
       body: Column(
         children: [

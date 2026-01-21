@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/row_button.dart';
-import 'recovery_notification_overlay.dart';
+import '../widgets/horcrux_scaffold.dart';
 import 'vault_explainer_screen.dart';
 import 'vault_detail_screen.dart';
 import 'settings_screen.dart';
@@ -17,7 +17,8 @@ class VaultListScreen extends ConsumerWidget {
     // Watch the vault stream provider
     final vaultsAsync = ref.watch(vaultListProvider);
 
-    return Scaffold(
+    return HorcruxScaffold(
+      showNotificationBanner: true,
       appBar: AppBar(
         title: const Text('Horcrux'),
         centerTitle: false,
@@ -122,13 +123,6 @@ class VaultListScreen extends ConsumerWidget {
                       },
                     );
                   },
-                ),
-                // Recovery notification overlay (inside the Stack)
-                const Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: RecoveryNotificationOverlay(),
                 ),
               ],
             ),

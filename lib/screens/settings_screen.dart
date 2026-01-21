@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/debug_info_sheet.dart';
+import '../widgets/horcrux_scaffold.dart';
 import 'relay_management_screen.dart';
 import 'account_management_screen.dart';
 
@@ -21,7 +22,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return HorcruxScaffold(
       appBar: AppBar(title: const Text('Settings'), centerTitle: false),
       body: ListView(
         children: [
