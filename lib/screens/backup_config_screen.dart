@@ -714,10 +714,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _hasUnsavedChanges = true;
         });
 
+        // Copy invitation link to clipboard
+        final url = result.invitation.toUrl();
+        Clipboard.setData(ClipboardData(text: url));
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Invitation link generated and steward added!'),
+            content: Text('Invitation link copied to clipboard'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
