@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/key_provider.dart';
 import '../providers/vault_provider.dart';
 import '../services/logout_service.dart';
+import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -111,6 +112,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       ref.invalidate(currentPublicKeyBech32Provider);
       ref.invalidate(isLoggedInProvider);
       ref.invalidate(vaultListProvider);
+      ref.invalidate(ndkServiceProvider); // Reset NDK service to clear relay connections
 
       if (!mounted) return;
 
