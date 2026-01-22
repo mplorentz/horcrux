@@ -162,7 +162,14 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultAsync = ref.watch(vaultProvider(request.vaultId));
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Recovery Request'), centerTitle: false),
+      appBar: AppBar(
+        title: const Text(
+          'Recovery Request',
+          overflow: TextOverflow.visible,
+          maxLines: 2,
+        ),
+        centerTitle: false,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : vaultAsync.when(
@@ -234,6 +241,38 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultName = vault?.name ?? 'Unknown Vault';
     final ownerName = vault?.ownerName ?? 'Unknown Owner';
 
+    // Get initiator contact info from vault shard data
+    String? initiatorContactInfo;
+    if (vault != null) {
+      // First check backupConfig
+      if (vault.backupConfig != null) {
+        try {
+          final steward = vault.backupConfig!.stewards.firstWhere(
+            (s) => s.pubkey == request.initiatorPubkey,
+          );
+          initiatorContactInfo = steward.contactInfo;
+        } catch (e) {
+          // Steward not found in backupConfig
+        }
+      }
+
+      // Fallback to shard data
+      if (initiatorContactInfo == null) {
+        final shard = vault.mostRecentShard;
+        if (shard?.stewards != null) {
+          for (final steward in shard!.stewards!) {
+            if (steward['pubkey'] == request.initiatorPubkey) {
+              initiatorContactInfo = steward['contactInfo'];
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Get threshold from request
+    final threshold = request.threshold;
+
     return Column(
       children: [
         Expanded(
@@ -287,25 +326,39 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                   ),
                   const SizedBox(height: 16),
                 ],
-                // Alert card (neutral colors, no orange)
+                // Alert card with updated messaging
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.warning_amber,
-                          color: Theme.of(context).colorScheme.secondary,
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                initiatorName != null
+                                    ? '$initiatorName is trying to open $ownerName\'s vault named $vaultName.'
+                                    : 'Someone is trying to open $ownerName\'s vault named $vaultName.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Someone is requesting recovery of a vault you have a key for',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          initiatorName != null
+                              ? 'You hold one of the keys to this vault. If you approve this request $initiatorName will receive your key. They need $threshold total keys to open the vault.'
+                              : 'You hold one of the keys to this vault. If you approve this request the requester will receive your key. They need $threshold total keys to open the vault.',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
@@ -328,9 +381,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                                 color: Theme.of(context).colorScheme.secondary,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Recovery Instructions (from owner)',
-                                style: Theme.of(context).textTheme.titleMedium,
+                              Expanded(
+                                child: Text(
+                                  'Here are the instructions that $ownerName gave when setting up the vault:',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
                               ),
                             ],
                           ),
@@ -346,70 +401,54 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                   const SizedBox(height: 16),
                 ],
 
-                // Request details
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Request Details',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoRow('Vault Name', vaultName),
-                        _buildInfoRow('Owner Name', ownerName),
-                      ],
+                // Contact info section (if available)
+                if (initiatorContactInfo != null &&
+                    initiatorContactInfo.isNotEmpty &&
+                    initiatorName != null) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.contact_mail,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Contact Information',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Here is the contact info for $initiatorName. We recommend getting in touch with them to confirm their identity.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              initiatorContactInfo,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Initiator info
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Initiator',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              child: Icon(
-                                Icons.person,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (initiatorName != null)
-                                    Text(
-                                      initiatorName,
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                  const SizedBox(height: 16),
+                ],
               ],
             ),
           ),
@@ -419,6 +458,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         if (request.status.isActive)
           RowButtonStack(
             buttons: [
+              RowButtonConfig(
+                onPressed: () => Navigator.pop(context),
+                icon: Icons.arrow_back,
+                text: 'Go Back',
+              ),
               RowButtonConfig(
                 onPressed: _showDenialDialog,
                 icon: Icons.cancel,
@@ -432,20 +476,6 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
             ],
           ),
       ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
     );
   }
 }
