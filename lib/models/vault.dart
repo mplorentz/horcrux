@@ -25,7 +25,6 @@ class VaultBackupConstraints {
 
 /// Vault state enum indicating the current state of a vault
 enum VaultState {
-  recovery, // Active recovery in progress
   owned, // Has decrypted content
   steward, // Has shard but no content
   awaitingKey, // Invitee has accepted invitation but hasn't received shard yet
@@ -53,14 +52,14 @@ class Vault with _$Vault {
   const Vault._();
 
   /// Get the state of this vault based on priority:
-  /// 1. Recovery (if has active recovery request)
-  /// 2. Owned (if has decrypted content)
-  /// 3. Steward (if has shards but no content)
-  /// 4. Awaiting key (if no content and no shards - invitee waiting for shard)
+  /// 1. Owned (if has decrypted content)
+  /// 2. Steward (if has shards but no content)
+  /// 3. Awaiting key (if no content and no shards - invitee waiting for shard)
+  ///
+  /// Note: Recovery state is user-specific (only for the initiator) and should be checked
+  /// using recoveryStatusProvider rather than vault.state, since the vault model doesn't
+  /// have access to the current user's context.
   VaultState get state {
-    if (hasActiveRecovery) {
-      return VaultState.recovery;
-    }
     if (content != null) {
       return VaultState.owned;
     }

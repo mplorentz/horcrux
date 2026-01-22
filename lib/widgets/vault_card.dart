@@ -29,13 +29,11 @@ class VaultCard extends ConsumerWidget {
     final textTheme = theme.textTheme;
 
     // Determine icon based on vault state
+    // Note: Recovery state is user-specific and not part of vault.state anymore
     IconData stateIcon;
     Color? iconColor;
 
     switch (vault.state) {
-      case VaultState.recovery:
-        stateIcon = Icons.refresh;
-        break;
       case VaultState.owned:
         stateIcon = Icons.lock_open;
         break;
