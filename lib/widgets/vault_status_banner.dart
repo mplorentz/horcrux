@@ -304,8 +304,8 @@ class VaultStatusBanner extends ConsumerWidget {
     return _buildBanner(
       context,
       const _StatusData(
-        headline: 'Vault status',
-        subtext: 'You have the latest key for this vault.',
+        headline: 'Uknown status',
+        subtext: 'This is a bug.',
         icon: Icons.key,
         accentColor: Color(0xFF676F62), // Secondary text color
         variant: _StatusVariant.stewardReady,
