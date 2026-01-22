@@ -20,6 +20,7 @@ import '../utils/validators.dart';
 import 'invitation_sending_service.dart';
 import 'ndk_service.dart';
 import 'relay_scan_service.dart';
+import 'backup_service.dart';
 
 /// Provider for InvitationService
 final invitationServiceProvider = Provider<InvitationService>((ref) {
@@ -29,6 +30,7 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
     ref.read(loginServiceProvider),
     () => ref.read(ndkServiceProvider),
     ref.read(relayScanServiceProvider),
+    ref.read(backupServiceProvider),
   );
 
   // Properly clean up when the provider is disposed
@@ -46,6 +48,7 @@ class InvitationService {
   final LoginService _loginService;
   final NdkService Function() _getNdkService;
   final RelayScanService _relayScanService;
+  final BackupService _backupService;
 
   // Stream controller for notifying listeners when invitations change
   final StreamController<void> _invitationsChangedController = StreamController<void>.broadcast();
@@ -60,6 +63,7 @@ class InvitationService {
     this._loginService,
     this._getNdkService,
     this._relayScanService,
+    this._backupService,
   );
 
   /// Stream that emits whenever invitations change
@@ -662,6 +666,42 @@ class InvitationService {
     } catch (e) {
       Log.warning('Error updating steward status after RSVP: $e');
       // Don't fail RSVP processing if status update fails
+    }
+
+    // Check if we should auto-distribute keys now that all stewards have accepted
+    // This handles the case where user adds stewards via invite, saves recovery plan,
+    // then stewards accept - we should auto-distribute when all stewards are ready
+    try {
+      final backupConfig = await repository.getBackupConfig(invitation.vaultId);
+      final vault = await repository.getVault(invitation.vaultId);
+      
+      if (backupConfig != null && vault != null && vault.content != null) {
+        // Check if all stewards now have pubkeys (can distribute)
+        if (backupConfig.canDistribute) {
+          // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
+          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
+          final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
+              stewardsWithPubkeys.every(
+                (s) => s.status == StewardStatus.awaitingKey,
+              );
+          
+          if (allAwaitingKey) {
+            Log.info(
+              'All stewards are awaitingKey and can distribute - triggering auto-distribution for vault ${invitation.vaultId}',
+            );
+            try {
+              await _backupService.createAndDistributeBackup(vaultId: invitation.vaultId);
+              Log.info('Auto-distributed keys after steward acceptance');
+            } catch (e) {
+              Log.error('Failed to auto-distribute keys after steward acceptance', e);
+              // Don't fail RSVP processing if auto-distribution fails
+            }
+          }
+        }
+      }
+    } catch (e) {
+      Log.warning('Error checking for auto-distribution after RSVP: $e');
+      // Don't fail RSVP processing if auto-distribution check fails
     }
 
     // Notify listeners
