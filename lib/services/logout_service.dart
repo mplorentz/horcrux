@@ -41,6 +41,17 @@ class LogoutService {
   Future<void> logout() async {
     Log.info('LogoutService: clearing all vault data and keys');
 
+    // Stop relay scanning first to stop NDK subscriptions
+    // This must be done before invalidating the NDK provider
+    try {
+      await _relayScanService.stopRelayScanning();
+      Log.info('LogoutService: stopped relay scanning');
+    } catch (e) {
+      Log.error('Error stopping relay scanning during logout', e);
+      // Continue with logout even if this fails
+    }
+
+    // Clear all service data
     await _vaultRepository.clearAll();
     await _vaultShareService.clearAll();
     await _recoveryService.clearAll();
