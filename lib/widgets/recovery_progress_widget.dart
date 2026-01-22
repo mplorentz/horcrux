@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
-import '../services/recovery_service.dart';
 
 /// Widget for displaying recovery progress and status
 class RecoveryProgressWidget extends ConsumerWidget {
@@ -128,26 +127,6 @@ class RecoveryProgressWidget extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _performRecovery(context, ref),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(16),
-                          ),
-                          icon: const Icon(Icons.lock_open),
-                          label: const Text(
-                            'Open Vault',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -182,106 +161,5 @@ class RecoveryProgressWidget extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _performRecovery(BuildContext context, WidgetRef ref) async {
-    // Get the recovery request to find the vault
-    final recoveryService = ref.read(recoveryServiceProvider);
-    final request = await recoveryService.getRecoveryRequest(recoveryRequestId);
-    if (request == null) return;
-
-    // Check if this is a practice recovery
-    if (request.isPractice) {
-      if (!context.mounted) return;
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Success!'),
-          content: const Text(
-            "Because this is only practice mode we can't show the real vault contents.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Get the vault to access owner name
-    final vaultAsync = ref.read(vaultProvider(request.vaultId));
-    final vault = vaultAsync.valueOrNull;
-    final ownerName = vault?.ownerName ?? 'the owner';
-
-    if (!context.mounted) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Recover Vault'),
-        content: Text(
-          'This will recover and unlock $ownerName\'s vault using the collected keys. '
-          'The vault contents will now be displayed. Continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Recover'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      // Perform the recovery
-      final service = ref.read(recoveryServiceProvider);
-      final content = await service.performRecovery(recoveryRequestId);
-
-      if (context.mounted) {
-        // Show the recovered content in a dialog
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Vault Recovered!'),
-            content: SingleChildScrollView(
-              child: SelectableText(
-                content,
-                style: const TextStyle(fontFamily: 'monospace'),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vault successfully recovered!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 }

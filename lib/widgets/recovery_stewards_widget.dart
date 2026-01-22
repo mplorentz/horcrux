@@ -117,29 +117,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
     // Fallback: use stewards from shards
     final shard = vault.mostRecentShard;
     if (shard != null) {
-      final stewards = <_StewardInfo>[];
-
-      // Add owner if ownerName is present
-      if (vault.ownerName != null) {
-        final response = request.stewardResponses[shard.creatorPubkey];
-        stewards.add(
-          _StewardInfo(
-            pubkey: shard.creatorPubkey,
-            name: vault.ownerName,
-            response: response,
-          ),
-        );
-      } else if (shard.ownerName != null) {
-        // Fallback to shard ownerName
-        final response = request.stewardResponses[shard.creatorPubkey];
-        stewards.add(
-          _StewardInfo(
-            pubkey: shard.creatorPubkey,
-            name: shard.ownerName,
-            response: response,
-          ),
-        );
-      }
+      final stewardsMap = <String, _StewardInfo>{};
 
       // Add stewards - now a list of maps with name, pubkey, and optionally contactInfo
       if (shard.stewards != null) {
@@ -149,19 +127,35 @@ class RecoveryStewardsWidget extends ConsumerWidget {
           final stewardContactInfo = steward['contactInfo'];
           if (stewardPubkey == null) continue;
 
+          // Skip if this is the owner and we already have owner info
+          final isOwner = stewardPubkey == vault.ownerPubkey;
+
           final response = request.stewardResponses[stewardPubkey];
-          stewards.add(
-            _StewardInfo(
-              pubkey: stewardPubkey,
-              name: stewardName,
-              contactInfo: stewardContactInfo,
-              response: response,
-            ),
+          stewardsMap[stewardPubkey] = _StewardInfo(
+            pubkey: stewardPubkey,
+            name: stewardName ??
+                (isOwner ? vault.ownerName : null) ??
+                (isOwner ? shard.ownerName : null),
+            contactInfo: stewardContactInfo,
+            response: response,
           );
         }
       }
 
-      return stewards;
+      // If owner is not in stewards list but has a name, add them
+      if (!stewardsMap.containsKey(vault.ownerPubkey)) {
+        final ownerName = vault.ownerName ?? shard.ownerName;
+        if (ownerName != null) {
+          final response = request.stewardResponses[vault.ownerPubkey];
+          stewardsMap[vault.ownerPubkey] = _StewardInfo(
+            pubkey: vault.ownerPubkey,
+            name: ownerName,
+            response: response,
+          );
+        }
+      }
+
+      return stewardsMap.values.toList();
     }
 
     return [];
@@ -200,17 +194,6 @@ class RecoveryStewardsWidget extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (info.name != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '${info.pubkey.substring(0, 16)}...',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
                 if (info.contactInfo != null && info.contactInfo!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(

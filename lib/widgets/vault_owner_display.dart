@@ -7,8 +7,13 @@ import '../providers/key_provider.dart';
 /// Widget that displays the vault owner information above the status banner
 class VaultOwnerDisplay extends ConsumerWidget {
   final Vault vault;
+  final bool includePadding;
 
-  const VaultOwnerDisplay({super.key, required this.vault});
+  const VaultOwnerDisplay({
+    super.key,
+    required this.vault,
+    this.includePadding = true,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,56 +37,62 @@ class VaultOwnerDisplay extends ConsumerWidget {
           ownerDisplayName = Helpers.encodeBech32(vault.ownerPubkey, 'npub');
         }
 
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              // Icon in square background with rounded corners
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.person,
-                  size: 20,
-                  color: colorScheme.onSurface,
-                ),
+        final content = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Owner',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
-              const SizedBox(width: 12),
-              // Text content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Owner',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      ownerDisplayName,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onSurface,
-                        fontFamily: ownerDisplayName.startsWith('npub') ? 'RobotoMono' : null,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              ownerDisplayName,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurface,
+                fontFamily: ownerDisplayName.startsWith('npub') ? 'RobotoMono' : null,
               ),
-            ],
-          ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         );
+
+        if (includePadding) {
+          return Container(
+            width: double.infinity,
+            decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // Icon in square background with rounded corners
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    size: 20,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Text content
+                Expanded(
+                  child: content,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return content;
       },
     );
   }
