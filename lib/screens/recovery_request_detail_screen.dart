@@ -358,7 +358,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                           initiatorName != null
                               ? 'You hold one of the keys to this vault. If you approve this request $initiatorName will receive your key. They need $threshold total keys to open the vault.'
                               : 'You hold one of the keys to this vault. If you approve this request the requester will receive your key. They need $threshold total keys to open the vault.',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
@@ -383,7 +383,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Here are the instructions that $ownerName shared when setting up the vault:',
+                                  'Here are the instructions that $ownerName gave when setting up the vault:',
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),

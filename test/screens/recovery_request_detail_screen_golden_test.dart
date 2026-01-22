@@ -169,7 +169,11 @@ void main() {
         instructions:
             'Please verify the requester\'s identity before approving. Contact me at alice@example.com if you have any questions.',
         stewards: [
-          createSteward(pubkey: initiatorPubkey, name: 'Alice'),
+          createSteward(
+            pubkey: initiatorPubkey,
+            name: 'Alice',
+            contactInfo: 'Email: alice@example.com\nPhone: +1 (555) 123-4567\nSignal: alice.signal',
+          ),
           createSteward(pubkey: testPubkey, name: 'Bob'),
           createSteward(pubkey: otherStewardPubkey, name: 'Charlie'),
         ],
