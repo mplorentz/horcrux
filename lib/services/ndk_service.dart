@@ -749,11 +749,19 @@ class NdkService {
   }
 
   /// Dispose of NDK resources
+  /// This stops all listening, closes subscriptions, and cleans up resources
   Future<void> dispose() async {
-    await _closeSubscriptions();
+    // Stop listening to all subscriptions first
+    await stopListening();
+    
+    // Close event streams
     await _recoveryRequestController.close();
     await _recoveryResponseController.close();
+    
+    // Dispose publish service
     await _publishService.dispose();
+    
+    // Clear state
     _activeRelays.clear();
     _ndk = null;
     _isInitialized = false;
