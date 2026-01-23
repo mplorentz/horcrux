@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:marionette_flutter/marionette_flutter.dart';
 import 'providers/key_provider.dart';
 import 'services/logger.dart';
 import 'screens/vault_list_screen.dart';
@@ -11,6 +13,13 @@ import 'widgets/theme.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  // Initialize Marionette only in debug mode
+  if (kDebugMode) {
+    MarionetteBinding.ensureInitialized();
+  } else {
+    WidgetsFlutterBinding.ensureInitialized();
+  }
+
   runApp(
     // Wrap the entire app with ProviderScope to enable Riverpod
     const ProviderScope(child: HorcruxApp()),
