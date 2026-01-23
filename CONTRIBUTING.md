@@ -3,6 +3,8 @@ Install uvx `curl -LsSf https://astral.sh/uv/install.sh | sh`
 Install spec-kit
 Install Nostrbook MCP
 Install flutter
+flutter pub get
+dart pub global activate marionette_mcp
 
 ## Code Generation with Freezed
 
