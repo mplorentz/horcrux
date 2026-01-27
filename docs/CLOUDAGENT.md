@@ -15,14 +15,16 @@ This Docker setup provides a complete environment for running Cursor Cloud Agent
 
 ### 1. Build the Docker Image
 
+The Dockerfile and docker-compose.yml are located in `.cursor/` for use with Cursor Cloud Agent:
+
 ```bash
-docker-compose build
+docker-compose -f .cursor/docker-compose.yml build
 ```
 
 ### 2. Start the Container
 
 ```bash
-docker-compose up -d
+docker-compose -f .cursor/docker-compose.yml up -d
 ```
 
 ### 3. Install Dependencies (First Time Only)
@@ -162,8 +164,8 @@ docker exec horcrux-cursor-agent bash -c "
 The VM service port needs to be accessible from outside the container. The Docker Compose file exposes ports 8181-8185. Flutter will auto-select a port when starting - check the logs or use `./scripts/get-vm-uri.sh` to find which port it's using.
 
 **Important**: If Flutter chooses a port outside the 8181-8185 range, you'll need to:
-1. Add that port to the `ports` section in `docker-compose.yml`
-2. Restart the container: `docker-compose restart`
+1. Add that port to the `ports` section in `.cursor/docker-compose.yml`
+2. Restart the container: `docker-compose -f .cursor/docker-compose.yml restart`
 
 ### Local Access (Same Machine)
 
@@ -184,7 +186,7 @@ If Cursor Cloud Agent is running on a different machine:
    ```
    Then connect to `ws://localhost:8181/ws`
 
-3. **Option 3: Host Networking (Linux only)** - For Linux hosts, you can use host networking mode by modifying `docker-compose.yml`:
+3. **Option 3: Host Networking (Linux only)** - For Linux hosts, you can use host networking mode by modifying `.cursor/docker-compose.yml`:
    ```yaml
    network_mode: host
    ```
@@ -256,8 +258,8 @@ If you see this error, it means a required pkg-config package is missing. To dia
 
 3. **Rebuild the container** after updating the Dockerfile:
    ```bash
-   docker-compose build --no-cache
-   docker-compose up -d
+   docker-compose -f .cursor/docker-compose.yml build --no-cache
+   docker-compose -f .cursor/docker-compose.yml up -d
    ```
 
 4. **Check plugin-specific requirements**: Some Flutter plugins may require additional packages. Check the plugin's documentation or CMakeLists.txt files.
@@ -279,7 +281,7 @@ If Marionette MCP cannot connect to the VM service:
    ```
 
 2. **Verify Flutter is binding correctly**: Flutter's VM service binds to `127.0.0.1` by default, which can cause issues with Docker port forwarding. The VM service may reject connections that don't appear to come from localhost:
-   - **On Linux hosts**: Try using host networking mode by adding `network_mode: host` to `docker-compose.yml` and removing the `ports` section
+   - **On Linux hosts**: Try using host networking mode by adding `network_mode: host` to `.cursor/docker-compose.yml` and removing the `ports` section
    - **On macOS/Windows**: Docker port forwarding may not work reliably due to Flutter's localhost-only binding. Consider:
      - Running Marionette MCP inside the container (if possible)
      - Using SSH port forwarding to the Docker host
@@ -330,7 +332,7 @@ If VNC client hangs or won't connect:
 
 ### Port Already in Use
 
-If ports 8181-8200 or 5900 are already in use, modify `docker-compose.yml` to use different ports.
+If ports 8181-8200 or 5900 are already in use, modify `.cursor/docker-compose.yml` to use different ports.
 
 ## Development Workflow
 
@@ -343,12 +345,12 @@ If ports 8181-8200 or 5900 are already in use, modify `docker-compose.yml` to us
 
 Stop and remove containers:
 ```bash
-docker-compose down
+docker-compose -f .cursor/docker-compose.yml down
 ```
 
 Remove volumes (clears Flutter/pub cache):
 ```bash
-docker-compose down -v
+docker-compose -f .cursor/docker-compose.yml down -v
 ```
 
 ## Notes

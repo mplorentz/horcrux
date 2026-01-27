@@ -4,7 +4,7 @@ services:
   cursor-cloud-agent:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: .cursor/Dockerfile
     container_name: horcrux-cursor-agent
     volumes:
       # Mount the project directory for live code changes

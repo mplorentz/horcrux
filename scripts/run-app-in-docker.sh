@@ -8,7 +8,7 @@ CONTAINER_NAME="horcrux-cursor-agent"
 # Check if container is running
 if ! docker ps | grep -q "$CONTAINER_NAME"; then
     echo "Error: Container $CONTAINER_NAME is not running."
-    echo "Start it with: docker-compose up -d"
+    echo "Start it with: docker-compose -f .cursor/docker-compose.yml up -d"
     exit 1
 fi
 
