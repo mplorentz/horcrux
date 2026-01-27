@@ -674,17 +674,18 @@ class InvitationService {
     try {
       final backupConfig = await repository.getBackupConfig(invitation.vaultId);
       final vault = await repository.getVault(invitation.vaultId);
-      
+
       if (backupConfig != null && vault != null && vault.content != null) {
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
-          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
+          final stewardsWithPubkeys =
+              backupConfig.stewards.where((s) => s.pubkey != null).toList();
           final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
               stewardsWithPubkeys.every(
                 (s) => s.status == StewardStatus.awaitingKey,
               );
-          
+
           if (allAwaitingKey) {
             Log.info(
               'All stewards are awaitingKey and can distribute - triggering auto-distribution for vault ${invitation.vaultId}',
