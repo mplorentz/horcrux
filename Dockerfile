@@ -1,4 +1,5 @@
-# Dockerfile for Cursor Cloud Agent
+# Dockerfile for development with Cursor Cloud Agent
+# Not suitable for production deployment
 # Includes Dart/Flutter, Nostrbook MCP, and Marionette MCP
 
 FROM ubuntu:22.04
@@ -51,6 +52,8 @@ RUN apt-get update && apt-get install -y \
     libgdk-pixbuf2.0-0 \
     # Virtual display for headless operation
     xvfb \
+    # VNC server for remote desktop access
+    x11vnc \
     # Screenshot tools
     x11-apps \
     imagemagick \
@@ -83,8 +86,11 @@ RUN npx -y @nostrbook/mcp@latest --help || true
 # Set up working directory
 WORKDIR /workspace
 
-# Expose port for VM service
+# Expose ports
+# VM service
 EXPOSE 8181
+# VNC server
+EXPOSE 5900
 
 # Set up Xvfb display
 ENV DISPLAY=:99

@@ -20,6 +20,7 @@ services:
       # Also expose common Flutter VM service ports in case direct connection works
       - "8181:8181"
       - "9100:9100"  # DevTools port
+      - "5900:5900"  # VNC server (for visual testing)
     environment:
       - DISPLAY=:99
       - FLUTTER_VM_SERVICE_PORT=8181

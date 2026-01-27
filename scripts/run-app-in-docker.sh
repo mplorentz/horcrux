@@ -28,12 +28,77 @@ docker exec "$CONTAINER_NAME" bash -c '
     echo "Cleanup complete" >> /tmp/flutter_run.log
 ' || echo "Cleanup completed (some processes may not have existed)"
 
-# Start Xvfb if not running
+# Start Xvfb if not running (or restart if resolution changed)
 echo "Starting Xvfb..."
 docker exec "$CONTAINER_NAME" bash -c "
+    # Check if Xvfb is running with correct resolution
+    if pgrep -x Xvfb > /dev/null; then
+        # Check current resolution
+        CURRENT_RES=\$(xdpyinfo -display :99 2>/dev/null | grep dimensions | awk '{print \$2}' || echo '')
+        if [ \"\$CURRENT_RES\" != \"600x1024\" ]; then
+            echo 'Restarting Xvfb with portrait resolution (600x1024)...'
+            pkill -x Xvfb
+            sleep 1
+        else
+            echo 'Xvfb already running with correct resolution'
+        fi
+    fi
+    
     if ! pgrep -x Xvfb > /dev/null; then
-        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        # Use portrait orientation: 600x1024 (phone-like aspect ratio)
+        Xvfb :99 -screen 0 600x1024x24 > /dev/null 2>&1 &
         sleep 2
+        echo 'Xvfb started with resolution 600x1024 (portrait)'
+    fi
+"
+
+# Start VNC server if not running
+echo "Starting VNC server..."
+docker exec "$CONTAINER_NAME" bash -c "
+    # Kill any existing VNC server to ensure clean start
+    pkill -x x11vnc 2>/dev/null || true
+    sleep 1
+    
+    export DISPLAY=:99
+    
+    # Wait for Xvfb to be ready
+    for i in {1..10}; do
+        if xdpyinfo -display :99 > /dev/null 2>&1; then
+            break
+        fi
+        sleep 0.5
+    done
+    
+    # Set VNC password to 'horcrux' (for development)
+    # Store password in /tmp/.vnc_passwd
+    x11vnc -storepasswd horcrux /tmp/.vnc_passwd > /dev/null 2>&1
+    
+    # Start VNC server with basic, reliable flags
+    x11vnc -display :99 \
+        -rfbauth /tmp/.vnc_passwd \
+        -listen 0.0.0.0 \
+        -rfbport 5900 \
+        -forever \
+        -shared \
+        -noxdamage \
+        -noxfixes \
+        -noxrecord \
+        -noxrandr \
+        -noxinerama \
+        -cursor most \
+        > /tmp/x11vnc.log 2>&1 &
+    
+    VNC_PID=\$!
+    sleep 2
+    
+    # Verify VNC server is listening
+    if netstat -tlnp 2>/dev/null | grep -q ':5900' || ss -tlnp 2>/dev/null | grep -q ':5900'; then
+        echo 'VNC server started successfully on port 5900'
+        echo 'Connect with any VNC client to: localhost:5900'
+        echo 'Password: horcrux'
+    else
+        echo 'WARNING: VNC server may not have started properly'
+        echo 'Check logs: docker exec $CONTAINER_NAME cat /tmp/x11vnc.log'
     fi
 "
 

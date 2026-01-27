@@ -71,6 +71,41 @@ mcp_horcrux_app-marionette_connect with uri: ws://localhost:8181/ws
 - Use `localhost:8181` when connecting from the host
 - If accessing remotely, use the Docker host's IP address instead of `localhost`
 
+### 7. View the App via VNC (Optional)
+
+A VNC server is automatically started when you run `./scripts/run-app-in-docker.sh`. You can connect to see the Flutter app visually:
+
+**Connect with a VNC client:**
+- **macOS**: Use built-in Screen Sharing app or [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
+- **Linux**: Use `vinagre`, `remmina`, or `vncviewer`
+- **Windows**: Use [TightVNC Viewer](https://www.tightvnc.com/download.php) or [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
+
+**Connection details:**
+- **Host**: `localhost` (or your Docker host IP if remote)
+- **Port**: `5900`
+- **Password**: `horcrux` (development password)
+
+**Example connection:**
+```bash
+# macOS - Option 1: RealVNC Viewer (recommended, more reliable)
+# Download from: https://www.realvnc.com/en/connect/download/viewer/
+# Then connect to: localhost:5900 with password: horcrux
+
+# macOS - Option 2: Screen Sharing (may have compatibility issues)
+open vnc://localhost:5900
+# If Screen Sharing hangs, try a different VNC client
+
+# macOS - Option 3: Command line with vncviewer (if installed)
+vncviewer localhost:5900
+
+# Linux command line
+vncviewer localhost:5900
+
+# Windows: Use TightVNC Viewer or RealVNC Viewer
+```
+
+**Note**: The VNC server displays the Xvfb virtual display (`:99`) where the Flutter app is running. The display is configured with a portrait orientation (600x1024 pixels) to better match mobile app layouts. This allows you to visually test the app's UI on Linux.
+
 ## Manual Usage
 
 ### Exec into the Container
@@ -99,6 +134,27 @@ docker exec horcrux-cursor-agent tail -f /tmp/flutter_run.log
 
 ```bash
 docker exec horcrux-cursor-agent pkill -f "flutter run"
+```
+
+### Stop VNC Server
+
+```bash
+docker exec horcrux-cursor-agent pkill -x x11vnc
+```
+
+### Restart VNC Server
+
+```bash
+docker exec horcrux-cursor-agent bash -c "
+    pkill -x x11vnc 2>/dev/null || true
+    sleep 1
+    export DISPLAY=:99
+    x11vnc -storepasswd horcrux /tmp/.vnc_passwd > /dev/null 2>&1
+    x11vnc -display :99 -rfbauth /tmp/.vnc_passwd -listen 0.0.0.0 -rfbport 5900 -forever -shared -noxdamage -noxfixes -noxrecord -noxrandr -noxinerama -cursor most > /tmp/x11vnc.log 2>&1 &
+    sleep 2
+    echo 'VNC server restarted on port 5900'
+    echo 'Password: horcrux'
+"
 ```
 
 ## Port Forwarding and Network Access
@@ -233,9 +289,48 @@ If Marionette MCP cannot connect to the VM service:
 
 4. **Current Status**: The app runs successfully in the container and exposes the VM service on port 8181. However, connecting from the host via Marionette MCP may fail due to Flutter's `127.0.0.1` binding. The VM service URI is available in `/tmp/flutter_run.log` inside the container.
 
+### VNC Connection Issues
+
+If VNC client hangs or won't connect:
+
+1. **Verify VNC server is running**:
+   ```bash
+   docker exec horcrux-cursor-agent ps aux | grep x11vnc
+   ```
+
+2. **Check if port is listening**:
+   ```bash
+   docker exec horcrux-cursor-agent netstat -tlnp | grep 5900
+   # or
+   docker exec horcrux-cursor-agent ss -tlnp | grep 5900
+   ```
+
+3. **Check VNC server logs**:
+   ```bash
+   docker exec horcrux-cursor-agent tail -30 /tmp/x11vnc.log
+   ```
+
+4. **Restart VNC server** (see "Restart VNC Server" section above)
+
+5. **Try a different VNC client** (macOS Screen Sharing can be unreliable):
+   - **macOS**: Download [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/) - it's more reliable than Screen Sharing
+   - **macOS alternative**: Install `vncviewer` via Homebrew: `brew install tigervnc` then use `vncviewer localhost:5900`
+   - **Linux**: Use `vncviewer`, `vinagre`, or `remmina`
+   - **Windows**: Use TightVNC Viewer or RealVNC Viewer
+   
+6. **macOS Screen Sharing specific issues**:
+   - Screen Sharing may hang if the VNC server doesn't support certain features
+   - Try connecting with the address format: `vnc://localhost:5900` in Finder's "Connect to Server"
+   - If it still hangs, use RealVNC Viewer instead
+
+6. **Verify Xvfb is running**:
+   ```bash
+   docker exec horcrux-cursor-agent pgrep -x Xvfb
+   ```
+
 ### Port Already in Use
 
-If ports 8181-8200 are already in use, modify `docker-compose.yml` to use different ports.
+If ports 8181-8200 or 5900 are already in use, modify `docker-compose.yml` to use different ports.
 
 ## Development Workflow
 
