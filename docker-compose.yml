@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  cursor-cloud-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: horcrux-cursor-agent
+    volumes:
+      # Mount the project directory for live code changes
+      - .:/workspace
+      # Persist Flutter cache
+      - flutter-cache:/root/.flutter
+      # Persist pub cache
+      - pub-cache:/root/.pub-cache
+    ports:
+      # Expose VM service port via socat proxy (port 8182)
+      # The socat proxy listens on 0.0.0.0:8182 inside container and forwards to Flutter's VM service
+      - "8182:8182"
+      # Also expose common Flutter VM service ports in case direct connection works
+      - "8181:8181"
+      - "9100:9100"  # DevTools port
+    environment:
+      - DISPLAY=:99
+      - FLUTTER_VM_SERVICE_PORT=8181
+    # Keep container running - you can exec into it to run commands
+    # Run './scripts/run-app-in-docker.sh' after starting to launch the Flutter app
+    command: tail -f /dev/null
+
+volumes:
+  flutter-cache:
+  pub-cache:
