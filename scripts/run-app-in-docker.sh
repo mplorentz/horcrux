@@ -46,12 +46,6 @@ cd /workspace
     
     echo 'Starting build process...' >> /tmp/flutter_run.log
     
-    # Enable Linux desktop support if not already enabled
-    if [ ! -d 'linux' ]; then
-        echo 'Linux desktop support not found. Enabling it...' >> /tmp/flutter_run.log
-        flutter create --platforms=linux . >> /tmp/flutter_run.log 2>&1 || echo 'Failed to create linux platform' >> /tmp/flutter_run.log
-    fi
-    
     # Clean previous builds
     echo 'Cleaning previous builds...' >> /tmp/flutter_run.log
     flutter clean >> /tmp/flutter_run.log 2>&1 || echo 'Clean failed (non-fatal)' >> /tmp/flutter_run.log

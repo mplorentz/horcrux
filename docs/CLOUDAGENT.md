@@ -33,7 +33,6 @@ On first run, you need to install Flutter dependencies:
 docker exec horcrux-cursor-agent bash -c "cd /workspace && flutter pub get"
 ```
 
-**Note**: Linux desktop support will be automatically enabled when you run `./scripts/run-app-in-docker.sh` if it's not already configured. This creates the `linux/` directory in your project.
 
 ### 4. Run the Flutter App in Debug Mode
 
@@ -261,6 +260,5 @@ docker-compose down -v
 
 - The container uses Ubuntu 22.04 as the base image
 - Flutter 3.35.0 is installed (matching `pubspec.yaml`)
-- Linux desktop support is enabled
 - Xvfb provides a virtual display for headless operation
 - The workspace is mounted as a volume, so code changes are reflected immediately
