@@ -426,7 +426,7 @@ class RelayScanService {
 
     // Stop NDK listening
     try {
-      await ndkService.stopListening();
+      await ndkService.closeSubscriptions();
       Log.info('Stopped NDK listening');
     } catch (e) {
       Log.error('Error stopping NDK', e);

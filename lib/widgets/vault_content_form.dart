@@ -33,6 +33,7 @@ class VaultContentForm extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
+              key: const ValueKey('vault_name_field'),
               controller: nameController,
               decoration: InputDecoration(
                 labelText: 'Vault Name',
@@ -49,6 +50,7 @@ class VaultContentForm extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: const ValueKey('owner_name_field'),
               controller: ownerNameController,
               decoration: const InputDecoration(
                 labelText: "Your name",
@@ -70,6 +72,7 @@ class VaultContentForm extends StatelessWidget {
             SizedBox(
               height: 200,
               child: TextFormField(
+                key: const ValueKey('vault_content_field'),
                 controller: contentController,
                 decoration: InputDecoration(
                   hintText: contentHintText,

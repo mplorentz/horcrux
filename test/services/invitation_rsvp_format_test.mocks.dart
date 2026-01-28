@@ -172,9 +172,9 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<String?>);
 
   @override
-  _i6.Future<void> stopListening() => (super.noSuchMethod(
+  _i6.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
-          #stopListening,
+          #closeSubscriptions,
           [],
         ),
         returnValue: _i6.Future<void>.value(),

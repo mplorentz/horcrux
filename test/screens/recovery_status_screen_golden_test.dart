@@ -9,6 +9,7 @@ import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
+import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/recovery_status_screen.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/steward_test_helpers.dart';
@@ -52,6 +53,7 @@ void main() {
     required String name,
     required String ownerPubkey,
     BackupConfig? backupConfig,
+    String? ownerName,
   }) {
     return Vault(
       id: id,
@@ -59,6 +61,7 @@ void main() {
       content: null,
       createdAt: DateTime(2024, 10, 1, 10, 30),
       ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
       backupConfig: backupConfig,
     );
   }
@@ -105,6 +108,9 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => const AsyncValue.loading()),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -133,6 +139,9 @@ void main() {
               StackTrace.empty,
             ),
           ),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -154,6 +163,9 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => const AsyncValue.data(null)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -196,6 +208,7 @@ void main() {
         id: 'test-vault',
         name: 'My Important Vault',
         ownerPubkey: initiatorPubkey,
+        ownerName: 'Alice',
         backupConfig: createTestBackupConfig(
           vaultId: 'test-vault',
           threshold: 2,
@@ -217,6 +230,9 @@ void main() {
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -246,9 +262,10 @@ void main() {
             pubkey: testPubkey,
             approved: true,
           ),
-          steward1Pubkey: RecoveryResponse(
+          steward1Pubkey: createTestRecoveryResponse(
             pubkey: steward1Pubkey,
             approved: false,
+            respondedAt: DateTime.now().subtract(const Duration(minutes: 15)),
           ),
           steward2Pubkey: RecoveryResponse(
             pubkey: steward2Pubkey,
@@ -282,6 +299,9 @@ void main() {
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -345,6 +365,9 @@ void main() {
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -384,6 +407,7 @@ void main() {
         id: 'test-vault',
         name: 'My Important Vault',
         ownerPubkey: initiatorPubkey,
+        ownerName: 'Alice',
         backupConfig: createTestBackupConfig(
           vaultId: 'test-vault',
           threshold: 2,
@@ -403,6 +427,9 @@ void main() {
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 
@@ -442,6 +469,7 @@ void main() {
         id: 'test-vault',
         name: 'My Important Vault',
         ownerPubkey: initiatorPubkey,
+        ownerName: 'Alice',
         backupConfig: createTestBackupConfig(
           vaultId: 'test-vault',
           threshold: 2,
@@ -461,6 +489,9 @@ void main() {
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith(
+            (ref) => Future.value(testPubkey),
+          ),
         ],
       );
 

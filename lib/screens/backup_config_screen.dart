@@ -466,6 +466,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 TextField(
+                                  key: const ValueKey('recovery_instructions_field'),
                                   controller: _instructionsController,
                                   decoration: const InputDecoration(
                                     hintText:

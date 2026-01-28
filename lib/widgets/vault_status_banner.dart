@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../models/backup_config.dart';
 import '../models/backup_status.dart';
-import '../models/recovery_request.dart';
 import '../providers/key_provider.dart';
+import '../providers/recovery_provider.dart';
+import '../screens/recovery_status_screen.dart';
 
 /// Status variant enum for internal use
 enum _StatusVariant {
@@ -47,6 +48,7 @@ class VaultStatusBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
+    final recoveryStatusAsync = ref.watch(recoveryStatusProvider(vault.id));
 
     return currentPubkeyAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -56,59 +58,66 @@ class VaultStatusBanner extends ConsumerWidget {
         final isSteward =
             currentPubkey != null && !vault.isOwned(currentPubkey) && vault.shards.isNotEmpty;
 
-        // Handle recovery status - for owners: only when active, for stewards: only if they initiated it
-        final hasNonArchivedRecovery = vault.recoveryRequests.any(
-          (request) => request.status != RecoveryRequestStatus.archived,
+        // Only show "Recovery in progress" if the current user initiated an active recovery
+        // Use the same recoveryStatusProvider that the button stack uses
+        return recoveryStatusAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+          data: (recoveryStatus) {
+            if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
+              const statusData = _StatusData(
+                headline: 'Recovery in progress',
+                subtext: 'Tap to manage recovery',
+                icon: Icons.refresh,
+                accentColor: Color(0xFF7A4A2F), // Umber
+                variant: _StatusVariant.recoveryInProgress,
+              );
+              return _buildBanner(
+                context,
+                statusData,
+                isOwner,
+                isSteward,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecoveryStatusScreen(
+                        recoveryRequestId: recoveryStatus.activeRecoveryRequest!.id,
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+
+            // Continue with normal status display
+            return _buildNormalStatus(context, isOwner, isSteward, vault);
+          },
         );
-        final stewardInitiatedRecovery = isSteward &&
-            hasNonArchivedRecovery &&
-            vault.recoveryRequests.any(
-              (request) =>
-                  request.status != RecoveryRequestStatus.archived &&
-                  request.initiatorPubkey == currentPubkey,
-            );
-
-        if (isOwner && vault.state == VaultState.recovery) {
-          const statusData = _StatusData(
-            headline: 'Recovery in progress',
-            subtext: 'View status and responses on the recovery screen.',
-            icon: Icons.refresh,
-            accentColor: Color(0xFF7A4A2F), // Umber
-            variant: _StatusVariant.recoveryInProgress,
-          );
-          return _buildBanner(context, statusData, isOwner, isSteward);
-        } else if (stewardInitiatedRecovery) {
-          const statusData = _StatusData(
-            headline: 'Recovery in progress',
-            subtext: 'View status and responses on the recovery screen.',
-            icon: Icons.refresh,
-            accentColor: Color(0xFF7A4A2F), // Umber
-            variant: _StatusVariant.recoveryInProgress,
-          );
-          return _buildBanner(context, statusData, isOwner, isSteward);
-        }
-
-        if (isOwner) {
-          return _buildOwnerStatus(context, vault);
-        } else if (isSteward) {
-          return _buildStewardStatus(context, vault);
-        } else {
-          // Unknown/generic view
-          return _buildBanner(
-            context,
-            const _StatusData(
-              headline: 'Recovery status unavailable',
-              subtext: 'Unable to determine vault recovery status.',
-              icon: Icons.info_outline,
-              accentColor: Color(0xFF676F62), // Secondary text color
-              variant: _StatusVariant.unknown,
-            ),
-            false,
-            false,
-          );
-        }
       },
     );
+  }
+
+  Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, Vault vault) {
+    if (isOwner) {
+      return _buildOwnerStatus(context, vault);
+    } else if (isSteward) {
+      return _buildStewardStatus(context, vault);
+    } else {
+      // Unknown/generic view
+      return _buildBanner(
+        context,
+        const _StatusData(
+          headline: 'Recovery status unavailable',
+          subtext: 'Unable to determine vault recovery status.',
+          icon: Icons.info_outline,
+          accentColor: Color(0xFF676F62), // Secondary text color
+          variant: _StatusVariant.unknown,
+        ),
+        false,
+        false,
+      );
+    }
   }
 
   Widget _buildOwnerStatus(BuildContext context, Vault vault) {
@@ -295,8 +304,8 @@ class VaultStatusBanner extends ConsumerWidget {
     return _buildBanner(
       context,
       const _StatusData(
-        headline: 'Vault status',
-        subtext: 'You have the latest key for this vault.',
+        headline: 'Uknown status',
+        subtext: 'This is a bug.',
         icon: Icons.key,
         accentColor: Color(0xFF676F62), // Secondary text color
         variant: _StatusVariant.stewardReady,
@@ -306,11 +315,17 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildBanner(BuildContext context, _StatusData statusData, bool isOwner, bool isSteward) {
+  Widget _buildBanner(
+    BuildContext context,
+    _StatusData statusData,
+    bool isOwner,
+    bool isSteward, {
+    VoidCallback? onTap,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
+    Widget content = Container(
       width: double.infinity,
       decoration: BoxDecoration(color: theme.scaffoldBackgroundColor),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -336,13 +351,10 @@ class VaultStatusBanner extends ConsumerWidget {
               children: [
                 // Headline
                 Text(statusData.headline, style: theme.textTheme.headlineSmall),
-                // Optional role context (only show if not obvious from context)
-                if (isOwner || isSteward) ...[
+                // Optional role context (only show for stewards, owner name is shown above)
+                if (isSteward) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    isOwner ? 'You are the owner' : 'You are a steward',
-                    style: theme.textTheme.labelSmall,
-                  ),
+                  Text('You are a steward', style: theme.textTheme.labelSmall),
                 ],
                 // Subtext
                 const SizedBox(height: 4),
@@ -353,5 +365,12 @@ class VaultStatusBanner extends ConsumerWidget {
         ],
       ),
     );
+
+    // Make tappable if onTap is provided
+    if (onTap != null) {
+      return InkWell(onTap: onTap, child: content);
+    }
+
+    return content;
   }
 }

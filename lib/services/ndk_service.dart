@@ -171,7 +171,7 @@ class NdkService {
     if (_activeRelays.isNotEmpty) {
       await _setupSubscriptions();
     } else {
-      await stopListening();
+      await closeSubscriptions();
     }
   }
 
@@ -192,7 +192,7 @@ class NdkService {
     final myPubkey = keyPair.publicKey;
 
     // Close existing subscriptions
-    await _closeSubscriptions();
+    await closeSubscriptions();
 
     Log.info('Setting up NDK subscriptions on ${_activeRelays.length} relays');
 
@@ -557,17 +557,12 @@ class NdkService {
     }
   }
 
-  /// Stop listening to all subscriptions
-  Future<void> stopListening() async {
-    await _closeSubscriptions();
-    Log.info('Stopped all NDK subscriptions');
-  }
-
   /// Close all active subscriptions
-  Future<void> _closeSubscriptions() async {
+  Future<void> closeSubscriptions() async {
     await _giftWrapStreamSub?.cancel();
     _giftWrapStreamSub = null;
     _giftWrapSubscription = null;
+    Log.info('Stopped all NDK subscriptions');
   }
 
   /// Get the list of active relays
@@ -749,11 +744,19 @@ class NdkService {
   }
 
   /// Dispose of NDK resources
+  /// This stops all listening, closes subscriptions, and cleans up resources
   Future<void> dispose() async {
-    await _closeSubscriptions();
+    // Stop listening to all subscriptions first
+    await closeSubscriptions();
+
+    // Close event streams
     await _recoveryRequestController.close();
     await _recoveryResponseController.close();
+
+    // Dispose publish service
     await _publishService.dispose();
+
+    // Clear state
     _activeRelays.clear();
     _ndk = null;
     _isInitialized = false;

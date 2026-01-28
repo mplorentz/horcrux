@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/key_provider.dart';
 import '../screens/horcrux_gallery_screen.dart';
+
+/// Provider for PackageInfo
+final packageInfoProvider = FutureProvider<PackageInfo>((ref) async {
+  return await PackageInfo.fromPlatform();
+});
 
 /// Debug information sheet widget
 class DebugInfoSheet extends ConsumerWidget {
@@ -10,9 +16,10 @@ class DebugInfoSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch both key providers
+    // Watch both key providers and package info
     final publicKeyAsync = ref.watch(currentPublicKeyProvider);
     final publicKeyBech32Async = ref.watch(currentPublicKeyBech32Provider);
+    final packageInfoAsync = ref.watch(packageInfoProvider);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
@@ -67,6 +74,30 @@ class DebugInfoSheet extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Version and build number
+                packageInfoAsync.when(
+                  loading: () => Text('Loading...', style: textTheme.bodySmall),
+                  error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
+                  data: (packageInfo) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _KeyDisplay(
+                        label: 'Version:',
+                        value: packageInfo.version,
+                        tooltipLabel: 'Version',
+                      ),
+                      const SizedBox(height: 12),
+                      _KeyDisplay(
+                        label: 'Build Number:',
+                        value: packageInfo.buildNumber,
+                        tooltipLabel: 'Build Number',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
                 // Bech32 key
                 publicKeyBech32Async.when(
                   loading: () => Text('Loading...', style: textTheme.bodySmall),
