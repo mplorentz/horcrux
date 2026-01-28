@@ -5,6 +5,7 @@ import '../models/vault.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'steward_details_dialog.dart';
 
 /// Widget for displaying list of stewards who have shards
 class StewardList extends ConsumerWidget {
@@ -37,8 +38,8 @@ class StewardList extends ConsumerWidget {
                   Text(
                     'Stewards',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).primaryColor,
-                        ),
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
                 ],
               ),
@@ -74,7 +75,8 @@ class StewardList extends ConsumerWidget {
               child: Text('Error loading user info: $error'),
             ),
           ),
-          data: (currentPubkey) => _buildKeyHolderContent(context, ref, vault, currentPubkey),
+          data: (currentPubkey) =>
+              _buildKeyHolderContent(context, ref, vault, currentPubkey),
         );
       },
     );
@@ -145,7 +147,8 @@ class StewardList extends ConsumerWidget {
             // Stewards can't read confirmation events from other stewards
             Builder(
               builder: (context) {
-                final isOwner = currentPubkey != null && currentPubkey == vault.ownerPubkey;
+                final isOwner =
+                    currentPubkey != null && currentPubkey == vault.ownerPubkey;
                 return Column(
                   children: [
                     for (int i = 0; i < stewards.length; i++) ...[
@@ -170,75 +173,92 @@ class StewardList extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: colorScheme.surfaceContainer),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
-            child: Icon(
-              steward.isOwner ? Icons.person : Icons.key,
-              color: colorScheme.onSurface,
-              size: 20,
+    return InkWell(
+      onTap: () {
+        StewardDetailsDialog.show(
+          context,
+          pubkey: steward.pubkey,
+          displayName: steward.displayName,
+          contactInfo: steward.contactInfo,
+          isOwner: steward.isOwner,
+          status: steward.status,
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: colorScheme.surfaceContainer),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
+              child: Icon(
+                steward.isOwner ? Icons.person : Icons.key,
+                color: colorScheme.onSurface,
+                size: 20,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        steward.displayName ??
-                            (steward.pubkey != null
-                                ? Helpers.encodeBech32(steward.pubkey!, 'npub')
-                                : 'Unknown'),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          steward.displayName ??
+                              (steward.pubkey != null
+                                  ? Helpers.encodeBech32(
+                                      steward.pubkey!,
+                                      'npub',
+                                    )
+                                  : 'Unknown'),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
+                      ),
+                    ],
+                  ),
+                  if (steward.isOwner) ...[
+                    Text(
+                      'Owner',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ] else if (steward.status != null && isOwner) ...[
+                    // Only show steward status if current user is the owner
+                    // Stewards can't read confirmation events from other stewards
+                    Text(
+                      steward.status!.label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
-                ),
-                if (steward.isOwner) ...[
-                  Text(
-                    'Owner',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.w500,
+                  if (steward.contactInfo != null &&
+                      steward.contactInfo!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      steward.contactInfo!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                ] else if (steward.status != null && isOwner) ...[
-                  // Only show steward status if current user is the owner
-                  // Stewards can't read confirmation events from other stewards
-                  Text(
-                    steward.status!.label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
+                  ],
                 ],
-                if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    steward.contactInfo!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -248,24 +268,30 @@ class StewardList extends ConsumerWidget {
   List<StewardInfo> _extractStewards(Vault vault, String? currentPubkey) {
     // NEW: Try backupConfig first (owner will have this)
     if (vault.backupConfig != null) {
-      final stewards = vault.backupConfig!.stewards.where((s) {
-        // Include owner only if they are holding a key (are a steward)
-        if (s.isOwner) {
-          return s.status == StewardStatus.holdingKey;
-        }
-        // Include all non-owner stewards
-        return true;
-      }).map((s) {
-        final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
-        final displayName = isCurrentUser ? '${s.displayName} (You)' : s.displayName;
-        return StewardInfo(
-          pubkey: s.pubkey,
-          displayName: displayName,
-          contactInfo: s.contactInfo,
-          isOwner: s.isOwner, // Preserve owner flag
-          status: s.status, // Use actual status from Steward model
-        );
-      }).toList();
+      final stewards = vault.backupConfig!.stewards
+          .where((s) {
+            // Include owner only if they are holding a key (are a steward)
+            if (s.isOwner) {
+              return s.status == StewardStatus.holdingKey;
+            }
+            // Include all non-owner stewards
+            return true;
+          })
+          .map((s) {
+            final isCurrentUser =
+                currentPubkey != null && s.pubkey == currentPubkey;
+            final displayName = isCurrentUser
+                ? '${s.displayName} (You)'
+                : s.displayName;
+            return StewardInfo(
+              pubkey: s.pubkey,
+              displayName: displayName,
+              contactInfo: s.contactInfo,
+              isOwner: s.isOwner, // Preserve owner flag
+              status: s.status, // Use actual status from Steward model
+            );
+          })
+          .toList();
 
       // Sort: owner first, then others
       stewards.sort((a, b) {
@@ -296,7 +322,9 @@ class StewardList extends ConsumerWidget {
       StewardStatus status = StewardStatus.holdingKey,
     }) {
       final isCurrentUser = currentPubkey != null && pubkey == currentPubkey;
-      final newDisplayName = isCurrentUser && name != null ? 'You ($name)' : name;
+      final newDisplayName = isCurrentUser && name != null
+          ? 'You ($name)'
+          : name;
 
       // Merge if we already have this pubkey
       final existing = stewardMap[pubkey];
@@ -318,11 +346,7 @@ class StewardList extends ConsumerWidget {
         if (stewardPubkey == null) continue;
 
         final isOwner = stewardPubkey == vault.ownerPubkey;
-        addSteward(
-          pubkey: stewardPubkey,
-          name: stewardName,
-          isOwner: isOwner,
-        );
+        addSteward(pubkey: stewardPubkey, name: stewardName, isOwner: isOwner);
       }
     }
 
