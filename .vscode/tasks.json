@@ -234,6 +234,42 @@
             },
             "problemMatcher": [],
             "detail": "Format all Dart source code in the project"
+        },
+        {
+            "label": "Docker: Run Linux App",
+            "type": "shell",
+            "command": "./scripts/run-app-in-docker.sh",
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Build Docker image, start container, and run Flutter Linux app with live logs. Press Ctrl+C to stop."
+        },
+        {
+            "label": "Docker: Hot Reload",
+            "type": "shell",
+            "command": "./scripts/hot-reload-docker.sh",
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "detail": "Trigger hot reload in the Flutter app running in Docker"
         }
     ]
 }

@@ -145,12 +145,8 @@ cd /workspace
     
     echo 'Starting build process...' >> /tmp/flutter_run.log
     
-    # Clean previous builds
-    echo 'Cleaning previous builds...' >> /tmp/flutter_run.log
-    flutter clean >> /tmp/flutter_run.log 2>&1 || echo 'Clean failed (non-fatal)' >> /tmp/flutter_run.log
-    
-    # Build the app
-    echo 'Building Flutter app...' >> /tmp/flutter_run.log
+    # Build the app 
+    echo 'Building Flutter app (incremental)...' >> /tmp/flutter_run.log
     flutter build linux --debug >> /tmp/flutter_run.log 2>&1 || { echo 'Build failed!' >> /tmp/flutter_run.log; exit 1; }
     
     # Ensure bundle directory exists with executable
@@ -211,7 +207,7 @@ cd /workspace
     echo "Flutter run started with PID: $FLUTTER_PID (hot reload enabled)" >> /tmp/flutter_run.log
     echo "$FLUTTER_PID" > /tmp/flutter_pid.txt
     
-    # Wait for VM service
+    # Wait for Marionette VM Service
     sleep 10
     VM_SERVICE_LINE=""
     for i in {1..20}; do
@@ -233,7 +229,7 @@ cd /workspace
             VM_PATH_CLEAN=$(echo "$VM_PATH" | sed 's|/$||')
             VM_URI="ws://localhost:8182${VM_PATH_CLEAN}/ws"
             echo "$VM_URI" > /tmp/vm_service_uri_host.txt
-            echo "VM service accessible at $VM_URI" >> /tmp/flutter_run.log
+            echo "Marionette VM Service accessible at $VM_URI" >> /tmp/flutter_run.log
         fi
     fi
     
@@ -249,7 +245,7 @@ echo ""
 echo -e "${GREEN}[5/5] Streaming logs (Press Ctrl+C to stop)...${NC}"
 echo ""
 echo -e "${BLUE}VNC Server:${NC} localhost:5900 (password: horcrux)"
-echo -e "${BLUE}VM Service:${NC} Check logs for URI"
+echo -e "${BLUE}Marionette VM Service:${NC} Check logs for URI"
 echo -e "${BLUE}Hot Reload:${NC} Manual trigger: ./scripts/hot-reload-docker.sh"
 echo ""
 

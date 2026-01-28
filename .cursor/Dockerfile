@@ -87,7 +87,7 @@ RUN npx -y @nostrbook/mcp@latest --help || true
 WORKDIR /workspace
 
 # Expose ports
-# VM service
+# Marionette VM Service
 EXPOSE 8181
 # VNC server
 EXPOSE 5900
@@ -95,7 +95,7 @@ EXPOSE 5900
 # Set up Xvfb display
 ENV DISPLAY=:99
 
-# Set default VM service port (can be overridden)
+# Set default Marionette VM Service port (can be overridden)
 ENV FLUTTER_VM_SERVICE_PORT=8181
 
 # Default command: keep container running

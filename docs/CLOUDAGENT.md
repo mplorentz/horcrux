@@ -13,100 +13,55 @@ This Docker setup provides a complete environment for running Cursor Cloud Agent
 
 ## Quick Start
 
-### 1. Build the Docker Image
-
-The Dockerfile and docker-compose.yml are located in `.cursor/` for use with Cursor Cloud Agent:
-
-```bash
-docker-compose -f .cursor/docker-compose.yml build
-```
-
-### 2. Start the Container
-
-```bash
-docker-compose -f .cursor/docker-compose.yml up -d
-```
-
-### 3. Install Dependencies (First Time Only)
-
-On first run, you need to install Flutter dependencies:
-
-```bash
-docker exec horcrux-cursor-agent bash -c "cd /workspace && flutter pub get"
-```
-
-
-### 4. Run the Flutter App in Debug Mode
+Run the Flutter app in Docker with a single command:
 
 ```bash
 ./scripts/run-app-in-docker.sh
 ```
 
-This script will:
-- Start Xvfb (virtual framebuffer) for headless display
-- Launch the Flutter app in debug mode on Linux desktop
-- Extract and save the VM service URI for Marionette MCP
+This script automatically:
+- Builds the Docker image (if needed)
+- Starts the container
+- Installs Flutter dependencies (if needed)
+- Starts Xvfb (virtual framebuffer) for headless display
+- Launches the Flutter app in debug mode on Linux desktop
+- Extracts and saves the Marionette VM Service URI for Marionette MCP
+- Streams logs in real-time
 
-### 5. Get the VM Service URI
+You can then interact with the app via Marionette MCP tools.
+
+**Press Ctrl+C to stop the app and container.**
+
+### Testing with Marionette MCP 
+
+You can test changes in the app using Marionette MCP. It includes tools for taking screenshots,
+tapping buttons, entering text, etc.
+
+#### Get the Marionette VM Service URI
+
+The Marionette MCP server connects to the Flutter VM service via a websocket connection. You can 
+get the websocket URI (from outside the docker container) by running the script: 
 
 ```bash
 ./scripts/get-vm-uri.sh
 ```
 
-Or manually:
+The URI will typically be: `ws://localhost:8182/ws` 
+
+#### Connect Marionette MCP
+
+Use the Marionette VM Service URI with Marionette MCP tools:
+```
+mcp_horcrux_app-marionette_connect with uri: ws://localhost:8182/ws
+```
+
+### Hot Reload
+
+After making changes to your Dart code, trigger hot reload manually:
+
 ```bash
-docker exec horcrux-cursor-agent cat /tmp/vm_service_uri.txt
+./scripts/hot-reload-docker.sh
 ```
-
-The URI will be: `ws://localhost:8181/ws` (or `ws://127.0.0.1:8181/ws`)
-
-### 6. Connect Marionette MCP
-
-Use the VM service URI with Marionette MCP tools:
-```
-mcp_horcrux_app-marionette_connect with uri: ws://localhost:8181/ws
-```
-
-**Note**: 
-- The VM service is bound to `0.0.0.0:8181` inside the container
-- Port 8181 is forwarded to your host machine
-- Use `localhost:8181` when connecting from the host
-- If accessing remotely, use the Docker host's IP address instead of `localhost`
-
-### 7. View the App via VNC (Optional)
-
-A VNC server is automatically started when you run `./scripts/run-app-in-docker.sh`. You can connect to see the Flutter app visually:
-
-**Connect with a VNC client:**
-- **macOS**: Use built-in Screen Sharing app or [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
-- **Linux**: Use `vinagre`, `remmina`, or `vncviewer`
-- **Windows**: Use [TightVNC Viewer](https://www.tightvnc.com/download.php) or [RealVNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
-
-**Connection details:**
-- **Host**: `localhost` (or your Docker host IP if remote)
-- **Port**: `5900`
-- **Password**: `horcrux` (development password)
-
-**Example connection:**
-```bash
-# macOS - Option 1: RealVNC Viewer (recommended, more reliable)
-# Download from: https://www.realvnc.com/en/connect/download/viewer/
-# Then connect to: localhost:5900 with password: horcrux
-
-# macOS - Option 2: Screen Sharing (may have compatibility issues)
-open vnc://localhost:5900
-# If Screen Sharing hangs, try a different VNC client
-
-# macOS - Option 3: Command line with vncviewer (if installed)
-vncviewer localhost:5900
-
-# Linux command line
-vncviewer localhost:5900
-
-# Windows: Use TightVNC Viewer or RealVNC Viewer
-```
-
-**Note**: The VNC server displays the Xvfb virtual display (`:99`) where the Flutter app is running. The display is configured with a portrait orientation (600x1024 pixels) to better match mobile app layouts. This allows you to visually test the app's UI on Linux.
 
 ## Manual Usage
 
@@ -132,36 +87,9 @@ flutter run -d linux --debug
 docker exec horcrux-cursor-agent tail -f /tmp/flutter_run.log
 ```
 
-### Stop the Flutter App
-
-```bash
-docker exec horcrux-cursor-agent pkill -f "flutter run"
-```
-
-### Stop VNC Server
-
-```bash
-docker exec horcrux-cursor-agent pkill -x x11vnc
-```
-
-### Restart VNC Server
-
-```bash
-docker exec horcrux-cursor-agent bash -c "
-    pkill -x x11vnc 2>/dev/null || true
-    sleep 1
-    export DISPLAY=:99
-    x11vnc -storepasswd horcrux /tmp/.vnc_passwd > /dev/null 2>&1
-    x11vnc -display :99 -rfbauth /tmp/.vnc_passwd -listen 0.0.0.0 -rfbport 5900 -forever -shared -noxdamage -noxfixes -noxrecord -noxrandr -noxinerama -cursor most > /tmp/x11vnc.log 2>&1 &
-    sleep 2
-    echo 'VNC server restarted on port 5900'
-    echo 'Password: horcrux'
-"
-```
-
 ## Port Forwarding and Network Access
 
-The VM service port needs to be accessible from outside the container. The Docker Compose file exposes ports 8181-8185. Flutter will auto-select a port when starting - check the logs or use `./scripts/get-vm-uri.sh` to find which port it's using.
+The Marionette VM Service port needs to be accessible from outside the container. The Docker Compose file exposes ports 8181-8185. Flutter will auto-select a port when starting - check the logs or use `./scripts/get-vm-uri.sh` to find which port it's using.
 
 **Important**: If Flutter chooses a port outside the 8181-8185 range, you'll need to:
 1. Add that port to the `ports` section in `.cursor/docker-compose.yml`
@@ -190,7 +118,7 @@ If Cursor Cloud Agent is running on a different machine:
    ```yaml
    network_mode: host
    ```
-   Then remove the `ports` section. The VM service will be directly accessible on the host.
+   Then remove the `ports` section. The Marionette VM Service will be directly accessible on the host.
 
 ## MCP Server Configuration
 
@@ -264,23 +192,23 @@ If you see this error, it means a required pkg-config package is missing. To dia
 
 4. **Check plugin-specific requirements**: Some Flutter plugins may require additional packages. Check the plugin's documentation or CMakeLists.txt files.
 
-### VM Service URI Not Found
+### Marionette VM Service URI Not Found
 
-The VM service URI appears in Flutter debug output. If it's not found:
+The Marionette VM Service URI appears in Flutter debug output. If it's not found:
 1. Wait longer (app may still be starting)
 2. Check logs for errors
 3. Verify the app is actually running: `docker exec horcrux-cursor-agent ps aux | grep flutter`
 
-### Cannot Connect to VM Service
+### Cannot Connect to Marionette VM Service
 
-If Marionette MCP cannot connect to the VM service:
+If Marionette MCP cannot connect to the Marionette VM Service:
 
 1. **Check if port is accessible**: 
    ```bash
    docker exec horcrux-cursor-agent netstat -tlnp | grep 8181
    ```
 
-2. **Verify Flutter is binding correctly**: Flutter's VM service binds to `127.0.0.1` by default, which can cause issues with Docker port forwarding. The VM service may reject connections that don't appear to come from localhost:
+2. **Verify Flutter is binding correctly**: Flutter's Marionette VM Service binds to `127.0.0.1` by default, which can cause issues with Docker port forwarding. The Marionette VM Service may reject connections that don't appear to come from localhost:
    - **On Linux hosts**: Try using host networking mode by adding `network_mode: host` to `.cursor/docker-compose.yml` and removing the `ports` section
    - **On macOS/Windows**: Docker port forwarding may not work reliably due to Flutter's localhost-only binding. Consider:
      - Running Marionette MCP inside the container (if possible)
@@ -289,7 +217,7 @@ If Marionette MCP cannot connect to the VM service:
 
 3. **Check firewall**: Ensure port 8181 is not blocked by firewall rules
 
-4. **Current Status**: The app runs successfully in the container and exposes the VM service on port 8181. However, connecting from the host via Marionette MCP may fail due to Flutter's `127.0.0.1` binding. The VM service URI is available in `/tmp/flutter_run.log` inside the container.
+4. **Current Status**: The app runs successfully in the container and exposes the Marionette VM Service on port 8181. However, connecting from the host via Marionette MCP may fail due to Flutter's `127.0.0.1` binding. The Marionette VM Service URI is available in `/tmp/flutter_run.log` inside the container.
 
 ### VNC Connection Issues
 
@@ -338,7 +266,7 @@ If ports 8181-8200 or 5900 are already in use, modify `.cursor/docker-compose.ym
 
 1. Make code changes in your local workspace
 2. Changes are synced to `/workspace` in the container (via volume mount)
-3. Hot reload should work: `docker exec horcrux-cursor-agent pkill -USR1 -f "flutter run"`
+3. Trigger hot reload: `./scripts/hot-reload-docker.sh` (or use VS Code task "Docker: Hot Reload")
 4. Or restart the app: `./scripts/run-app-in-docker.sh`
 
 ## Cleanup

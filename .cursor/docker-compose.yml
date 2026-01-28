@@ -15,10 +15,11 @@ services:
       # Persist pub cache
       - pub-cache:/root/.pub-cache
     ports:
-      # Expose VM service port via socat proxy (port 8182)
-      # The socat proxy listens on 0.0.0.0:8182 inside container and forwards to Flutter's VM service
+      # Expose Marionette VM Service port via socat proxy (port 8182)
+      # The socat proxy listens on 0.0.0.0:8182 inside container and forwards outside the container
+      # so Marionette MCP can connect.
       - "8182:8182"
-      # Also expose common Flutter VM service ports in case direct connection works
+      # Also expose common Flutter Marionette VM Service ports in case direct connection works
       - "8181:8181"
       - "9100:9100"  # DevTools port
       - "5900:5900"  # VNC server (for visual testing)

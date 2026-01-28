@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to get the VM service URI from the running Flutter app
+# Script to get the Marionette VM Service URI from the running Flutter app
 # Returns the URI formatted for connecting from the host machine
 
 CONTAINER_NAME="horcrux-cursor-agent"
@@ -13,7 +13,7 @@ if [ -n "$HOST_URI" ]; then
 fi
 
 # Extract from logs - wait longer and try multiple patterns
-echo "Waiting for VM service URI..." >&2
+echo "Waiting for Marionette VM Service URI..." >&2
 docker exec -i "$CONTAINER_NAME" bash << 'EXTRACTEOF'
     # Wait up to 60 seconds for VM service URI to appear
     for i in {1..60}; do
@@ -110,7 +110,7 @@ docker exec -i "$CONTAINER_NAME" bash << 'EXTRACTEOF'
     done
     
     # If we get here, show the last few lines of the log for debugging
-    echo 'Error: Could not find VM service URI in logs after 60 seconds' >&2
+    echo 'Error: Could not find Marionette VM Service URI in logs after 60 seconds' >&2
     echo 'Last 20 lines of Flutter log:' >&2
     tail -20 /tmp/flutter_run.log >&2
     exit 1
