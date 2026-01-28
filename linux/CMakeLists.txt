@@ -1,5 +1,11 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.13)
+
+# Force use of g++-12 instead of clang++
+# Must be set before project() call
+set(CMAKE_CXX_COMPILER "g++-12")
+set(CMAKE_C_COMPILER "gcc-12")
+
 project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
