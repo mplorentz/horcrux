@@ -3,12 +3,13 @@ version: '3.8'
 services:
   cursor-cloud-agent:
     build:
-      context: .
+      context: ..
       dockerfile: .cursor/Dockerfile
     container_name: horcrux-cursor-agent
     volumes:
       # Mount the project directory for live code changes
-      - .:/workspace
+      # Use absolute path or relative to docker-compose.yml location
+      - ../:/workspace
       # Persist Flutter cache
       - flutter-cache:/root/.flutter
       # Persist pub cache
