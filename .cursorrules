@@ -410,7 +410,79 @@ The app uses the **horcrux3 theme** defined in `lib/widgets/theme.dart`
 - **Icons**: Use `onSurface` color for high contrast
 
 **Remember**: Check DESIGN_GUIDE.md for complete details before implementing any UI changes.
-- If you need to manually verify some behavior in the UI you can run the app for web and use Playwright MCP to interact with it. Use the task "Flutter: Build and Serve for Playwright" to start.
+
+## Automated Testing with Marionette MCP
+
+### When to Use Marionette Testing
+**CRITICAL**: When the user asks you to:
+- "test your changes"
+- "qa your changes"
+- "verify your changes"
+- "test the app"
+- "check if it works"
+- Or any similar request to verify functionality
+
+**You MUST automatically**:
+1. Launch the Flutter app in debug mode (if not already running)
+2. Connect via Marionette MCP
+3. Navigate through the app to test the changes
+4. Verify the changes work as expected
+5. Report results to the user
+
+### Marionette Testing Workflow
+
+**Step 1: Launch App (if needed)**
+```bash
+# Check if app is already running
+ps aux | grep "flutter run" | grep -v grep
+
+# If not running, launch it
+flutter run -d macos > /tmp/flutter_run.log 2>&1 &
+sleep 15  # Wait for app to start
+```
+
+**Step 2: Get VM Service URI**
+```bash
+grep -i "vm service\|ws://" /tmp/flutter_run.log | head -1
+# Look for: "A Dart VM Service on macOS is available at: http://127.0.0.1:XXXXX/XXXXX=/"
+# Convert to: ws://127.0.0.1:XXXXX/XXXXX=/ws
+```
+
+**Step 3: Connect**
+```
+mcp_horcrux_app-marionette_connect with the WebSocket URI
+```
+
+**Step 4: Test Changes**
+- Take screenshots to see current state
+- Get interactive elements to find buttons/fields
+- Navigate to the feature you changed
+- Test the functionality
+- Verify it works as expected
+
+**Step 5: Hot Reload (if code changed)**
+After making code changes, use:
+```
+mcp_horcrux_app-marionette_hot_reload
+```
+Then verify the changes are reflected in the app.
+
+### Testing Checklist
+When testing changes, verify:
+- ✅ App launches without errors
+- ✅ Navigation works correctly
+- ✅ UI elements render properly
+- ✅ User interactions work (taps, text input, etc.)
+- ✅ Changes match the intended behavior
+- ✅ No crashes or errors occur
+
+### Common Testing Scenarios
+- **UI Changes**: Navigate to the screen, verify visual changes, test interactions
+- **New Features**: Go through the complete flow, test edge cases
+- **Bug Fixes**: Reproduce the bug scenario, verify it's fixed
+- **Form Changes**: Fill out forms, submit, verify validation
+
+**Remember**: Always use Marionette MCP for Flutter app testing. See `.cursor/rules/ui-testing.mdc` for detailed instructions.
 
 ## Pull Request Requirements
 
@@ -434,6 +506,15 @@ The app uses the **horcrux3 theme** defined in `lib/widgets/theme.dart`
 5. ✅ **Code Formatted**: `dart format .`
 
 6. ✅ **Linter Clean**: Use ReadLints tool on modified files
+
+7. ✅ **Marionette Testing** ⚠️ MANDATORY - Test changes in the app:
+   - Launch Flutter app in debug mode (if not already running)
+   - Connect via Marionette MCP using VM Service URI
+   - Navigate to and test all changed features
+   - Verify functionality works as expected
+   - Check for crashes, errors, or UI issues
+   - **If problems found**: Fix them, then re-run steps 1-6 above
+   - **DO NOT open PR** until Marionette testing passes
 
 **If you skip any step, the PR will fail CI and waste reviewer time.**
 
@@ -481,6 +562,26 @@ Before opening a pull request, you MUST verify ALL of the following requirements
 - Fix any linter warnings or errors
 - Do not disable linter rules without team discussion
 
+#### 6. Marionette Testing ⚠️ MANDATORY
+**CRITICAL**: You MUST test all changes in the running app before opening a PR.
+
+**Steps:**
+1. Launch Flutter app: `flutter run -d macos > /tmp/flutter_run.log 2>&1 &`
+2. Wait 15 seconds, then get VM Service URI: `grep -i "vm service\|ws://" /tmp/flutter_run.log | head -1`
+3. Connect via Marionette MCP (convert HTTP URI to WebSocket: `ws://127.0.0.1:XXXXX/XXXXX=/ws`)
+4. Navigate to and test ALL changed features
+5. Verify functionality works as expected
+6. Check for crashes, errors, or UI issues
+
+**If problems found:**
+- Fix the issues in code
+- Hot reload: `mcp_horcrux_app-marionette_hot_reload`
+- Re-test to verify fixes
+- Re-run all PR checks (codegen, format, analyzer, tests, linter)
+- Repeat Marionette testing until all issues resolved
+
+**DO NOT open PR** until Marionette testing passes and all issues are fixed.
+
 ### Running the Complete Pre-PR Check
 Run these commands in sequence to verify all requirements:
 
@@ -502,9 +603,12 @@ flutter test
 
 # 6. Verify no issues
 flutter analyze
+
+# 7. Marionette Testing (MANDATORY)
+# Launch app and test changes - see Marionette Testing Workflow section above
 ```
 
-All commands must complete successfully before opening a PR.
+All commands must complete successfully AND Marionette testing must pass before opening a PR.
 
 ### AI Assistant PR Workflow
 **CRITICAL**: AI assistants MUST complete ALL steps below before opening or pushing a PR.
@@ -526,7 +630,16 @@ All commands must complete successfully before opening a PR.
    - Re-run tests to verify they pass: `flutter test <test_file_path>`
 6. ✅ **Run all tests**: `flutter test` (must pass with 0 failures)
 7. ✅ **Verify no linter errors**: Use ReadLints tool on modified files
-8. ✅ **Do NOT open/push PRs** until ALL above steps are complete
+8. ✅ **Marionette Testing** ⚠️ MANDATORY - Test changes in the app:
+   - Launch Flutter app in debug mode: `flutter run -d macos > /tmp/flutter_run.log 2>&1 &`
+   - Wait 15 seconds, then get VM Service URI: `grep -i "vm service\|ws://" /tmp/flutter_run.log | head -1`
+   - Connect via Marionette MCP (convert HTTP URI to WebSocket: `ws://127.0.0.1:XXXXX/XXXXX=/ws`)
+   - Navigate to and test ALL changed features
+   - Verify functionality works as expected
+   - Check for crashes, errors, or UI issues
+   - **If problems found**: Fix them, then re-run steps 1-7 above (including Marionette testing again)
+   - **DO NOT open/push PRs** until Marionette testing passes
+9. ✅ **Do NOT open/push PRs** until ALL above steps are complete
 
 **FOR EVERY COMMIT ON AN OPEN PR**:
 - ✅ Run codegen: If you modified any `@freezed` classes or `@GenerateMocks` annotations
@@ -536,6 +649,7 @@ All commands must complete successfully before opening a PR.
 - ✅ If UI changed: Update goldens and commit together
 - ✅ Verify build: Code must compile
 - ✅ All tests pass: `flutter test`
+- ✅ Marionette Testing: Test changes in app, fix issues if found, re-run checks
 
 **Golden Test Rule (CRITICAL - DO NOT SKIP)**:
 - If you create a new `*_golden_test.dart` file → YOU MUST update goldens BEFORE committing
@@ -549,6 +663,26 @@ Before opening/pushing a PR, verify:
 - [ ] All golden test files have corresponding PNG files in `test/**/goldens/`
 - [ ] Running `flutter test` shows all tests passing (including golden tests)
 - [ ] No new `*_golden_test.dart` files exist without their golden images committed
+- [ ] Marionette testing completed and all functionality verified
+- [ ] No crashes, errors, or UI issues found during Marionette testing
+
+**Marionette Testing Workflow (MANDATORY for PRs)**:
+1. Launch app: `flutter run -d macos > /tmp/flutter_run.log 2>&1 &`
+2. Wait 15 seconds for app to start
+3. Get VM Service URI: `grep -i "vm service\|ws://" /tmp/flutter_run.log | head -1`
+4. Connect: Convert HTTP URI to WebSocket format (`ws://127.0.0.1:XXXXX/XXXXX=/ws`) and connect via `mcp_horcrux_app-marionette_connect`
+5. Test all changed features:
+   - Navigate to affected screens
+   - Test user interactions (taps, text input, scrolling)
+   - Verify UI renders correctly
+   - Check for crashes or errors
+6. **If problems found**:
+   - Fix the issues in code
+   - Hot reload: `mcp_horcrux_app-marionette_hot_reload`
+   - Re-test to verify fixes
+   - Re-run all PR checks (codegen, format, analyzer, tests, linter)
+   - Repeat Marionette testing until all issues resolved
+7. **Only after Marionette testing passes**: Proceed with opening PR
 
 ### Common Pre-PR Issues
 
