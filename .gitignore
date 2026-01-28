@@ -58,3 +58,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/test_output/
 fastlane/README.md
+
+# CMake toolchain files (environment-specific)
+*.cmake
