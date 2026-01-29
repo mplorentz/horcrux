@@ -1,6 +1,37 @@
 ---
-description:
+description: UI Testing Instructions for Flutter App
 globs:
 alwaysApply: true
 ---
-If you need to manually verify some behavior in the UI you can run the app for web and use Playwright MCP to interact with it. Use the task "Flutter: Build and Serve for Playwright" to start.
+
+## UI Testing with Marionette MCP
+When asked to "test your changes", "qa your changes", or verify app behavior, use Marionette MCP to interact with the running Flutter app:
+
+**Quick Start:**
+1. **Launch app in debug mode** (if not already running):
+   ```bash
+   flutter run -d macos > /tmp/flutter_run.log 2>&1 &
+   ```
+   Wait 10-15 seconds for the app to start.
+
+2. **Find VM Service URI**:
+   ```bash
+   sleep 10 && grep -i "vm service\|ws://" /tmp/flutter_run.log | head -1
+   ```
+   Look for output like: `A Dart VM Service on macOS is available at: http://127.0.0.1:XXXXX/XXXXX=/`
+   Convert to WebSocket format: `ws://127.0.0.1:XXXXX/XXXXX=/ws`
+
+3. **Connect via Marionette**:
+   ```
+   mcp_horcrux_app-marionette_connect with uri: ws://127.0.0.1:XXXXX/XXXXX=/ws
+   ```
+
+4. **Verify changes**:
+   - Take screenshots: `mcp_horcrux_app-marionette_take_screenshots`
+   - Get interactive elements: `mcp_horcrux_app-marionette_get_interactive_elements`
+   - Tap buttons: `mcp_horcrux_app-marionette_tap` (by text, key, or type)
+   - Enter text: `mcp_horcrux_app-marionette_enter_text` (by key)
+   - Scroll: `mcp_horcrux_app-marionette_scroll_to`
+   - Hot reload: `mcp_horcrux_app-marionette_hot_reload` (after code changes)
+
+**Note**: If the app is already running, check for existing VM Service URI in logs or connect to existing instance.

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "marionette": {
+      "command": "marionette_mcp",
+      "args": []
+    },
+    "nostrbook": {
+      "command": "npx",
+      "args": ["-y", "@nostrbook/mcp@latest"]
+    }
+  }
+}

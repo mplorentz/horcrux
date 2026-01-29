@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- INTERNET permission required for network operations (Nostr relays, RSVP events, etc.) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Horcrux"
         android:name="${applicationName}"
