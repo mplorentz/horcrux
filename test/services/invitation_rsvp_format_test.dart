@@ -9,6 +9,7 @@ import 'package:horcrux/services/invitation_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
+import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
@@ -23,6 +24,7 @@ import 'invitation_rsvp_format_test.mocks.dart';
   VaultRepository,
   InvitationSendingService,
   RelayScanService,
+  BackupService,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -53,12 +55,14 @@ void main() {
 
       invitationSendingService = InvitationSendingService(mockNdkService);
       final mockRelayScanService = MockRelayScanService();
+      final mockBackupService = MockBackupService();
       invitationService = InvitationService(
         realRepository,
         mockInvitationSendingService,
         mockLoginService,
         () => mockNdkService,
         mockRelayScanService,
+        mockBackupService,
       );
 
       // Clear SharedPreferences before each test

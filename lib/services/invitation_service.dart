@@ -679,8 +679,7 @@ class InvitationService {
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
-          final stewardsWithPubkeys =
-              backupConfig.stewards.where((s) => s.pubkey != null).toList();
+          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
           final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
               stewardsWithPubkeys.every(
                 (s) => s.status == StewardStatus.awaitingKey,
