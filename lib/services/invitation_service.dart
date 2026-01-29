@@ -20,6 +20,7 @@ import '../utils/validators.dart';
 import 'invitation_sending_service.dart';
 import 'ndk_service.dart';
 import 'relay_scan_service.dart';
+import 'backup_service.dart';
 
 /// Provider for InvitationService
 final invitationServiceProvider = Provider<InvitationService>((ref) {
@@ -29,6 +30,7 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
     ref.read(loginServiceProvider),
     () => ref.read(ndkServiceProvider),
     ref.read(relayScanServiceProvider),
+    ref.read(backupServiceProvider),
   );
 
   // Properly clean up when the provider is disposed
@@ -46,6 +48,7 @@ class InvitationService {
   final LoginService _loginService;
   final NdkService Function() _getNdkService;
   final RelayScanService _relayScanService;
+  final BackupService _backupService;
 
   // Stream controller for notifying listeners when invitations change
   final StreamController<void> _invitationsChangedController = StreamController<void>.broadcast();
@@ -60,6 +63,7 @@ class InvitationService {
     this._loginService,
     this._getNdkService,
     this._relayScanService,
+    this._backupService,
   );
 
   /// Stream that emits whenever invitations change
@@ -663,6 +667,11 @@ class InvitationService {
       Log.warning('Error updating steward status after RSVP: $e');
       // Don't fail RSVP processing if status update fails
     }
+
+    // Check if we should auto-distribute keys now that all stewards have accepted
+    // This handles the case where user adds stewards via invite, saves recovery plan,
+    // then stewards accept - we should auto-distribute when all stewards are ready
+    await _backupService.distributeKeysIfNecessary(invitation.vaultId);
 
     // Notify listeners
     _notifyInvitationsChanged();

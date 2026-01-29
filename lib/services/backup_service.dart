@@ -503,6 +503,51 @@ class BackupService {
     );
   }
 
+  /// Check if keys should be auto-distributed and distribute if necessary
+  ///
+  /// This handles the case where all stewards have accepted invitations and are
+  /// ready for key distribution. Checks if:
+  /// - Backup config exists and can distribute (all stewards have pubkeys)
+  /// - Vault exists and has content
+  /// - All stewards with pubkeys are awaitingKey (ready for distribution)
+  ///
+  /// If all conditions are met, automatically distributes keys.
+  /// Errors are logged but not thrown to avoid disrupting the calling flow.
+  Future<void> distributeKeysIfNecessary(String vaultId) async {
+    try {
+      final backupConfig = await _repository.getBackupConfig(vaultId);
+      final vault = await _repository.getVault(vaultId);
+
+      if (backupConfig != null && vault != null && vault.content != null) {
+        // Check if all stewards now have pubkeys (can distribute)
+        if (backupConfig.canDistribute) {
+          // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
+          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
+          final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
+              stewardsWithPubkeys.every(
+                (s) => s.status == StewardStatus.awaitingKey,
+              );
+
+          if (allAwaitingKey) {
+            Log.info(
+              'All stewards are awaitingKey and can distribute - triggering auto-distribution for vault $vaultId',
+            );
+            try {
+              await createAndDistributeBackup(vaultId: vaultId);
+              Log.info('Auto-distributed keys after steward acceptance');
+            } catch (e) {
+              Log.error('Failed to auto-distribute keys after steward acceptance', e);
+              // Don't fail if auto-distribution fails
+            }
+          }
+        }
+      }
+    } catch (e) {
+      Log.warning('Error checking for auto-distribution: $e');
+      // Don't fail if auto-distribution check fails
+    }
+  }
+
   /// Helper to merge steward lists
   List<Steward> _mergeStewards(List<Steward> existing, List<Steward> updated) {
     final merged = <Steward>[];

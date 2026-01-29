@@ -13,6 +13,7 @@ import 'package:horcrux/models/steward.dart' as _i13;
 import 'package:horcrux/models/steward_status.dart' as _i14;
 import 'package:horcrux/models/vault.dart' as _i11;
 import 'package:horcrux/providers/vault_provider.dart' as _i10;
+import 'package:horcrux/services/backup_service.dart' as _i18;
 import 'package:horcrux/services/invitation_sending_service.dart' as _i16;
 import 'package:horcrux/services/login_service.dart' as _i8;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
@@ -67,6 +68,16 @@ class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
 
 class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus {
   _FakeScanningStatus_3(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeDateTime_4 extends _i1.SmartFake implements DateTime {
+  _FakeDateTime_4(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -1160,4 +1171,824 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
       ) as _i6.Future<void>);
+}
+
+/// A class which mocks [BackupService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockBackupService extends _i1.Mock implements _i18.BackupService {
+  MockBackupService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i6.Future<
+      ({
+        String? contentHash,
+        DateTime createdAt,
+        int distributionVersion,
+        String? instructions,
+        DateTime? lastContentChange,
+        DateTime? lastRedistribution,
+        DateTime lastUpdated,
+        List<String> relays,
+        String specVersion,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
+        int threshold,
+        int totalKeys,
+        String vaultId
+      })> createBackupConfiguration({
+    required String? vaultId,
+    required int? threshold,
+    required int? totalKeys,
+    required List<_i13.Steward>? stewards,
+    required List<String>? relays,
+    String? instructions,
+    String? contentHash,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createBackupConfiguration,
+          [],
+          {
+            #vaultId: vaultId,
+            #threshold: threshold,
+            #totalKeys: totalKeys,
+            #stewards: stewards,
+            #relays: relays,
+            #instructions: instructions,
+            #contentHash: contentHash,
+          },
+        ),
+        returnValue: _i6.Future<
+            ({
+              String? contentHash,
+              DateTime createdAt,
+              int distributionVersion,
+              String? instructions,
+              DateTime? lastContentChange,
+              DateTime? lastRedistribution,
+              DateTime lastUpdated,
+              List<String> relays,
+              String specVersion,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
+              int threshold,
+              int totalKeys,
+              String vaultId
+            })>.value((
+          contentHash: null,
+          createdAt: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #createBackupConfiguration,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+                #contentHash: contentHash,
+              },
+            ),
+          ),
+          distributionVersion: 0,
+          instructions: null,
+          lastContentChange: null,
+          lastRedistribution: null,
+          lastUpdated: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #createBackupConfiguration,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+                #contentHash: contentHash,
+              },
+            ),
+          ),
+          relays: <String>[],
+          specVersion: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #createBackupConfiguration,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+                #contentHash: contentHash,
+              },
+            ),
+          ),
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
+          threshold: 0,
+          totalKeys: 0,
+          vaultId: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #createBackupConfiguration,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+                #contentHash: contentHash,
+              },
+            ),
+          )
+        )),
+      ) as _i6.Future<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })>);
+
+  @override
+  _i6.Future<
+      ({
+        String? contentHash,
+        DateTime createdAt,
+        int distributionVersion,
+        String? instructions,
+        DateTime? lastContentChange,
+        DateTime? lastRedistribution,
+        DateTime lastUpdated,
+        List<String> relays,
+        String specVersion,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
+        int threshold,
+        int totalKeys,
+        String vaultId
+      })?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #getBackupConfig,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<
+            ({
+              String? contentHash,
+              DateTime createdAt,
+              int distributionVersion,
+              String? instructions,
+              DateTime? lastContentChange,
+              DateTime? lastRedistribution,
+              DateTime lastUpdated,
+              List<String> relays,
+              String specVersion,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
+              int threshold,
+              int totalKeys,
+              String vaultId
+            })?>.value(),
+      ) as _i6.Future<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })?>);
+
+  @override
+  _i6.Future<
+      List<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })>> getAllBackupConfigs() => (super.noSuchMethod(
+        Invocation.method(
+          #getAllBackupConfigs,
+          [],
+        ),
+        returnValue: _i6.Future<
+            List<
+                ({
+                  String? contentHash,
+                  DateTime createdAt,
+                  int distributionVersion,
+                  String? instructions,
+                  DateTime? lastContentChange,
+                  DateTime? lastRedistribution,
+                  DateTime lastUpdated,
+                  List<String> relays,
+                  String specVersion,
+                  _i12.BackupStatus status,
+                  List<_i13.Steward> stewards,
+                  int threshold,
+                  int totalKeys,
+                  String vaultId
+                })>>.value(<({
+          String? contentHash,
+          DateTime createdAt,
+          int distributionVersion,
+          String? instructions,
+          DateTime? lastContentChange,
+          DateTime? lastRedistribution,
+          DateTime lastUpdated,
+          List<String> relays,
+          String specVersion,
+          _i12.BackupStatus status,
+          List<_i13.Steward> stewards,
+          int threshold,
+          int totalKeys,
+          String vaultId
+        })>[]),
+      ) as _i6.Future<
+          List<
+              ({
+                String? contentHash,
+                DateTime createdAt,
+                int distributionVersion,
+                String? instructions,
+                DateTime? lastContentChange,
+                DateTime? lastRedistribution,
+                DateTime lastUpdated,
+                List<String> relays,
+                String specVersion,
+                _i12.BackupStatus status,
+                List<_i13.Steward> stewards,
+                int threshold,
+                int totalKeys,
+                String vaultId
+              })>>);
+
+  @override
+  _i6.Future<void> updateBackupConfig(
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })? config) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateBackupConfig,
+          [config],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteBackupConfig(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteBackupConfig,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<List<_i15.ShardData>> generateShamirShares({
+    required String? content,
+    required int? threshold,
+    required int? totalShards,
+    required String? creatorPubkey,
+    required String? vaultId,
+    required String? vaultName,
+    required List<Map<String, String>>? stewards,
+    String? ownerName,
+    String? instructions,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #generateShamirShares,
+          [],
+          {
+            #content: content,
+            #threshold: threshold,
+            #totalShards: totalShards,
+            #creatorPubkey: creatorPubkey,
+            #vaultId: vaultId,
+            #vaultName: vaultName,
+            #stewards: stewards,
+            #ownerName: ownerName,
+            #instructions: instructions,
+          },
+        ),
+        returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
+      ) as _i6.Future<List<_i15.ShardData>>);
+
+  @override
+  _i6.Future<String> reconstructFromShares({required List<_i15.ShardData>? shares}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #reconstructFromShares,
+          [],
+          {#shares: shares},
+        ),
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+          this,
+          Invocation.method(
+            #reconstructFromShares,
+            [],
+            {#shares: shares},
+          ),
+        )),
+      ) as _i6.Future<String>);
+
+  @override
+  _i6.Future<void> updateBackupStatus(
+    String? vaultId,
+    _i12.BackupStatus? status,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateBackupStatus,
+          [
+            vaultId,
+            status,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> updateStewardStatus({
+    required String? vaultId,
+    required String? pubkey,
+    required _i14.StewardStatus? status,
+    DateTime? acknowledgedAt,
+    String? acknowledgmentEventId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateStewardStatus,
+          [],
+          {
+            #vaultId: vaultId,
+            #pubkey: pubkey,
+            #status: status,
+            #acknowledgedAt: acknowledgedAt,
+            #acknowledgmentEventId: acknowledgmentEventId,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<bool> isBackupReady(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isBackupReady,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
+
+  @override
+  _i6.Future<
+      ({
+        String? contentHash,
+        DateTime createdAt,
+        int distributionVersion,
+        String? instructions,
+        DateTime? lastContentChange,
+        DateTime? lastRedistribution,
+        DateTime lastUpdated,
+        List<String> relays,
+        String specVersion,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
+        int threshold,
+        int totalKeys,
+        String vaultId
+      })> mergeBackupConfig({
+    required String? vaultId,
+    int? threshold,
+    List<_i13.Steward>? stewards,
+    List<String>? relays,
+    String? instructions,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #mergeBackupConfig,
+          [],
+          {
+            #vaultId: vaultId,
+            #threshold: threshold,
+            #stewards: stewards,
+            #relays: relays,
+            #instructions: instructions,
+          },
+        ),
+        returnValue: _i6.Future<
+            ({
+              String? contentHash,
+              DateTime createdAt,
+              int distributionVersion,
+              String? instructions,
+              DateTime? lastContentChange,
+              DateTime? lastRedistribution,
+              DateTime lastUpdated,
+              List<String> relays,
+              String specVersion,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
+              int threshold,
+              int totalKeys,
+              String vaultId
+            })>.value((
+          contentHash: null,
+          createdAt: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #mergeBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          distributionVersion: 0,
+          instructions: null,
+          lastContentChange: null,
+          lastRedistribution: null,
+          lastUpdated: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #mergeBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          relays: <String>[],
+          specVersion: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #mergeBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
+          threshold: 0,
+          totalKeys: 0,
+          vaultId: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #mergeBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          )
+        )),
+      ) as _i6.Future<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })>);
+
+  @override
+  _i6.Future<void> handleContentChange(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #handleContentChange,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<
+      ({
+        String? contentHash,
+        DateTime createdAt,
+        int distributionVersion,
+        String? instructions,
+        DateTime? lastContentChange,
+        DateTime? lastRedistribution,
+        DateTime lastUpdated,
+        List<String> relays,
+        String specVersion,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
+        int threshold,
+        int totalKeys,
+        String vaultId
+      })> saveBackupConfig({
+    required String? vaultId,
+    required int? threshold,
+    required int? totalKeys,
+    required List<_i13.Steward>? stewards,
+    required List<String>? relays,
+    String? instructions,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveBackupConfig,
+          [],
+          {
+            #vaultId: vaultId,
+            #threshold: threshold,
+            #totalKeys: totalKeys,
+            #stewards: stewards,
+            #relays: relays,
+            #instructions: instructions,
+          },
+        ),
+        returnValue: _i6.Future<
+            ({
+              String? contentHash,
+              DateTime createdAt,
+              int distributionVersion,
+              String? instructions,
+              DateTime? lastContentChange,
+              DateTime? lastRedistribution,
+              DateTime lastUpdated,
+              List<String> relays,
+              String specVersion,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
+              int threshold,
+              int totalKeys,
+              String vaultId
+            })>.value((
+          contentHash: null,
+          createdAt: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #saveBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          distributionVersion: 0,
+          instructions: null,
+          lastContentChange: null,
+          lastRedistribution: null,
+          lastUpdated: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #saveBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          relays: <String>[],
+          specVersion: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #saveBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          ),
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
+          threshold: 0,
+          totalKeys: 0,
+          vaultId: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #saveBackupConfig,
+              [],
+              {
+                #vaultId: vaultId,
+                #threshold: threshold,
+                #totalKeys: totalKeys,
+                #stewards: stewards,
+                #relays: relays,
+                #instructions: instructions,
+              },
+            ),
+          )
+        )),
+      ) as _i6.Future<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })>);
+
+  @override
+  _i6.Future<
+      ({
+        String? contentHash,
+        DateTime createdAt,
+        int distributionVersion,
+        String? instructions,
+        DateTime? lastContentChange,
+        DateTime? lastRedistribution,
+        DateTime lastUpdated,
+        List<String> relays,
+        String specVersion,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
+        int threshold,
+        int totalKeys,
+        String vaultId
+      })> createAndDistributeBackup({required String? vaultId}) => (super.noSuchMethod(
+        Invocation.method(
+          #createAndDistributeBackup,
+          [],
+          {#vaultId: vaultId},
+        ),
+        returnValue: _i6.Future<
+            ({
+              String? contentHash,
+              DateTime createdAt,
+              int distributionVersion,
+              String? instructions,
+              DateTime? lastContentChange,
+              DateTime? lastRedistribution,
+              DateTime lastUpdated,
+              List<String> relays,
+              String specVersion,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
+              int threshold,
+              int totalKeys,
+              String vaultId
+            })>.value((
+          contentHash: null,
+          createdAt: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #createAndDistributeBackup,
+              [],
+              {#vaultId: vaultId},
+            ),
+          ),
+          distributionVersion: 0,
+          instructions: null,
+          lastContentChange: null,
+          lastRedistribution: null,
+          lastUpdated: _FakeDateTime_4(
+            this,
+            Invocation.method(
+              #createAndDistributeBackup,
+              [],
+              {#vaultId: vaultId},
+            ),
+          ),
+          relays: <String>[],
+          specVersion: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #createAndDistributeBackup,
+              [],
+              {#vaultId: vaultId},
+            ),
+          ),
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
+          threshold: 0,
+          totalKeys: 0,
+          vaultId: _i9.dummyValue<String>(
+            this,
+            Invocation.method(
+              #createAndDistributeBackup,
+              [],
+              {#vaultId: vaultId},
+            ),
+          )
+        )),
+      ) as _i6.Future<
+          ({
+            String? contentHash,
+            DateTime createdAt,
+            int distributionVersion,
+            String? instructions,
+            DateTime? lastContentChange,
+            DateTime? lastRedistribution,
+            DateTime lastUpdated,
+            List<String> relays,
+            String specVersion,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
+            int threshold,
+            int totalKeys,
+            String vaultId
+          })>);
 }
