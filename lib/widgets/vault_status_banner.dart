@@ -55,8 +55,7 @@ class VaultStatusBanner extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (currentPubkey) {
         final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
-        final isSteward =
-            currentPubkey != null && !vault.isOwned(currentPubkey) && vault.shards.isNotEmpty;
+        final isSteward = currentPubkey != null && !vault.isOwned(currentPubkey);
 
         // Only show "Recovery in progress" if the current user initiated an active recovery
         // Use the same recoveryStatusProvider that the button stack uses
@@ -271,7 +270,7 @@ class VaultStatusBanner extends ConsumerWidget {
         const _StatusData(
           headline: 'Waiting for your key',
           subtext:
-              'You\'ve accepted the invite. The owner still needs to distribute keys—there\'s nothing you need to do yet.',
+              'You\'ve accepted an invitation to this vault. Waiting on the owner to send you your vault key.',
           icon: Icons.hourglass_empty,
           accentColor: Color(0xFF7A4A2F), // Umber
           variant: _StatusVariant.stewardWaitingKey,
