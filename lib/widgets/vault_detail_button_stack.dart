@@ -258,7 +258,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
-                    if (!isOwned && !isOwnerSteward) {
+                    // Don't show recovery buttons when steward is waiting for their key (awaitingKey state)
+                    if (!isOwned &&
+                        !isOwnerSteward &&
+                        currentVault != null &&
+                        currentVault.state != VaultState.awaitingKey) {
                       // Show "Manage Recovery" if user initiated active recovery
                       if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
                         buttons.add(
