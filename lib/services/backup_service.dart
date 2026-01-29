@@ -509,7 +509,7 @@ class BackupService {
   /// ready for key distribution. Checks if:
   /// - Backup config exists and can distribute (all stewards have pubkeys)
   /// - Vault exists and has content
-  /// - All stewards with pubkeys are awaitingKey (ready for distribution)
+  /// - All stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)
   ///
   /// If all conditions are met, automatically distributes keys.
   /// Errors are logged but not thrown to avoid disrupting the calling flow.
@@ -521,16 +521,19 @@ class BackupService {
       if (backupConfig != null && vault != null && vault.content != null) {
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
-          // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
+          // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)
+          // awaitingNewKey means they have an old shard but need an updated one (e.g., after a new steward joins)
           final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
-          final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
+          final allReadyForDistribution = stewardsWithPubkeys.isNotEmpty &&
               stewardsWithPubkeys.every(
-                (s) => s.status == StewardStatus.awaitingKey,
+                (s) =>
+                    s.status == StewardStatus.awaitingKey ||
+                    s.status == StewardStatus.awaitingNewKey,
               );
 
-          if (allAwaitingKey) {
+          if (allReadyForDistribution) {
             Log.info(
-              'All stewards are awaitingKey and can distribute - triggering auto-distribution for vault $vaultId',
+              'All stewards are ready for distribution (awaitingKey or awaitingNewKey) - triggering auto-distribution for vault $vaultId',
             );
             try {
               await createAndDistributeBackup(vaultId: vaultId);
@@ -701,6 +704,7 @@ class BackupService {
         }
         return stewardMap;
       }).toList();
+
       final shards = await generateShamirShares(
         content: content,
         threshold: config.threshold,

@@ -53,7 +53,8 @@ class _FakeNdk_1 extends _i1.SmartFake implements _i2.Ndk {
         );
 }
 
-class _FakeVaultRepository_2 extends _i1.SmartFake implements _i3.VaultRepository {
+class _FakeVaultRepository_2 extends _i1.SmartFake
+    implements _i3.VaultRepository {
   _FakeVaultRepository_2(
     Object parent,
     Invocation parentInvocation,
@@ -422,7 +423,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<List<_i9.ShardData>>);
 
   @override
-  _i5.Future<String> reconstructFromShares({required List<_i9.ShardData>? shares}) =>
+  _i5.Future<String> reconstructFromShares(
+          {required List<_i9.ShardData>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,
@@ -638,6 +640,17 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<void> distributeKeysIfNecessary(String? vaultId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #distributeKeysIfNecessary,
+          [vaultId],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   _i5.Future<
       ({
         String? contentHash,
@@ -798,7 +811,9 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
         int threshold,
         int totalKeys,
         String vaultId
-      })> createAndDistributeBackup({required String? vaultId}) => (super.noSuchMethod(
+      })> createAndDistributeBackup(
+          {required String? vaultId}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #createAndDistributeBackup,
           [],
@@ -886,7 +901,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
 /// A class which mocks [ShardDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistributionService {
+class MockShardDistributionService extends _i1.Mock
+    implements _i11.ShardDistributionService {
   MockShardDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -997,7 +1013,8 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processShardConfirmationEvent({required _i2.Nip01Event? event}) =>
+  _i5.Future<void> processShardConfirmationEvent(
+          {required _i2.Nip01Event? event}) =>
       (super.noSuchMethod(
         Invocation.method(
           #processShardConfirmationEvent,
@@ -1009,7 +1026,8 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processShardErrorEvent({required _i2.Nip01Event? event}) => (super.noSuchMethod(
+  _i5.Future<void> processShardErrorEvent({required _i2.Nip01Event? event}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processShardErrorEvent,
           [],
@@ -1029,13 +1047,15 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
-  _i5.Stream<_i14.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
+  _i5.Stream<_i14.RecoveryRequest> get recoveryRequestStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryRequestStream),
         returnValue: _i5.Stream<_i14.RecoveryRequest>.empty(),
       ) as _i5.Stream<_i14.RecoveryRequest>);
 
   @override
-  _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
+  _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryResponseStream),
         returnValue: _i5.Stream<_i13.RecoveryResponseEvent>.empty(),
       ) as _i5.Stream<_i13.RecoveryResponseEvent>);
@@ -1257,7 +1277,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<List<_i9.ShardData>> getVaultShares(String? vaultId) => (super.noSuchMethod(
+  _i5.Future<List<_i9.ShardData>> getVaultShares(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getVaultShares,
           [vaultId],
@@ -1266,7 +1287,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<List<_i9.ShardData>>);
 
   @override
-  _i5.Future<_i9.ShardData?> getVaultShare(String? vaultId) => (super.noSuchMethod(
+  _i5.Future<_i9.ShardData?> getVaultShare(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getVaultShare,
           [vaultId],
@@ -1275,7 +1297,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<_i9.ShardData?>);
 
   @override
-  _i5.Future<_i9.ShardData?> getShareByEventId(String? nostrEventId) => (super.noSuchMethod(
+  _i5.Future<_i9.ShardData?> getShareByEventId(String? nostrEventId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getShareByEventId,
           [nostrEventId],
@@ -1351,7 +1374,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> markShareAsReceivedByEventId(String? nostrEventId) => (super.noSuchMethod(
+  _i5.Future<void> markShareAsReceivedByEventId(String? nostrEventId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #markShareAsReceivedByEventId,
           [nostrEventId],
@@ -1361,7 +1385,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<String?> reassembleVaultContent(String? vaultId) => (super.noSuchMethod(
+  _i5.Future<String?> reassembleVaultContent(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #reassembleVaultContent,
           [vaultId],
@@ -1379,7 +1404,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<bool>);
 
   @override
-  _i5.Future<List<_i9.ShardData>> getAllCollectedShards() => (super.noSuchMethod(
+  _i5.Future<List<_i9.ShardData>> getAllCollectedShards() =>
+      (super.noSuchMethod(
         Invocation.method(
           #getAllCollectedShards,
           [],
@@ -1425,7 +1451,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> removeShareByEventId(String? nostrEventId) => (super.noSuchMethod(
+  _i5.Future<void> removeShareByEventId(String? nostrEventId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #removeShareByEventId,
           [nostrEventId],
@@ -1461,7 +1488,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<List<_i9.ShardData>> getRecoveryShards(String? recoveryRequestId) =>
+  _i5.Future<List<_i9.ShardData>> getRecoveryShards(
+          String? recoveryRequestId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryShards,
@@ -1471,7 +1499,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<List<_i9.ShardData>>);
 
   @override
-  _i5.Future<int> getRecoveryShardCount(String? recoveryRequestId) => (super.noSuchMethod(
+  _i5.Future<int> getRecoveryShardCount(String? recoveryRequestId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getRecoveryShardCount,
           [recoveryRequestId],
@@ -1496,7 +1525,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<bool>);
 
   @override
-  _i5.Future<void> removeRecoveryShards(String? recoveryRequestId) => (super.noSuchMethod(
+  _i5.Future<void> removeRecoveryShards(String? recoveryRequestId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #removeRecoveryShards,
           [recoveryRequestId],
@@ -1526,7 +1556,8 @@ class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processKeyHolderRemoval({required _i2.Nip01Event? event}) => (super.noSuchMethod(
+  _i5.Future<void> processKeyHolderRemoval({required _i2.Nip01Event? event}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processKeyHolderRemoval,
           [],

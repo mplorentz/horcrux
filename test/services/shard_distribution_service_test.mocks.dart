@@ -33,7 +33,8 @@ import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeNdkBroadcastResponse_0 extends _i1.SmartFake implements _i2.NdkBroadcastResponse {
+class _FakeNdkBroadcastResponse_0 extends _i1.SmartFake
+    implements _i2.NdkBroadcastResponse {
   _FakeNdkBroadcastResponse_0(
     Object parent,
     Invocation parentInvocation,
@@ -318,7 +319,8 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
       ) as _i4.Future<void>);
 
   @override
-  _i2.NdkResponse requestNostrEvent(_i2.NdkRequest? request) => (super.noSuchMethod(
+  _i2.NdkResponse requestNostrEvent(_i2.NdkRequest? request) =>
+      (super.noSuchMethod(
         Invocation.method(
           #requestNostrEvent,
           [request],
@@ -621,7 +623,8 @@ class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
 /// A class which mocks [NdkBroadcastResponse].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkBroadcastResponse extends _i1.Mock implements _i2.NdkBroadcastResponse {
+class MockNdkBroadcastResponse extends _i1.Mock
+    implements _i2.NdkBroadcastResponse {
   MockNdkBroadcastResponse() {
     _i1.throwOnMissingStub(this);
   }
@@ -636,14 +639,16 @@ class MockNdkBroadcastResponse extends _i1.Mock implements _i2.NdkBroadcastRespo
       ) as _i2.Nip01Event);
 
   @override
-  _i4.Future<List<_i6.RelayBroadcastResponse>> get broadcastDoneFuture => (super.noSuchMethod(
+  _i4.Future<List<_i6.RelayBroadcastResponse>> get broadcastDoneFuture =>
+      (super.noSuchMethod(
         Invocation.getter(#broadcastDoneFuture),
-        returnValue:
-            _i4.Future<List<_i6.RelayBroadcastResponse>>.value(<_i6.RelayBroadcastResponse>[]),
+        returnValue: _i4.Future<List<_i6.RelayBroadcastResponse>>.value(
+            <_i6.RelayBroadcastResponse>[]),
       ) as _i4.Future<List<_i6.RelayBroadcastResponse>>);
 
   @override
-  _i4.Stream<List<_i6.RelayBroadcastResponse>> get broadcastDone => (super.noSuchMethod(
+  _i4.Stream<List<_i6.RelayBroadcastResponse>> get broadcastDone =>
+      (super.noSuchMethod(
         Invocation.getter(#broadcastDone),
         returnValue: _i4.Stream<List<_i6.RelayBroadcastResponse>>.empty(),
       ) as _i4.Stream<List<_i6.RelayBroadcastResponse>>);
@@ -893,7 +898,8 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i12.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<List<_i12.ShardData>> getShardsForVault(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
@@ -967,13 +973,15 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i13.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+  _i4.Future<List<_i13.RecoveryRequest>> getRecoveryRequestsForVault(
+          String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(<_i13.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(
+            <_i13.RecoveryRequest>[]),
       ) as _i4.Future<List<_i13.RecoveryRequest>>);
 
   @override
@@ -987,12 +995,14 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<_i13.RecoveryRequest?>);
 
   @override
-  _i4.Future<List<_i13.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+  _i4.Future<List<_i13.RecoveryRequest>> getAllRecoveryRequests() =>
+      (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(<_i13.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(
+            <_i13.RecoveryRequest>[]),
       ) as _i4.Future<List<_i13.RecoveryRequest>>);
 
   @override
@@ -1044,7 +1054,8 @@ class MockLoginService extends _i1.Mock implements _i14.LoginService {
       ) as _i4.Future<_i3.KeyPair>);
 
   @override
-  _i4.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
+  _i4.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
+      (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -1219,13 +1230,15 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
   }
 
   @override
-  _i4.Stream<_i13.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
+  _i4.Stream<_i13.RecoveryRequest> get recoveryRequestStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryRequestStream),
         returnValue: _i4.Stream<_i13.RecoveryRequest>.empty(),
       ) as _i4.Stream<_i13.RecoveryRequest>);
 
   @override
-  _i4.Stream<_i15.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
+  _i4.Stream<_i15.RecoveryResponseEvent> get recoveryResponseStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryResponseStream),
         returnValue: _i4.Stream<_i15.RecoveryResponseEvent>.empty(),
       ) as _i4.Stream<_i15.RecoveryResponseEvent>);
