@@ -181,13 +181,22 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                       ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  ownerNpub,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
+                // Show owner name if available, otherwise show npub
+                if (invitation.ownerName != null && invitation.ownerName!.isNotEmpty)
+                  Text(
+                    invitation.ownerName!,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                  )
+                else
+                  Text(
+                    ownerNpub,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
                 const SizedBox(height: 24),
 
                 // Invitee name (if provided)

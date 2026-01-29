@@ -127,6 +127,7 @@ class InvitationService {
       vaultId: vaultId,
       vaultName: vault.name,
       ownerPubkey: ownerPubkey,
+      ownerName: vault.ownerName,
       relayUrls: relayUrls,
       inviteeName: inviteeName.trim(),
     );
@@ -245,6 +246,7 @@ class InvitationService {
     required String ownerPubkey,
     required List<String> relayUrls,
     String? vaultName,
+    String? ownerName,
   }) async {
     // Check if invitation already exists
     final existing = await _loadInvitation(inviteCode);
@@ -260,6 +262,7 @@ class InvitationService {
       vaultId: vaultId,
       vaultName: vaultName,
       ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
       relayUrls: relayUrls,
       inviteeName: null, // Not available on receiving side
     );
@@ -375,6 +378,7 @@ class InvitationService {
         content: null, // No content yet - waiting for shard
         createdAt: invitation.createdAt,
         ownerPubkey: invitation.ownerPubkey,
+        ownerName: invitation.ownerName, // Include owner name from invitation
         shards: [], // No shards yet - awaiting key distribution
         backupConfig: null,
       );
