@@ -56,8 +56,7 @@ class _FakeNdkService_1 extends _i1.SmartFake implements _i3.NdkService {
         );
 }
 
-class _FakeScanningStatus_2 extends _i1.SmartFake
-    implements _i4.ScanningStatus {
+class _FakeScanningStatus_2 extends _i1.SmartFake implements _i4.ScanningStatus {
   _FakeScanningStatus_2(
     Object parent,
     Invocation parentInvocation,
@@ -311,8 +310,7 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) =>
-      (super.noSuchMethod(
+  _i6.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
@@ -386,15 +384,13 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(
-          String? vaultId) =>
+  _i6.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i12.RecoveryRequest>>.value(
-            <_i12.RecoveryRequest>[]),
+        returnValue: _i6.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
       ) as _i6.Future<List<_i12.RecoveryRequest>>);
 
   @override
@@ -408,14 +404,12 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<_i12.RecoveryRequest?>);
 
   @override
-  _i6.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() =>
-      (super.noSuchMethod(
+  _i6.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i6.Future<List<_i12.RecoveryRequest>>.value(
-            <_i12.RecoveryRequest>[]),
+        returnValue: _i6.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
       ) as _i6.Future<List<_i12.RecoveryRequest>>);
 
   @override
@@ -431,8 +425,7 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
 /// A class which mocks [ShardDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShardDistributionService extends _i1.Mock
-    implements _i13.ShardDistributionService {
+class MockShardDistributionService extends _i1.Mock implements _i13.ShardDistributionService {
   MockShardDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -543,8 +536,7 @@ class MockShardDistributionService extends _i1.Mock
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> processShardConfirmationEvent(
-          {required _i15.Nip01Event? event}) =>
+  _i6.Future<void> processShardConfirmationEvent({required _i15.Nip01Event? event}) =>
       (super.noSuchMethod(
         Invocation.method(
           #processShardConfirmationEvent,
@@ -556,8 +548,7 @@ class MockShardDistributionService extends _i1.Mock
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> processShardErrorEvent({required _i15.Nip01Event? event}) =>
-      (super.noSuchMethod(
+  _i6.Future<void> processShardErrorEvent({required _i15.Nip01Event? event}) => (super.noSuchMethod(
         Invocation.method(
           #processShardErrorEvent,
           [],
@@ -607,8 +598,7 @@ class MockLoginService extends _i1.Mock implements _i16.LoginService {
       ) as _i6.Future<_i2.KeyPair>);
 
   @override
-  _i6.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
-      (super.noSuchMethod(
+  _i6.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -802,16 +792,14 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i18.RelayConfiguration>> getRelayConfigurations(
-          {bool? enabledOnly}) =>
+  _i6.Future<List<_i18.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i6.Future<List<_i18.RelayConfiguration>>.value(
-            <_i18.RelayConfiguration>[]),
+        returnValue: _i6.Future<List<_i18.RelayConfiguration>>.value(<_i18.RelayConfiguration>[]),
       ) as _i6.Future<List<_i18.RelayConfiguration>>);
 
   @override
@@ -825,8 +813,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<_i18.RelayConfiguration?>);
 
   @override
-  _i6.Future<void> addRelayConfiguration(_i18.RelayConfiguration? relay) =>
-      (super.noSuchMethod(
+  _i6.Future<void> addRelayConfiguration(_i18.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
@@ -836,8 +823,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> updateRelayConfiguration(_i18.RelayConfiguration? relay) =>
-      (super.noSuchMethod(
+  _i6.Future<void> updateRelayConfiguration(_i18.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],
@@ -847,8 +833,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> removeRelayConfiguration(String? relayId) =>
-      (super.noSuchMethod(
+  _i6.Future<void> removeRelayConfiguration(String? relayId) => (super.noSuchMethod(
         Invocation.method(
           #removeRelayConfiguration,
           [relayId],
@@ -858,8 +843,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> startRelayScanning({Duration? scanInterval}) =>
-      (super.noSuchMethod(
+  _i6.Future<void> startRelayScanning({Duration? scanInterval}) => (super.noSuchMethod(
         Invocation.method(
           #startRelayScanning,
           [],
@@ -934,8 +918,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> syncRelaysFromUrls(List<String>? relayUrls) =>
-      (super.noSuchMethod(
+  _i6.Future<void> syncRelaysFromUrls(List<String>? relayUrls) => (super.noSuchMethod(
         Invocation.method(
           #syncRelaysFromUrls,
           [relayUrls],

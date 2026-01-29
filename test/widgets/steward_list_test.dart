@@ -6,7 +6,6 @@ import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
-import '../fixtures/test_keys.dart';
 
 void main() {
   testWidgets('includes owner in steward list when owner is in shard peers', (tester) async {

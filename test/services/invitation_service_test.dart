@@ -123,7 +123,6 @@ void main() {
         await realRepository.updateBackupConfig(vaultId, backupConfigWithVersion);
 
         // Create an invitation for Device C
-        const inviteCode = 'test-invite-code-c';
         await invitationService.generateInvitationLink(
           vaultId: vaultId,
           inviteeName: 'Device C',
@@ -313,7 +312,6 @@ void main() {
         const deviceAPubkey = TestHexPubkeys.alice; // Owner
         const deviceBPubkey = TestHexPubkeys.bob; // holdingKey (should be updated)
         final deviceDPubkey = 'd' * 64; // awaitingKey (should NOT be updated)
-        final deviceEPubkey = 'e' * 64; // invited (should NOT be updated)
         const deviceCPubkey = TestHexPubkeys.charlie; // New steward being added
 
         final deviceBSteward = createSteward(
