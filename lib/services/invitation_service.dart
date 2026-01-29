@@ -671,38 +671,7 @@ class InvitationService {
     // Check if we should auto-distribute keys now that all stewards have accepted
     // This handles the case where user adds stewards via invite, saves recovery plan,
     // then stewards accept - we should auto-distribute when all stewards are ready
-    try {
-      final backupConfig = await repository.getBackupConfig(invitation.vaultId);
-      final vault = await repository.getVault(invitation.vaultId);
-
-      if (backupConfig != null && vault != null && vault.content != null) {
-        // Check if all stewards now have pubkeys (can distribute)
-        if (backupConfig.canDistribute) {
-          // Check if all stewards with pubkeys are awaitingKey (ready for distribution)
-          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
-          final allAwaitingKey = stewardsWithPubkeys.isNotEmpty &&
-              stewardsWithPubkeys.every(
-                (s) => s.status == StewardStatus.awaitingKey,
-              );
-
-          if (allAwaitingKey) {
-            Log.info(
-              'All stewards are awaitingKey and can distribute - triggering auto-distribution for vault ${invitation.vaultId}',
-            );
-            try {
-              await _backupService.createAndDistributeBackup(vaultId: invitation.vaultId);
-              Log.info('Auto-distributed keys after steward acceptance');
-            } catch (e) {
-              Log.error('Failed to auto-distribute keys after steward acceptance', e);
-              // Don't fail RSVP processing if auto-distribution fails
-            }
-          }
-        }
-      }
-    } catch (e) {
-      Log.warning('Error checking for auto-distribution after RSVP: $e');
-      // Don't fail RSVP processing if auto-distribution check fails
-    }
+    await _backupService.distributeKeysIfNecessary(invitation.vaultId);
 
     // Notify listeners
     _notifyInvitationsChanged();
