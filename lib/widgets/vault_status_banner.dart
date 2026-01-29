@@ -128,7 +128,7 @@ class VaultStatusBanner extends ConsumerWidget {
         context,
         const _StatusData(
           headline: 'Recovery not set up',
-          subtext: 'Step 1 of 3: Choose stewards and rules in your Recovery Plan.',
+          subtext: 'Step 1 of 3: Invite stewards from the Recovery Plan screen.',
           icon: Icons.info_outline,
           accentColor: Color(0xFF676F62), // Secondary text color
           variant: _StatusVariant.noPlan,
@@ -234,9 +234,9 @@ class VaultStatusBanner extends ConsumerWidget {
       return _buildBanner(
         context,
         _StatusData(
-          headline: 'Waiting for stewards to accept',
+          headline: 'Waiting for stewards to join',
           subtext:
-              'Step 2 of 3: Waiting for $pendingCount pending steward${pendingCount > 1 ? 's' : ''} to accept their invitation${pendingCount > 1 ? 's' : ''} before keys can be distributed.',
+              'Step 2 of 3: Invites sent. ${pendingCount > 0 ? "$pendingCount steward${pendingCount > 1 ? 's' : ''} need" : "Stewards need"} to accept before keys can be distributed.',
           icon: Icons.hourglass_empty,
           accentColor: const Color(0xFF7A4A2F), // Umber
           variant: _StatusVariant.waitingOnStewards,
@@ -252,7 +252,7 @@ class VaultStatusBanner extends ConsumerWidget {
       const _StatusData(
         headline: 'Ready for recovery',
         subtext:
-            'Your stewards have confirmed keys are stored. You or a steward can initiate recovery at any time.',
+            'Your stewards all have the latest keys to the vault. Stewards can initiate recovery at any time.',
         icon: Icons.check_circle,
         accentColor: Color(0xFF2E7D32), // Deep green for success
         variant: _StatusVariant.ready,
