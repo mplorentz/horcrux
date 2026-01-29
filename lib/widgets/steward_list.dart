@@ -74,7 +74,15 @@ class StewardList extends ConsumerWidget {
               child: Text('Error loading user info: $error'),
             ),
           ),
-          data: (currentPubkey) => _buildKeyHolderContent(context, ref, vault, currentPubkey),
+          data: (currentPubkey) {
+            // Hide steward list when vault is in awaitingKey state AND current user is a steward
+            // (not the owner) - stewards waiting for their key shouldn't see an empty steward list
+            final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
+            if (vault.state == VaultState.awaitingKey && !isOwner) {
+              return const SizedBox.shrink();
+            }
+            return _buildKeyHolderContent(context, ref, vault, currentPubkey);
+          },
         );
       },
     );
