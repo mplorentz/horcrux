@@ -143,7 +143,7 @@ class InvitationService {
     // Add to vault invitations index
     await _addToVaultIndex(vaultId, inviteCode);
 
-    // Ensure relay URLs are added to NDK service so we can receive RSVP events
+    // Ensure relay URLs are added to NDK service so we can receive invitation acceptance events
     // Add relays asynchronously - don't fail invitation generation if relay addition fails
     _addRelaysToNdk(relayUrls);
 
@@ -160,7 +160,7 @@ class InvitationService {
     }
 
     // Add invited steward placeholder to backup config immediately
-    // This allows the RSVP handler to find and update it when the invitee accepts
+    // This allows the invitation acceptance handler to find and update it when the invitee accepts
     Steward? createdSteward;
     try {
       createdSteward = await _addInvitedKeyHolderToBackupConfig(
@@ -290,7 +290,7 @@ class InvitationService {
   /// Checks if already redeemed.
   /// Updates invitation status to redeemed.
   /// Adds invitee to backup config as steward.
-  /// Sends RSVP event via InvitationSendingService.
+  /// Sends invitation acceptance event via InvitationSendingService.
   /// Updates invitation tracking.
   Future<void> redeemInvitation({
     required String inviteCode,
@@ -393,35 +393,35 @@ class InvitationService {
     );
     await _saveInvitation(redeemedInvitation);
 
-    // Send RSVP event BEFORE syncing relays to avoid timing issues
-    // The RSVP uses specificRelays which will connect to relays on demand
-    String? rsvpEventId;
+    // Send invitation acceptance event BEFORE syncing relays to avoid timing issues
+    // The acceptance event uses specificRelays which will connect to relays on demand
+    String? acceptanceEventId;
     try {
-      rsvpEventId = await invitationSendingService.sendRsvpEvent(
+      acceptanceEventId = await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
       );
 
-      if (rsvpEventId == null) {
-        // RSVP event failed to publish - throw error so UI can show appropriate message
+      if (acceptanceEventId == null) {
+        // Invitation acceptance event failed to publish - throw error so UI can show appropriate message
         throw Exception(
-          'Failed to publish RSVP event to relays. Please check your relay connections.',
+          'Failed to publish invitation acceptance event to relays. Please check your relay connections.',
         );
       }
 
-      Log.info('RSVP event published successfully: $rsvpEventId');
+      Log.info('Invitation acceptance event published successfully: $acceptanceEventId');
     } catch (e) {
-      Log.error('Error sending RSVP event for invitation $inviteCode', e);
+      Log.error('Error sending invitation acceptance event for invitation $inviteCode', e);
       // Re-throw so the UI can handle it appropriately
-      // The invitation is already marked as redeemed, but RSVP failed
+      // The invitation is already marked as redeemed, but acceptance event failed
       throw Exception(
         'Invitation was accepted locally, but failed to notify the owner: $e',
       );
     }
 
     // NOW sync relays from invitation and start scanning so invitee can receive shards
-    // This is done AFTER sending RSVP to avoid timing conflicts with relay connections
+    // This is done AFTER sending acceptance event to avoid timing conflicts with relay connections
     try {
       await _relayScanService.syncRelaysFromUrls(invitation.relayUrls);
       await _relayScanService.ensureScanningStarted();
@@ -550,50 +550,50 @@ class InvitationService {
     Log.info('Invalidated invitation $inviteCode, reason: $reason');
   }
 
-  /// Processes RSVP event received from invitee
+  /// Processes invitation acceptance event received from invitee
   ///
   /// Decrypts event content using NIP-44.
   /// Validates invite code and invitee pubkey.
   /// Updates invitation status to redeemed.
   /// Adds invitee to backup config if not already present.
   /// Updates steward status to "awaiting key".
-  Future<void> processRsvpEvent({required Nip01Event event}) async {
+  Future<void> processInvitationAcceptanceEvent({required Nip01Event event}) async {
     // Validate event kind
-    if (event.kind != NostrKind.invitationRsvp.value) {
+    if (event.kind != NostrKind.invitationAcceptance.value) {
       throw ArgumentError(
-        'Invalid event kind: expected ${NostrKind.invitationRsvp.value}, got ${event.kind}',
+        'Invalid event kind: expected ${NostrKind.invitationAcceptance.value}, got ${event.kind}',
       );
     }
 
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process RSVP event.');
+      throw Exception('No key pair available. Cannot process invitation acceptance event.');
     }
 
-    // Parse the RSVP data from the unwrapped content (already decrypted by NDK)
+    // Parse the invitation acceptance data from the unwrapped content (already decrypted by NDK)
     Map<String, dynamic> payload;
     try {
-      Log.debug('RSVP event content: ${event.content}');
+      Log.debug('Invitation acceptance event content: ${event.content}');
       payload = json.decode(event.content) as Map<String, dynamic>;
-      Log.debug('RSVP event payload keys: ${payload.keys.toList()}');
+      Log.debug('Invitation acceptance event payload keys: ${payload.keys.toList()}');
     } catch (e) {
-      Log.error('Error parsing RSVP event JSON', e);
+      Log.error('Error parsing invitation acceptance event JSON', e);
       throw Exception(
-        'Failed to parse RSVP event content. The event may be corrupted or encrypted incorrectly: $e',
+        'Failed to parse invitation acceptance event content. The event may be corrupted or encrypted incorrectly: $e',
       );
     }
 
     // Extract invite code from payload
     final inviteCode = payload['invite_code'] as String?;
     if (inviteCode == null) {
-      throw ArgumentError('Missing invite_code in RSVP event payload');
+      throw ArgumentError('Missing invite_code in invitation acceptance event payload');
     }
 
     // Extract invitee pubkey from payload
     final inviteePubkey = payload['invitee_pubkey'] as String?;
     if (inviteePubkey == null || !isValidHexPubkey(inviteePubkey)) {
-      throw ArgumentError('Invalid invitee_pubkey in RSVP event payload');
+      throw ArgumentError('Invalid invitee_pubkey in invitation acceptance event payload');
     }
 
     if (inviteePubkey != event.pubKey) {
@@ -605,7 +605,7 @@ class InvitationService {
     // Load invitation
     final invitation = await _loadInvitation(inviteCode);
     if (invitation == null) {
-      Log.warning('RSVP event received for unknown invitation: $inviteCode');
+      Log.warning('Invitation acceptance event received for unknown invitation: $inviteCode');
       return; // Silently ignore if invitation not found
     }
 
@@ -664,8 +664,8 @@ class InvitationService {
         }
       }
     } catch (e) {
-      Log.warning('Error updating steward status after RSVP: $e');
-      // Don't fail RSVP processing if status update fails
+      Log.warning('Error updating steward status after invitation acceptance: $e');
+      // Don't fail invitation acceptance processing if status update fails
     }
 
     // Check if we should auto-distribute keys now that all stewards have accepted
@@ -677,7 +677,7 @@ class InvitationService {
     _notifyInvitationsChanged();
 
     Log.info(
-      'Processed RSVP event for invitation $inviteCode from invitee $inviteePubkey',
+      'Processed invitation acceptance event for invitation $inviteCode from invitee $inviteePubkey',
     );
   }
 
@@ -795,7 +795,7 @@ class InvitationService {
 
   /// Add a steward to backup config (or create config if it doesn't exist)
   ///
-  /// When an RSVP is received:
+  /// When an invitation acceptance event is received:
   /// - If a steward with this pubkey already exists, do nothing
   /// - If a steward with matching inviteCode exists but no pubkey (invited status),
   ///   update it with the pubkey and change status to awaitingKey
@@ -830,7 +830,7 @@ class InvitationService {
     } else {
       // FIRST: Check if there's an invited steward (no pubkey) with matching invite code
       // This must be checked BEFORE checking for existing pubkey, otherwise we'll miss
-      // updating invited stewards when RSVP comes in
+      // updating invited stewards when invitation acceptance event comes in
       if (inviteCode != null) {
         Log.debug(
           'Looking for invited steward with invite code: "$inviteCode"',
@@ -941,7 +941,7 @@ class InvitationService {
   ///
   /// This is called when an invitation is generated, before the invitee has accepted.
   /// It creates a steward with null pubkey and invited status, which will be
-  /// updated when the RSVP is received.
+  /// updated when the invitation acceptance event is received.
   ///
   /// Returns the created steward so the UI can use the same instance (with same ID).
   Future<Steward> _addInvitedKeyHolderToBackupConfig({
@@ -1003,10 +1003,10 @@ class InvitationService {
     }
   }
 
-  /// Add relay URLs to NDK service so we can receive RSVP events
+  /// Add relay URLs to NDK service so we can receive invitation acceptance events
   ///
   /// This is called when an invitation is generated to ensure the owner
-  /// is listening on the relays where the invitee will send RSVP events.
+  /// is listening on the relays where the invitee will send invitation acceptance events.
   Future<void> _addRelaysToNdk(List<String> relayUrls) async {
     try {
       final ndkService = _getNdkService();

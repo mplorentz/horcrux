@@ -20,15 +20,15 @@ class InvitationSendingService {
 
   InvitationSendingService(this.ndkService);
 
-  /// Creates and publishes RSVP event to accept invitation
+  /// Creates and publishes invitation acceptance event to accept invitation
   ///
-  /// Creates RSVP event payload.
+  /// Creates invitation acceptance event payload.
   /// Encrypts using NIP-44.
   /// Creates Nostr event (kind 1340).
   /// Signs with invitee's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
-  Future<String?> sendRsvpEvent({
+  Future<String?> sendInvitationAcceptanceEvent({
     required String inviteCode,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
@@ -36,36 +36,36 @@ class InvitationSendingService {
     try {
       final currentPubkey = await ndkService.getCurrentPubkey();
       if (currentPubkey == null) {
-        Log.error('No key pair available for sending RSVP event');
+        Log.error('No key pair available for sending invitation acceptance event');
         return null;
       }
 
-      // Create RSVP event payload
-      final rsvpData = {
+      // Create invitation acceptance event payload
+      final acceptanceData = {
         'invite_code': inviteCode,
         'invitee_pubkey': currentPubkey,
         'responded_at': DateTime.now().toIso8601String(),
       };
 
-      final rsvpJson = json.encode(rsvpData);
+      final acceptanceJson = json.encode(acceptanceData);
 
       Log.info(
-        'Sending RSVP event for invite code: ${inviteCode.substring(0, 8)}...',
+        'Sending invitation acceptance event for invite code: ${inviteCode.substring(0, 8)}...',
       );
 
       // Publish using NdkService
       return await ndkService.publishEncryptedEvent(
-        content: rsvpJson,
-        kind: NostrKind.invitationRsvp.value,
+        content: acceptanceJson,
+        kind: NostrKind.invitationAcceptance.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'invitation_rsvp_$inviteCode'],
+          ['d', 'invitation_acceptance_$inviteCode'],
           ['invite', inviteCode],
         ],
       );
     } catch (e) {
-      Log.error('Error sending RSVP event', e);
+      Log.error('Error sending invitation acceptance event', e);
       return null;
     }
   }

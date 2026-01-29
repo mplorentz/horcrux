@@ -1414,7 +1414,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
               : _instructionsController.text.trim(),
         );
       } else {
-        // Update: use mergeBackupConfig to preserve RSVP updates
+        // Update: use mergeBackupConfig to preserve invitation acceptance updates
         await backupService.mergeBackupConfig(
           vaultId: widget.vaultId,
           threshold: _threshold,

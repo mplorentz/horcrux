@@ -23,9 +23,9 @@ enum NostrKind {
   /// Used when a steward responds to a recovery request
   recoveryResponse(1339),
 
-  /// Horcrux custom: Invitation RSVP
+  /// Horcrux custom: Invitation Acceptance
   /// Used when an invitee accepts an invitation link
-  invitationRsvp(1340),
+  invitationAcceptance(1340),
 
   /// Horcrux custom: Invitation denial
   /// Used when an invitee denies an invitation link
