@@ -131,36 +131,21 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         ),
                       );
 
-                      // Waiting for stewards button - shown when stewards haven't accepted invitations
+                      // Delete Local Copy Button - shown after distribution
+                      // Owner can delete vault content while keeping recovery capability
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
-                        if (backupConfig != null && backupConfig.stewards.isNotEmpty) {
-                          if (!backupConfig.canDistribute) {
-                            // Show "Waiting for stewards" button (disabled)
-                            final pendingCount = backupConfig.pendingInvitationsCount;
-                            buttons.add(
-                              RowButtonConfig(
-                                onPressed: null, // Disabled
-                                icon: Icons.hourglass_empty,
-                                text:
-                                    'Waiting for $pendingCount Steward${pendingCount > 1 ? 's' : ''}',
-                              ),
-                            );
-                          }
-
-                          // Delete Local Copy Button - shown after distribution
-                          // Owner can delete vault content while keeping recovery capability
-                          if (backupConfig.lastRedistribution != null &&
-                              currentVault.content != null) {
-                            buttons.add(
-                              RowButtonConfig(
-                                onPressed: () =>
-                                    _showDeleteContentDialog(context, ref, currentVault),
-                                icon: Icons.delete_sweep,
-                                text: 'Delete Local Copy',
-                              ),
-                            );
-                          }
+                        if (backupConfig != null &&
+                            backupConfig.stewards.isNotEmpty &&
+                            backupConfig.lastRedistribution != null &&
+                            currentVault.content != null) {
+                          buttons.add(
+                            RowButtonConfig(
+                              onPressed: () => _showDeleteContentDialog(context, ref, currentVault),
+                              icon: Icons.delete_sweep,
+                              text: 'Delete Local Copy',
+                            ),
+                          );
                         }
                       }
 
