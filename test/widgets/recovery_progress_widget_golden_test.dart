@@ -20,7 +20,7 @@ void main() {
   // Helper to create vault
   Vault createTestVault({
     required String id,
-    required List<String> stewardPubkeys,
+    required List<(String pubkey, String? name, String? contactInfo)> stewards,
   }) {
     return Vault(
       id: id,
@@ -31,8 +31,14 @@ void main() {
       backupConfig: createBackupConfig(
         vaultId: id,
         threshold: 2,
-        totalKeys: stewardPubkeys.length,
-        stewards: stewardPubkeys.map((pubkey) => createSteward(pubkey: pubkey)).toList(),
+        totalKeys: stewards.length,
+        stewards: stewards.map((steward) {
+          return createSteward(
+            pubkey: steward.$1,
+            name: steward.$2,
+            contactInfo: steward.$3,
+          );
+        }).toList(),
         relays: ['wss://relay.example.com'],
       ),
     );
@@ -109,7 +115,11 @@ void main() {
 
       final vault = createTestVault(
         id: 'test-vault',
-        stewardPubkeys: [testPubkey2, testPubkey3, testPubkey1],
+        stewards: [
+          (testPubkey2, 'Alice', 'alice@example.com'),
+          (testPubkey3, 'Bob', 'bob@example.com'),
+          (testPubkey1, 'Charlie', 'charlie@example.com'),
+        ],
       );
 
       final container = ProviderContainer(
@@ -163,7 +173,11 @@ void main() {
 
       final vault = createTestVault(
         id: 'test-vault',
-        stewardPubkeys: [testPubkey2, testPubkey3, testPubkey1],
+        stewards: [
+          (testPubkey2, 'Alice', 'alice@example.com'),
+          (testPubkey3, 'Bob', 'bob@example.com'),
+          (testPubkey1, 'Charlie', 'charlie@example.com'),
+        ],
       );
 
       final container = ProviderContainer(
@@ -217,7 +231,11 @@ void main() {
 
       final vault = createTestVault(
         id: 'test-vault',
-        stewardPubkeys: [testPubkey2, testPubkey3, testPubkey1],
+        stewards: [
+          (testPubkey2, 'Alice', 'alice@example.com'),
+          (testPubkey3, 'Bob', 'bob@example.com'),
+          (testPubkey1, 'Charlie', 'charlie@example.com'),
+        ],
       );
 
       final container = ProviderContainer(
