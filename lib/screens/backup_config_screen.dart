@@ -262,18 +262,23 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        final shouldDiscard = await showDialog<bool>(
+        final result = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Discard Changes?'),
-            content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+            content: const Text('You have unsaved changes. What would you like to do?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(context, 'cancel'),
                 child: const Text('Cancel'),
               ),
+              if (_canCreateBackup())
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, 'save'),
+                  child: const Text('Save'),
+                ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.pop(context, 'discard'),
                 child: const Text('Discard'),
               ),
             ],
@@ -281,7 +286,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
 
         if (!context.mounted) return;
-        if (shouldDiscard == true) {
+        if (result == 'save') {
+          await _saveBackup();
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        } else if (result == 'discard') {
           Navigator.of(context).pop();
         }
       },
@@ -1308,25 +1318,37 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     } else {
       // Normal mode: handle unsaved changes
       if (_hasUnsavedChanges) {
-        final shouldDiscard = await showDialog<bool>(
+        final result = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Discard Changes?'),
-            content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+            content: const Text('You have unsaved changes. What would you like to do?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(context, 'cancel'),
                 child: const Text('Cancel'),
               ),
+              if (_canCreateBackup())
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, 'save'),
+                  child: const Text('Save'),
+                ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.pop(context, 'discard'),
                 child: const Text('Discard'),
               ),
             ],
           ),
         );
 
-        if (shouldDiscard == true && mounted) {
+        if (!mounted) return;
+        if (result == 'save') {
+          await _saveBackup();
+          if (mounted) {
+            // Pop with vaultId so the vault detail screen is shown
+            Navigator.of(context).pop(widget.vaultId);
+          }
+        } else if (result == 'discard') {
           await _restoreInitialConfig();
           if (!mounted) return;
           // Pop with vaultId so the vault detail screen is shown
