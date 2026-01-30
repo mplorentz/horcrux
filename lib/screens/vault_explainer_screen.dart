@@ -45,7 +45,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     context,
                     number: '1',
                     title: 'Adding contents',
-                    description: 'attach files that you want to back up.',
+                    description: 'Attach files that you want to back up.',
                   ),
                   const SizedBox(height: 16),
                   // Step 2
@@ -54,7 +54,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     number: '2',
                     title: 'Invite stewards',
                     description:
-                        'stewards are the other people who will hold keys to your vault. They\'ll need to download Horcrux as well to hold the keys. We\'ll give you a link that makes this easy for them.',
+                        'Stewards are the other people who will hold keys to your vault. They\'ll need to download Horcrux as well to hold the keys. We\'ll give you a link that makes this easy for them.',
                   ),
                   const SizedBox(height: 16),
                   // Step 3
@@ -63,7 +63,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     number: '3',
                     title: 'Distribute keys',
                     description:
-                        'once you have configured everything we\'ll securely create and distribute the keys to your vault.',
+                        'Once you have configured everything we\'ll securely create and distribute the keys to your vault.',
                   ),
                   const SizedBox(height: 16),
                   // Step 4
@@ -72,7 +72,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     number: '4',
                     title: 'Recover',
                     description:
-                        'if you lose access to your data or your stewards lose access to you (🪦) any steward can initiate a recovery process. All stewards will receive a notification requesting them to share their key. Assemble enough keys and the steward can unlock the vault.',
+                        'If you lose access to your data or your stewards lose access to you (🪦) any steward can initiate a recovery process. All stewards will receive a notification requesting them to share their key. Assemble enough keys and the steward can unlock the vault.',
                   ),
                   const SizedBox(height: 24),
                   // Learn more button (placeholder)
