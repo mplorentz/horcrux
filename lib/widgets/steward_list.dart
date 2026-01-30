@@ -241,17 +241,6 @@ class StewardList extends ConsumerWidget {
                       ),
                     ),
                   ],
-                  if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _truncateToTwoLines(steward.contactInfo!),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -316,6 +305,7 @@ class StewardList extends ConsumerWidget {
     void addSteward({
       required String pubkey,
       String? name,
+      String? contactInfo,
       required bool isOwner,
       StewardStatus status = StewardStatus.holdingKey,
     }) {
@@ -327,7 +317,7 @@ class StewardList extends ConsumerWidget {
       final merged = StewardInfo(
         pubkey: pubkey,
         displayName: newDisplayName ?? existing?.displayName,
-        contactInfo: existing?.contactInfo,
+        contactInfo: contactInfo ?? existing?.contactInfo,
         isOwner: isOwner || (existing?.isOwner ?? false),
         status: status,
       );
@@ -339,10 +329,16 @@ class StewardList extends ConsumerWidget {
       for (final steward in shard.stewards!) {
         final stewardPubkey = steward['pubkey'];
         final stewardName = steward['name'];
+        final stewardContactInfo = steward['contactInfo'];
         if (stewardPubkey == null) continue;
 
         final isOwner = stewardPubkey == vault.ownerPubkey;
-        addSteward(pubkey: stewardPubkey, name: stewardName, isOwner: isOwner);
+        addSteward(
+          pubkey: stewardPubkey,
+          name: stewardName,
+          contactInfo: stewardContactInfo,
+          isOwner: isOwner,
+        );
       }
     }
 
@@ -356,18 +352,6 @@ class StewardList extends ConsumerWidget {
     });
 
     return stewards;
-  }
-
-  /// Truncates text to approximately 2 lines while preserving line breaks
-  /// If text exceeds 2 lines, adds ellipsis
-  String _truncateToTwoLines(String text) {
-    final lines = text.split('\n');
-    if (lines.length <= 2) {
-      // If 2 or fewer lines, return as-is (Text widget will handle wrapping)
-      return text;
-    }
-    // If more than 2 lines, take first 2 and add ellipsis
-    return '${lines[0]}\n${lines[1]}...';
   }
 }
 
