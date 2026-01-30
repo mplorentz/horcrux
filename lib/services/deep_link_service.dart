@@ -301,7 +301,8 @@ class DeepLinkService {
         vaultName:
             vaultName != null && vaultName.isNotEmpty ? Uri.decodeComponent(vaultName) : null,
         ownerPubkey: ownerPubkey,
-        ownerName: ownerName != null && ownerName.isNotEmpty ? Uri.decodeComponent(ownerName) : null,
+        ownerName:
+            ownerName != null && ownerName.isNotEmpty ? Uri.decodeComponent(ownerName) : null,
         relayUrls: relayUrls,
       );
     } on InvalidInvitationLinkException {
