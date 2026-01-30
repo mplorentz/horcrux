@@ -179,7 +179,6 @@ class StewardList extends ConsumerWidget {
           displayName: steward.displayName,
           contactInfo: steward.contactInfo,
           isOwner: steward.isOwner,
-          status: steward.status,
         );
       },
       borderRadius: BorderRadius.circular(8),
@@ -245,14 +244,22 @@ class StewardList extends ConsumerWidget {
                   if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      steward.contactInfo!,
+                      _truncateToTwoLines(steward.contactInfo!),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
               ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+              size: 20,
             ),
           ],
         ),
@@ -349,6 +356,18 @@ class StewardList extends ConsumerWidget {
     });
 
     return stewards;
+  }
+
+  /// Truncates text to approximately 2 lines while preserving line breaks
+  /// If text exceeds 2 lines, adds ellipsis
+  String _truncateToTwoLines(String text) {
+    final lines = text.split('\n');
+    if (lines.length <= 2) {
+      // If 2 or fewer lines, return as-is (Text widget will handle wrapping)
+      return text;
+    }
+    // If more than 2 lines, take first 2 and add ellipsis
+    return '${lines[0]}\n${lines[1]}...';
   }
 }
 

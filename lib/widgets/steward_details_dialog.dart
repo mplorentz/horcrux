@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
-import '../models/steward_status.dart';
 
 /// Dialog widget for displaying detailed steward information
 class StewardDetailsDialog extends StatelessWidget {
@@ -8,7 +8,7 @@ class StewardDetailsDialog extends StatelessWidget {
   final String? displayName;
   final String? contactInfo;
   final bool isOwner;
-  final StewardStatus? status;
+  final BuildContext? rootContext;
 
   const StewardDetailsDialog({
     super.key,
@@ -16,7 +16,7 @@ class StewardDetailsDialog extends StatelessWidget {
     this.displayName,
     this.contactInfo,
     required this.isOwner,
-    this.status,
+    this.rootContext,
   });
 
   /// Show steward details dialog
@@ -26,16 +26,15 @@ class StewardDetailsDialog extends StatelessWidget {
     String? displayName,
     String? contactInfo,
     required bool isOwner,
-    StewardStatus? status,
   }) {
     return showDialog(
       context: context,
-      builder: (context) => StewardDetailsDialog(
+      builder: (dialogContext) => StewardDetailsDialog(
         pubkey: pubkey,
         displayName: displayName,
         contactInfo: contactInfo,
         isOwner: isOwner,
-        status: status,
+        rootContext: context, // Store original context for SnackBar
       ),
     );
   }
@@ -58,7 +57,7 @@ class StewardDetailsDialog extends StatelessWidget {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.person, color: colorScheme.primary),
+          Icon(Icons.person, color: colorScheme.onSurface),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -91,12 +90,29 @@ class StewardDetailsDialog extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             if (nostrId != null) ...[
-              Text(
-                'Nostr ID',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Nostr ID',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.copy,
+                      size: 18,
+                      color: colorScheme.onSurface,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _copyToClipboard(context, nostrId!, 'Nostr ID'),
+                    tooltip: 'Copy Nostr ID',
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               SelectableText(
@@ -107,43 +123,38 @@ class StewardDetailsDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
             ],
-            if (status != null) ...[
-              Text(
-                'Status',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Contact Information',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                status!.label,
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-            ],
+                if (contactInfo != null && contactInfo!.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      Icons.copy,
+                      size: 18,
+                      color: colorScheme.onSurface,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _copyToClipboard(context, contactInfo!, 'Contact Information'),
+                    tooltip: 'Copy Contact Information',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
             if (contactInfo != null && contactInfo!.isNotEmpty) ...[
-              Text(
-                'Contact Information',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
               SelectableText(
                 contactInfo!,
                 style: theme.textTheme.bodyMedium,
               ),
             ] else ...[
-              Text(
-                'Contact Information',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
               Text(
                 'No contact information provided.',
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -161,6 +172,20 @@ class StewardDetailsDialog extends StatelessWidget {
           child: const Text('Close'),
         ),
       ],
+    );
+  }
+
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    // Use root context to ensure SnackBar shows even from dialog
+    final scaffoldMessenger =
+        rootContext != null ? ScaffoldMessenger.of(rootContext!) : ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text('$label copied to clipboard'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }

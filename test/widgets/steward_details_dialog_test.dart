@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/widgets/steward_details_dialog.dart';
 
 void main() {
@@ -15,7 +14,6 @@ void main() {
               displayName: 'Test Owner',
               contactInfo: 'owner@example.com',
               isOwner: true,
-              status: StewardStatus.holdingKey,
             ),
           ),
         ),
@@ -78,27 +76,6 @@ void main() {
         ),
         findsOneWidget,
       );
-    });
-
-    testWidgets('displays status when provided', (tester) async {
-      final pubkey = 'c' * 64;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StewardDetailsDialog(
-              pubkey: pubkey,
-              displayName: 'Test User',
-              contactInfo: 'test@example.com',
-              isOwner: false,
-              status: StewardStatus.invited,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Status'), findsOneWidget);
-      expect(find.text(StewardStatus.invited.label), findsOneWidget);
     });
 
     testWidgets('displays no contact info message when not provided', (tester) async {
@@ -174,7 +151,6 @@ void main() {
                     displayName: 'Static Method User',
                     contactInfo: 'static@example.com',
                     isOwner: true,
-                    status: StewardStatus.holdingKey,
                   );
                 },
                 child: const Text('Show Dialog'),
