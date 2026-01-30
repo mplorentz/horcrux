@@ -13,6 +13,7 @@ typedef InvitationLink = ({
   String vaultId, // ID of the vault being shared
   String vaultName, // Name of the vault being shared (null when not available)
   String ownerPubkey, // Hex format (64 chars) - vault owner's public key
+  String? ownerName, // Name of the vault owner (null when not available)
   List<String> relayUrls, // Up to 3 relay URLs for communication
   String? inviteeName, // Name entered by vault owner (null when received via deep link)
   DateTime createdAt, // When invitation was generated
@@ -28,6 +29,7 @@ InvitationLink createInvitationLink({
   required String ownerPubkey,
   required List<String> relayUrls,
   String? vaultName,
+  String? ownerName,
   String? inviteeName,
 }) {
   return (
@@ -35,6 +37,7 @@ InvitationLink createInvitationLink({
     vaultId: vaultId,
     vaultName: vaultName ?? defaultVaultName,
     ownerPubkey: ownerPubkey,
+    ownerName: ownerName,
     relayUrls: relayUrls,
     inviteeName: inviteeName,
     createdAt: DateTime.now(),
@@ -57,6 +60,7 @@ extension InvitationLinkExtension on InvitationLink {
       vaultId: vaultId,
       vaultName: vaultName,
       ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
       relayUrls: relayUrls,
       inviteeName: inviteeName,
       createdAt: createdAt,
@@ -68,7 +72,7 @@ extension InvitationLinkExtension on InvitationLink {
 
   /// Generates an invitation URL from this InvitationLink
   ///
-  /// Format: https://horcruxbackup.com/invite/{inviteCode}?vault={vaultId}&name={vaultName}&owner={ownerPubkey}&relays={relayUrls}
+  /// Format: https://horcruxbackup.com/invite/{inviteCode}?vault={vaultId}&name={vaultName}&owner={ownerPubkey}&ownerName={ownerName}&relays={relayUrls}
   /// Relay URLs are comma-separated and URL-encoded.
   String toUrl() {
     final baseUrl = 'https://horcruxbackup.com/invite/$inviteCode';
@@ -77,6 +81,10 @@ extension InvitationLinkExtension on InvitationLink {
     params.add('vault=${Uri.encodeComponent(vaultId)}');
     params.add('name=${Uri.encodeComponent(vaultName)}');
     params.add('owner=${Uri.encodeComponent(ownerPubkey)}');
+
+    if (ownerName != null && ownerName!.isNotEmpty) {
+      params.add('ownerName=${Uri.encodeComponent(ownerName!)}');
+    }
 
     if (relayUrls.isNotEmpty) {
       final encodedRelays = relayUrls.map((url) => Uri.encodeComponent(url)).join(',');
@@ -94,6 +102,7 @@ Map<String, dynamic> invitationLinkToJson(InvitationLink link) {
     'vaultId': link.vaultId,
     'vaultName': link.vaultName,
     'ownerPubkey': link.ownerPubkey,
+    'ownerName': link.ownerName,
     'relayUrls': link.relayUrls,
     'inviteeName': link.inviteeName,
     'createdAt': link.createdAt.toIso8601String(),
@@ -110,6 +119,7 @@ InvitationLink invitationLinkFromJson(Map<String, dynamic> json) {
     vaultId: json['vaultId'] as String,
     vaultName: json['vaultName'] as String? ?? defaultVaultName,
     ownerPubkey: json['ownerPubkey'] as String,
+    ownerName: json['ownerName'] as String?,
     relayUrls: List<String>.from(json['relayUrls'] as List),
     inviteeName: json['inviteeName'] as String?,
     createdAt: DateTime.parse(json['createdAt'] as String),
