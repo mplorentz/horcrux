@@ -126,22 +126,22 @@ class VaultDetailScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Owner display above status banner
-          VaultOwnerDisplay(vault: vault),
-          // Status banner showing recovery readiness
-          VaultStatusBanner(vault: vault),
           // Scrollable content
           Expanded(
-            child: Container(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Steward List (extends to edges)
-                    StewardList(vaultId: vault.id),
-                  ],
-                ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Owner display above status banner
+                  VaultOwnerDisplay(vault: vault),
+                  // Status banner showing recovery readiness
+                  VaultStatusBanner(vault: vault),
+                  // Steward List (extends to edges)
+                  Container(
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    child: StewardList(vaultId: vault.id),
+                  ),
+                ],
               ),
             ),
           ),
