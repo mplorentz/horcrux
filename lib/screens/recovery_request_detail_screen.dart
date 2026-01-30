@@ -438,7 +438,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                               color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
+                            child: SelectableText(
                               initiatorContactInfo,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
