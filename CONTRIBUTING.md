@@ -6,9 +6,9 @@ Install flutter
 flutter pub get
 dart pub global activate marionette_mcp
 
-## Code Generation with Freezed
+## Code Generation with Freezed and Mockito
 
-This project uses [Freezed](https://pub.dev/packages/freezed) for generating immutable data classes with value equality, `copyWith` methods, and more.
+This project uses [Freezed](https://pub.dev/packages/freezed) for generating immutable data classes with value equality, `copyWith` methods, and more. It also uses Mockito to generate mocks for testing.
 
 ### When to Use Freezed
 
@@ -34,6 +34,7 @@ flutter pub run build_runner build --delete-conflicting-outputs
 ### Important Notes
 
 - Always run codegen after modifying `@freezed` classes or `@GenerateMocks` annotations
+- **Always run `dart format .` after running codegen** - generated code may not be formatted correctly
 - Generated files should be committed to git (they're part of the codebase)
 - If you see "The getter 'copyWith' isn't defined", run codegen
 - Use `--delete-conflicting-outputs` flag to avoid manual cleanup
