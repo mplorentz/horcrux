@@ -619,12 +619,12 @@ void main() {
           return 'test-event-id';
         });
 
-      // Act
-      await invitationSendingService.sendInvitationAcceptanceEvent(
-        inviteCode: inviteCode,
-        ownerPubkey: ownerPubkey,
-        relayUrls: ['ws://localhost:10547'],
-      );
+        // Act
+        await invitationSendingService.sendInvitationAcceptanceEvent(
+          inviteCode: inviteCode,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['ws://localhost:10547'],
+        );
 
         // Assert: Verify JSON roundtrip
         expect(capturedContent, isNotNull);
