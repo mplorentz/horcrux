@@ -150,14 +150,18 @@ final currentKeyProvider = FutureProvider<String?>((ref) async {
 
 **BEFORE EVERY COMMIT** (especially when working on an open PR):
 
-1. **Format Code**: `dart format .` - MUST run before every commit
-2. **Check Linter**: Use ReadLints tool on modified files - MUST be clean
-3. **Run Analyzer**: `flutter analyze` - MUST show "No issues found!"
-4. **UI Changes**: If you modified ANY UI file (`lib/screens/*.dart`, `lib/widgets/*.dart`):
+1. **Code Generation** ⚠️ MANDATORY - If you modified any `@freezed` classes or `@GenerateMocks` annotations:
+   - **MUST run**: `flutter pub run build_runner build --delete-conflicting-outputs`
+   - **MUST format**: `dart format .` (ALWAYS run after codegen - generated code needs formatting)
+   - **MUST commit**: Generated files with your changes
+2. **Format Code**: `dart format .` - MUST run before every commit
+3. **Check Linter**: Use ReadLints tool on modified files - MUST be clean
+4. **Run Analyzer**: `flutter analyze` - MUST show "No issues found!"
+5. **UI Changes**: If you modified ANY UI file (`lib/screens/*.dart`, `lib/widgets/*.dart`):
    - **MUST update goldens**: `flutter test test/screens/<screen>_golden_test.dart --update-goldens` (if golden tests exist)
    - **MUST format**: `dart format .`
    - **MUST commit golden PNG files** with the UI changes
-5. **Build Check**: Code must compile without errors
+6. **Build Check**: Code must compile without errors
 
 **NEVER commit**:
 - ❌ Unformatted code
@@ -176,6 +180,18 @@ final currentKeyProvider = FutureProvider<String?>((ref) async {
 ### Verification Checklist (Execute After Every Change)
 
 After making ANY code changes, you MUST run the following verification steps IN ORDER:
+
+0. **Code Generation** ⚠️ MANDATORY - If you modified any `@freezed` classes or `@GenerateMocks` annotations:
+   ```bash
+   # Run codegen first
+   flutter pub run build_runner build --delete-conflicting-outputs
+   # ALWAYS format after codegen
+   dart format .
+   ```
+   - **MANDATORY**: Run codegen if you modified `@freezed` classes or `@GenerateMocks` annotations
+   - **MANDATORY**: ALWAYS run `dart format .` immediately after codegen (generated code needs formatting)
+   - **MANDATORY**: Commit generated files with your changes
+   - **DO NOT skip** - missing codegen will cause build failures
 
 1. **Check Linter Errors**
    ```bash
@@ -208,6 +224,7 @@ After making ANY code changes, you MUST run the following verification steps IN 
    ```
    - **MANDATORY**: Run `dart format .` before EVERY commit
    - **MANDATORY**: Especially for UI changes
+   - **MANDATORY**: ALWAYS run after codegen (see step 0 above)
    - **DO NOT skip** - unformatted code will fail CI
 
 5. **Update Golden Tests** (for UI changes) ⚠️ MANDATORY
@@ -233,6 +250,8 @@ After making ANY code changes, you MUST run the following verification steps IN 
 - ❌ Mark a task complete with known linter/analyzer errors
 
 **ALWAYS**:
+- ✅ Run codegen if you modified `@freezed` classes or `@GenerateMocks` annotations
+- ✅ Run `dart format .` after codegen (MANDATORY - generated code needs formatting)
 - ✅ Run `dart format .` before EVERY commit (especially UI changes)
 - ✅ Run ReadLints on modified files after every change
 - ✅ Check for golden tests when modifying UI files
@@ -245,13 +264,14 @@ After making ANY code changes, you MUST run the following verification steps IN 
 
 **UI CHANGE WORKFLOW** (follow this EVERY time):
 1. Modify UI file (`lib/screens/*.dart` or `lib/widgets/*.dart`)
-2. Check if golden test exists: `test/screens/<screen>_golden_test.dart` or `test/widgets/<widget>_golden_test.dart`
-3. If golden test exists → Run `flutter test <test_file> --update-goldens`
-4. Run `dart format .`
-5. Run ReadLints on modified files
-6. Run `flutter analyze`
-7. Commit UI changes + golden images together
-8. Verify: `flutter test` passes
+2. **If you modified `@freezed` classes or `@GenerateMocks`**: Run codegen → `dart format .`
+3. Check if golden test exists: `test/screens/<screen>_golden_test.dart` or `test/widgets/<widget>_golden_test.dart`
+4. If golden test exists → Run `flutter test <test_file> --update-goldens`
+5. Run `dart format .`
+6. Run ReadLints on modified files
+7. Run `flutter analyze`
+8. Commit UI changes + golden images together
+9. Verify: `flutter test` passes
 
 ### Example Verification Workflow
 
@@ -259,27 +279,31 @@ After making ANY code changes, you MUST run the following verification steps IN 
 // 1. Make code changes
 StrReplace(...)
 
-// 2. IMMEDIATELY verify
+// 2. If you modified @freezed classes or @GenerateMocks annotations:
+//    Run: flutter pub run build_runner build --delete-conflicting-outputs
+//    Run: dart format . (ALWAYS after codegen)
+
+// 3. IMMEDIATELY verify
 ReadLints(paths: ["lib/screens/my_screen.dart"])
 
-// 3. If UI file changed, check for golden tests
+// 4. If UI file changed, check for golden tests
 // If test/screens/my_screen_golden_test.dart exists:
 //   Run: flutter test test/screens/my_screen_golden_test.dart --update-goldens
 //   Commit golden PNG files with UI changes
 
-// 4. Format code
+// 5. Format code
 // Run: dart format .
 
-// 5. Run analyzer
+// 6. Run analyzer
 // Run: flutter analyze
 
-// 6. If issues found, fix them
+// 7. If issues found, fix them
 StrReplace(...) // fix the issues
 
-// 7. Re-verify
+// 8. Re-verify
 ReadLints(paths: ["lib/screens/my_screen.dart"])
 
-// 8. Only NOW commit and respond to user with "✅ Verified clean"
+// 9. Only NOW commit and respond to user with "✅ Verified clean"
 ```
 
 ### ⚠️ UI CHANGE REMINDER ⚠️
@@ -585,11 +609,10 @@ Before opening a pull request, you MUST verify ALL of the following requirements
 ### Running the Complete Pre-PR Check
 Run these commands in sequence to verify all requirements:
 
-```bash
 # 1. Run codegen (if you modified @freezed classes or @GenerateMocks)
 flutter pub run build_runner build --delete-conflicting-outputs
 
-# 2. Format code
+# 2. Format code (ALWAYS run after codegen - generated code needs formatting)
 dart format .
 
 # 3. Run analyzer
@@ -616,8 +639,9 @@ All commands must complete successfully AND Marionette testing must pass before 
 **MANDATORY PRE-PR CHECKLIST** (must complete ALL items):
 1. ✅ **Run codegen**: If you modified any `@freezed` classes or `@GenerateMocks` annotations:
    - Run VS Code task "Codegen" or `flutter pub run build_runner build --delete-conflicting-outputs`
+   - **ALWAYS run `dart format .` immediately after codegen** (generated code needs formatting)
    - Commit generated files with your changes
-2. ✅ **Format code**: `dart format .` (MUST run before every commit)
+2. ✅ **Format code**: `dart format .` (MUST run before every commit, MUST run after codegen)
 3. ✅ **Run analyzer**: `flutter analyze` (must show "No issues found!")
 4. ✅ **Check for UI changes**: If you modified ANY `lib/screens/*.dart` or `lib/widgets/*.dart`:
    - Check if corresponding golden test exists
@@ -643,7 +667,7 @@ All commands must complete successfully AND Marionette testing must pass before 
 
 **FOR EVERY COMMIT ON AN OPEN PR**:
 - ✅ Run codegen: If you modified any `@freezed` classes or `@GenerateMocks` annotations
-- ✅ Format code: `dart format .`
+- ✅ Format code: `dart format .` (ALWAYS run after codegen)
 - ✅ Check linter: ReadLints on modified files
 - ✅ Run analyzer: `flutter analyze` (must be clean)
 - ✅ If UI changed: Update goldens and commit together
