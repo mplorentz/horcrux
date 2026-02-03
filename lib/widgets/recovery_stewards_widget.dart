@@ -4,6 +4,7 @@ import '../models/recovery_request.dart';
 import '../models/vault.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
+import 'steward_details_dialog.dart';
 
 /// Widget displaying steward responses
 class RecoveryStewardsWidget extends ConsumerWidget {
@@ -78,9 +79,10 @@ class RecoveryStewardsWidget extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ...stewards.map((info) {
-                      return _buildStewardItem(info);
-                    }),
+                    for (int i = 0; i < stewards.length; i++) ...[
+                      _buildStewardItem(context, stewards[i]),
+                      if (i < stewards.length - 1) const Divider(height: 1),
+                    ],
                   ],
                 ),
               ),
@@ -161,89 +163,121 @@ class RecoveryStewardsWidget extends ConsumerWidget {
     return [];
   }
 
-  Widget _buildStewardItem(_StewardInfo info) {
+  Widget _buildStewardItem(BuildContext context, _StewardInfo info) {
     final response = info.response;
     final status = response?.status ?? RecoveryResponseStatus.pending;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: _getResponseColor(status).withValues(alpha: 0.1),
-            child: Icon(
-              _getResponseIcon(status),
-              color: _getResponseColor(status),
-              size: 20,
+    return InkWell(
+      onTap: () {
+        StewardDetailsDialog.show(
+          context,
+          pubkey: info.pubkey,
+          displayName: info.name,
+          contactInfo: info.contactInfo,
+          isOwner: false, // Stewards in recovery are not owners
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: _getResponseColor(status).withValues(alpha: 0.1),
+              child: Icon(
+                _getResponseIcon(status),
+                color: _getResponseColor(status),
+                size: 20,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  info.name ?? '${info.pubkey.substring(0, 16)}...',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (info.contactInfo != null && info.contactInfo!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    info.contactInfo!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
+                    info.name ?? '${info.pubkey.substring(0, 16)}...',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                  if (info.contactInfo != null && info.contactInfo!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _truncateToTwoLines(info.contactInfo!),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
                       ),
-                      decoration: BoxDecoration(
-                        color: _getResponseColor(status).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        status.displayName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: _getResponseColor(status),
-                        ),
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (response?.respondedAt != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
+                  ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getResponseColor(status).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         child: Text(
-                          _formatDateTime(response!.respondedAt!),
+                          status.displayName,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.grey[500],
+                            fontWeight: FontWeight.bold,
+                            color: _getResponseColor(status),
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ],
+                      if (response?.respondedAt != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Text(
+                            _formatDateTime(response!.respondedAt!),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Truncates text to approximately 2 lines while preserving line breaks
+  /// If text exceeds 2 lines, adds ellipsis
+  String _truncateToTwoLines(String text) {
+    final lines = text.split('\n');
+    if (lines.length <= 2) {
+      // If 2 or fewer lines, return as-is (Text widget will handle wrapping)
+      return text;
+    }
+    // If more than 2 lines, take first 2 and add ellipsis
+    return '${lines[0]}\n${lines[1]}...';
   }
 
   IconData _getResponseIcon(RecoveryResponseStatus status) {
