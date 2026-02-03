@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'person_display.dart';
 
 /// Widget for displaying list of stewards who have shards
 class StewardList extends ConsumerWidget {
@@ -192,19 +192,26 @@ class StewardList extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        steward.displayName ??
-                            (steward.pubkey != null
-                                ? Helpers.encodeBech32(steward.pubkey!, 'npub')
-                                : 'Unknown'),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
-                      ),
+                      child: steward.pubkey != null
+                          ? PersonDisplay(
+                              name: steward.displayName,
+                              pubkey: steward.pubkey!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : Text(
+                              steward.displayName ?? 'Unknown',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ),
                   ],
                 ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/invitation_link.dart';
 import '../models/invitation_status.dart';
 import '../models/invitation_exceptions.dart';
@@ -10,6 +9,7 @@ import '../providers/key_provider.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/person_display.dart';
 
 /// Screen for accepting or denying an invitation link
 ///
@@ -108,7 +108,6 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   ) {
     final canAct = invitation.status.canRedeem && !_isProcessing;
     final isTerminal = invitation.status.isTerminal;
-    final ownerNpub = Helpers.encodeBech32(invitation.ownerPubkey, 'npub');
 
     return Column(
       children: [
@@ -181,22 +180,13 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                       ),
                 ),
                 const SizedBox(height: 4),
-                // Show owner name if available, otherwise show npub
-                if (invitation.ownerName != null && invitation.ownerName!.isNotEmpty)
-                  Text(
-                    invitation.ownerName!,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  )
-                else
-                  Text(
-                    ownerNpub,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
+                PersonDisplay(
+                  name: invitation.ownerName,
+                  pubkey: invitation.ownerPubkey,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
                 const SizedBox(height: 24),
 
                 // Invitee name (if provided)

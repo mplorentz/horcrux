@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'person_display.dart';
 
 /// Widget for displaying vault metadata (ownership info)
 class VaultMetadataSection extends ConsumerWidget {
@@ -131,10 +131,21 @@ class VaultMetadataSection extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Owner: ${Helpers.encodeBech32(vault.ownerPubkey, 'npub')}',
-                style: Theme.of(context).textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Text(
+                    'Owner: ',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  Expanded(
+                    child: PersonDisplay(
+                      name: vault.ownerName,
+                      pubkey: vault.ownerPubkey,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
               if (threshold != null) ...[
                 const SizedBox(height: 8),
