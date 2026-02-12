@@ -141,7 +141,7 @@ class StewardList extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Change backup settings to add stewards',
+                    'Add stewards in your recovery plan',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
