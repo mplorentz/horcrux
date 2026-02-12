@@ -524,7 +524,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
                 ),
               ),
               child: Row(
