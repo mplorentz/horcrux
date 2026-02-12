@@ -123,37 +123,76 @@ class VaultDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Container(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Owner display above status banner
-                    VaultOwnerDisplay(vault: vault),
-                    // Status banner showing recovery readiness
-                    VaultStatusBanner(vault: vault),
-                    // Steward List (extends to edges)
-                    Container(
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      child: StewardList(vaultId: vault.id),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Determine background color based on vault state
+          // We are doing some stupidly complex background color logic here to make the screen
+          // look nice in all the various states.
+          final backgroundColor = vault.state == VaultState.awaitingKey
+              ? Theme.of(context).scaffoldBackgroundColor
+              : Theme.of(context).colorScheme.surfaceContainer;
+
+          return Container(
+            color: backgroundColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Scrollable content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: LayoutBuilder(
+                      builder: (context, scrollConstraints) {
+                        // For awaitingKey state, fill remaining space with darker background
+                        final isAwaitingKey = vault.state == VaultState.awaitingKey;
+                        final viewportHeight = constraints.maxHeight;
+
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: isAwaitingKey ? viewportHeight : 0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Owner display above status banner
+                              VaultOwnerDisplay(vault: vault),
+                              // Status banner showing recovery readiness
+                              VaultStatusBanner(vault: vault),
+                              // Steward List (extends to edges)
+                              Container(
+                                color: Theme.of(context).colorScheme.surfaceContainer,
+                                child: StewardList(vaultId: vault.id),
+                              ),
+                              // Fill remaining space with darker background for awaitingKey state
+                              // ConstrainedBox ensures Column is at least viewport height,
+                              // and this SizedBox fills the remaining space
+                              if (isAwaitingKey)
+                                SizedBox(
+                                  // Fill remaining viewport space with darker background
+                                  // ConstrainedBox with minHeight ensures Column is at least viewport height.
+                                  // This SizedBox ensures the background fills from content end to viewport bottom.
+                                  // Using viewportHeight ensures it fills the space regardless of content height.
+                                  height: viewportHeight,
+                                  child: Container(
+                                    color: backgroundColor,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                // Fixed buttons at bottom
+                // Always use scaffoldBackgroundColor behind buttons for consistent appearance
+                Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: VaultDetailButtonStack(vaultId: vault.id),
+                ),
+              ],
             ),
-            // Fixed buttons at bottom
-            Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: VaultDetailButtonStack(vaultId: vault.id),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

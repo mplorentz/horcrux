@@ -80,6 +80,7 @@ class StewardList extends ConsumerWidget {
             // (not the owner) - stewards waiting for their key shouldn't see an empty steward list
             final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
             if (vault.state == VaultState.awaitingKey && !isOwner) {
+              // Return empty widget - background fill handled at screen level
               return const SizedBox.shrink();
             }
             return _buildKeyHolderContent(context, ref, vault, currentPubkey);
