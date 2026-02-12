@@ -5,6 +5,7 @@ import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'person_display.dart';
+import 'steward_details_dialog.dart';
 
 /// Widget for displaying list of stewards who have shards
 class StewardList extends ConsumerWidget {
@@ -170,82 +171,94 @@ class StewardList extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: colorScheme.surfaceContainer),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
-            child: Icon(
-              steward.isOwner ? Icons.person : Icons.key,
-              color: colorScheme.onSurface,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+    return Material(
+      color: colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () {
+          StewardDetailsDialog.show(
+            context,
+            pubkey: steward.pubkey,
+            displayName: steward.displayName,
+            contactInfo: steward.contactInfo,
+            isOwner: steward.isOwner,
+          );
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 4),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: colorScheme.onSurface.withValues(alpha: 0.1),
+                child: Icon(
+                  steward.isOwner ? Icons.person : Icons.key,
+                  color: colorScheme.onSurface,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: steward.pubkey != null
-                          ? PersonDisplay(
-                              name: steward.displayName,
-                              pubkey: steward.pubkey!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : Text(
-                              steward.displayName ?? 'Unknown',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: steward.pubkey != null
+                              ? PersonDisplay(
+                                  name: steward.displayName,
+                                  pubkey: steward.pubkey!,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              : Text(
+                                  steward.displayName ?? 'Unknown',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                        ),
+                      ],
                     ),
+                    if (steward.isOwner) ...[
+                      Text(
+                        'Owner',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ] else if (steward.status != null && isOwner) ...[
+                      // Only show steward status if current user is the owner
+                      // Stewards can't read confirmation events from other stewards
+                      Text(
+                        steward.status!.label,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                if (steward.isOwner) ...[
-                  Text(
-                    'Owner',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ] else if (steward.status != null && isOwner) ...[
-                  // Only show steward status if current user is the owner
-                  // Stewards can't read confirmation events from other stewards
-                  Text(
-                    steward.status!.label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-                if (steward.contactInfo != null && steward.contactInfo!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    steward.contactInfo!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+                size: 20,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -299,6 +312,7 @@ class StewardList extends ConsumerWidget {
     void addSteward({
       required String pubkey,
       String? name,
+      String? contactInfo,
       required bool isOwner,
       StewardStatus status = StewardStatus.holdingKey,
     }) {
@@ -310,7 +324,7 @@ class StewardList extends ConsumerWidget {
       final merged = StewardInfo(
         pubkey: pubkey,
         displayName: newDisplayName ?? existing?.displayName,
-        contactInfo: existing?.contactInfo,
+        contactInfo: contactInfo ?? existing?.contactInfo,
         isOwner: isOwner || (existing?.isOwner ?? false),
         status: status,
       );
@@ -322,12 +336,14 @@ class StewardList extends ConsumerWidget {
       for (final steward in shard.stewards!) {
         final stewardPubkey = steward['pubkey'];
         final stewardName = steward['name'];
+        final stewardContactInfo = steward['contactInfo'];
         if (stewardPubkey == null) continue;
 
         final isOwner = stewardPubkey == vault.ownerPubkey;
         addSteward(
           pubkey: stewardPubkey,
           name: stewardName,
+          contactInfo: stewardContactInfo,
           isOwner: isOwner,
         );
       }

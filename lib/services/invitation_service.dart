@@ -814,6 +814,10 @@ class InvitationService {
     var backupConfig = await repository.getBackupConfig(vaultId);
 
     if (backupConfig == null) {
+      // TODO: we should really create a backup config earlier. I think this is here to handle the
+      // case where the steward accepts the invitation before the owner has saved their initial
+      //recovery plan.
+
       // Create new backup config with this steward
       // We'll use default values - owner can adjust later
       final newSteward = createSteward(pubkey: pubkey, name: name);
@@ -855,22 +859,32 @@ class InvitationService {
               invitedSteward.acknowledgedAt != null || invitedSteward.acknowledgmentEventId != null;
           final newStatus =
               hasAcknowledgment ? StewardStatus.holdingKey : StewardStatus.awaitingKey;
-          final updatedStewards = List<Steward>.from(backupConfig.stewards);
-          updatedStewards[invitedStewardIndex] = updatedStewards[invitedStewardIndex].copyWith(
-            pubkey: pubkey,
-            status: newStatus,
-            // Preserve contactInfo when updating invited steward
-            // Keep inviteCode for reference, but it's no longer needed after acceptance
-          );
 
-          final updatedConfig = copyBackupConfig(
-            backupConfig,
-            stewards: updatedStewards,
-            lastUpdated: DateTime.now(),
+          // When a new steward accepts, existing stewards who are holdingKey need updated shards
+          // Update the invited steward with pubkey first, then update existing stewards
+          final stewardsWithInvitedUpdated =
+              List<Steward>.from(backupConfig.stewards).map((steward) {
+            if (steward.id == invitedSteward.id) {
+              // Update the invited steward with pubkey
+              return steward.copyWith(
+                pubkey: pubkey,
+                status: newStatus,
+                // Preserve contactInfo when updating invited steward
+                // Keep inviteCode for reference, but it's no longer needed after acceptance
+              );
+            }
+            return steward;
+          }).toList();
+
+          // Update existing stewards who are holdingKey to awaitingNewKey
+          final updatedConfig = _incrementDistributionVersionForNewSteward(
+            backupConfig: backupConfig,
+            stewards: stewardsWithInvitedUpdated,
+            newStewardPubkey: pubkey,
           );
           await repository.updateBackupConfig(vaultId, updatedConfig);
           Log.info(
-            'Updated invited steward with invite code "$inviteCode" - added pubkey $pubkey and changed status to awaitingKey',
+            'Updated invited steward with invite code "$inviteCode" - added pubkey $pubkey, changed status to $newStatus, and incremented distribution version to ${updatedConfig.distributionVersion}',
           );
 
           // Sync relays from backup config to RelayScanService
@@ -903,20 +917,62 @@ class InvitationService {
       }
 
       // THIRD: Add new steward and update totalKeys
+      // When adding a new steward, existing stewards who are holdingKey need updated shards
       final newSteward = createSteward(pubkey: pubkey, name: name);
-      final updatedStewards = [...backupConfig.stewards, newSteward];
-      final updatedConfig = copyBackupConfig(
-        backupConfig,
-        stewards: updatedStewards,
-        totalKeys: updatedStewards.length,
-        lastUpdated: DateTime.now(),
+      final stewardsWithNew = [...backupConfig.stewards, newSteward];
+
+      // Update existing stewards who are holdingKey to awaitingNewKey
+      final updatedConfig = _incrementDistributionVersionForNewSteward(
+        backupConfig: backupConfig,
+        stewards: stewardsWithNew,
+        newStewardPubkey: pubkey,
+        totalKeys: stewardsWithNew.length,
       );
       await repository.updateBackupConfig(vaultId, updatedConfig);
-      Log.info('Added steward $pubkey to backup config for vault $vaultId');
+      Log.info(
+        'Added steward $pubkey to backup config for vault $vaultId and incremented distribution version to ${updatedConfig.distributionVersion}',
+      );
 
       // Sync relays from backup config to RelayScanService
       await _syncRelaysFromBackupConfig(updatedConfig);
     }
+  }
+
+  /// Increment distribution version and update existing steward statuses for a new steward
+  ///
+  /// When a new steward is added to the backup config, existing stewards who already have
+  /// shards (holdingKey status) need to receive updated shards that include the new steward.
+  /// This helper increments the distribution version, updates existing stewards accordingly,
+  /// and returns the updated backup config.
+  BackupConfig _incrementDistributionVersionForNewSteward({
+    required BackupConfig backupConfig,
+    required List<Steward> stewards,
+    required String newStewardPubkey,
+    int? totalKeys,
+  }) {
+    final newDistributionVersion = backupConfig.distributionVersion + 1;
+    final updatedStewards = stewards.map((steward) {
+      // If this is an existing steward who is holdingKey, they need a new shard with the new steward included
+      if (steward.pubkey != null &&
+          steward.pubkey != newStewardPubkey &&
+          steward.status == StewardStatus.holdingKey) {
+        return steward.copyWith(
+          status: StewardStatus.awaitingNewKey,
+          acknowledgedAt: null,
+          acknowledgmentEventId: null,
+          acknowledgedDistributionVersion: null,
+        );
+      }
+      return steward;
+    }).toList();
+
+    return copyBackupConfig(
+      backupConfig,
+      stewards: updatedStewards,
+      totalKeys: totalKeys,
+      distributionVersion: newDistributionVersion,
+      lastUpdated: DateTime.now(),
+    );
   }
 
   /// Sync relays from backup config to RelayScanService and ensure scanning is started
