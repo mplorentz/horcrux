@@ -21,6 +21,7 @@ typedef InvitationLinkData = ({
   String vaultId,
   String? vaultName,
   String ownerPubkey, // Hex format
+  String? ownerName,
   List<String> relayUrls,
 });
 
@@ -139,6 +140,7 @@ class DeepLinkService {
         ownerPubkey: linkData.ownerPubkey,
         relayUrls: linkData.relayUrls,
         vaultName: linkData.vaultName,
+        ownerName: linkData.ownerName,
       );
 
       // Navigate to invitation acceptance screen
@@ -251,6 +253,10 @@ class DeepLinkService {
       final vaultName = uri.queryParameters['name'];
       // Decode if present, otherwise use null (will fallback to defaultVaultName in createInvitationLink)
 
+      // Extract owner name from query params (optional)
+      final ownerName = uri.queryParameters['ownerName'];
+      // Decode if present, otherwise use null
+
       // Extract relay URLs from query params (comma-separated)
       final relayUrlsParam = uri.queryParameters['relays'];
       final relayUrls = <String>[];
@@ -286,7 +292,7 @@ class DeepLinkService {
       }
 
       Log.info(
-        'Successfully parsed invitation link: inviteCode=$inviteCode, vaultId=$vaultId, vaultName=$vaultName, owner=$ownerPubkey, relays=${relayUrls.length}',
+        'Successfully parsed invitation link: inviteCode=$inviteCode, vaultId=$vaultId, vaultName=$vaultName, owner=$ownerPubkey, ownerName=$ownerName, relays=${relayUrls.length}',
       );
 
       return (
@@ -295,6 +301,8 @@ class DeepLinkService {
         vaultName:
             vaultName != null && vaultName.isNotEmpty ? Uri.decodeComponent(vaultName) : null,
         ownerPubkey: ownerPubkey,
+        ownerName:
+            ownerName != null && ownerName.isNotEmpty ? Uri.decodeComponent(ownerName) : null,
         relayUrls: relayUrls,
       );
     } on InvalidInvitationLinkException {

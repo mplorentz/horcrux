@@ -23,6 +23,7 @@ void main() {
     required String inviteCode,
     required InvitationStatus status,
     String? inviteeName,
+    String? ownerName,
     List<String>? relayUrls,
     String? redeemedBy,
     DateTime? redeemedAt,
@@ -32,6 +33,7 @@ void main() {
       vaultId: 'vault-123',
       vaultName: 'My Shared Vault',
       ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
       relayUrls: relayUrls ?? ['wss://relay.example.com'],
       inviteeName: inviteeName,
       createdAt: DateTime(2024, 10, 1, 10, 30),
@@ -127,6 +129,7 @@ void main() {
         inviteCode: 'active-code',
         status: InvitationStatus.pending,
         inviteeName: 'Alice',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -159,6 +162,7 @@ void main() {
         inviteCode: 'active-code-2',
         status: InvitationStatus.created,
         inviteeName: null,
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -191,6 +195,7 @@ void main() {
         inviteCode: 'active-code-3',
         status: InvitationStatus.pending,
         inviteeName: 'Bob',
+        ownerName: 'Bob',
         relayUrls: [
           'wss://relay1.example.com',
           'wss://relay2.example.com',
@@ -228,6 +233,7 @@ void main() {
         inviteCode: 'active-code-4',
         status: InvitationStatus.pending,
         inviteeName: 'Charlie',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -258,6 +264,7 @@ void main() {
         inviteCode: 'active-code-5',
         status: InvitationStatus.pending,
         inviteeName: 'Diana',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -293,6 +300,7 @@ void main() {
         inviteCode: 'active-code-6',
         status: InvitationStatus.pending,
         inviteeName: 'Eve',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -325,6 +333,7 @@ void main() {
         inviteCode: 'redeemed-code',
         status: InvitationStatus.redeemed,
         inviteeName: 'Frank',
+        ownerName: 'Bob',
         redeemedBy: inviteePubkey,
         redeemedAt: DateTime(2024, 10, 1, 11, 0),
       );
@@ -359,6 +368,7 @@ void main() {
         inviteCode: 'denied-code',
         status: InvitationStatus.denied,
         inviteeName: 'Grace',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -388,6 +398,7 @@ void main() {
         inviteCode: 'invalidated-code',
         status: InvitationStatus.invalidated,
         inviteeName: 'Henry',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -420,6 +431,7 @@ void main() {
         inviteCode: 'error-code',
         status: InvitationStatus.error,
         inviteeName: 'Iris',
+        ownerName: 'Bob',
       );
 
       final container = ProviderContainer(
@@ -452,6 +464,7 @@ void main() {
         inviteCode: 'device-test-code',
         status: InvitationStatus.pending,
         inviteeName: 'Jane',
+        ownerName: 'Bob',
         relayUrls: ['wss://relay1.example.com', 'wss://relay2.example.com'],
       );
 

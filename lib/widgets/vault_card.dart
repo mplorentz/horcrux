@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../providers/key_provider.dart';
 import '../screens/vault_detail_screen.dart';
+import 'name_label.dart';
 
+/// A card widget displaying a vault summary for use in vault lists.
+///
+/// Shows the vault name, owner, and state icon. Tapping navigates to [VaultDetailScreen].
 class VaultCard extends ConsumerWidget {
   final Vault vault;
 
   const VaultCard({super.key, required this.vault});
 
-  String _getOwnerDisplayText(String? currentPubkey) {
-    if (currentPubkey == null) {
-      return Helpers.encodeBech32(vault.ownerPubkey, 'npub');
-    }
+  /// Returns display name for the vault owner. When [vault.ownerName] is null
+  /// (e.g. not included in invitation link), returns null so [NameLabel] falls
+  /// back to showing the npub.
+  String? _getOwnerDisplayName(String? currentPubkey) {
     if (currentPubkey == vault.ownerPubkey) {
       return 'You';
     }
-    if (vault.ownerName != null && vault.ownerName!.isNotEmpty) {
-      return vault.ownerName!;
-    }
-    return Helpers.encodeBech32(vault.ownerPubkey, 'npub');
+    return vault.ownerName;
   }
 
   @override
@@ -51,9 +51,12 @@ class VaultCard extends ConsumerWidget {
       data: (pubkey) => pubkey,
       orElse: () => null,
     );
-    final ownerDisplayText = _getOwnerDisplayText(currentPubkey);
-    // Use monospace font only for npub display (not for names or "You")
-    final isNpubDisplay = ownerDisplayText.startsWith('npub');
+    final ownerDisplayName = _getOwnerDisplayName(currentPubkey);
+    final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
+      name: ownerDisplayName,
+      pubkey: vault.ownerPubkey,
+      baseStyle: textTheme.bodySmall,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -97,13 +100,27 @@ class VaultCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      "Owner: $ownerDisplayText",
-                      style: textTheme.bodySmall?.copyWith(
-                        fontFamily: isNpubDisplay ? 'RobotoMono' : null,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Owner: ',
+                                  style: textTheme.bodySmall,
+                                ),
+                                TextSpan(
+                                  text: ownerText,
+                                  style: ownerStyle ?? textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
