@@ -141,7 +141,7 @@ class VaultDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: SingleChildScrollView(
                     child: LayoutBuilder(
-                      builder: (context, scrollConstraints) {
+                      builder: (context, _) {
                         // For awaitingKey state, fill remaining space with darker background
                         final isAwaitingKey = vault.state == VaultState.awaitingKey;
                         final viewportHeight = constraints.maxHeight;
