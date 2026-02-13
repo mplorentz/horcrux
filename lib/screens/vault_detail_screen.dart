@@ -162,20 +162,6 @@ class VaultDetailScreen extends ConsumerWidget {
                                 color: Theme.of(context).colorScheme.surfaceContainer,
                                 child: StewardList(vaultId: vault.id),
                               ),
-                              // Fill remaining space with darker background for awaitingKey state
-                              // ConstrainedBox ensures Column is at least viewport height,
-                              // and this SizedBox fills the remaining space
-                              if (isAwaitingKey)
-                                SizedBox(
-                                  // Fill remaining viewport space with darker background
-                                  // ConstrainedBox with minHeight ensures Column is at least viewport height.
-                                  // This SizedBox ensures the background fills from content end to viewport bottom.
-                                  // Using viewportHeight ensures it fills the space regardless of content height.
-                                  height: viewportHeight,
-                                  child: Container(
-                                    color: backgroundColor,
-                                  ),
-                                ),
                             ],
                           ),
                         );
