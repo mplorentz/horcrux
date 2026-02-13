@@ -3,13 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../providers/key_provider.dart';
 import '../screens/vault_detail_screen.dart';
-import 'person_display.dart';
+import 'name_label.dart';
 
+/// A card widget displaying a vault summary for use in vault lists.
+///
+/// Shows the vault name, owner, and state icon. Tapping navigates to [VaultDetailScreen].
 class VaultCard extends ConsumerWidget {
   final Vault vault;
 
   const VaultCard({super.key, required this.vault});
 
+  /// Returns display name for the vault owner. When [vault.ownerName] is null
+  /// (e.g. not included in invitation link), returns null so [NameLabel] falls
+  /// back to showing the npub.
   String? _getOwnerDisplayName(String? currentPubkey) {
     if (currentPubkey == vault.ownerPubkey) {
       return 'You';
@@ -46,6 +52,11 @@ class VaultCard extends ConsumerWidget {
       orElse: () => null,
     );
     final ownerDisplayName = _getOwnerDisplayName(currentPubkey);
+    final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
+      name: ownerDisplayName,
+      pubkey: vault.ownerPubkey,
+      baseStyle: textTheme.bodySmall,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -91,15 +102,20 @@ class VaultCard extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          "Owner: ",
-                          style: textTheme.bodySmall,
-                        ),
                         Expanded(
-                          child: PersonDisplay(
-                            name: ownerDisplayName,
-                            pubkey: vault.ownerPubkey,
-                            style: textTheme.bodySmall,
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Owner: ',
+                                  style: textTheme.bodySmall,
+                                ),
+                                TextSpan(
+                                  text: ownerText,
+                                  style: ownerStyle ?? textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

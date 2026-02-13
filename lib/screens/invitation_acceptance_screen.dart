@@ -9,7 +9,7 @@ import '../providers/key_provider.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/person_display.dart';
+import '../widgets/name_label.dart';
 
 /// Screen for accepting or denying an invitation link
 ///
@@ -180,7 +180,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                       ),
                 ),
                 const SizedBox(height: 4),
-                PersonDisplay(
+                NameLabel(
                   name: invitation.ownerName,
                   pubkey: invitation.ownerPubkey,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(

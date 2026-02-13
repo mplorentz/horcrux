@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../providers/key_provider.dart';
-import 'person_display.dart';
+import 'name_label.dart';
 
 /// Widget that displays the vault owner information above the status banner
 class VaultOwnerDisplay extends ConsumerWidget {
@@ -41,15 +41,13 @@ class VaultOwnerDisplay extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 2),
-            PersonDisplay(
+            NameLabel(
               name: ownerDisplayName,
               pubkey: vault.ownerPubkey,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onSurface,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         );
