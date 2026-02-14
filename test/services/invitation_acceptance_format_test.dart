@@ -16,7 +16,7 @@ import 'package:horcrux/models/nostr_kinds.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/shared_preferences_mock.dart';
 
-import 'invitation_rsvp_format_test.mocks.dart';
+import 'invitation_acceptance_format_test.mocks.dart';
 
 @GenerateMocks([
   NdkService,
@@ -39,7 +39,7 @@ void main() {
     sharedPreferencesMock.tearDownAll();
   });
 
-  group('RSVP Event Format Compatibility Tests', () {
+  group('Invitation Acceptance Event Format Compatibility Tests', () {
     late MockNdkService mockNdkService;
     late MockLoginService mockLoginService;
     late VaultRepository realRepository;
@@ -70,7 +70,7 @@ void main() {
     });
 
     test(
-      'sendRsvpEvent creates JSON that processRsvpEvent can parse',
+      'sendInvitationAcceptanceEvent creates JSON that processInvitationAcceptanceEvent can parse',
       () async {
         // Arrange
         const inviteCode = 'test-invite-code-123';
@@ -98,8 +98,8 @@ void main() {
           return 'test-event-id';
         });
 
-        // Act: Call sendRsvpEvent
-        await invitationSendingService.sendRsvpEvent(
+        // Act: Call sendInvitationAcceptanceEvent
+        await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
           ownerPubkey: ownerPubkey,
           relayUrls: relayUrls,
@@ -117,7 +117,7 @@ void main() {
 
         // Now create a mock event with this content (simulating NDK unwrapping)
         final mockEvent = Nip01Event(
-          kind: NostrKind.invitationRsvp.value,
+          kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
           content: content, // Already decrypted JSON from NDK
           tags: [],
@@ -158,8 +158,8 @@ void main() {
         );
         await realRepository.addVault(testVault);
 
-        // Act: Call processRsvpEvent with the JSON created by sendRsvpEvent
-        await invitationService.processRsvpEvent(event: mockEvent);
+        // Act: Call processInvitationAcceptanceEvent with the JSON created by sendInvitationAcceptanceEvent
+        await invitationService.processInvitationAcceptanceEvent(event: mockEvent);
 
         // Verify it succeeded (no exception thrown)
         // The invitation should now be marked as redeemed
@@ -171,7 +171,7 @@ void main() {
     );
 
     test(
-      'processRsvpEvent throws ArgumentError for missing inviteCode',
+      'processInvitationAcceptanceEvent throws ArgumentError for missing inviteCode',
       () async {
         // Arrange
         const ownerPubkey = TestHexPubkeys.alice;
@@ -184,7 +184,7 @@ void main() {
         });
 
         final mockEvent = Nip01Event(
-          kind: NostrKind.invitationRsvp.value,
+          kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
           content: invalidJson,
           tags: [],
@@ -197,7 +197,7 @@ void main() {
 
         // Act & Assert
         expect(
-          () => invitationService.processRsvpEvent(event: mockEvent),
+          () => invitationService.processInvitationAcceptanceEvent(event: mockEvent),
           throwsA(
             isA<ArgumentError>().having(
               (e) => e.toString(),
@@ -209,7 +209,7 @@ void main() {
       },
     );
 
-    test('processRsvpEvent throws ArgumentError for invalid pubkey', () async {
+    test('processInvitationAcceptanceEvent throws ArgumentError for invalid pubkey', () async {
       // Arrange
       const ownerPubkey = TestHexPubkeys.alice;
       const inviteCode = 'test-invite-code';
@@ -222,7 +222,7 @@ void main() {
       });
 
       final mockEvent = Nip01Event(
-        kind: NostrKind.invitationRsvp.value,
+        kind: NostrKind.invitationAcceptance.value,
         pubKey: 'short',
         content: invalidJson,
         tags: [],
@@ -235,7 +235,7 @@ void main() {
 
       // Act & Assert
       expect(
-        () => invitationService.processRsvpEvent(event: mockEvent),
+        () => invitationService.processInvitationAcceptanceEvent(event: mockEvent),
         throwsA(
           isA<ArgumentError>().having(
             (e) => e.toString(),
@@ -246,7 +246,7 @@ void main() {
       );
     });
 
-    test('processRsvpEvent throws ArgumentError for pubkey mismatch', () async {
+    test('processInvitationAcceptanceEvent throws ArgumentError for pubkey mismatch', () async {
       // Arrange
       const ownerPubkey = TestHexPubkeys.alice;
       const inviteePubkey = TestHexPubkeys.bob;
@@ -261,7 +261,7 @@ void main() {
       });
 
       final mockEvent = Nip01Event(
-        kind: NostrKind.invitationRsvp.value,
+        kind: NostrKind.invitationAcceptance.value,
         pubKey: differentPubkey, // Different from payload
         content: mismatchJson,
         tags: [],
@@ -274,7 +274,7 @@ void main() {
 
       // Act & Assert
       expect(
-        () => invitationService.processRsvpEvent(event: mockEvent),
+        () => invitationService.processInvitationAcceptanceEvent(event: mockEvent),
         throwsA(
           isA<ArgumentError>().having(
             (e) => e.toString(),
@@ -285,7 +285,7 @@ void main() {
       );
     });
 
-    test('processRsvpEvent silently ignores unknown invitation', () async {
+    test('processInvitationAcceptanceEvent silently ignores unknown invitation', () async {
       // Arrange
       const ownerPubkey = TestHexPubkeys.alice;
       const inviteePubkey = TestHexPubkeys.bob;
@@ -299,7 +299,7 @@ void main() {
       });
 
       final mockEvent = Nip01Event(
-        kind: NostrKind.invitationRsvp.value,
+        kind: NostrKind.invitationAcceptance.value,
         pubKey: inviteePubkey,
         content: validJson,
         tags: [],
@@ -311,7 +311,7 @@ void main() {
       ).thenAnswer((_) async => ownerPubkey);
 
       // Act: Should not throw, just silently ignore
-      await invitationService.processRsvpEvent(event: mockEvent);
+      await invitationService.processInvitationAcceptanceEvent(event: mockEvent);
 
       // Verify invitation doesn't exist
       final invitation = await invitationService.lookupInvitationByCode(
@@ -320,7 +320,7 @@ void main() {
       expect(invitation, isNull);
     });
 
-    test('sendRsvpEvent JSON format matches expected structure', () async {
+    test('sendInvitationAcceptanceEvent JSON format matches expected structure', () async {
       // Arrange
       const inviteCode = 'test-code-xyz';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -346,7 +346,7 @@ void main() {
       });
 
       // Act
-      await invitationSendingService.sendRsvpEvent(
+      await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
         ownerPubkey: ownerPubkey,
         relayUrls: relayUrls,
@@ -367,7 +367,7 @@ void main() {
     });
   });
 
-  group('sendRsvpEvent Unit Tests', () {
+  group('sendInvitationAcceptanceEvent Unit Tests', () {
     late MockNdkService mockNdkService;
     late InvitationSendingService invitationSendingService;
 
@@ -377,7 +377,7 @@ void main() {
     });
 
     test(
-      'sendRsvpEvent calls publishEncryptedEvent with correct parameters',
+      'sendInvitationAcceptanceEvent calls publishEncryptedEvent with correct parameters',
       () async {
         // Arrange
         const inviteCode = 'test-invite-code-abc';
@@ -411,7 +411,7 @@ void main() {
         });
 
         // Act
-        final result = await invitationSendingService.sendRsvpEvent(
+        final result = await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
           ownerPubkey: ownerPubkey,
           relayUrls: relayUrls,
@@ -419,17 +419,17 @@ void main() {
 
         // Assert
         expect(result, 'test-event-id-123');
-        expect(capturedKind, NostrKind.invitationRsvp.value);
+        expect(capturedKind, NostrKind.invitationAcceptance.value);
         expect(capturedRecipientPubkey, ownerPubkey);
         expect(capturedRelays, relayUrls);
         expect(capturedTags, isNotNull);
         expect(capturedTags!.length, 2);
-        expect(capturedTags![0], ['d', 'invitation_rsvp_$inviteCode']);
+        expect(capturedTags![0], ['d', 'invitation_acceptance_$inviteCode']);
         expect(capturedTags![1], ['invite', inviteCode]);
       },
     );
 
-    test('sendRsvpEvent creates payload with correct field names', () async {
+    test('sendInvitationAcceptanceEvent creates payload with correct field names', () async {
       // Arrange
       const inviteCode = 'test-code-123';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -455,7 +455,7 @@ void main() {
       });
 
       // Act
-      await invitationSendingService.sendRsvpEvent(
+      await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
         ownerPubkey: ownerPubkey,
         relayUrls: relayUrls,
@@ -495,12 +495,12 @@ void main() {
       );
     });
 
-    test('sendRsvpEvent returns null when getCurrentPubkey fails', () async {
+    test('sendInvitationAcceptanceEvent returns null when getCurrentPubkey fails', () async {
       // Arrange
       when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => null);
 
       // Act
-      final result = await invitationSendingService.sendRsvpEvent(
+      final result = await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: 'test-code',
         ownerPubkey: TestHexPubkeys.alice,
         relayUrls: ['ws://localhost:10547'],
@@ -520,7 +520,7 @@ void main() {
     });
 
     test(
-      'sendRsvpEvent handles publishEncryptedEvent errors gracefully',
+      'sendInvitationAcceptanceEvent handles publishEncryptedEvent errors gracefully',
       () async {
         // Arrange
         const inviteCode = 'test-code';
@@ -541,7 +541,7 @@ void main() {
         ).thenThrow(Exception('Network error'));
 
         // Act
-        final result = await invitationSendingService.sendRsvpEvent(
+        final result = await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
           ownerPubkey: ownerPubkey,
           relayUrls: ['ws://localhost:10547'],
@@ -552,7 +552,7 @@ void main() {
       },
     );
 
-    test('sendRsvpEvent includes invite code in tags', () async {
+    test('sendInvitationAcceptanceEvent includes invite code in tags', () async {
       // Arrange
       const inviteCode = 'special-invite-code-xyz';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -577,7 +577,7 @@ void main() {
       });
 
       // Act
-      await invitationSendingService.sendRsvpEvent(
+      await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
         ownerPubkey: ownerPubkey,
         relayUrls: ['ws://localhost:10547'],
@@ -594,7 +594,7 @@ void main() {
     });
 
     test(
-      'sendRsvpEvent JSON payload can be roundtrip encoded/decoded',
+      'sendInvitationAcceptanceEvent JSON payload can be roundtrip encoded/decoded',
       () async {
         // Arrange
         const inviteCode = 'roundtrip-test-code';
@@ -620,7 +620,7 @@ void main() {
         });
 
         // Act
-        await invitationSendingService.sendRsvpEvent(
+        await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
           ownerPubkey: ownerPubkey,
           relayUrls: ['ws://localhost:10547'],
