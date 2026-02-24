@@ -30,6 +30,7 @@ dependencies:
   marionette_flutter: ^0.2.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   integration_test:
@@ -40,6 +41,14 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   golden_toolkit: ^0.15.0
   marionette_mcp: ^0.1.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true
