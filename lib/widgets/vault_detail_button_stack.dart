@@ -487,8 +487,40 @@ class VaultDetailButtonStack extends ConsumerWidget {
   }
 
   Future<void> _initiateRecovery(BuildContext context, WidgetRef ref, String vaultId) async {
+    // Show confirmation dialog first
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Initiate Recovery?'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This will begin the process of recovering the contents of this vault.'),
+            SizedBox(height: 8),
+            Text('• Recovery requests will be sent to all stewards.'),
+            Text('• Stewards can approve or deny your request.'),
+            Text(
+                '• Once enough stewards approve, you can recover the vault content on the recovery screen.'),
+            SizedBox(height: 12),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Initiate Recovery'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     // Show full-screen loading dialog
-    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,

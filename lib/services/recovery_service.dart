@@ -219,7 +219,6 @@ class RecoveryService {
     required String initiatorPubkey,
     required List<String> stewardPubkeys,
     required int threshold,
-    Duration? expirationDuration,
     bool isPractice = false,
   }) async {
     await initialize();
@@ -241,11 +240,6 @@ class RecoveryService {
     // Create recovery request
     // Generate cryptographically secure request ID
     final requestId = '${generateSecureID()}_$vaultId';
-    final expiresAt = expirationDuration != null
-        ? DateTime.now().add(expirationDuration)
-        : DateTime.now().add(
-            const Duration(hours: 24),
-          ); // Default 24 hour expiration
 
     // Initialize steward responses
     final stewardResponses = <String, RecoveryResponse>{};
@@ -263,7 +257,7 @@ class RecoveryService {
       requestedAt: DateTime.now(),
       status: RecoveryRequestStatus.pending,
       threshold: threshold,
-      expiresAt: expiresAt,
+      expiresAt: null,
       stewardResponses: stewardResponses,
       isPractice: isPractice,
     );
@@ -295,7 +289,6 @@ class RecoveryService {
   /// Throws an exception if recovery cannot be initiated
   Future<RecoveryRequest> initiateAndSendRecovery(
     String vaultId, {
-    Duration? expirationDuration,
     bool isPractice = false,
   }) async {
     await initialize();
@@ -401,7 +394,6 @@ class RecoveryService {
       initiatorPubkey: initiatorPubkey,
       stewardPubkeys: stewardPubkeys,
       threshold: threshold,
-      expirationDuration: expirationDuration,
       isPractice: isPractice,
     );
 
