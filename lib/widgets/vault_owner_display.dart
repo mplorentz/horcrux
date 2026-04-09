@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../providers/key_provider.dart';
+import 'name_label.dart';
 
 /// Widget that displays the vault owner information above the status banner
 class VaultOwnerDisplay extends ConsumerWidget {
@@ -28,14 +28,7 @@ class VaultOwnerDisplay extends ConsumerWidget {
         final isCurrentUser = currentPubkey != null && vault.isOwned(currentPubkey);
 
         // Get owner display name
-        String ownerDisplayName;
-        if (isCurrentUser) {
-          ownerDisplayName = vault.ownerName ?? 'You';
-        } else if (vault.ownerName != null && vault.ownerName!.isNotEmpty) {
-          ownerDisplayName = vault.ownerName!;
-        } else {
-          ownerDisplayName = Helpers.encodeBech32(vault.ownerPubkey, 'npub');
-        }
+        final ownerDisplayName = isCurrentUser ? (vault.ownerName ?? 'You') : vault.ownerName;
 
         final content = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,15 +41,13 @@ class VaultOwnerDisplay extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              ownerDisplayName,
+            NameLabel(
+              name: ownerDisplayName,
+              pubkey: vault.ownerPubkey,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: colorScheme.onSurface,
-                fontFamily: ownerDisplayName.startsWith('npub') ? 'RobotoMono' : null,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         );

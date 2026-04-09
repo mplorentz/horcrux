@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'name_label.dart';
 import 'steward_details_dialog.dart';
 
 /// Widget for displaying list of stewards who have shards
@@ -75,7 +75,16 @@ class StewardList extends ConsumerWidget {
               child: Text('Error loading user info: $error'),
             ),
           ),
-          data: (currentPubkey) => _buildKeyHolderContent(context, ref, vault, currentPubkey),
+          data: (currentPubkey) {
+            // Hide steward list when vault is in awaitingKey state AND current user is a steward
+            // (not the owner) - stewards waiting for their key shouldn't see an empty steward list
+            final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
+            if (vault.state == VaultState.awaitingKey && !isOwner) {
+              // Return empty widget - background fill handled at screen level
+              return const SizedBox.shrink();
+            }
+            return _buildKeyHolderContent(context, ref, vault, currentPubkey);
+          },
         );
       },
     );
@@ -132,7 +141,7 @@ class StewardList extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Change backup settings to add stewards',
+                    'Add stewards in your recovery plan',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
@@ -206,21 +215,13 @@ class StewardList extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            steward.displayName ??
-                                (steward.pubkey != null
-                                    ? Helpers.encodeBech32(
-                                        steward.pubkey!,
-                                        'npub',
-                                      )
-                                    : 'Unknown'),
+                          child: NameLabel(
+                            name: steward.displayName,
+                            pubkey: steward.pubkey,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colorScheme.onSurface,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
                           ),
                         ),
                       ],

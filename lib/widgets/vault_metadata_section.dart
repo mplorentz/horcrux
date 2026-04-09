@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'name_label.dart';
 
 /// Widget for displaying vault metadata (ownership info)
 class VaultMetadataSection extends ConsumerWidget {
@@ -89,6 +89,11 @@ class VaultMetadataSection extends ConsumerWidget {
   ) {
     final isOwner = currentPubkey == vault.ownerPubkey;
     final threshold = vault.mostRecentShard?.threshold;
+    final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
+      name: vault.ownerName,
+      pubkey: vault.ownerPubkey,
+      baseStyle: Theme.of(context).textTheme.bodyMedium,
+    );
 
     return Card(
       child: Padding(
@@ -131,10 +136,27 @@ class VaultMetadataSection extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Owner: ${Helpers.encodeBech32(vault.ownerPubkey, 'npub')}',
-                style: Theme.of(context).textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Owner: ',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          TextSpan(
+                            text: ownerText,
+                            style: ownerStyle ?? Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
               if (threshold != null) ...[
                 const SizedBox(height: 8),

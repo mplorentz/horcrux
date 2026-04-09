@@ -131,36 +131,21 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         ),
                       );
 
-                      // Waiting for stewards button - shown when stewards haven't accepted invitations
+                      // Delete Local Copy Button - shown after distribution
+                      // Owner can delete vault content while keeping recovery capability
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
-                        if (backupConfig != null && backupConfig.stewards.isNotEmpty) {
-                          if (!backupConfig.canDistribute) {
-                            // Show "Waiting for stewards" button (disabled)
-                            final pendingCount = backupConfig.pendingInvitationsCount;
-                            buttons.add(
-                              RowButtonConfig(
-                                onPressed: null, // Disabled
-                                icon: Icons.hourglass_empty,
-                                text:
-                                    'Waiting for $pendingCount Steward${pendingCount > 1 ? 's' : ''}',
-                              ),
-                            );
-                          }
-
-                          // Delete Local Copy Button - shown after distribution
-                          // Owner can delete vault content while keeping recovery capability
-                          if (backupConfig.lastRedistribution != null &&
-                              currentVault.content != null) {
-                            buttons.add(
-                              RowButtonConfig(
-                                onPressed: () =>
-                                    _showDeleteContentDialog(context, ref, currentVault),
-                                icon: Icons.delete_sweep,
-                                text: 'Delete Local Copy',
-                              ),
-                            );
-                          }
+                        if (backupConfig != null &&
+                            backupConfig.stewards.isNotEmpty &&
+                            backupConfig.lastRedistribution != null &&
+                            currentVault.content != null) {
+                          buttons.add(
+                            RowButtonConfig(
+                              onPressed: () => _showDeleteContentDialog(context, ref, currentVault),
+                              icon: Icons.delete_sweep,
+                              text: 'Delete Local Copy',
+                            ),
+                          );
                         }
                       }
 
@@ -258,7 +243,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
-                    if (!isOwned && !isOwnerSteward) {
+                    // Don't show recovery buttons when steward is waiting for their key (awaitingKey state)
+                    if (!isOwned &&
+                        !isOwnerSteward &&
+                        currentVault != null &&
+                        currentVault.state != VaultState.awaitingKey) {
                       // Show "Manage Recovery" if user initiated active recovery
                       if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
                         buttons.add(
@@ -498,8 +487,40 @@ class VaultDetailButtonStack extends ConsumerWidget {
   }
 
   Future<void> _initiateRecovery(BuildContext context, WidgetRef ref, String vaultId) async {
+    // Show confirmation dialog first
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Initiate Recovery?'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This will begin the process of recovering the contents of this vault.'),
+            SizedBox(height: 8),
+            Text('• Recovery requests will be sent to all stewards.'),
+            Text('• Stewards can approve or deny your request.'),
+            Text(
+                '• Once enough stewards approve, you can recover the vault content on the recovery screen.'),
+            SizedBox(height: 12),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Initiate Recovery'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     // Show full-screen loading dialog
-    if (!context.mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,

@@ -164,6 +164,7 @@ void main() {
       expect(decoded['threshold'], 2);
       expect(decoded['recovery_request_id'], isNotEmpty);
       expect(decoded['requested_at'], isNotEmpty);
+      expect(decoded['expires_at'], isNull);
     });
 
     test(
@@ -290,8 +291,7 @@ void main() {
       expect(recoveryRequest.totalStewards, 2);
     });
 
-    test('recovery request contains proper expiration', () async {
-      // Create request with default expiration
+    test('recovery request has no expiration', () async {
       final recoveryRequest = await recoveryService.initiateRecovery(
         testVaultId,
         initiatorPubkey: testCreatorPubkey,
@@ -299,35 +299,8 @@ void main() {
         threshold: 1,
       );
 
-      // Verify expiration is set and in the future
-      expect(recoveryRequest.expiresAt, isNotNull);
-      expect(recoveryRequest.expiresAt!.isAfter(DateTime.now()), true);
-
-      // Should default to ~24 hours
-      final duration = recoveryRequest.expiresAt!.difference(
-        recoveryRequest.requestedAt,
-      );
-      expect(duration.inHours, greaterThanOrEqualTo(23));
-      expect(duration.inHours, lessThanOrEqualTo(25));
-    });
-
-    test('recovery request respects custom expiration duration', () async {
-      // Create request with custom 2-hour expiration
-      final recoveryRequest = await recoveryService.initiateRecovery(
-        testVaultId,
-        initiatorPubkey: testCreatorPubkey,
-        stewardPubkeys: [testKeyHolder1],
-        threshold: 1,
-        expirationDuration: const Duration(hours: 2),
-      );
-
-      // Verify custom expiration
-      expect(recoveryRequest.expiresAt, isNotNull);
-      final duration = recoveryRequest.expiresAt!.difference(
-        recoveryRequest.requestedAt,
-      );
-      expect(duration.inHours, greaterThanOrEqualTo(1));
-      expect(duration.inHours, lessThanOrEqualTo(3));
+      expect(recoveryRequest.expiresAt, isNull);
+      expect(recoveryRequest.isExpired, false);
     });
 
     test('recovery response shard data is stored and can be retrieved', () async {

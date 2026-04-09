@@ -33,7 +33,7 @@ class VaultExplainerScreen extends StatelessWidget {
                 children: [
                   // Main explanation paragraph
                   Text(
-                    'A Vault is an encrypted bundle of your sensitive data that Horcrux can back up to your friends and family. Each vault requires multiple keys to open. Horcrux helps you create these keys and distribute them to other people.',
+                    'A Vault is an encrypted bundle of your sensitive data that Horcrux can back up to your friends. Each vault requires multiple keys to open. Horcrux helps you create these keys and distribute them to other people.',
                     style: textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 24),
@@ -45,7 +45,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     context,
                     number: '1',
                     title: 'Adding contents',
-                    description: 'Attach files that you want to back up.',
+                    description: 'Add the data that you want to back up.',
                   ),
                   const SizedBox(height: 16),
                   // Step 2
