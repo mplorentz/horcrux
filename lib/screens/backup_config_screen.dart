@@ -262,7 +262,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        final result = await showDialog<String>(
+        final dialogResult = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Discard Changes?'),
@@ -286,12 +286,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
 
         if (!context.mounted) return;
-        if (result == 'save') {
+        if (dialogResult == 'save') {
           await _saveBackup();
-          if (context.mounted) {
-            Navigator.of(context).pop();
-          }
-        } else if (result == 'discard') {
+        } else if (dialogResult == 'discard') {
           Navigator.of(context).pop();
         }
       },
@@ -1326,17 +1323,17 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, 'cancel'),
-                child: const Text('Cancel'),
+                child: const Text('Go Back'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'discard'),
+                child: const Text('Discard'),
               ),
               if (_canCreateBackup())
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, 'save'),
                   child: const Text('Save'),
                 ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, 'discard'),
-                child: const Text('Discard'),
-              ),
             ],
           ),
         );
@@ -1344,10 +1341,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (!mounted) return;
         if (result == 'save') {
           await _saveBackup();
-          if (mounted) {
-            // Pop with vaultId so the vault detail screen is shown
-            Navigator.of(context).pop(widget.vaultId);
-          }
         } else if (result == 'discard') {
           await _restoreInitialConfig();
           if (!mounted) return;
