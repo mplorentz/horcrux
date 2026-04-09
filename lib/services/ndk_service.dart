@@ -242,8 +242,8 @@ class NdkService {
         await _handleRecoveryRequestData(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.recoveryResponse.value) {
         await _handleRecoveryResponseData(unwrappedEvent);
-      } else if (unwrappedEvent.kind == NostrKind.invitationRsvp.value) {
-        await _handleInvitationRsvp(unwrappedEvent);
+      } else if (unwrappedEvent.kind == NostrKind.invitationAcceptance.value) {
+        await _handleInvitationAcceptance(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.shardConfirmation.value) {
@@ -373,18 +373,18 @@ class NdkService {
     }
   }
 
-  /// Handle incoming invitation RSVP event (kind 1340)
-  Future<void> _handleInvitationRsvp(Nip01Event event) async {
+  /// Handle incoming invitation acceptance event (kind 1340)
+  Future<void> _handleInvitationAcceptance(Nip01Event event) async {
     try {
-      Log.info('Processing invitation RSVP event: ${event.id}');
+      Log.info('Processing invitation acceptance event: ${event.id}');
       Log.debug(
-        'RSVP event before processing: kind=${event.kind}, content length=${event.content.length}, content preview=${event.content.length > 100 ? event.content.substring(0, 100) : event.content}',
+        'Invitation acceptance event before processing: kind=${event.kind}, content length=${event.content.length}, content preview=${event.content.length > 100 ? event.content.substring(0, 100) : event.content}',
       );
       final invitationService = _getInvitationService();
-      await invitationService.processRsvpEvent(event: event);
-      Log.info('Successfully processed RSVP event: ${event.id}');
+      await invitationService.processInvitationAcceptanceEvent(event: event);
+      Log.info('Successfully processed invitation acceptance event: ${event.id}');
     } catch (e) {
-      Log.error('Error handling invitation RSVP event ${event.id}', e);
+      Log.error('Error handling invitation acceptance event ${event.id}', e);
     }
   }
 
