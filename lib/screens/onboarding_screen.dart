@@ -30,17 +30,29 @@ class OnboardingScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           Center(
-                            child: Text(
-                              'Horcrux',
-                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                    fontSize: 90,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2,
-                                  ),
-                              textAlign: TextAlign.center,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/icon/app_icon.png',
+                                  height: 160,
+                                  width: 160,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Horcrux',
+                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                        fontSize: 90,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.2,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 128),
+                          const SizedBox(height: 64),
                           // Body text and Learn More button - vertically centered
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

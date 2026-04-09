@@ -30,6 +30,7 @@ dependencies:
   marionette_flutter: ^0.2.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   integration_test:
@@ -41,6 +42,21 @@ dev_dependencies:
   golden_toolkit: ^0.15.0
   marionette_mcp: ^0.1.0
 
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FF000000"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#000000"
+    theme_color: "#000000"
+
 flutter:
   uses-material-design: true
 
@@ -50,6 +66,7 @@ flutter:
   assets:
     # Add assets from the images directory to the application.
     - assets/images/
+    - assets/icon/
 
   # Bundled fonts for consistent rendering in tests and app
   fonts:
