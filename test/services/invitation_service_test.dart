@@ -134,25 +134,25 @@ void main() {
         final invitation = invitations.first;
 
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async => false);
+        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create RSVP event
-        final rsvpPayload = json.encode({
+        // Create invitation acceptance event
+        final acceptancePayload = json.encode({
           'invite_code': invitation.inviteCode,
           'invitee_pubkey': deviceCPubkey,
           'responded_at': DateTime.now().toIso8601String(),
         });
 
-        final rsvpEvent = Nip01Event(
-          kind: NostrKind.invitationRsvp.value,
+        final acceptanceEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: rsvpPayload,
+          content: acceptancePayload,
           tags: [],
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
-        // Act: Process RSVP event (which adds Device C as a new steward)
-        await invitationService.processRsvpEvent(event: rsvpEvent);
+        // Act: Process invitation acceptance (which adds Device C as a new steward)
+        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
@@ -254,25 +254,25 @@ void main() {
         // We'll use the generated invite code instead
 
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async => false);
+        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create RSVP event with the generated invite code
-        final rsvpPayload = json.encode({
+        // Create invitation acceptance event with the generated invite code
+        final acceptancePayload = json.encode({
           'invite_code': generatedInvitation.inviteCode,
           'invitee_pubkey': deviceCPubkey,
           'responded_at': DateTime.now().toIso8601String(),
         });
 
-        final rsvpEvent = Nip01Event(
-          kind: NostrKind.invitationRsvp.value,
+        final acceptanceEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: rsvpPayload,
+          content: acceptancePayload,
           tags: [],
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
         // Act: Device C accepts the invitation
-        await invitationService.processRsvpEvent(event: rsvpEvent);
+        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
@@ -374,25 +374,25 @@ void main() {
         final invitations = await invitationService.getPendingInvitations(vaultId);
         final invitation = invitations.first;
 
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async => false);
+        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create RSVP event
-        final rsvpPayload = json.encode({
+        // Create invitation acceptance event
+        final acceptancePayload = json.encode({
           'invite_code': invitation.inviteCode,
           'invitee_pubkey': deviceCPubkey,
           'responded_at': DateTime.now().toIso8601String(),
         });
 
-        final rsvpEvent = Nip01Event(
-          kind: NostrKind.invitationRsvp.value,
+        final acceptanceEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: rsvpPayload,
+          content: acceptancePayload,
           tags: [],
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
         // Act: Add Device C as a new steward
-        await invitationService.processRsvpEvent(event: rsvpEvent);
+        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
