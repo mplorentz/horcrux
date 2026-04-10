@@ -1,12 +1,18 @@
 # Horcrux
 
-*Horcrux is alpha software, do not use it to back up real secrets at this time.*
+_Horcrux is alpha software, do not use it to back up real secrets at this time._
 
-What's the most secure and resilient way to backup sensitive files? Splitting them into pieces and distributing them to trusted parties, like friends and family. No single person has full access to your data, but in an emergency the pieces can be reassembled and decrypted.
+Horcrux is an app for backup and recovery of sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux uses advanced cryptography to distribute the data to the devices of the people you choose. All data is encrypted and can only be decrypted when most or all of of these people provide their consent. The result is a virtual vault that no single person or key can open.
 
-Horcrux is an app for backup and recovery of sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, horcrux uses Shamir's Secret Sharing algorithm to distribute the sensitive data in pieces to your friends and family's devices. Recovery is accomplished by getting consent from these friends and family to reassemble your data.
+## Privacy
 
-This is more private than backing up to the cloud, because no single party has all your data. It's more secure than storing a full copy of the data in a password manager or physical safe because even if one or more devices are compromised the data will not be leaked. And you can still recover your data even if some parties have lost their share.
+Horcrux is designed to protect your data and metadata, but all software comes with inherent risks. To help you understand whether Horcrux is appropriate for your individual threat model here are some of the security tradeoffs we have made:
+
+Horcrux is built on the Nostr protocol which makes strong guarantees about the authorship and integrity of data. All messages between users are end-to-end encrypted using NIP-44 gift wraps, which hides both the content and the sender's public key from relays. Your vault contents and cryptographic keys are always encrypted at rest. Horcrux allows you to choose the relay servers you use to exchange data with your stewards. While these servers act as middlemen who can never decrypt your vault data the following metadata is observable:
+
+- A malicious relay can associate your IP address with your Nostr identity. Using a network-layer anonymizer like Tor or I2P can be used to mitigate this risk.
+- A malicious relay could observe the timing of published gift-wrap events to build a list of stewards (identified by their Nostr identity) for a given vault.
+- Horcrux uses it's own notification service, Google's Firebase Cloud Messaging service, and Apple's Push Notification Service in order to deliver push notifications for recovery events to any user who opts in to push notifications. The Horcrux notification server holds a map of Nostr identities to push notification device tokens, and could build lists of stewards based on the timing of notifications. Apple and Google's notification servers only receive device tokens but could use timing to identify groups of stewards by their device tokens.
 
 ## Development
 
