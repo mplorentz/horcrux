@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../main.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/relay_scan_service.dart';
 
 /// Initializes app services (deep linking and relay scanning).
@@ -31,6 +32,10 @@ Future<void> initializeAppServices(
   // This will auto-start scanning if there are enabled relays
   final relayScanService = ref.read(relayScanServiceProvider);
   await relayScanService.initialize();
+
+  // Initialize local notifications for recovery events
+  final localNotificationService = ref.read(localNotificationServiceProvider);
+  await localNotificationService.initialize();
 
   // Invalidate key-related providers to trigger rebuild (e.g., after onboarding)
   if (initializeKeyIfNeeded) {
