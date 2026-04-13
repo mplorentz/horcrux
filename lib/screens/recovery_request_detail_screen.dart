@@ -7,6 +7,7 @@ import '../providers/key_provider.dart';
 import '../services/logger.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
+import '../utils/nostr_display.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_scaffold.dart';
 
@@ -185,44 +186,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     RecoveryRequest request,
     Vault? vault,
   ) {
-    // Get initiator name from vault shard data
-    String? initiatorName;
-    if (vault != null) {
-      final shard = vault.mostRecentShard;
-
-      // First check vault ownerName
-      if (vault.ownerPubkey == request.initiatorPubkey) {
-        initiatorName = vault.ownerName;
-      }
-
-      // If not found and we have shards, check shard data
-      if (initiatorName == null && shard != null) {
-        // Check if initiator is the owner
-        if (shard.creatorPubkey == request.initiatorPubkey) {
-          initiatorName = shard.ownerName ?? vault.ownerName;
-        } else if (shard.stewards != null) {
-          // Check if initiator is in stewards
-          for (final steward in shard.stewards!) {
-            if (steward['pubkey'] == request.initiatorPubkey) {
-              initiatorName = steward['name'];
-              break;
-            }
-          }
-        }
-      }
-
-      // Also check backupConfig
-      if (initiatorName == null && vault.backupConfig != null) {
-        try {
-          final keyHolder = vault.backupConfig!.stewards.firstWhere(
-            (kh) => kh.pubkey == request.initiatorPubkey,
-          );
-          initiatorName = keyHolder.displayName;
-        } catch (e) {
-          // Key holder not found in backupConfig
-        }
-      }
-    }
+    final initiatorName = displayNameFromPubkeyOrNull(vault, request.initiatorPubkey);
 
     // Get instructions from vault
     String? instructions;
@@ -401,7 +365,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
                   const SizedBox(height: 16),
                 ],
 
-                // Contact info section (if available)
+                // Contact info section (if available and we know who to name)
                 if (initiatorContactInfo != null &&
                     initiatorContactInfo.isNotEmpty &&
                     initiatorName != null) ...[

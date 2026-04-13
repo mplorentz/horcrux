@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../utils/nostr_display.dart';
 import '../utils/validators.dart';
 import 'steward_status.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
@@ -84,11 +85,11 @@ class Steward with _$Steward {
     if (isInvited) {
       return 'Pending';
     }
-    final displayNpub = npub;
-    if (displayNpub == null) {
+    final pk = pubkey;
+    if (pk == null) {
       return 'Unknown';
     }
-    return '${displayNpub.substring(0, 8)}...${displayNpub.substring(displayNpub.length - 8)}';
+    return shortNpub(pk);
   }
 
   /// Get display subtitle (npub for real stewards, status for invited)

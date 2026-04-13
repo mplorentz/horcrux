@@ -1,15 +1,22 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'logger.dart';
-import 'ndk_service.dart';
 import '../main.dart';
 import '../models/recovery_request.dart';
+import '../providers/vault_provider.dart';
+import '../utils/nostr_display.dart';
+import 'logger.dart';
+import 'ndk_service.dart';
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final ndkService = ref.watch(ndkServiceProvider);
-  final service = LocalNotificationService(ndkService: ndkService);
+  final vaultRepository = ref.watch(vaultRepositoryProvider);
+  final service = LocalNotificationService(
+    ndkService: ndkService,
+    vaultRepository: vaultRepository,
+  );
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -17,6 +24,7 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
 /// Service that displays OS notifications to the user for things like recovery requests.
 class LocalNotificationService {
   final NdkService _ndkService;
+  final VaultRepository _vaultRepository;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   StreamSubscription<RecoveryRequest>? _recoveryRequestSub;
@@ -28,7 +36,11 @@ class LocalNotificationService {
 
   int _notificationCounter = 0;
 
-  LocalNotificationService({required NdkService ndkService}) : _ndkService = ndkService;
+  LocalNotificationService({
+    required NdkService ndkService,
+    required VaultRepository vaultRepository,
+  })  : _ndkService = ndkService,
+        _vaultRepository = vaultRepository;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -103,26 +115,41 @@ class LocalNotificationService {
   }
 
   void _onRecoveryRequest(RecoveryRequest request) {
+    unawaited(_showRecoveryRequestNotification(request));
+  }
+
+  Future<void> _showRecoveryRequestNotification(RecoveryRequest request) async {
     Log.info(
       'Showing notification for recovery request: ${request.id}',
     );
-    showNotification(
-      title: 'Recovery Request',
-      body: 'Someone is requesting recovery of a vault.',
+    final vault = await _vaultRepository.getVault(request.vaultId);
+    final vaultName = vault?.name ?? 'a vault';
+    final requester = displayNameFromPubkey(vault, request.initiatorPubkey);
+    await showNotification(
+      title: 'Recovery request',
+      body: '$requester is requesting your key to vault "$vaultName".',
       payload: 'recovery_request:${request.id}',
     );
   }
 
   void _onRecoveryResponse(RecoveryResponseEvent response) {
+    unawaited(_showRecoveryResponseNotification(response));
+  }
+
+  Future<void> _showRecoveryResponseNotification(RecoveryResponseEvent response) async {
     final status = response.approved ? 'approved' : 'denied';
     Log.info(
       'Showing notification for recovery response ($status): ${response.recoveryRequestId}',
     );
-    showNotification(
-      title: 'Recovery Response',
-      body: response.approved
-          ? 'A steward approved your recovery request.'
-          : 'A steward denied your recovery request.',
+    final vault = await _vaultRepository.getVault(response.vaultId);
+    final vaultName = vault?.name ?? 'your vault';
+    final steward = displayNameFromPubkey(vault, response.senderPubkey);
+    final body = response.approved
+        ? '$steward approved recovery of "$vaultName".'
+        : '$steward denied recovery of "$vaultName".';
+    await showNotification(
+      title: 'Recovery response',
+      body: body,
       payload: 'recovery_response:${response.recoveryRequestId}',
     );
   }
