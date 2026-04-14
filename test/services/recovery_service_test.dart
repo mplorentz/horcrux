@@ -13,6 +13,8 @@ import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/services/shard_distribution_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/vault_share_service.dart';
+import 'package:horcrux/services/local_notification_service.dart';
+import 'package:horcrux/services/processed_nostr_event_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'recovery_service_test.mocks.dart';
@@ -20,6 +22,7 @@ import '../helpers/secure_storage_mock.dart';
 
 @GenerateMocks([
   BackupService,
+  LocalNotificationService,
   ShardDistributionService,
   NdkService,
   VaultShareService,
@@ -44,6 +47,7 @@ void main() {
     late BackupService backupService;
     late NdkService ndkService;
     late VaultShareService vaultShareService;
+    late MockLocalNotificationService mockLocalNotificationService;
     late RecoveryService recoveryService;
     const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
     const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
@@ -67,6 +71,13 @@ void main() {
       final mockBackupService = MockBackupService();
       final mockNdkService = MockNdkService();
       final mockVaultShareService = MockVaultShareService();
+      mockLocalNotificationService = MockLocalNotificationService();
+      when(
+        mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
+      ).thenAnswer((_) async {});
+      when(
+        mockLocalNotificationService.notifyRecoveryResponseProcessed(any),
+      ).thenAnswer((_) async {});
 
       // Stub the streams that RecoveryService accesses in its constructor
       when(
@@ -88,6 +99,8 @@ void main() {
         backupService,
         ndkService,
         vaultShareService,
+        ProcessedNostrEventStore(),
+        mockLocalNotificationService,
       );
       await recoveryService.clearAll();
       await repository.clearAll();
@@ -329,7 +342,7 @@ void main() {
       );
 
       // Respond to the recovery request (simulating what _handleRecoveryResponseData does)
-      await recoveryService.respondToRecoveryRequest(
+      await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
@@ -365,7 +378,7 @@ void main() {
       );
 
       // Simulate receiving a denial response (no shard data)
-      await recoveryService.respondToRecoveryRequest(
+      await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder1,
         false, // denied
@@ -418,7 +431,7 @@ void main() {
       );
 
       // First steward approves
-      await recoveryService.respondToRecoveryRequest(
+      await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
@@ -426,7 +439,7 @@ void main() {
       );
 
       // Second steward approves
-      await recoveryService.respondToRecoveryRequest(
+      await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder2,
         true, // approved

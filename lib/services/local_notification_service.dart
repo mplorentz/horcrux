@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,27 +6,22 @@ import '../models/recovery_request.dart';
 import '../providers/vault_provider.dart';
 import '../utils/nostr_display.dart';
 import 'logger.dart';
-import 'ndk_service.dart';
+import 'ndk_service.dart' show RecoveryResponseEvent;
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
-  final ndkService = ref.watch(ndkServiceProvider);
   final vaultRepository = ref.watch(vaultRepositoryProvider);
-  final service = LocalNotificationService(
-    ndkService: ndkService,
-    vaultRepository: vaultRepository,
-  );
+  final service = LocalNotificationService(vaultRepository: vaultRepository);
   ref.onDispose(() => service.dispose());
   return service;
 });
 
-/// Service that displays OS notifications to the user for things like recovery requests.
+/// Service that displays OS notifications to the user for things like recovery events.
+///
+/// [RecoveryService] calls [notifyRecoveryRequestProcessed] / [notifyRecoveryResponseProcessed]
+/// after it finishes handling Nostr events and applies live-vs-historical rules.
 class LocalNotificationService {
-  final NdkService _ndkService;
   final VaultRepository _vaultRepository;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
-
-  StreamSubscription<RecoveryRequest>? _recoveryRequestSub;
-  StreamSubscription<RecoveryResponseEvent>? _recoveryResponseSub;
 
   static const _channelId = 'horcrux_notifications';
   static const _channelName = 'Horcrux Notifications';
@@ -36,11 +29,8 @@ class LocalNotificationService {
 
   int _notificationCounter = 0;
 
-  LocalNotificationService({
-    required NdkService ndkService,
-    required VaultRepository vaultRepository,
-  })  : _ndkService = ndkService,
-        _vaultRepository = vaultRepository;
+  LocalNotificationService({required VaultRepository vaultRepository})
+      : _vaultRepository = vaultRepository;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -70,8 +60,17 @@ class LocalNotificationService {
 
     await _requestPlatformNotificationPermissions();
 
-    _subscribeToEvents();
     Log.info('LocalNotificationService initialized');
+  }
+
+  /// Called by [RecoveryService] after a recovery request event is processed successfully.
+  Future<void> notifyRecoveryRequestProcessed(RecoveryRequest request) async {
+    await _showRecoveryRequestNotification(request);
+  }
+
+  /// Called by [RecoveryService] after a recovery response event is processed successfully.
+  Future<void> notifyRecoveryResponseProcessed(RecoveryResponseEvent response) async {
+    await _showRecoveryResponseNotification(response);
   }
 
   /// Asks the OS for permission to show notifications.
@@ -109,15 +108,6 @@ class LocalNotificationService {
     }
   }
 
-  void _subscribeToEvents() {
-    _recoveryRequestSub = _ndkService.recoveryRequestStream.listen(_onRecoveryRequest);
-    _recoveryResponseSub = _ndkService.recoveryResponseStream.listen(_onRecoveryResponse);
-  }
-
-  void _onRecoveryRequest(RecoveryRequest request) {
-    unawaited(_showRecoveryRequestNotification(request));
-  }
-
   Future<void> _showRecoveryRequestNotification(RecoveryRequest request) async {
     Log.info(
       'Showing notification for recovery request: ${request.id}',
@@ -130,10 +120,6 @@ class LocalNotificationService {
       body: '$requester is requesting your key to vault "$vaultName".',
       payload: 'recovery_request:${request.id}',
     );
-  }
-
-  void _onRecoveryResponse(RecoveryResponseEvent response) {
-    unawaited(_showRecoveryResponseNotification(response));
   }
 
   Future<void> _showRecoveryResponseNotification(RecoveryResponseEvent response) async {
@@ -199,8 +185,5 @@ class LocalNotificationService {
     }
   }
 
-  void dispose() {
-    _recoveryRequestSub?.cancel();
-    _recoveryResponseSub?.cancel();
-  }
+  void dispose() {}
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/nostr_kinds.dart';
@@ -10,7 +11,9 @@ import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
 import 'backup_service.dart';
+import 'local_notification_service.dart';
 import 'ndk_service.dart';
+import 'processed_nostr_event_store.dart';
 import 'vault_share_service.dart';
 import 'logger.dart';
 
@@ -22,11 +25,15 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
   final vaultShareService = ref.read(vaultShareServiceProvider);
+  final processedStore = ref.read(processedNostrEventStoreProvider);
+  final localNotifications = ref.read(localNotificationServiceProvider);
   final service = RecoveryService(
     repository,
     backupService,
     ndkService,
     vaultShareService,
+    processedStore,
+    localNotifications,
   );
 
   // Clean up streams when disposed
@@ -44,8 +51,13 @@ class RecoveryService {
   final BackupService backupService;
   final NdkService _ndkService;
   final VaultShareService _vaultShareService;
+  final ProcessedNostrEventStore _processedStore;
+  final LocalNotificationService _localNotifications;
 
   static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
+  static const String _firstOpenUtcKey = 'horcrux_first_open_utc_ms';
+
+  DateTime? _firstOpenUtcCached;
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
@@ -63,6 +75,8 @@ class RecoveryService {
     this.backupService,
     this._ndkService,
     this._vaultShareService,
+    this._processedStore,
+    this._localNotifications,
   ) {
     _loadViewedNotificationIds();
     _setupNdkStreamListeners();
@@ -70,38 +84,15 @@ class RecoveryService {
 
   /// Set up listeners for incoming NDK events
   void _setupNdkStreamListeners() {
-    // Listen for incoming recovery requests
     _ndkService.recoveryRequestStream.listen(
-      (recoveryRequest) async {
-        try {
-          await addIncomingRecoveryRequest(recoveryRequest);
-        } catch (e) {
-          Log.error(
-            'Error processing incoming recovery request from stream',
-            e,
-          );
-        }
-      },
+      _onIncomingRecoveryRequestFromNdk,
       onError: (error) {
         Log.error('Error in recovery request stream', error);
       },
     );
 
-    // Listen for incoming recovery responses
     _ndkService.recoveryResponseStream.listen(
-      (responseEvent) async {
-        try {
-          await respondToRecoveryRequest(
-            responseEvent.recoveryRequestId,
-            responseEvent.senderPubkey,
-            responseEvent.approved,
-            shardData: responseEvent.shardData,
-            nostrEventId: responseEvent.nostrEventId,
-          );
-        } catch (e) {
-          Log.error('Error processing recovery response from stream', e);
-        }
-      },
+      _onIncomingRecoveryResponseFromNdk,
       onError: (error) {
         Log.error('Error in recovery response stream', error);
       },
@@ -110,19 +101,91 @@ class RecoveryService {
     Log.info('RecoveryService listening to NdkService event streams');
   }
 
+  Future<void> _onIncomingRecoveryRequestFromNdk(RecoveryRequest recoveryRequest) async {
+    final id = recoveryRequest.nostrEventId;
+    if (id != null && await _processedStore.contains(id)) {
+      Log.debug('Skipping already-processed recovery request event $id');
+      return;
+    }
+    try {
+      await processRecoveryRequest(recoveryRequest);
+      if (id != null) {
+        await _processedStore.recordProcessed(id);
+      }
+      final firstOpen = await _initFirstOpenTime();
+      if (RecoveryLiveNotificationPolicy.shouldNotifyRecoveryRequest(recoveryRequest, firstOpen)) {
+        unawaited(_localNotifications.notifyRecoveryRequestProcessed(recoveryRequest));
+      }
+    } catch (e, st) {
+      Log.error(
+        'Error processing incoming recovery request from stream',
+        e,
+        st,
+      );
+    }
+  }
+
+  Future<void> _onIncomingRecoveryResponseFromNdk(RecoveryResponseEvent responseEvent) async {
+    final id = responseEvent.nostrEventId;
+    if (id != null && await _processedStore.contains(id)) {
+      Log.debug('Skipping already-processed recovery response event $id');
+      return;
+    }
+    try {
+      await processRecoveryResponse(
+        responseEvent.recoveryRequestId,
+        responseEvent.senderPubkey,
+        responseEvent.approved,
+        shardData: responseEvent.shardData,
+        nostrEventId: responseEvent.nostrEventId,
+      );
+      if (id != null) {
+        await _processedStore.recordProcessed(id);
+      }
+      final firstOpen = await _initFirstOpenTime();
+      if (RecoveryLiveNotificationPolicy.shouldNotifyRecoveryResponse(
+        createdAt: responseEvent.createdAt,
+        firstOpenUtc: firstOpen,
+      )) {
+        unawaited(_localNotifications.notifyRecoveryResponseProcessed(responseEvent));
+      }
+    } catch (e, st) {
+      Log.error('Error processing recovery response from stream', e, st);
+    }
+  }
+
   /// Dispose resources
   void dispose() {
     _notificationController.close();
     _recoveryRequestController.close();
   }
 
-  /// Initialize the service
+  Future<DateTime> _initFirstOpenTime() async {
+    if (_firstOpenUtcCached != null) return _firstOpenUtcCached!;
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt(_firstOpenUtcKey);
+    if (ms != null) {
+      _firstOpenUtcCached = DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+      return _firstOpenUtcCached!;
+    }
+    final now = DateTime.now().toUtc();
+    await prefs.setInt(_firstOpenUtcKey, now.millisecondsSinceEpoch);
+    _firstOpenUtcCached = now;
+    return _firstOpenUtcCached!;
+  }
+
+  /// Initialize the service: first-open UTC, processed Nostr event ids, viewed-notification ids.
+  ///
+  /// Call from app startup after [LocalNotificationService.initialize] and before relay traffic
+  /// so dedupe and notification policy see stable state.
   Future<void> initialize() async {
     if (_isInitialized) {
       return;
     }
 
     try {
+      await _initFirstOpenTime();
+      await _processedStore.ensureLoaded();
       await _loadViewedNotificationIds();
     } catch (e) {
       Log.error('Error initializing RecoveryService', e);
@@ -426,10 +489,11 @@ class RecoveryService {
     return recoveryRequest;
   }
 
-  /// Add an incoming recovery request (received via Nostr)
-  /// This is different from initiateRecovery which creates a new request
-  /// Since events are immutable, we skip processing if the request already exists locally
-  Future<void> addIncomingRecoveryRequest(RecoveryRequest request) async {
+  /// Merges a recovery request from Nostr into local vault state.
+  ///
+  /// Unlike [initiateRecovery], this does not create a new request id—it persists an event
+  /// the relays delivered. Since events are immutable, we skip if this request id already exists locally.
+  Future<void> processRecoveryRequest(RecoveryRequest request) async {
     await initialize();
 
     // Check if request already exists in vault (source of truth)
@@ -521,9 +585,10 @@ class RecoveryService {
     );
   }
 
-  /// Respond to a recovery request (from a steward)
-  /// Since events are immutable, we skip processing if the response already exists
-  Future<void> respondToRecoveryRequest(
+  /// Merges one steward's recovery response into local vault state (from Nostr or from this device).
+  ///
+  /// Since events are immutable, we skip processing if the response already exists.
+  Future<void> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
@@ -651,7 +716,7 @@ class RecoveryService {
     }
 
     // Submit response locally
-    await respondToRecoveryRequest(
+    await processRecoveryResponse(
       recoveryRequestId,
       responderPubkey,
       approved,
@@ -1171,5 +1236,29 @@ class RecoveryService {
     _isInitialized = false;
     _viewedNotificationIds = null;
     await initialize();
+  }
+}
+
+/// Live vs historical replay rules for recovery-related local notifications.
+///
+/// Kept next to [RecoveryService] and referenced from tests via this type.
+class RecoveryLiveNotificationPolicy {
+  RecoveryLiveNotificationPolicy._();
+
+  static const Duration slack = Duration(hours: 1);
+
+  /// Prefer [RecoveryRequest.eventCreationTime]; fall back to [RecoveryRequest.requestedAt].
+  static bool shouldNotifyRecoveryRequest(RecoveryRequest request, DateTime firstOpenUtc) {
+    final anchor = request.eventCreationTime ?? request.requestedAt;
+    return anchor.isAfter(firstOpenUtc.subtract(slack));
+  }
+
+  /// Requires inner event time; if unknown, do not notify.
+  static bool shouldNotifyRecoveryResponse({
+    required DateTime? createdAt,
+    required DateTime firstOpenUtc,
+  }) {
+    if (createdAt == null) return false;
+    return createdAt.isAfter(firstOpenUtc.subtract(slack));
   }
 }

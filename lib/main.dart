@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'providers/key_provider.dart';
 import 'services/logger.dart';
+import 'services/processed_nostr_event_store.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/app_initialization.dart';
@@ -33,7 +36,7 @@ class HorcruxApp extends ConsumerStatefulWidget {
   ConsumerState<HorcruxApp> createState() => _HorcruxAppState();
 }
 
-class _HorcruxAppState extends ConsumerState<HorcruxApp> {
+class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObserver {
   bool _isInitializing = true;
   String? _initError;
   ProviderSubscription<AsyncValue<bool>>? _loginStateSubscription;
@@ -41,8 +44,24 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeApp();
     _setupLoginStateListener();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      unawaited(_mergeProcessedNostrEventStoreOnBackground());
+    }
+  }
+
+  Future<void> _mergeProcessedNostrEventStoreOnBackground() async {
+    try {
+      await ref.read(processedNostrEventStoreProvider).mergePersistedStateOnBackground();
+    } catch (e, st) {
+      Log.error('ProcessedNostrEventStore background merge failed', e, st);
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -94,6 +113,7 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _loginStateSubscription?.close();
     super.dispose();
   }

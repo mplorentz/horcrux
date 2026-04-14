@@ -166,6 +166,9 @@ class RecoveryRequest with _$RecoveryRequest {
     required RecoveryRequestStatus status,
     required int threshold, // Shamir threshold needed for recovery
     String? nostrEventId,
+
+    /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
+    DateTime? eventCreationTime,
     DateTime? expiresAt,
     @Default({}) Map<String, RecoveryResponse> stewardResponses, // pubkey -> response
     String? errorMessage, // Error message if status is failed
@@ -233,6 +236,7 @@ class RecoveryRequest with _$RecoveryRequest {
       'status': status.name,
       'threshold': threshold,
       'nostrEventId': nostrEventId,
+      'eventCreationTime': eventCreationTime?.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
       'stewardResponses': stewardResponses.map(
         (key, value) => MapEntry(key, value.toJson()),
@@ -265,6 +269,9 @@ class RecoveryRequest with _$RecoveryRequest {
       threshold: json['threshold'] as int? ??
           1, // Default to 1 if not present (for backwards compatibility)
       nostrEventId: json['nostrEventId'] as String?,
+      eventCreationTime: json['eventCreationTime'] != null
+          ? DateTime.parse(json['eventCreationTime'] as String)
+          : null,
       expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
       stewardResponses: responses,
       errorMessage: json['errorMessage'] as String?,

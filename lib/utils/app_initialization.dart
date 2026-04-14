@@ -3,6 +3,7 @@ import '../main.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/recovery_service.dart';
 import '../services/relay_scan_service.dart';
 
 /// Initializes app services (deep linking and relay scanning).
@@ -23,6 +24,14 @@ Future<void> initializeAppServices(
     await loginService.initializeKey();
   }
 
+  // OS notification plugin before relay traffic: [RecoveryService] may call back into
+  // [LocalNotificationService] as soon as subscriptions deliver events.
+  final localNotificationService = ref.read(localNotificationServiceProvider);
+  await localNotificationService.initialize();
+
+  // Recovery dedupe + notification timeline before relay traffic.
+  await ref.read(recoveryServiceProvider).initialize();
+
   // Initialize deep linking
   final deepLinkService = ref.read(deepLinkServiceProvider);
   deepLinkService.setNavigatorKey(navigatorKey);
@@ -32,10 +41,6 @@ Future<void> initializeAppServices(
   // This will auto-start scanning if there are enabled relays
   final relayScanService = ref.read(relayScanServiceProvider);
   await relayScanService.initialize();
-
-  // Initialize local notifications for recovery events
-  final localNotificationService = ref.read(localNotificationServiceProvider);
-  await localNotificationService.initialize();
 
   // Invalidate key-related providers to trigger rebuild (e.g., after onboarding)
   if (initializeKeyIfNeeded) {
