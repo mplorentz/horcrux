@@ -10,25 +10,25 @@ import 'key_provider.dart';
 /// Pending steward recovery requests for banner / modal.
 ///
 /// [RecoveryService.notificationStream] is a **broadcast** stream: emissions that happen before
-/// any listener subscribes (e.g. during [RecoveryService.initialize]) are **dropped**. We therefore
-/// emit the current list once on subscribe via [RecoveryService.getPendingNotifications], then
-/// forward live updates from [RecoveryService.notificationStream].
+/// any listener subscribes (e.g. during [RecoveryService.initialize]) are **dropped**. We attach
+/// to [RecoveryService.notificationStream] **before** awaiting [RecoveryService.getPendingNotifications]
+/// so notifications are not missed while the initial snapshot loads, then emit that snapshot.
 final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((ref) {
   final service = ref.watch(recoveryServiceProvider);
   return Stream.multi((controller) async {
     StreamSubscription<List<RecoveryRequest>>? subscription;
-    try {
-      controller.add(await service.getPendingNotifications());
-    } catch (e, st) {
-      controller.addError(e, st);
-      return;
-    }
     subscription = service.notificationStream.listen(
       controller.add,
       onError: controller.addError,
       onDone: controller.close,
     );
     controller.onCancel = () => subscription?.cancel();
+    try {
+      controller.add(await service.getPendingNotifications());
+    } catch (e, st) {
+      controller.addError(e, st);
+      return;
+    }
   });
 });
 

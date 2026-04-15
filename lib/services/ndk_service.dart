@@ -277,9 +277,10 @@ class NdkService {
     Nip01Event event, {
     required String relayUrl,
   }) async {
-    unawaited(_processedEventStore.recordLastSeen(relayUrl, event.createdAt));
-
     if (!await _processedEventStore.claimEvent(event.id)) {
+      if (await _processedEventStore.contains(event.id)) {
+        await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
+      }
       return;
     }
 
@@ -315,6 +316,7 @@ class NdkService {
       }
 
       await _processedEventStore.recordProcessed(event.id);
+      await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
     } catch (e) {
       await _processedEventStore.releaseClaimedEvent(event.id);
       Log.error('Error handling gift wrap event ${event.id}', e);

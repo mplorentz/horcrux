@@ -53,7 +53,7 @@ class ProcessedNostrEventStore {
   ProcessedNostrEventStore({this.maxIds = 99999});
 
   /// Shared debounce for relay cursors and WAL→log merge.
-  static const _persistenceDebounceTime = Duration(seconds: 10);
+  static const _persistenceDebounceTime = Duration(seconds: 1);
 
   static const _logName = 'processed_nostr_event_ids.log';
   static const _walName = 'processed_nostr_event_ids.wal';
