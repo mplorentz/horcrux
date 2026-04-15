@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- INTERNET permission required for network operations (Nostr relays, invitation acceptance events, etc.) -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ (API 33): runtime permission for posting local notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Horcrux"
         android:name="${applicationName}"

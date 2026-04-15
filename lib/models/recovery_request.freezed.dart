@@ -261,6 +261,9 @@ mixin _$RecoveryRequest {
   RecoveryRequestStatus get status => throw _privateConstructorUsedError;
   int get threshold => throw _privateConstructorUsedError; // Shamir threshold needed for recovery
   String? get nostrEventId => throw _privateConstructorUsedError;
+
+  /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
+  DateTime? get eventCreationTime => throw _privateConstructorUsedError;
   DateTime? get expiresAt => throw _privateConstructorUsedError;
   Map<String, RecoveryResponse> get stewardResponses =>
       throw _privateConstructorUsedError; // pubkey -> response
@@ -285,6 +288,7 @@ abstract class $RecoveryRequestCopyWith<$Res> {
       RecoveryRequestStatus status,
       int threshold,
       String? nostrEventId,
+      DateTime? eventCreationTime,
       DateTime? expiresAt,
       Map<String, RecoveryResponse> stewardResponses,
       String? errorMessage,
@@ -311,6 +315,7 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
     Object? status = null,
     Object? threshold = null,
     Object? nostrEventId = freezed,
+    Object? eventCreationTime = freezed,
     Object? expiresAt = freezed,
     Object? stewardResponses = null,
     Object? errorMessage = freezed,
@@ -345,6 +350,10 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
               as String?,
+      eventCreationTime: freezed == eventCreationTime
+          ? _value.eventCreationTime
+          : eventCreationTime // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       expiresAt: freezed == expiresAt
           ? _value.expiresAt
           : expiresAt // ignore: cast_nullable_to_non_nullable
@@ -380,6 +389,7 @@ abstract class _$$RecoveryRequestImplCopyWith<$Res> implements $RecoveryRequestC
       RecoveryRequestStatus status,
       int threshold,
       String? nostrEventId,
+      DateTime? eventCreationTime,
       DateTime? expiresAt,
       Map<String, RecoveryResponse> stewardResponses,
       String? errorMessage,
@@ -404,6 +414,7 @@ class __$$RecoveryRequestImplCopyWithImpl<$Res>
     Object? status = null,
     Object? threshold = null,
     Object? nostrEventId = freezed,
+    Object? eventCreationTime = freezed,
     Object? expiresAt = freezed,
     Object? stewardResponses = null,
     Object? errorMessage = freezed,
@@ -438,6 +449,10 @@ class __$$RecoveryRequestImplCopyWithImpl<$Res>
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
               as String?,
+      eventCreationTime: freezed == eventCreationTime
+          ? _value.eventCreationTime
+          : eventCreationTime // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
       expiresAt: freezed == expiresAt
           ? _value.expiresAt
           : expiresAt // ignore: cast_nullable_to_non_nullable
@@ -469,6 +484,7 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
       required this.status,
       required this.threshold,
       this.nostrEventId,
+      this.eventCreationTime,
       this.expiresAt,
       final Map<String, RecoveryResponse> stewardResponses = const {},
       this.errorMessage,
@@ -492,6 +508,10 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
 // Shamir threshold needed for recovery
   @override
   final String? nostrEventId;
+
+  /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
+  @override
+  final DateTime? eventCreationTime;
   @override
   final DateTime? expiresAt;
   final Map<String, RecoveryResponse> _stewardResponses;
@@ -524,6 +544,8 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.threshold, threshold) || other.threshold == threshold) &&
             (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
+            (identical(other.eventCreationTime, eventCreationTime) ||
+                other.eventCreationTime == eventCreationTime) &&
             (identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt) &&
             const DeepCollectionEquality().equals(other._stewardResponses, _stewardResponses) &&
             (identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage) &&
@@ -540,6 +562,7 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
       status,
       threshold,
       nostrEventId,
+      eventCreationTime,
       expiresAt,
       const DeepCollectionEquality().hash(_stewardResponses),
       errorMessage,
@@ -561,6 +584,7 @@ abstract class _RecoveryRequest extends RecoveryRequest {
       required final RecoveryRequestStatus status,
       required final int threshold,
       final String? nostrEventId,
+      final DateTime? eventCreationTime,
       final DateTime? expiresAt,
       final Map<String, RecoveryResponse> stewardResponses,
       final String? errorMessage,
@@ -581,6 +605,10 @@ abstract class _RecoveryRequest extends RecoveryRequest {
   int get threshold;
   @override // Shamir threshold needed for recovery
   String? get nostrEventId;
+  @override
+
+  /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
+  DateTime? get eventCreationTime;
   @override
   DateTime? get expiresAt;
   @override

@@ -6,16 +6,17 @@
 import 'dart:async' as _i5;
 
 import 'package:horcrux/models/backup_status.dart' as _i6;
-import 'package:horcrux/models/event_status.dart' as _i12;
-import 'package:horcrux/models/recovery_request.dart' as _i14;
+import 'package:horcrux/models/event_status.dart' as _i15;
+import 'package:horcrux/models/recovery_request.dart' as _i12;
 import 'package:horcrux/models/shard_data.dart' as _i9;
 import 'package:horcrux/models/steward.dart' as _i7;
 import 'package:horcrux/models/steward_status.dart' as _i10;
 import 'package:horcrux/providers/vault_provider.dart' as _i3;
 import 'package:horcrux/services/backup_service.dart' as _i4;
+import 'package:horcrux/services/local_notification_service.dart' as _i11;
 import 'package:horcrux/services/ndk_service.dart' as _i13;
-import 'package:horcrux/services/shard_distribution_service.dart' as _i11;
-import 'package:horcrux/services/vault_share_service.dart' as _i15;
+import 'package:horcrux/services/shard_distribution_service.dart' as _i14;
+import 'package:horcrux/services/vault_share_service.dart' as _i16;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i8;
 import 'package:ndk/ndk.dart' as _i2;
@@ -893,10 +894,80 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
           })>);
 }
 
+/// A class which mocks [LocalNotificationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotificationService {
+  MockLocalNotificationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<void> initialize() => (super.noSuchMethod(
+        Invocation.method(
+          #initialize,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> notifyRecoveryRequestProcessed(_i12.RecoveryRequest? request) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #notifyRecoveryRequestProcessed,
+          [request],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> notifyRecoveryResponseProcessed(_i13.RecoveryResponseEvent? response) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #notifyRecoveryResponseProcessed,
+          [response],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> showNotification({
+    required String? title,
+    required String? body,
+    String? payload,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showNotification,
+          [],
+          {
+            #title: title,
+            #body: body,
+            #payload: payload,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
 /// A class which mocks [ShardDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistributionService {
+class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistributionService {
   MockShardDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -912,7 +983,7 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
             DateTime? publishedAt,
             String recipientPubkey,
             int shardIndex,
-            _i12.EventStatus status
+            _i15.EventStatus status
           })>> distributeShards({
     required String? ownerPubkey,
     required ({
@@ -953,7 +1024,7 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shardIndex,
-                  _i12.EventStatus status
+                  _i15.EventStatus status
                 })>>.value(<({
           String backupConfigId,
           DateTime createdAt,
@@ -962,7 +1033,7 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
           DateTime? publishedAt,
           String recipientPubkey,
           int shardIndex,
-          _i12.EventStatus status
+          _i15.EventStatus status
         })>[]),
       ) as _i5.Future<
           List<
@@ -974,7 +1045,7 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shardIndex,
-                _i12.EventStatus status
+                _i15.EventStatus status
               })>>);
 
   @override
@@ -989,7 +1060,7 @@ class MockShardDistributionService extends _i1.Mock implements _i11.ShardDistrib
               DateTime? publishedAt,
               String recipientPubkey,
               int shardIndex,
-              _i12.EventStatus status
+              _i15.EventStatus status
             })>?
         shardEvents,
   }) =>
@@ -1039,10 +1110,10 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
-  _i5.Stream<_i14.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
+  _i5.Stream<_i12.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
         Invocation.getter(#recoveryRequestStream),
-        returnValue: _i5.Stream<_i14.RecoveryRequest>.empty(),
-      ) as _i5.Stream<_i14.RecoveryRequest>);
+        returnValue: _i5.Stream<_i12.RecoveryRequest>.empty(),
+      ) as _i5.Stream<_i12.RecoveryRequest>);
 
   @override
   _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
@@ -1242,7 +1313,7 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
 /// A class which mocks [VaultShareService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultShareService extends _i1.Mock implements _i15.VaultShareService {
+class MockVaultShareService extends _i1.Mock implements _i16.VaultShareService {
   MockVaultShareService() {
     _i1.throwOnMissingStub(this);
   }

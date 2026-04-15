@@ -22,6 +22,7 @@ class RecoveryResponseEvent {
   final bool approved;
   final ShardData? shardData;
   final String? nostrEventId;
+  final DateTime? createdAt;
 
   RecoveryResponseEvent({
     required this.recoveryRequestId,
@@ -30,6 +31,7 @@ class RecoveryResponseEvent {
     required this.approved,
     this.shardData,
     this.nostrEventId,
+    this.createdAt,
   });
 }
 
@@ -306,6 +308,10 @@ class NdkService {
         status: RecoveryRequestStatus.sent,
         threshold: requestData['threshold'] as int? ?? 1, // Default to 1 if not present
         nostrEventId: event.id,
+        eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
+          event.createdAt * 1000,
+          isUtc: true,
+        ),
         expiresAt: requestData['expires_at'] != null
             ? DateTime.parse(requestData['expires_at'] as String)
             : null,
@@ -362,6 +368,10 @@ class NdkService {
         approved: approved,
         shardData: shardData,
         nostrEventId: event.id,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          event.createdAt * 1000,
+          isUtc: true,
+        ),
       );
       _recoveryResponseController.add(responseEvent);
 

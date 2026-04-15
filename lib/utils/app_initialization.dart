@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../main.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
+import '../services/local_notification_service.dart';
+import '../services/recovery_service.dart';
 import '../services/relay_scan_service.dart';
 
 /// Initializes app services (deep linking and relay scanning).
@@ -21,6 +23,14 @@ Future<void> initializeAppServices(
     final loginService = ref.read(loginServiceProvider);
     await loginService.initializeKey();
   }
+
+  // OS notification plugin before relay traffic: [RecoveryService] may call back into
+  // [LocalNotificationService] as soon as subscriptions deliver events.
+  final localNotificationService = ref.read(localNotificationServiceProvider);
+  await localNotificationService.initialize();
+
+  // Recovery dedupe + notification timeline before relay traffic.
+  await ref.read(recoveryServiceProvider).initialize();
 
   // Initialize deep linking
   final deepLinkService = ref.read(deepLinkServiceProvider);

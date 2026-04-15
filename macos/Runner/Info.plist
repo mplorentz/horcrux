@@ -28,6 +28,8 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Horcrux uses notifications to alert you to recovery requests and steward responses while the app is open.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

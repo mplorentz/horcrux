@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
-import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
-import '../services/recovery_service.dart';
 import '../services/logger.dart';
+import '../services/recovery_service.dart';
+import '../utils/nostr_display.dart';
 
 /// Modal bottom sheet showing list of pending recovery requests
 class RecoveryRequestListModal extends ConsumerWidget {
@@ -155,7 +155,7 @@ class RecoveryRequestListModal extends ConsumerWidget {
       ),
       data: (vault) {
         final vaultName = vault?.name ?? 'Unknown Vault';
-        final initiatorName = _getInitiatorName(vault, request.initiatorPubkey);
+        final initiatorName = displayNameFromPubkey(vault, request.initiatorPubkey);
 
         return InkWell(
           onTap: () => _viewNotification(context, ref, request),
@@ -219,16 +219,14 @@ class RecoveryRequestListModal extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Initiator
-                      if (initiatorName != null)
-                        Text(
-                          'From: $initiatorName',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                      Text(
+                        'From: $initiatorName',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                       // Vault name
                       Text(
                         'Vault: $vaultName',
@@ -261,46 +259,6 @@ class RecoveryRequestListModal extends ConsumerWidget {
         );
       },
     );
-  }
-
-  String? _getInitiatorName(Vault? vault, String initiatorPubkey) {
-    if (vault == null) return null;
-
-    final shard = vault.mostRecentShard;
-
-    // First check vault ownerName
-    if (vault.ownerPubkey == initiatorPubkey) {
-      return vault.ownerName;
-    }
-
-    // If not found and we have shards, check shard data
-    if (shard != null) {
-      // Check if initiator is the owner
-      if (shard.creatorPubkey == initiatorPubkey) {
-        return shard.ownerName ?? vault.ownerName;
-      } else if (shard.stewards != null) {
-        // Check if initiator is in stewards
-        for (final steward in shard.stewards!) {
-          if (steward['pubkey'] == initiatorPubkey) {
-            return steward['name'];
-          }
-        }
-      }
-    }
-
-    // Also check backupConfig
-    if (vault.backupConfig != null) {
-      try {
-        final keyHolder = vault.backupConfig!.stewards.firstWhere(
-          (kh) => kh.pubkey == initiatorPubkey,
-        );
-        return keyHolder.displayName;
-      } catch (e) {
-        // Key holder not found in backupConfig
-      }
-    }
-
-    return null;
   }
 
   String _formatDateTime(DateTime dateTime) {
