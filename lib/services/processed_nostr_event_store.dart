@@ -10,7 +10,11 @@ import 'package:path_provider/path_provider.dart';
 import 'logger.dart';
 
 final processedNostrEventStoreProvider = Provider<ProcessedNostrEventStore>((ref) {
-  return ProcessedNostrEventStore();
+  final store = ProcessedNostrEventStore();
+  ref.onDispose(() {
+    unawaited(store.flushToDisk());
+  });
+  return store;
 });
 
 /// Normalizes relay URLs so cursor map keys stay stable across trivial spelling differences.
@@ -31,9 +35,10 @@ String normalizeRelayUrlForNostrEventCursor(String relayUrl) {
 
 /// Persists the last [maxIds] successfully processed Nostr event IDs (FIFO eviction).
 ///
-/// Uses a **snapshot** file plus an **append-only log** of IDs since the last snapshot.
-/// On app background, [mergePersistedStateOnBackground] rewrites the snapshot and clears
-/// the log so normal operation only appends small writes.
+/// Durable state is an **append-only log** ([_logName]) plus a **WAL** ([_walName]). New IDs are
+/// appended to the WAL immediately; on the debounced timer the WAL is merged into the main log and
+/// relay cursors are written. [writeStores] forces WAL→log merge and cursor
+/// write without waiting for the debounce.
 ///
 /// Also keeps the date of the most recent event from each relay so we can avoid fetching duplicate
 /// events.
@@ -47,8 +52,11 @@ String normalizeRelayUrlForNostrEventCursor(String relayUrl) {
 class ProcessedNostrEventStore {
   ProcessedNostrEventStore({this.maxIds = 99999});
 
-  static const _snapshotName = 'processed_nostr_event_ids.snapshot';
+  /// Shared debounce for relay cursors and WAL→log merge.
+  static const _persistenceDebounceTime = Duration(seconds: 10);
+
   static const _logName = 'processed_nostr_event_ids.log';
+  static const _walName = 'processed_nostr_event_ids.wal';
   static const _cursorsFileName = 'nostr_relay_subscription_cursors.json';
 
   final int maxIds;
@@ -63,14 +71,16 @@ class ProcessedNostrEventStore {
   final Map<String, int> _relayMaxSeenEventCreatedAtSec = {};
 
   Directory? _dir;
-  File? _snapshotFile;
   File? _logFile;
+  File? _walFile;
   File? _cursorsFile;
 
   bool _loaded = false;
   Future<void>? _loadFuture;
 
-  /// Serializes snapshot writes, log appends, and merge so concurrent calls do not corrupt files.
+  Timer? _persistenceDebounceTimer;
+
+  /// Serializes log/WAL appends and merge so concurrent calls do not corrupt files.
   Future<void> _chain = Future<void>.value();
 
   Future<T> _serialized<T>(Future<T> Function() fn) async {
@@ -95,16 +105,20 @@ class ProcessedNostrEventStore {
     try {
       final dir = await getApplicationSupportDirectory();
       _dir = dir;
-      _snapshotFile = File(p.join(dir.path, _snapshotName));
       _logFile = File(p.join(dir.path, _logName));
+      _walFile = File(p.join(dir.path, _walName));
       _cursorsFile = File(p.join(dir.path, _cursorsFileName));
 
-      await _removeStaleSnapshotTemp(dir);
+      Log.info(
+        'ProcessedNostrEventStore directory: ${dir.path} '
+        '(files: $_logName, $_walName, $_cursorsFileName)',
+      );
+
       await _removeStaleCursorsTemp(dir);
 
       _ids.clear();
-      await _readSnapshotIntoMemory();
       await _replayLogIntoMemory();
+      await _replayWalIntoMemory();
 
       _trimToMaxIds();
 
@@ -113,17 +127,6 @@ class ProcessedNostrEventStore {
       Log.error('ProcessedNostrEventStore load failed', e, st);
     } finally {
       _loaded = true;
-    }
-  }
-
-  Future<void> _removeStaleSnapshotTemp(Directory dir) async {
-    final tmp = File(p.join(dir.path, '$_snapshotName.tmp'));
-    if (tmp.existsSync()) {
-      try {
-        await tmp.delete();
-      } catch (e) {
-        Log.warning('ProcessedNostrEventStore: could not delete stale snapshot tmp: $e');
-      }
     }
   }
 
@@ -173,8 +176,62 @@ class ProcessedNostrEventStore {
     }
   }
 
-  Future<void> _readSnapshotIntoMemory() async {
-    final file = _snapshotFile;
+  /// Appends WAL contents to the main log and deletes the WAL (empty or missing WAL is a no-op).
+  Future<void> _mergeWalIntoLog() async {
+    final wal = _walFile;
+    final log = _logFile;
+    if (wal == null || log == null) return;
+    if (!await wal.exists()) return;
+
+    final len = await wal.length();
+    if (len == 0) {
+      await wal.delete();
+      return;
+    }
+
+    try {
+      final text = await wal.readAsString();
+      if (text.trim().isEmpty) {
+        await wal.delete();
+        return;
+      }
+      if (!await log.exists()) {
+        await log.create();
+      }
+      await log.writeAsString(text, mode: FileMode.append, flush: true);
+      await wal.delete();
+    } catch (e, st) {
+      Log.error('ProcessedNostrEventStore WAL merge into log failed', e, st);
+    }
+  }
+
+  void _cancelDebouncedPersist() {
+    _persistenceDebounceTimer?.cancel();
+    _persistenceDebounceTimer = null;
+  }
+
+  void _scheduleDebouncedPersist() {
+    _cancelDebouncedPersist();
+    _persistenceDebounceTimer = Timer(_persistenceDebounceTime, () {
+      unawaited(flushToDisk());
+    });
+  }
+
+  /// Merges the WAL into the append log and writes relay cursors (cancels any debounced flush).
+  ///
+  /// Desktop (e.g. macOS) often never reaches [AppLifecycleState.paused]; call this from
+  /// lifecycle transitions so cursors and merged log state survive restarts.
+  Future<void> flushToDisk() async {
+    _cancelDebouncedPersist();
+    await _serialized(() async {
+      await ensureLoaded();
+      await _mergeWalIntoLog();
+      await _writeCursorsJson();
+    });
+  }
+
+  Future<void> _replayLogIntoMemory() async {
+    final file = _logFile;
     if (file == null || !await file.exists()) return;
 
     await for (final line
@@ -187,8 +244,8 @@ class ProcessedNostrEventStore {
     _trimToMaxIds();
   }
 
-  Future<void> _replayLogIntoMemory() async {
-    final file = _logFile;
+  Future<void> _replayWalIntoMemory() async {
+    final file = _walFile;
     if (file == null || !await file.exists()) return;
 
     await for (final line
@@ -211,25 +268,6 @@ class ProcessedNostrEventStore {
     while (_ids.length > maxIds) {
       _ids.remove(_ids.first);
     }
-  }
-
-  Future<void> _writeSnapshotFromMemory() async {
-    final dir = _dir;
-    final snapshot = _snapshotFile;
-    if (dir == null || snapshot == null) return;
-
-    final tmp = File(p.join(dir.path, '$_snapshotName.tmp'));
-    final sink = tmp.openWrite();
-    try {
-      for (final id in _ids) {
-        sink.writeln(id);
-      }
-    } finally {
-      await sink.close();
-    }
-
-    // Atomic replace on POSIX; Dart removes an existing [snapshot] first when needed.
-    await tmp.rename(snapshot.path);
   }
 
   Future<bool> contains(String id) async {
@@ -262,25 +300,35 @@ class ProcessedNostrEventStore {
   }
 
   /// Call after an event has been fully handled (vault updated or idempotent skip).
+  ///
+  /// Appends the ID to the WAL immediately, then updates in-memory state. The debounced timer merges
+  /// the WAL into the main append log and flushes relay cursors; use [flushToDisk] or
+  /// [writeStores] for an immediate merge.
   Future<void> recordProcessed(String id) async {
+    var scheduleFlush = false;
     await _serialized(() async {
       await ensureLoaded();
       _claimedIds.remove(id);
       if (_ids.contains(id)) return;
 
-      _ingestId(id);
-
-      final log = _logFile;
-      if (log == null) return;
+      final wal = _walFile;
+      if (wal == null) return;
       try {
-        if (!await log.exists()) {
-          await log.create();
+        if (!await wal.exists()) {
+          await wal.create();
         }
-        await log.writeAsString('$id\n', mode: FileMode.append, flush: true);
+        await wal.writeAsString('$id\n', mode: FileMode.append, flush: true);
       } catch (e, st) {
-        Log.error('ProcessedNostrEventStore log append failed', e, st);
+        Log.error('ProcessedNostrEventStore WAL append failed', e, st);
+        return;
       }
+
+      _ingestId(id);
+      scheduleFlush = true;
     });
+    if (scheduleFlush) {
+      _scheduleDebouncedPersist();
+    }
   }
 
   /// Latest recorded outer `created_at` (unix seconds) for subscription events from [relayUrl].
@@ -291,11 +339,13 @@ class ProcessedNostrEventStore {
     return _relayMaxSeenEventCreatedAtSec[key];
   }
 
-  /// Updates the per-relay cursor if [createdAtUnix] is newer (in-memory until background merge).
+  /// Updates the per-relay cursor if [createdAtUnix] is newer, then schedules a debounced
+  /// WAL→log merge and cursor flush (see [flushToDisk]).
   Future<void> recordLastSeen(
     String relayUrl,
     int createdAtUnix,
   ) async {
+    var scheduleFlush = false;
     await _serialized(() async {
       await ensureLoaded();
       final key = normalizeRelayUrlForNostrEventCursor(relayUrl);
@@ -303,30 +353,15 @@ class ProcessedNostrEventStore {
       final existing = _relayMaxSeenEventCreatedAtSec[key] ?? 0;
       if (createdAtUnix <= existing) return;
       _relayMaxSeenEventCreatedAtSec[key] = createdAtUnix;
+      scheduleFlush = true;
     });
+    if (scheduleFlush) {
+      _scheduleDebouncedPersist();
+    }
   }
 
-  /// Rewrites the snapshot from memory and truncates the append log. Call when the app
-  /// goes to background so the log stays small and restarts stay fast.
+  /// Merges WAL→append log and writes relay cursors immediately (cancels debounced flush).
   ///
-  /// Also persists relay subscription cursors to JSON.
-  Future<void> mergePersistedStateOnBackground() async {
-    await _serialized(() async {
-      await ensureLoaded();
-      try {
-        final log = _logFile;
-        final snapshot = _snapshotFile;
-        if (snapshot != null && log != null) {
-          await _writeSnapshotFromMemory();
-          if (await log.exists()) {
-            await log.delete();
-          }
-          await log.create();
-        }
-        await _writeCursorsJson();
-      } catch (e, st) {
-        Log.error('ProcessedNostrEventStore merge (snapshot/cursors) failed', e, st);
-      }
-    });
-  }
+  /// Call when the app backgrounds or terminates so durable state is not left only in the WAL.
+  Future<void> writeStores() => flushToDisk();
 }

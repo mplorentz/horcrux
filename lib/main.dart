@@ -51,14 +51,22 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      unawaited(_mergeProcessedNostrEventStoreOnBackground());
+    // macOS/desktop often never reaches [paused]; persist cursors on inactive/hidden/detached too.
+    switch (state) {
+      case AppLifecycleState.resumed:
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        unawaited(_flushStoresToDisk());
+        break;
     }
   }
 
-  Future<void> _mergeProcessedNostrEventStoreOnBackground() async {
+  Future<void> _flushStoresToDisk() async {
     try {
-      await ref.read(processedNostrEventStoreProvider).mergePersistedStateOnBackground();
+      await ref.read(processedNostrEventStoreProvider).writeStores();
     } catch (e, st) {
       Log.error('ProcessedNostrEventStore background merge failed', e, st);
     }

@@ -1,8 +1,34 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory tempSupportDir;
+
+  setUp(() {
+    tempSupportDir = Directory.systemTemp.createTempSync('horcrux_processed_store_');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async {
+        if (call.method == 'getApplicationSupportDirectory') {
+          return tempSupportDir.path;
+        }
+        return null;
+      },
+    );
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'), null);
+    if (tempSupportDir.existsSync()) {
+      tempSupportDir.deleteSync(recursive: true);
+    }
+  });
 
   group('ProcessedNostrEventStore claims', () {
     test('second claimEvent for same id returns false until released', () async {
