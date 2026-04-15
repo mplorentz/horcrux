@@ -13,6 +13,9 @@ import 'key_provider.dart';
 /// any listener subscribes (e.g. during [RecoveryService.initialize]) are **dropped**. We attach
 /// to [RecoveryService.notificationStream] **before** awaiting [RecoveryService.getPendingNotifications]
 /// so notifications are not missed while the initial snapshot loads, then emit that snapshot.
+///
+/// Only the snapshot [Future] suspends; after it completes the [Stream.multi] sink may already be
+/// closed (e.g. listener disposed), so we skip [add]/[addError] when [controller.isClosed].
 final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((ref) {
   final service = ref.watch(recoveryServiceProvider);
   return Stream.multi((controller) async {
@@ -24,10 +27,11 @@ final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((r
     );
     controller.onCancel = () => subscription?.cancel();
     try {
-      controller.add(await service.getPendingNotifications());
+      final pending = await service.getPendingNotifications();
+      if (controller.isClosed) return;
+      controller.add(pending);
     } catch (e, st) {
-      controller.addError(e, st);
-      return;
+      if (!controller.isClosed) controller.addError(e, st);
     }
   });
 });
