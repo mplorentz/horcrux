@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
@@ -9,10 +11,34 @@ import 'vault_share_service.dart';
 import 'invitation_service.dart';
 import 'shard_distribution_service.dart';
 import 'logger.dart';
+import 'processed_nostr_event_store.dart';
 import 'publish_service.dart';
 import '../models/nostr_kinds.dart';
 import '../models/shard_data.dart';
 import '../models/recovery_request.dart';
+
+/// Nostr `since` for relay subscription filters ([NdkService] gift-wrap subscriptions).
+///
+/// When a cursor exists: [min] of (rolling window start, last seen `created_at`) — the
+/// **older** bound — so a stale cursor (e.g. weeks ago) requests from that cursor, not
+/// only the last [recentWindow]. When the cursor is inside the window, we still go back
+/// to the window start so we always overlap at least [recentWindow].
+///
+/// No cursor yet (never received an event for this relay): `0` so the REQ asks from
+/// the epoch (full history the relay will return, subject to relay `limit`).
+@visibleForTesting
+int computeSinceTime({
+  required DateTime nowUtc,
+  required int? lastSeenEventCreatedAtUnix,
+  Duration recentWindow = const Duration(days: 3),
+}) {
+  final windowStartSec = nowUtc.subtract(recentWindow).millisecondsSinceEpoch ~/ 1000;
+  final last = lastSeenEventCreatedAtUnix;
+  if (last == null || last <= 0) {
+    return 0;
+  }
+  return math.min(windowStartSec, last);
+}
 
 /// Event emitted when a recovery response is received
 class RecoveryResponseEvent {
@@ -38,9 +64,11 @@ class RecoveryResponseEvent {
 // Provider for NdkService
 final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
   final loginService = ref.read(loginServiceProvider);
+  final processedEventStore = ref.read(processedNostrEventStoreProvider);
   final service = NdkService(
     ref: ref,
     loginService: loginService,
+    processedEventStore: processedEventStore,
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
 
@@ -57,13 +85,14 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
 class NdkService {
   final Ref _ref;
   final LoginService _loginService;
+  final ProcessedNostrEventStore _processedEventStore;
   final InvitationService Function() _getInvitationService;
 
   Ndk? _ndk;
   bool _isInitialized = false;
-  NdkResponse? _giftWrapSubscription;
+  final List<NdkResponse> _subscriptionResponses = [];
+  final List<StreamSubscription<Nip01Event>> _subscriptionStreamSubs = [];
   final List<String> _activeRelays = [];
-  StreamSubscription<Nip01Event>? _giftWrapStreamSub;
 
   late final PublishService _publishService;
 
@@ -82,9 +111,11 @@ class NdkService {
   NdkService({
     required Ref ref,
     required LoginService loginService,
+    required ProcessedNostrEventStore processedEventStore,
     required InvitationService Function() getInvitationService,
   })  : _ref = ref,
         _loginService = loginService,
+        _processedEventStore = processedEventStore,
         _getInvitationService = getInvitationService {
     _publishService = PublishService(
       getNdk: getNdk,
@@ -198,35 +229,62 @@ class NdkService {
 
     Log.info('Setting up NDK subscriptions on ${_activeRelays.length} relays');
 
-    // Subscribe to all gift wrap events (kind 1059)
-    // All Horcrux data (shards, recovery requests, recovery responses) are sent as gift wraps
-    _giftWrapSubscription = _ndk!.requests.subscription(
-      filters: [
-        Filter(
-          kinds: [NostrKind.giftWrap.value], // Gift wrap events
-          pTags: [myPubkey], // Events sent to us
-          limit: 100, // Get recent events
-        ),
-      ],
-      explicitRelays: _activeRelays,
-    );
+    await _processedEventStore.ensureLoaded();
 
-    // Listen to gift wrap stream - will route to appropriate handler based on inner kind
-    _giftWrapStreamSub = _giftWrapSubscription!.stream.listen(
-      (event) => _handleGiftWrap(event),
-      onError: (error) => Log.error('Error in gift wrap stream', error),
-    );
+    // One subscription per relay so we can persist a cursor per relay (merged NDK streams
+    // do not expose which relay delivered each event).
+    for (final relayUrl in _activeRelays) {
+      final lastSeen = await _processedEventStore.getLastSeen(relayUrl);
+      final sinceFilter = computeSinceTime(
+        nowUtc: DateTime.now().toUtc(),
+        lastSeenEventCreatedAtUnix: lastSeen,
+      );
+      Log.info(
+        'Nostr subscription for $relayUrl since=$sinceFilter '
+        '(last seen event created_at=${lastSeen ?? 'none'})',
+      );
+
+      // Subscribe to all gift wrap events (kind 1059)
+      // All Horcrux data (shards, recovery requests, recovery responses) are sent as gift wraps
+      final response = _ndk!.requests.subscription(
+        filters: [
+          Filter(
+            kinds: [NostrKind.giftWrap.value],
+            pTags: [myPubkey],
+            since: sinceFilter,
+          ),
+        ],
+        explicitRelays: [relayUrl],
+      );
+      _subscriptionResponses.add(response);
+
+      _subscriptionStreamSubs.add(
+        response.stream.listen(
+          (event) => _handleIncomingNostrEvent(event, relayUrl: relayUrl),
+          onError: (error) => Log.error('Error in Nostr subscription stream ($relayUrl)', error),
+        ),
+      );
+    }
 
     Log.info(
-      'NDK subscriptions active for gift wrapped events (kind ${NostrKind.giftWrap.value})',
+      'NDK subscriptions setup for ${_subscriptionResponses.length} relays',
     );
   }
 
-  /// Handle incoming gift wrap event (kind 1059)
-  /// Routes to appropriate handler based on the inner kind
-  Future<void> _handleGiftWrap(Nip01Event event) async {
+  /// Handle incoming Nostr events
+  /// Routes to appropriate handler based on the inner kind.
+  Future<void> _handleIncomingNostrEvent(
+    Nip01Event event, {
+    required String relayUrl,
+  }) async {
+    unawaited(_processedEventStore.recordLastSeen(relayUrl, event.createdAt));
+
+    if (!await _processedEventStore.claimEvent(event.id)) {
+      return;
+    }
+
     try {
-      Log.info('Received gift wrap event: ${event.id}');
+      Log.info('Received subscription Nostr event: ${event.id}');
 
       // Unwrap the gift wrap event using NDK
       final unwrappedEvent = await _ndk!.giftWrap.fromGiftWrap(giftWrap: event);
@@ -255,7 +313,10 @@ class NdkService {
       } else {
         Log.warning('Unknown gift wrap inner kind: ${unwrappedEvent.kind}');
       }
+
+      await _processedEventStore.recordProcessed(event.id);
     } catch (e) {
+      await _processedEventStore.releaseClaimedEvent(event.id);
       Log.error('Error handling gift wrap event ${event.id}', e);
     }
   }
@@ -569,9 +630,11 @@ class NdkService {
 
   /// Close all active subscriptions
   Future<void> closeSubscriptions() async {
-    await _giftWrapStreamSub?.cancel();
-    _giftWrapStreamSub = null;
-    _giftWrapSubscription = null;
+    for (final sub in _subscriptionStreamSubs) {
+      await sub.cancel();
+    }
+    _subscriptionStreamSubs.clear();
+    _subscriptionResponses.clear();
     Log.info('Stopped all NDK subscriptions');
   }
 
