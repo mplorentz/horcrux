@@ -246,32 +246,34 @@ class RecoveryService {
       return;
     }
 
-    // Get current user's pubkey to filter out their own recovery requests
-    final currentPubkey = await _ndkService.getCurrentPubkey();
+    final pendingRequests = await _pendingRecoveryRequests();
+    _notificationController.add(pendingRequests);
+  }
 
-    // Get all recovery requests from vault repository
+  /// Steward banner / counts: unresponded, not self-initiated, and "live" per
+  /// [RecoveryLiveNotificationPolicy] (matches local notification rules so relay backfill
+  /// does not surface historical requests as pending).
+  Future<List<RecoveryRequest>> _pendingRecoveryRequests() async {
+    await initialize();
+    final firstOpen = await _initFirstOpenTime();
+    final currentPubkey = await _ndkService.getCurrentPubkey();
     final allRequests = await repository.getAllRecoveryRequests();
 
-    // Filter out requests where the current user has already responded
-    // and requests initiated by the current user (steward's own requests)
-    final pendingRequests = allRequests.where((req) {
-      // Exclude requests initiated by the current user (steward's own requests)
+    return allRequests.where((req) {
       if (currentPubkey != null && req.initiatorPubkey == currentPubkey) {
         return false;
       }
-
-      // Exclude requests where the current user has already responded
       if (currentPubkey != null) {
         final userResponse = req.stewardResponses[currentPubkey];
         if (userResponse != null && userResponse.status.isResolved) {
           return false;
         }
       }
-
+      if (!RecoveryLiveNotificationPolicy.shouldNotifyRecoveryRequest(req, firstOpen)) {
+        return false;
+      }
       return true;
     }).toList();
-
-    _notificationController.add(pendingRequests);
   }
 
   /// Initiate recovery for a vault
@@ -1120,32 +1122,12 @@ class RecoveryService {
 
   // ========== Notification Methods ==========
 
-  /// Get pending (unresponded) recovery request notifications
-  /// Excludes recovery requests initiated by the current user (steward's own requests)
-  /// and requests where the current user has already responded
+  /// Get pending (unresponded) recovery request notifications for steward UI.
+  ///
+  /// Excludes own requests, resolved responses, and requests outside
+  /// [RecoveryLiveNotificationPolicy] (historical relay replay).
   Future<List<RecoveryRequest>> getPendingNotifications() async {
-    await initialize();
-
-    // Get current user's pubkey to filter out their own recovery requests
-    final currentPubkey = await _ndkService.getCurrentPubkey();
-
-    final allRequests = await repository.getAllRecoveryRequests();
-    return allRequests.where((request) {
-      // Exclude requests initiated by the current user (steward's own requests)
-      if (currentPubkey != null && request.initiatorPubkey == currentPubkey) {
-        return false;
-      }
-
-      // Exclude requests where the current user has already responded
-      if (currentPubkey != null) {
-        final userResponse = request.stewardResponses[currentPubkey];
-        if (userResponse != null && userResponse.status.isResolved) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
+    return _pendingRecoveryRequests();
   }
 
   /// Get all recovery request notifications (including viewed)
@@ -1178,31 +1160,18 @@ class RecoveryService {
     }
   }
 
-  /// Get notification count
-  /// Excludes recovery requests initiated by the current user (steward's own requests)
+  /// Get notification count (same scope as [getPendingNotifications]).
   Future<int> getNotificationCount({bool unviewedOnly = true}) async {
     await initialize();
 
-    // Get current user's pubkey to filter out their own recovery requests
-    final currentPubkey = await _ndkService.getCurrentPubkey();
-
-    final allRequests = await repository.getAllRecoveryRequests();
-
-    // Filter out requests initiated by the current user
-    final filteredRequests = allRequests.where((request) {
-      if (currentPubkey != null && request.initiatorPubkey == currentPubkey) {
-        return false;
-      }
-      return true;
-    }).toList();
+    final filteredRequests = await _pendingRecoveryRequests();
 
     if (unviewedOnly) {
       return filteredRequests
           .where((request) => !_viewedNotificationIds!.contains(request.id))
           .length;
-    } else {
-      return filteredRequests.length;
     }
+    return filteredRequests.length;
   }
 
   /// Check if a notification has been viewed
@@ -1239,7 +1208,8 @@ class RecoveryService {
   }
 }
 
-/// Live vs historical replay rules for recovery-related local notifications.
+/// Live vs historical replay rules for recovery-related local notifications and steward UI
+/// ([RecoveryService._pendingRecoveryRequests]).
 ///
 /// Kept next to [RecoveryService] and referenced from tests via this type.
 class RecoveryLiveNotificationPolicy {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart' as recovery_status;
@@ -5,12 +7,29 @@ import 'vault_provider.dart';
 import '../services/recovery_service.dart';
 import 'key_provider.dart';
 
-/// Provider for pending recovery request notifications
-/// Streams live updates of unresponded recovery requests (excluding user's own requests)
-/// Requests remain visible until the current user has responded (approved or denied)
+/// Pending steward recovery requests for banner / modal.
+///
+/// [RecoveryService.notificationStream] is a **broadcast** stream: emissions that happen before
+/// any listener subscribes (e.g. during [RecoveryService.initialize]) are **dropped**. We therefore
+/// emit the current list once on subscribe via [RecoveryService.getPendingNotifications], then
+/// forward live updates from [RecoveryService.notificationStream].
 final pendingRecoveryRequestsProvider = StreamProvider<List<RecoveryRequest>>((ref) {
   final service = ref.watch(recoveryServiceProvider);
-  return service.notificationStream;
+  return Stream.multi((controller) async {
+    StreamSubscription<List<RecoveryRequest>>? subscription;
+    try {
+      controller.add(await service.getPendingNotifications());
+    } catch (e, st) {
+      controller.addError(e, st);
+      return;
+    }
+    subscription = service.notificationStream.listen(
+      controller.add,
+      onError: controller.addError,
+      onDone: controller.close,
+    );
+    controller.onCancel = () => subscription?.cancel();
+  });
 });
 
 /// Provider for recovery status of a specific vault
