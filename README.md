@@ -2,7 +2,7 @@
 
 _Horcrux is alpha software, do not use it to back up real secrets at this time._
 
-Horcrux is an app for backup and recovery of sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux uses advanced cryptography to distribute the data to the devices of the people you choose. All data is encrypted and can only be decrypted when most or all of of these people provide their consent. The result is a virtual vault that no single person or key can open.
+Horcrux is an app for backup and recovery of sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux uses advanced cryptography to distribute the data to the devices of the people you choose. All data is encrypted and can only be decrypted when most or all of these people provide their consent. The result is a virtual vault that no single person or key can open.
 
 ## Privacy
 
@@ -12,7 +12,7 @@ Horcrux is built on the Nostr protocol which makes strong guarantees about the a
 
 - A malicious relay can associate your IP address with your Nostr identity. Using a network-layer anonymizer like Tor or I2P can be used to mitigate this risk.
 - A malicious relay could observe the timing of published gift-wrap events to build a list of stewards (identified by their Nostr identity) for a given vault.
-- Horcrux uses it's own notification service, Google's Firebase Cloud Messaging service, and Apple's Push Notification Service in order to deliver push notifications for recovery events to any user who opts in to push notifications. The Horcrux notification server holds a map of Nostr identities to push notification device tokens, and could build lists of stewards based on the timing of notifications. Apple and Google's notification servers only receive device tokens but could use timing to identify groups of stewards by their device tokens.
+- Horcrux uses its own notification service, Google's Firebase Cloud Messaging service, and Apple's Push Notification Service in order to deliver push notifications for recovery events to any user who opts in to push notifications. The Horcrux notification server holds a map of Nostr identities to push notification device tokens, and could build lists of stewards based on the timing of notifications. Apple and Google's notification servers only receive device tokens but could use timing to identify groups of stewards by their device tokens.
 
 ## Development
 

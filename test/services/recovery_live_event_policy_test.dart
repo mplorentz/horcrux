@@ -27,10 +27,10 @@ void main() {
         id: 'r1',
         vaultId: 'v1',
         initiatorPubkey: 'a' * 64,
-        requestedAt: DateTime.utc(2026, 4, 1, 11, 0),
+        requestedAt: DateTime.utc(2026, 4, 1, 10, 0),
         status: RecoveryRequestStatus.sent,
         threshold: 2,
-        eventCreationTime: DateTime.utc(2026, 4, 1, 11, 30),
+        eventCreationTime: DateTime.utc(2026, 4, 1, 12, 30),
       );
       expect(
         RecoveryLiveNotificationPolicy.shouldNotifyRecoveryRequest(req, firstOpen),
