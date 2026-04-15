@@ -112,10 +112,6 @@ class RecoveryService {
       if (id != null) {
         await _processedStore.recordProcessed(id);
       }
-      final firstOpen = await _initFirstOpenTime();
-      if (RecoveryLiveNotificationPolicy.shouldNotifyRecoveryRequest(recoveryRequest, firstOpen)) {
-        unawaited(_localNotifications.notifyRecoveryRequestProcessed(recoveryRequest));
-      }
     } catch (e, st) {
       Log.error(
         'Error processing incoming recovery request from stream',
@@ -138,16 +134,10 @@ class RecoveryService {
         responseEvent.approved,
         shardData: responseEvent.shardData,
         nostrEventId: responseEvent.nostrEventId,
+        recoveryResponseSourceEvent: responseEvent,
       );
       if (id != null) {
         await _processedStore.recordProcessed(id);
-      }
-      final firstOpen = await _initFirstOpenTime();
-      if (RecoveryLiveNotificationPolicy.shouldNotifyRecoveryResponse(
-        createdAt: responseEvent.createdAt,
-        firstOpenUtc: firstOpen,
-      )) {
-        unawaited(_localNotifications.notifyRecoveryResponseProcessed(responseEvent));
       }
     } catch (e, st) {
       Log.error('Error processing recovery response from stream', e, st);
@@ -160,7 +150,7 @@ class RecoveryService {
     _recoveryRequestController.close();
   }
 
-  Future<DateTime> _initFirstOpenTime() async {
+  Future<DateTime> _firstAppOpen() async {
     if (_firstOpenUtcCached != null) return _firstOpenUtcCached!;
     final prefs = await SharedPreferences.getInstance();
     final ms = prefs.getInt(_firstOpenUtcKey);
@@ -184,7 +174,7 @@ class RecoveryService {
     }
 
     try {
-      await _initFirstOpenTime();
+      await _firstAppOpen();
       await _processedStore.ensureLoaded();
       await _loadViewedNotificationIds();
     } catch (e) {
@@ -251,25 +241,26 @@ class RecoveryService {
   }
 
   /// Steward banner / counts: unresponded, not self-initiated, and "live" per
-  /// [RecoveryLiveNotificationPolicy] (matches local notification rules so relay backfill
+  /// [RecoveryNotificationPolicy] (matches local notification rules so relay backfill
   /// does not surface historical requests as pending).
   Future<List<RecoveryRequest>> _pendingRecoveryRequests() async {
     await initialize();
-    final firstOpen = await _initFirstOpenTime();
+    final firstOpen = await _firstAppOpen();
     final currentPubkey = await _ndkService.getCurrentPubkey();
     final allRequests = await repository.getAllRecoveryRequests();
 
     return allRequests.where((req) {
-      if (currentPubkey != null && req.initiatorPubkey == currentPubkey) {
-        return false;
-      }
       if (currentPubkey != null) {
         final userResponse = req.stewardResponses[currentPubkey];
         if (userResponse != null && userResponse.status.isResolved) {
           return false;
         }
       }
-      if (!RecoveryLiveNotificationPolicy.shouldNotifyRecoveryRequest(req, firstOpen)) {
+      if (!RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
+        req,
+        firstOpen,
+        currentPubkeyHex: currentPubkey,
+      )) {
         return false;
       }
       return true;
@@ -495,6 +486,8 @@ class RecoveryService {
   ///
   /// Unlike [initiateRecovery], this does not create a new request id—it persists an event
   /// the relays delivered. Since events are immutable, we skip if this request id already exists locally.
+  ///
+  /// After a new request is persisted, may show a local OS notification per [RecoveryNotificationPolicy].
   Future<void> processRecoveryRequest(RecoveryRequest request) async {
     await initialize();
 
@@ -518,6 +511,16 @@ class RecoveryService {
 
     // Emit notification update
     await _emitNotificationUpdate();
+
+    final firstOpen = await _firstAppOpen();
+    final myPubkey = await _ndkService.getCurrentPubkey();
+    if (RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
+      request,
+      firstOpen,
+      currentPubkeyHex: myPubkey,
+    )) {
+      unawaited(_localNotifications.notifyRecoveryRequestProcessed(request));
+    }
   }
 
   /// Get all recovery requests for the current user
@@ -590,12 +593,16 @@ class RecoveryService {
   /// Merges one steward's recovery response into local vault state (from Nostr or from this device).
   ///
   /// Since events are immutable, we skip processing if the response already exists.
+  ///
+  /// When [recoveryResponseSourceEvent] is set (relay-delivered event), may show a local OS
+  /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it.
   Future<void> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
     ShardData? shardData,
     String? nostrEventId,
+    RecoveryResponseEvent? recoveryResponseSourceEvent,
   }) async {
     await initialize();
 
@@ -673,6 +680,22 @@ class RecoveryService {
 
     // Emit notification update to refresh banner
     await _emitNotificationUpdate();
+
+    if (recoveryResponseSourceEvent != null) {
+      final firstOpen = await _firstAppOpen();
+      final myPubkey = await _ndkService.getCurrentPubkey();
+      if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(
+        responseCreatedAt: recoveryResponseSourceEvent.createdAt,
+        firstOpenUtc: firstOpen,
+        requestBeforeApply: request,
+        currentPubkeyHex: myPubkey,
+        responseSenderPubkey: responderPubkey,
+      )) {
+        unawaited(
+          _localNotifications.notifyRecoveryResponseProcessed(recoveryResponseSourceEvent),
+        );
+      }
+    }
 
     Log.info(
       'Updated recovery request $recoveryRequestId with response from ${responderPubkey.substring(0, 8)}... (approved: $approved)',
@@ -1125,7 +1148,7 @@ class RecoveryService {
   /// Get pending (unresponded) recovery request notifications for steward UI.
   ///
   /// Excludes own requests, resolved responses, and requests outside
-  /// [RecoveryLiveNotificationPolicy] (historical relay replay).
+  /// [RecoveryNotificationPolicy] (historical relay replay).
   Future<List<RecoveryRequest>> getPendingNotifications() async {
     return _pendingRecoveryRequests();
   }
@@ -1212,23 +1235,61 @@ class RecoveryService {
 /// ([RecoveryService._pendingRecoveryRequests]).
 ///
 /// Kept next to [RecoveryService] and referenced from tests via this type.
-class RecoveryLiveNotificationPolicy {
-  RecoveryLiveNotificationPolicy._();
+class RecoveryNotificationPolicy {
+  RecoveryNotificationPolicy._();
 
   static const Duration slack = Duration(hours: 1);
 
+  /// Whether [eventUtc] is recent enough relative to first app open to surface as live
+  /// (vs relay historical replay).
+  static bool isLiveEventTime(DateTime eventUtc, DateTime firstOpenUtc) =>
+      eventUtc.isAfter(firstOpenUtc.subtract(slack));
+
   /// Prefer [RecoveryRequest.eventCreationTime]; fall back to [RecoveryRequest.requestedAt].
-  static bool shouldNotifyRecoveryRequest(RecoveryRequest request, DateTime firstOpenUtc) {
+  ///
+  /// When [currentPubkeyHex] is set and matches [RecoveryRequest.initiatorPubkey], returns false
+  /// (do not notify for your own recovery request event echoed from relays; steward UI also
+  /// excludes self-initiated requests).
+  static bool shouldNotifyRecoveryRequest(
+    RecoveryRequest request,
+    DateTime firstOpenUtc, {
+    String? currentPubkeyHex,
+  }) {
+    if (currentPubkeyHex != null && request.initiatorPubkey == currentPubkeyHex) {
+      return false;
+    }
     final anchor = request.eventCreationTime ?? request.requestedAt;
-    return anchor.isAfter(firstOpenUtc.subtract(slack));
+    return isLiveEventTime(anchor, firstOpenUtc);
   }
 
-  /// Requires inner event time; if unknown, do not notify.
+  /// Whether to show a local OS notification for an incoming recovery **response** event.
+  ///
+  /// Combines: inner [responseCreatedAt] must exist and fall in the [isLiveEventTime] window;
+  /// [requestBeforeApply] / [currentPubkeyHex] must be known; only the **initiator** is notified
+  /// of peers' responses; not when the response is the user's own relay echo; not when the
+  /// session is already terminal.
   static bool shouldNotifyRecoveryResponse({
-    required DateTime? createdAt,
+    required DateTime? responseCreatedAt,
     required DateTime firstOpenUtc,
+    required RecoveryRequest? requestBeforeApply,
+    required String? currentPubkeyHex,
+    required String responseSenderPubkey,
   }) {
-    if (createdAt == null) return false;
-    return createdAt.isAfter(firstOpenUtc.subtract(slack));
+    if (responseCreatedAt == null) {
+      return false;
+    }
+    if (!isLiveEventTime(responseCreatedAt, firstOpenUtc)) {
+      return false;
+    }
+    if (requestBeforeApply == null || currentPubkeyHex == null) {
+      return false;
+    }
+    if (responseSenderPubkey == currentPubkeyHex) {
+      return false;
+    }
+    if (requestBeforeApply.status.isTerminal) {
+      return false;
+    }
+    return requestBeforeApply.initiatorPubkey == currentPubkeyHex;
   }
 }
