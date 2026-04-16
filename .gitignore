@@ -49,6 +49,12 @@ app.*.map.json
 # Android signing keys (DO NOT COMMIT)
 /android/key.properties
 
+# Firebase config files (DO NOT COMMIT - contain project API keys)
+# See docs/firebase_setup.md for how to obtain these.
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/lib/firebase_options.dart
+
 # Screenshot (Golden) test failures
 test/**/failures/
 
