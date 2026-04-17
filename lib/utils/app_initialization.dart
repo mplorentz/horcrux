@@ -29,6 +29,11 @@ Future<void> initializeAppServices(
   final localNotificationService = ref.read(localNotificationServiceProvider);
   await localNotificationService.initialize();
 
+  // Firebase Cloud Messaging is initialized lazily -- only after the user
+  // opts into push notifications at vault creation, invitation acceptance,
+  // or from settings. See [PushNotificationReceiver.optIn]. Users who haven't
+  // opted in never have Firebase initialized on their device.
+
   // Recovery dedupe + notification timeline before relay traffic.
   await ref.read(recoveryServiceProvider).initialize();
 

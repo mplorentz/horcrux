@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'firebase_options.dart';
 import 'providers/key_provider.dart';
 import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
+import 'services/push_notification_receiver.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/app_initialization.dart';
@@ -15,7 +19,7 @@ import 'widgets/theme.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+Future<void> main() async {
   // Initialize Marionette only in debug mode
   if (kDebugMode) {
     MarionetteBinding.ensureInitialized();
@@ -23,10 +27,53 @@ void main() {
     WidgetsFlutterBinding.ensureInitialized();
   }
 
+  await _initializeFirebaseIfNecessary();
+
   runApp(
     // Wrap the entire app with ProviderScope to enable Riverpod
     const ProviderScope(child: HorcruxApp()),
   );
+}
+
+/// Initialize Firebase only when the user has opted into push notifications.
+/// Users who never opt in incur zero Firebase/FCM footprint.
+///
+/// The opt-in flag is flipped by [PushNotificationReceiver.optIn]; once set,
+/// it persists across app starts. When a user opts in mid-session
+/// [PushNotificationReceiver] also initializes Firebase on demand for the
+/// current session; this function handles the startup path for subsequent
+/// launches.
+///
+/// There is no FCM background message handler: our pushes always include a
+/// `notification` payload so the OS displays them directly. Event data is
+/// picked up via `onMessage` (foreground), `onMessageOpenedApp` (background
+/// tap), and `getInitialMessage()` (cold-start tap) -- all wired from
+/// [PushNotificationReceiver].
+Future<void> _initializeFirebaseIfNecessary() async {
+  bool optedIn = false;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    optedIn = prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
+  } catch (e, st) {
+    Log.warning('Failed to read push opt-in flag; skipping Firebase init', e, st);
+    return;
+  }
+
+  if (!optedIn) {
+    Log.info('Push notifications not opted-in; skipping Firebase init');
+    return;
+  }
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    Log.info('Firebase initialized (user opted in)');
+  } catch (e, st) {
+    // Firebase init can fail on unsupported platforms (Linux) or if config files
+    // are missing. We don't want that to prevent the app from launching.
+    Log.warning('Firebase initialization failed; continuing without Firebase', e, st);
+  }
 }
 
 class HorcruxApp extends ConsumerStatefulWidget {
