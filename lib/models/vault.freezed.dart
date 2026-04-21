@@ -46,10 +46,17 @@ mixin _$Vault {
   bool get isArchived => throw _privateConstructorUsedError; // Whether this vault is archived
   DateTime? get archivedAt => throw _privateConstructorUsedError; // When the vault was archived
   String? get archivedReason => throw _privateConstructorUsedError; // Reason for archiving
-// Whether this user wants push notifications for events related to this
-// vault. Default `true` for newly-created vaults and for legacy vaults
-// persisted before this field existed (see [Vault.fromJson]). Owners set
-// this at vault creation; stewards control their own copy independently.
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (opt-in at creation, since
+// users see the checkbox) and `false` for vaults persisted before this
+// field existed -- legacy vaults stay off until the owner explicitly
+// turns push on.
   bool get pushEnabled => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
@@ -407,10 +414,17 @@ class _$VaultImpl extends _Vault {
   @override
   final String? archivedReason;
 // Reason for archiving
-// Whether this user wants push notifications for events related to this
-// vault. Default `true` for newly-created vaults and for legacy vaults
-// persisted before this field existed (see [Vault.fromJson]). Owners set
-// this at vault creation; stewards control their own copy independently.
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (opt-in at creation, since
+// users see the checkbox) and `false` for vaults persisted before this
+// field existed -- legacy vaults stay off until the owner explicitly
+// turns push on.
   @override
   @JsonKey()
   final bool pushEnabled;
@@ -537,10 +551,17 @@ abstract class _Vault extends Vault {
   @override // When the vault was archived
   String? get archivedReason;
   @override // Reason for archiving
-// Whether this user wants push notifications for events related to this
-// vault. Default `true` for newly-created vaults and for legacy vaults
-// persisted before this field existed (see [Vault.fromJson]). Owners set
-// this at vault creation; stewards control their own copy independently.
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (opt-in at creation, since
+// users see the checkbox) and `false` for vaults persisted before this
+// field existed -- legacy vaults stay off until the owner explicitly
+// turns push on.
   bool get pushEnabled;
   @override
   @JsonKey(ignore: true)

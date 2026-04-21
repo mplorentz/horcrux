@@ -574,4 +574,68 @@ void main() {
       expect(str, contains('a11ac73f')); // First 8 chars of pubkey
     });
   });
+
+  group('ShardData.pushEnabled wire format', () {
+    const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+
+    ShardData buildShard({bool? pushEnabled}) {
+      return createShardData(
+        shard: 'abc123',
+        threshold: 2,
+        shardIndex: 0,
+        totalShards: 3,
+        primeMod: 'xyz',
+        creatorPubkey: creatorPubkey,
+        vaultId: 'vault-1',
+        vaultName: 'My Vault',
+        pushEnabled: pushEnabled,
+      );
+    }
+
+    test('defaults to null when not supplied', () {
+      expect(buildShard().pushEnabled, isNull);
+    });
+
+    test('toJson omits pushEnabled when null (legacy shard)', () {
+      final json = shardDataToJson(buildShard());
+      expect(json.containsKey('pushEnabled'), isFalse);
+    });
+
+    test('toJson emits pushEnabled=true when set', () {
+      final json = shardDataToJson(buildShard(pushEnabled: true));
+      expect(json['pushEnabled'], isTrue);
+    });
+
+    test('toJson emits pushEnabled=false when explicitly opted-out', () {
+      // We care about the difference between "unspecified" (legacy) and
+      // "explicitly false" (owner flipped it off). Both end up having the
+      // receiver keep its previous value, but the wire format should still
+      // distinguish them so future behaviour can rely on it.
+      final json = shardDataToJson(buildShard(pushEnabled: false));
+      expect(json['pushEnabled'], isFalse);
+    });
+
+    test('fromJson round-trips true/false/null', () {
+      for (final value in [true, false, null]) {
+        final encoded = shardDataToJson(buildShard(pushEnabled: value));
+        final decoded = shardDataFromJson(encoded);
+        expect(decoded.pushEnabled, value, reason: 'for $value');
+      }
+    });
+
+    test('fromJson on a legacy JSON (no pushEnabled key) yields null', () {
+      final legacyJson = <String, dynamic>{
+        'shard': 'abc123',
+        'threshold': 2,
+        'shardIndex': 0,
+        'totalShards': 3,
+        'primeMod': 'xyz',
+        'creatorPubkey': creatorPubkey,
+        'createdAt': 1759759657,
+        // pushEnabled intentionally absent.
+      };
+      final decoded = shardDataFromJson(legacyJson);
+      expect(decoded.pushEnabled, isNull);
+    });
+  });
 }

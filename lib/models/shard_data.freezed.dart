@@ -35,7 +35,17 @@ mixin _$ShardData {
   String? get nostrEventId => throw _privateConstructorUsedError;
   List<String>? get relayUrls =>
       throw _privateConstructorUsedError; // Relay URLs from backup config for sending confirmations
-  int? get distributionVersion => throw _privateConstructorUsedError;
+  int? get distributionVersion =>
+      throw _privateConstructorUsedError; // Version tracking for redistribution detection (nullable for backward compatibility)
+// Whether the vault owner has push notifications enabled for this vault.
+//
+// Nullable for backward compatibility: pre-push shards arrive without this
+// field, in which case receivers should preserve whatever push setting
+// their local Vault already has (don't silently flip anything). When the
+// owner re-distributes after changing the flag, the new value overrides.
+// The owner is the only party whose opinion matters here because they are
+// the one whose pubkey/IP/contact-graph leaks to the notifier.
+  bool? get pushEnabled => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $ShardDataCopyWith<ShardData> get copyWith => throw _privateConstructorUsedError;
@@ -64,7 +74,8 @@ abstract class $ShardDataCopyWith<$Res> {
       DateTime? receivedAt,
       String? nostrEventId,
       List<String>? relayUrls,
-      int? distributionVersion});
+      int? distributionVersion,
+      bool? pushEnabled});
 }
 
 /// @nodoc
@@ -97,6 +108,7 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
     Object? nostrEventId = freezed,
     Object? relayUrls = freezed,
     Object? distributionVersion = freezed,
+    Object? pushEnabled = freezed,
   }) {
     return _then(_value.copyWith(
       shard: null == shard
@@ -171,6 +183,10 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
           ? _value.distributionVersion
           : distributionVersion // ignore: cast_nullable_to_non_nullable
               as int?,
+      pushEnabled: freezed == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ) as $Val);
   }
 }
@@ -199,7 +215,8 @@ abstract class _$$ShardDataImplCopyWith<$Res> implements $ShardDataCopyWith<$Res
       DateTime? receivedAt,
       String? nostrEventId,
       List<String>? relayUrls,
-      int? distributionVersion});
+      int? distributionVersion,
+      bool? pushEnabled});
 }
 
 /// @nodoc
@@ -229,6 +246,7 @@ class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, 
     Object? nostrEventId = freezed,
     Object? relayUrls = freezed,
     Object? distributionVersion = freezed,
+    Object? pushEnabled = freezed,
   }) {
     return _then(_$ShardDataImpl(
       shard: null == shard
@@ -303,6 +321,10 @@ class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, 
           ? _value.distributionVersion
           : distributionVersion // ignore: cast_nullable_to_non_nullable
               as int?,
+      pushEnabled: freezed == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
     ));
   }
 }
@@ -328,7 +350,8 @@ class _$ShardDataImpl extends _ShardData {
       this.receivedAt,
       this.nostrEventId,
       final List<String>? relayUrls,
-      this.distributionVersion})
+      this.distributionVersion,
+      this.pushEnabled})
       : _stewards = stewards,
         _relayUrls = relayUrls,
         super._();
@@ -390,10 +413,21 @@ class _$ShardDataImpl extends _ShardData {
 // Relay URLs from backup config for sending confirmations
   @override
   final int? distributionVersion;
+// Version tracking for redistribution detection (nullable for backward compatibility)
+// Whether the vault owner has push notifications enabled for this vault.
+//
+// Nullable for backward compatibility: pre-push shards arrive without this
+// field, in which case receivers should preserve whatever push setting
+// their local Vault already has (don't silently flip anything). When the
+// owner re-distributes after changing the flag, the new value overrides.
+// The owner is the only party whose opinion matters here because they are
+// the one whose pubkey/IP/contact-graph leaks to the notifier.
+  @override
+  final bool? pushEnabled;
 
   @override
   String toString() {
-    return 'ShardData(shard: $shard, threshold: $threshold, shardIndex: $shardIndex, totalShards: $totalShards, primeMod: $primeMod, creatorPubkey: $creatorPubkey, createdAt: $createdAt, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion)';
+    return 'ShardData(shard: $shard, threshold: $threshold, shardIndex: $shardIndex, totalShards: $totalShards, primeMod: $primeMod, creatorPubkey: $creatorPubkey, createdAt: $createdAt, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion, pushEnabled: $pushEnabled)';
   }
 
   @override
@@ -421,30 +455,33 @@ class _$ShardDataImpl extends _ShardData {
             (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
             const DeepCollectionEquality().equals(other._relayUrls, _relayUrls) &&
             (identical(other.distributionVersion, distributionVersion) ||
-                other.distributionVersion == distributionVersion));
+                other.distributionVersion == distributionVersion) &&
+            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      shard,
-      threshold,
-      shardIndex,
-      totalShards,
-      primeMod,
-      creatorPubkey,
-      createdAt,
-      vaultId,
-      vaultName,
-      const DeepCollectionEquality().hash(_stewards),
-      ownerName,
-      instructions,
-      recipientPubkey,
-      isReceived,
-      receivedAt,
-      nostrEventId,
-      const DeepCollectionEquality().hash(_relayUrls),
-      distributionVersion);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        shard,
+        threshold,
+        shardIndex,
+        totalShards,
+        primeMod,
+        creatorPubkey,
+        createdAt,
+        vaultId,
+        vaultName,
+        const DeepCollectionEquality().hash(_stewards),
+        ownerName,
+        instructions,
+        recipientPubkey,
+        isReceived,
+        receivedAt,
+        nostrEventId,
+        const DeepCollectionEquality().hash(_relayUrls),
+        distributionVersion,
+        pushEnabled
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -472,7 +509,8 @@ abstract class _ShardData extends ShardData {
       final DateTime? receivedAt,
       final String? nostrEventId,
       final List<String>? relayUrls,
-      final int? distributionVersion}) = _$ShardDataImpl;
+      final int? distributionVersion,
+      final bool? pushEnabled}) = _$ShardDataImpl;
   const _ShardData._() : super._();
 
   @override
@@ -511,6 +549,16 @@ abstract class _ShardData extends ShardData {
   List<String>? get relayUrls;
   @override // Relay URLs from backup config for sending confirmations
   int? get distributionVersion;
+  @override // Version tracking for redistribution detection (nullable for backward compatibility)
+// Whether the vault owner has push notifications enabled for this vault.
+//
+// Nullable for backward compatibility: pre-push shards arrive without this
+// field, in which case receivers should preserve whatever push setting
+// their local Vault already has (don't silently flip anything). When the
+// owner re-distributes after changing the flag, the new value overrides.
+// The owner is the only party whose opinion matters here because they are
+// the one whose pubkey/IP/contact-graph leaks to the notifier.
+  bool? get pushEnabled;
   @override
   @JsonKey(ignore: true)
   _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith => throw _privateConstructorUsedError;

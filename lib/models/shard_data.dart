@@ -36,6 +36,15 @@ class ShardData with _$ShardData {
     List<String>? relayUrls, // Relay URLs from backup config for sending confirmations
     int?
         distributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+    // Whether the vault owner has push notifications enabled for this vault.
+    //
+    // Nullable for backward compatibility: pre-push shards arrive without this
+    // field, in which case receivers should preserve whatever push setting
+    // their local Vault already has (don't silently flip anything). When the
+    // owner re-distributes after changing the flag, the new value overrides.
+    // The owner is the only party whose opinion matters here because they are
+    // the one whose pubkey/IP/contact-graph leaks to the notifier.
+    bool? pushEnabled,
   }) = _ShardData;
 
   const ShardData._();
@@ -173,6 +182,7 @@ ShardData createShardData({
   String? nostrEventId,
   List<String>? relayUrls,
   int? distributionVersion,
+  bool? pushEnabled,
 }) {
   if (shard.isEmpty) {
     throw ArgumentError('Shard cannot be empty');
@@ -246,6 +256,7 @@ ShardData createShardData({
     nostrEventId: nostrEventId,
     relayUrls: relayUrls,
     distributionVersion: distributionVersion,
+    pushEnabled: pushEnabled,
   );
 }
 
@@ -270,6 +281,7 @@ Map<String, dynamic> shardDataToJson(ShardData shardData) {
     if (shardData.nostrEventId != null) 'nostrEventId': shardData.nostrEventId,
     if (shardData.relayUrls != null) 'relayUrls': shardData.relayUrls,
     if (shardData.distributionVersion != null) 'distributionVersion': shardData.distributionVersion,
+    if (shardData.pushEnabled != null) 'pushEnabled': shardData.pushEnabled,
   };
 }
 
@@ -298,6 +310,7 @@ ShardData shardDataFromJson(Map<String, dynamic> json) {
     nostrEventId: json['nostrEventId'] as String?,
     relayUrls: json['relayUrls'] != null ? List<String>.from(json['relayUrls'] as List) : null,
     distributionVersion: json['distributionVersion'] as int?,
+    pushEnabled: json['pushEnabled'] as bool?,
   );
 }
 

@@ -194,6 +194,12 @@ class VaultShareService {
     // Create a vault record if one doesn't exist yet
     await _ensureVaultExists(vaultId, shardData);
 
+    // Sync mutable vault metadata from the authoritative owner shardData.
+    // `_ensureVaultExists` only initializes new/stub records; we pick up
+    // later owner-side changes (e.g. toggling pushEnabled and redistributing)
+    // here on every shard arrival.
+    await _syncVaultMetadataFromShardData(vaultId, shardData);
+
     // Add shard to vault via VaultService
     await repository.addShardToVault(vaultId, shardData);
     Log.info(
@@ -334,10 +340,15 @@ class VaultShareService {
         // If stub, update it with shard data
         if (existingVault.shards.isEmpty && existingVault.content == null) {
           // This is a stub vault created when invitation was accepted
-          // Update it with shard data and name from ShardData if available
+          // Update it with shard data and name from ShardData if available.
+          //
+          // `pushEnabled`: a null on the wire collapses to `false` so
+          // stewards stay opted-out by default. [_syncVaultMetadataFromShardData]
+          // applies the same rule on every later shard.
           final updatedVault = existingVault.copyWith(
             name: shardData.vaultName ?? existingVault.name,
             ownerName: shardData.ownerName ?? existingVault.ownerName,
+            pushEnabled: shardData.pushEnabled ?? false,
             // createdAt stays the same (from invitation)
             // ownerPubkey stays the same (from invitation)
             // shards will be added via addShardToVault below
@@ -345,12 +356,18 @@ class VaultShareService {
           await repository.saveVault(updatedVault);
           Log.info('Updated stub vault $vaultId with shard data');
         } else {
+          // Already-populated vault: metadata updates from redistribution
+          // are handled by [_syncVaultMetadataFromShardData], not here.
           Log.info('Vault $vaultId already exists with shards/content');
         }
         return;
       }
 
-      // Create a new vault entry for the shared key
+      // Create a new vault entry for the shared key.
+      //
+      // pushEnabled defaults to `false` when the owner's shard doesn't carry
+      // the flag (legacy pre-push shard): stewards stay opted-out until the
+      // owner explicitly turns it on and re-distributes.
       final vaultName = shardData.vaultName ?? defaultVaultName;
 
       final vault = Vault(
@@ -362,6 +379,7 @@ class VaultShareService {
         ),
         ownerPubkey: shardData.creatorPubkey, // Owner is the creator of the shard
         ownerName: shardData.ownerName, // Set owner name from shard data
+        pushEnabled: shardData.pushEnabled ?? false,
       );
 
       await repository.addVault(vault);
@@ -369,6 +387,43 @@ class VaultShareService {
     } catch (e) {
       Log.error('Error creating vault record for $vaultId', e);
       // Don't throw - we don't want to fail shard storage just because vault creation failed
+    }
+  }
+
+  /// Sync mutable vault metadata from the owner's authoritative shardData.
+  ///
+  /// Runs on every shard arrival so that redistribution picks up owner-side
+  /// changes to fields the steward mirrors locally (currently just
+  /// `pushEnabled`). Creation and stub-upgrade initialization happen in
+  /// [_ensureVaultExists]; this method only issues a write when a field
+  /// actually changed, so it is a no-op immediately after creation.
+  Future<void> _syncVaultMetadataFromShardData(
+    String vaultId,
+    ShardData shardData,
+  ) async {
+    try {
+      final vault = await repository.getVault(vaultId);
+      if (vault == null) return;
+
+      var next = vault;
+
+      // pushEnabled: a null on the wire (legacy shard, no opinion) collapses
+      // to `false` — stewards stay opted-out until the owner explicitly turns
+      // push on and re-distributes.
+      final desiredPushEnabled = shardData.pushEnabled ?? false;
+      if (desiredPushEnabled != vault.pushEnabled) {
+        next = next.copyWith(pushEnabled: desiredPushEnabled);
+      }
+
+      if (!identical(next, vault)) {
+        await repository.saveVault(next);
+        Log.info(
+          'Synced vault $vaultId metadata from shardData (pushEnabled=${next.pushEnabled})',
+        );
+      }
+    } catch (e) {
+      Log.error('Error syncing vault metadata for $vaultId', e);
+      // Don't rethrow - metadata sync must not fail shard storage.
     }
   }
 

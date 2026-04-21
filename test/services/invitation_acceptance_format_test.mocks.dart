@@ -1511,6 +1511,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
     required List<Map<String, String>>? stewards,
     String? ownerName,
     String? instructions,
+    bool? pushEnabled,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1526,6 +1527,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
             #stewards: stewards,
             #ownerName: ownerName,
             #instructions: instructions,
+            #pushEnabled: pushEnabled,
           },
         ),
         returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),

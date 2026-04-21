@@ -402,6 +402,7 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
     required List<Map<String, String>>? stewards,
     String? ownerName,
     String? instructions,
+    bool? pushEnabled,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -417,6 +418,7 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
             #stewards: stewards,
             #ownerName: ownerName,
             #instructions: instructions,
+            #pushEnabled: pushEnabled,
           },
         ),
         returnValue: _i5.Future<List<_i9.ShardData>>.value(<_i9.ShardData>[]),

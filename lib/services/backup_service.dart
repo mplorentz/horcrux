@@ -127,6 +127,7 @@ class BackupService {
     required List<Map<String, String>> stewards,
     String? ownerName,
     String? instructions,
+    bool? pushEnabled,
   }) async {
     try {
       // Validate inputs
@@ -170,6 +171,7 @@ class BackupService {
           stewards: stewards,
           ownerName: ownerName,
           instructions: instructions,
+          pushEnabled: pushEnabled,
         );
         Log.debug(shardData.toString());
         shardDataList.add(shardData);
@@ -715,6 +717,9 @@ class BackupService {
         stewards: stewards,
         ownerName: vault.ownerName,
         instructions: config.instructions,
+        // Advertise the owner's current push preference so stewards learn
+        // (or re-learn, on redistribution) whether this vault uses push.
+        pushEnabled: vault.pushEnabled,
       );
       Log.info('Generated ${shards.length} Shamir shares');
 
