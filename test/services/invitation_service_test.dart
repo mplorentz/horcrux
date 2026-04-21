@@ -15,6 +15,7 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
+import 'package:horcrux/utils/date_time_extensions.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/shared_preferences_mock.dart';
 import 'invitation_service_test.mocks.dart';
@@ -148,7 +149,7 @@ void main() {
           pubKey: deviceCPubkey,
           content: acceptancePayload,
           tags: [],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Act: Process invitation acceptance (which adds Device C as a new steward)
@@ -268,7 +269,7 @@ void main() {
           pubKey: deviceCPubkey,
           content: acceptancePayload,
           tags: [],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Act: Device C accepts the invitation
@@ -388,7 +389,7 @@ void main() {
           pubKey: deviceCPubkey,
           content: acceptancePayload,
           tags: [],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Act: Add Device C as a new steward

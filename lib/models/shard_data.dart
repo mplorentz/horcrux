@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'vault.dart';
 import '../services/logger.dart';
+import '../utils/date_time_extensions.dart';
 
 part 'shard_data.freezed.dart';
 
@@ -133,7 +134,7 @@ class ShardData with _$ShardData {
 
   /// Get the age of this shard data in seconds
   int get ageInSeconds {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final now = secondsSinceEpoch();
     return now - createdAt;
   }
 
@@ -233,7 +234,7 @@ ShardData createShardData({
     totalShards: totalShards,
     primeMod: primeMod,
     creatorPubkey: creatorPubkey,
-    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unix timestamp
+    createdAt: secondsSinceEpoch(),
     vaultId: vaultId,
     vaultName: vaultName,
     stewards: stewards,

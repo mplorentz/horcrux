@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../providers/key_provider.dart';
+import '../utils/date_time_extensions.dart';
 import 'login_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
@@ -32,7 +33,7 @@ int computeSinceTime({
   required int? lastSeenEventCreatedAtUnix,
   Duration recentWindow = const Duration(days: 3),
 }) {
-  final windowStartSec = nowUtc.subtract(recentWindow).millisecondsSinceEpoch ~/ 1000;
+  final windowStartSec = nowUtc.subtract(recentWindow).secondsSinceEpoch;
   final last = lastSeenEventCreatedAtUnix;
   if (last == null || last <= 0) {
     return 0;
@@ -547,7 +548,7 @@ class NdkService {
           tags: [
             ['p', keyHolderPubkey], // Recipient
           ],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Sign and broadcast the event
@@ -612,7 +613,7 @@ class NdkService {
           ['p', initiatorPubkey], // Send to initiator
           ['e', recoveryRequestId], // Reference to original request
         ],
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        createdAt: secondsSinceEpoch(),
       );
 
       // Sign and broadcast the event

@@ -13,6 +13,7 @@ import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
+import 'package:horcrux/utils/date_time_extensions.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/shared_preferences_mock.dart';
 
@@ -121,7 +122,7 @@ void main() {
           pubKey: inviteePubkey,
           content: content, // Already decrypted JSON from NDK
           tags: [],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Mock LoginService.getCurrentPublicKey() to return owner pubkey
@@ -188,7 +189,7 @@ void main() {
           pubKey: inviteePubkey,
           content: invalidJson,
           tags: [],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         when(
@@ -226,7 +227,7 @@ void main() {
         pubKey: 'short',
         content: invalidJson,
         tags: [],
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        createdAt: secondsSinceEpoch(),
       );
 
       when(
@@ -265,7 +266,7 @@ void main() {
         pubKey: differentPubkey, // Different from payload
         content: mismatchJson,
         tags: [],
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        createdAt: secondsSinceEpoch(),
       );
 
       when(
@@ -303,7 +304,7 @@ void main() {
         pubKey: inviteePubkey,
         content: validJson,
         tags: [],
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        createdAt: secondsSinceEpoch(),
       );
 
       when(

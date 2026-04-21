@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/utils/date_time_extensions.dart';
 
 void main() {
   group('ShardData JSON Serialization', () {
@@ -450,7 +451,7 @@ void main() {
     });
 
     test('ageInSeconds calculates correctly', () {
-      final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
+      final pastTimestamp = secondsSinceEpoch() - 3600; // 1 hour ago
       final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
@@ -477,7 +478,7 @@ void main() {
     });
 
     test('ageInHours calculates correctly', () {
-      final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 7200; // 2 hours ago
+      final pastTimestamp = secondsSinceEpoch() - 7200; // 2 hours ago
       final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
@@ -504,7 +505,7 @@ void main() {
     });
 
     test('isRecent returns true for recent shard', () {
-      final recentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600; // 1 hour ago
+      final recentTimestamp = secondsSinceEpoch() - 3600; // 1 hour ago
       final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,
@@ -530,8 +531,7 @@ void main() {
     });
 
     test('isRecent returns false for old shard', () {
-      final oldTimestamp =
-          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 86400 - 3600; // >24 hours ago
+      final oldTimestamp = secondsSinceEpoch() - 86400 - 3600; // >24 hours ago
       final ShardData shardData = ShardData(
         shard: 'abc',
         threshold: 2,

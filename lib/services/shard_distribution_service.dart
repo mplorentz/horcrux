@@ -9,6 +9,7 @@ import '../models/steward_status.dart';
 import '../models/event_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import '../utils/date_time_extensions.dart';
 import 'login_service.dart';
 import 'ndk_service.dart';
 import 'logger.dart';
@@ -164,7 +165,7 @@ class ShardDistributionService {
           final filter = Filter(
             kinds: [1059], // Gift wrap events
             authors: [shardEvent.recipientPubkey], // Hex format
-            since: shardEvent.createdAt.millisecondsSinceEpoch ~/ 1000,
+            since: shardEvent.createdAt.secondsSinceEpoch,
           );
 
           final acknowledgmentResponse = ndk.requests.query(filters: [filter]);
