@@ -84,6 +84,9 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
 /// Service for managing NDK (Nostr Development Kit) connections and subscriptions
 /// Handles real-time listening for recovery requests and key share events
 class NdkService {
+  /// Pseudo-relay URL for FCM-delivered gift wraps ([processGiftWrapFromForegroundPush]).
+  static const _fcmForegroundPushRelayUrl = 'push://horcrux-fcm';
+
   final Ref _ref;
   final LoginService _loginService;
   final ProcessedNostrEventStore _processedEventStore;
@@ -270,6 +273,27 @@ class NdkService {
     Log.info(
       'NDK subscriptions setup for ${_subscriptionResponses.length} relays',
     );
+  }
+
+  /// Unwraps and routes a kind-1059 gift wrap received on an FCM foreground message
+  /// with inline `event_json` — same pipeline as relay subscription deliveries.
+  ///
+  /// No-ops when NDK cannot be initialized (no key). Large pushes that omit inline
+  /// JSON are handled later by the tap / cold-start path.
+  Future<void> processGiftWrapFromForegroundPush(Nip01Event event) async {
+    if (!_isInitialized) {
+      try {
+        await initialize();
+      } catch (e, st) {
+        Log.warning(
+          'NDK could not initialize; skipping FCM foreground gift-wrap',
+          e,
+          st,
+        );
+        return;
+      }
+    }
+    await _handleIncomingNostrEvent(event, relayUrl: _fcmForegroundPushRelayUrl);
   }
 
   /// Handle incoming Nostr events

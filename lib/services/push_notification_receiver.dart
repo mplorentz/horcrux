@@ -1,23 +1,28 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase_options.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
+import 'ndk_service.dart';
 
 final pushNotificationReceiverProvider = Provider<PushNotificationReceiver>((ref) {
   final localNotifications = ref.watch(localNotificationServiceProvider);
   final notifierService = ref.watch(horcruxNotificationServiceProvider);
+  final ndkService = ref.watch(ndkServiceProvider);
   final receiver = PushNotificationReceiver(
     localNotifications: localNotifications,
     notifierService: notifierService,
+    ndkService: ndkService,
   );
   ref.onDispose(() => receiver.dispose());
   return receiver;
@@ -48,6 +53,7 @@ class PushNotificationReceiver {
 
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
+  final NdkService _ndkService;
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -59,8 +65,10 @@ class PushNotificationReceiver {
   PushNotificationReceiver({
     required LocalNotificationService localNotifications,
     required HorcruxNotificationService notifierService,
+    required NdkService ndkService,
   })  : _localNotifications = localNotifications,
-        _notifierService = notifierService;
+        _notifierService = notifierService,
+        _ndkService = ndkService;
 
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
@@ -313,40 +321,58 @@ class PushNotificationReceiver {
   void _subscribeToForegroundMessages() {
     _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen(
       (RemoteMessage message) {
-        Log.info(
-          'FCM foreground message received: messageId=${message.messageId}, '
-          'data=${message.data}, '
-          'notification=${message.notification?.title}/${message.notification?.body}',
-        );
-
-        // Real pushes from horcrux-notifier always include a `notification`
-        // payload that the OS would normally display on its own. In the
-        // foreground, FCM suppresses the OS display and hands the message to
-        // us, so we surface it via [LocalNotificationService] to keep the UX
-        // consistent across foreground/background.
-        final notification = message.notification;
-        if (notification != null) {
-          unawaited(
-            _localNotifications.showNotification(
-              title: notification.title ?? 'Horcrux',
-              body: notification.body ?? 'Push notification received',
-              payload: 'fcm_test',
-            ),
-          );
-        } else if (kDebugMode) {
-          unawaited(
-            _localNotifications.showNotification(
-              title: 'FCM data message',
-              body: 'Received ${message.data}',
-              payload: 'fcm_test',
-            ),
-          );
-        }
+        unawaited(_onForegroundRemoteMessage(message));
       },
       onError: (Object error, StackTrace stackTrace) {
         Log.warning('FCM onMessage error', error, stackTrace);
       },
     );
+  }
+
+  Future<void> _onForegroundRemoteMessage(RemoteMessage message) async {
+    Log.info(
+      'FCM foreground message received: messageId=${message.messageId}, '
+      'data=${message.data}, '
+      'notification=${message.notification?.title}/${message.notification?.body}',
+    );
+
+    final embedded = parseFcmEmbeddedEventJson(message.data);
+    if (embedded != null) {
+      try {
+        final event = Nip01Event.fromJson(embedded);
+        await _ndkService.processGiftWrapFromForegroundPush(event);
+      } catch (e, st) {
+        Log.warning(
+          'FCM foreground: failed to process embedded gift wrap',
+          e,
+          st,
+        );
+      }
+    }
+
+    // Real pushes from horcrux-notifier always include a `notification`
+    // payload that the OS would normally display on its own. In the
+    // foreground, FCM suppresses the OS display and hands the message to
+    // us, so we surface it via [LocalNotificationService] to keep the UX
+    // consistent across foreground/background.
+    final notification = message.notification;
+    if (notification != null) {
+      unawaited(
+        _localNotifications.showNotification(
+          title: notification.title ?? 'Horcrux',
+          body: notification.body ?? 'Push notification received',
+          payload: 'fcm_test',
+        ),
+      );
+    } else if (kDebugMode) {
+      unawaited(
+        _localNotifications.showNotification(
+          title: 'FCM data message',
+          body: 'Received ${message.data}',
+          payload: 'fcm_test',
+        ),
+      );
+    }
   }
 
   /// Logs the FCM token in a highly visible format so it's easy to copy out of
@@ -364,4 +390,26 @@ class PushNotificationReceiver {
     _foregroundMessageSubscription?.cancel();
     _foregroundMessageSubscription = null;
   }
+}
+
+/// Parses inline `event_json` from FCM [RemoteMessage.data].
+///
+/// Mobile FCM delivers all data values as JSON strings; some environments may
+/// expose decoded maps. Returns `null` when absent or not decodable as a JSON
+/// object (id-only pushes omit this until the tap handler fetches the event).
+@visibleForTesting
+Map<String, dynamic>? parseFcmEmbeddedEventJson(Map<String, dynamic> data) {
+  final raw = data['event_json'];
+  if (raw == null) return null;
+  if (raw is Map) {
+    return Map<String, dynamic>.from(raw);
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+  }
+  return null;
 }
