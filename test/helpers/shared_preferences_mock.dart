@@ -77,6 +77,24 @@ class SharedPreferencesMock {
       case 'setStringList':
         _store[args['key']] = args['value'];
         return true;
+      case 'getBool':
+        final value = _store[args['key']];
+        return value is bool ? value : null;
+      case 'setBool':
+        _store[args['key']] = args['value'];
+        return true;
+      case 'getInt':
+        final value = _store[args['key']];
+        return value is int ? value : null;
+      case 'setInt':
+        _store[args['key']] = args['value'];
+        return true;
+      case 'getDouble':
+        final value = _store[args['key']];
+        return value is double ? value : null;
+      case 'setDouble':
+        _store[args['key']] = args['value'];
+        return true;
       case 'clear':
         _store.clear();
         return true;

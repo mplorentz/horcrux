@@ -937,6 +937,15 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<bool> requestPlatformNotificationPermissions() => (super.noSuchMethod(
+        Invocation.method(
+          #requestPlatformNotificationPermissions,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
   _i5.Future<void> showNotification({
     required String? title,
     required String? body,

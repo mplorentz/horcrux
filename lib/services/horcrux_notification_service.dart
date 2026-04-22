@@ -1,15 +1,20 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/vault.dart';
+import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import '../utils/validators.dart';
 import '../utils/nip98_auth.dart';
 import 'login_service.dart';
 import 'logger.dart';
+import 'push_notification_receiver.dart';
 
 /// Provider for [HorcruxNotificationService].
 ///
@@ -17,7 +22,11 @@ import 'logger.dart';
 /// that is closed on dispose.
 final horcruxNotificationServiceProvider = Provider<HorcruxNotificationService>((ref) {
   final loginService = ref.watch(loginServiceProvider);
-  final service = HorcruxNotificationService(loginService: loginService);
+  final vaultRepository = ref.watch(vaultRepositoryProvider);
+  final service = HorcruxNotificationService(
+    loginService: loginService,
+    vaultRepository: vaultRepository,
+  );
   ref.onDispose(service.dispose);
   return service;
 });
@@ -109,19 +118,30 @@ class HorcruxNotificationService {
   /// [SharedPreferences] key for a user-overridden base URL. When present,
   /// overrides [defaultBaseUrl]; when absent or empty, the default is used.
   static const String baseUrlPrefsKey = 'horcrux_notifier_base_url';
+  static const String _consentSnapshotPrefsKey = 'horcrux_notifier_last_synced_consents';
+  static const Duration _consentDebounce = Duration(milliseconds: 700);
 
   static const Duration _requestTimeout = Duration(seconds: 15);
 
   final LoginService _loginService;
+  final VaultRepository _vaultRepository;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
+  StreamSubscription<List<Vault>>? _vaultsSubscription;
+  Timer? _consentDebounceTimer;
+  bool _syncInFlight = false;
+  bool _syncQueued = false;
 
   HorcruxNotificationService({
     required LoginService loginService,
+    required VaultRepository vaultRepository,
     http.Client? httpClient,
   })  : _loginService = loginService,
+        _vaultRepository = vaultRepository,
         _httpClient = httpClient ?? http.Client(),
-        _ownsHttpClient = httpClient == null;
+        _ownsHttpClient = httpClient == null {
+    _startConsentSyncSubscriptions();
+  }
 
   /// Resolved base URL for notifier requests. Honors the user's override
   /// when set, otherwise falls back to [defaultBaseUrl]. Trailing slashes
@@ -240,15 +260,88 @@ class HorcruxNotificationService {
     );
   }
 
-  /// Syncs the consent allowlist to the notifier.
+  /// Derives the consent allowlist from current Horcrux relationships.
   ///
-  /// Full derivation from vault relationships is implemented in `p4-consent-sync`.
-  /// For now this keeps the opt-in flow stable and explicitly performs no network
-  /// mutation.
+  /// For every vault the user participates in (owned or stewarded) we
+  /// authorize pushes from:
+  /// - the vault owner (unless that's us), and
+  /// - every co-steward of the vault (excluding us).
+  ///
+  /// On the owner's side co-stewards come from `backupConfig.stewards`. On
+  /// the steward's side the local vault stub usually doesn't carry a
+  /// backup config, so we fall back to the `stewards` list that the owner
+  /// piggybacks onto each shard payload (see [ShardData.stewards], which
+  /// already excludes the creator).
+  ///
+  /// This is symmetric on purpose: any steward -- not just the owner --
+  /// can originate a recovery request, so every co-steward of a shared
+  /// vault needs to be allowed to push us.
+  ///
+  /// Pending invitations are intentionally excluded. We don't learn the
+  /// invitee's pubkey until they accept, at which point they appear in
+  /// the vault's steward list and the vault stream triggers a resync.
+  ///
+  /// Returns deduped, lower-cased, sorted pubkeys.
+  List<String> computeConsentList({
+    required String currentUserPubkey,
+    required List<Vault> vaults,
+  }) {
+    final self = currentUserPubkey.trim().toLowerCase();
+    final senders = <String>{};
+
+    void add(String? raw) {
+      if (raw == null) return;
+      final pk = raw.trim().toLowerCase();
+      if (pk.isEmpty || pk == self) return;
+      if (!isValidHexPubkey(pk)) return;
+      senders.add(pk);
+    }
+
+    for (final vault in vaults) {
+      add(vault.ownerPubkey);
+
+      for (final steward in vault.backupConfig?.stewards ?? const []) {
+        add(steward.pubkey);
+      }
+
+      final coStewards = vault.mostRecentShard?.stewards;
+      if (coStewards != null) {
+        for (final entry in coStewards) {
+          add(entry['pubkey']);
+        }
+      }
+    }
+
+    final result = senders.toList()..sort();
+    return result;
+  }
+
+  /// Syncs the derived consent allowlist to notifier if it has changed.
   Future<void> syncConsentList() async {
-    Log.debug(
-      'HorcruxNotificationService: syncConsentList is not yet wired to relationship derivation',
+    if (!await _isPushOptedIn()) {
+      Log.debug('HorcruxNotificationService: skipping consent sync (push not opted in)');
+      return;
+    }
+
+    final currentPubkey = await _loginService.getCurrentPublicKey();
+    if (currentPubkey == null || !isValidHexPubkey(currentPubkey)) {
+      Log.warning('HorcruxNotificationService: cannot sync consents without a valid pubkey');
+      return;
+    }
+
+    final vaults = await _vaultRepository.getAllVaults();
+    final computed = computeConsentList(
+      currentUserPubkey: currentPubkey,
+      vaults: vaults,
     );
+    final lastSynced = await _loadLastSyncedConsentSnapshot();
+    if (_sameConsentSet(computed, lastSynced)) {
+      Log.debug('HorcruxNotificationService: consent list unchanged, skipping PUT /consent');
+      return;
+    }
+
+    await replaceConsents(computed);
+    await _storeLastSyncedConsentSnapshot(computed);
   }
 
   /// Removes a single sender from the caller's consent allowlist.
@@ -409,8 +502,91 @@ class HorcruxNotificationService {
 
   /// Closes the underlying [http.Client] if this service owns it.
   void dispose() {
+    _consentDebounceTimer?.cancel();
+    _consentDebounceTimer = null;
+    _vaultsSubscription?.cancel();
+    _vaultsSubscription = null;
     if (_ownsHttpClient) {
       _httpClient.close();
     }
+  }
+
+  void _startConsentSyncSubscriptions() {
+    _vaultsSubscription = _vaultRepository.vaultsStream.listen(
+      (_) => _scheduleConsentSync(),
+      onError: (Object error, StackTrace stackTrace) {
+        Log.warning('HorcruxNotificationService: vault stream error', error, stackTrace);
+      },
+    );
+  }
+
+  void _scheduleConsentSync() {
+    _consentDebounceTimer?.cancel();
+    _consentDebounceTimer = Timer(_consentDebounce, () {
+      unawaited(_runSyncWithCoalescing());
+    });
+  }
+
+  Future<void> _runSyncWithCoalescing() async {
+    if (_syncInFlight) {
+      _syncQueued = true;
+      return;
+    }
+    _syncInFlight = true;
+    try {
+      do {
+        _syncQueued = false;
+        await syncConsentList();
+      } while (_syncQueued);
+    } catch (e, st) {
+      Log.warning('HorcruxNotificationService: consent sync failed', e, st);
+    } finally {
+      _syncInFlight = false;
+    }
+  }
+
+  Future<bool> _isPushOptedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
+    } catch (e, st) {
+      Log.warning('HorcruxNotificationService: failed to read push opt-in flag', e, st);
+      return false;
+    }
+  }
+
+  Future<List<String>> _loadLastSyncedConsentSnapshot() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_consentSnapshotPrefsKey) ?? const <String>[];
+      final normalized = raw
+          .map((e) => e.trim().toLowerCase())
+          .where((e) => isValidHexPubkey(e))
+          .toSet()
+          .toList()
+        ..sort();
+      return normalized;
+    } catch (e, st) {
+      Log.warning('HorcruxNotificationService: failed reading consent snapshot', e, st);
+      return const <String>[];
+    }
+  }
+
+  Future<void> _storeLastSyncedConsentSnapshot(List<String> senders) async {
+    final normalized = senders.map((e) => e.trim().toLowerCase()).toSet().toList()..sort();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_consentSnapshotPrefsKey, normalized);
+    } catch (e, st) {
+      Log.warning('HorcruxNotificationService: failed persisting consent snapshot', e, st);
+    }
+  }
+
+  bool _sameConsentSet(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }
