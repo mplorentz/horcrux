@@ -284,6 +284,32 @@ class VaultRepository {
     }
   }
 
+  /// Toggle the per-vault push notification preference.
+  ///
+  /// Flips [Vault.pushEnabled] and persists the change. Gates whether this
+  /// device triggers pushes from the owner's gift-wrap publishes for this
+  /// vault (see `HorcruxNotificationService.tryPushForEvent`). Existing
+  /// stewards keep the value they learned from the last shard distribution
+  /// until the owner redistributes.
+  Future<void> setPushEnabled(String vaultId, bool enabled) async {
+    await initialize();
+
+    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
+    if (index == -1) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+
+    final vault = _cachedVaults![index];
+    if (vault.pushEnabled == enabled) return;
+
+    final updatedVault = vault.copyWith(pushEnabled: enabled);
+    _cachedVaults![index] = updatedVault;
+    await _saveVault(updatedVault);
+    Log.info(
+      'Updated pushEnabled=$enabled for vault $vaultId',
+    );
+  }
+
   /// Delete a vault
   Future<void> deleteVault(String id) async {
     await initialize();

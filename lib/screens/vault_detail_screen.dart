@@ -100,13 +100,13 @@ class VaultDetailScreen extends ConsumerWidget {
               final canRedistribute =
                   isOwned && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty;
 
-              return PopupMenuButton(
+              return PopupMenuButton<String>(
                 itemBuilder: (context) {
-                  final items = <PopupMenuItem>[];
+                  final items = <PopupMenuEntry<String>>[];
 
                   if (canRedistribute) {
                     items.add(
-                      const PopupMenuItem(
+                      const PopupMenuItem<String>(
                         value: 'redistribute',
                         child: Row(
                           children: [
@@ -119,8 +119,18 @@ class VaultDetailScreen extends ConsumerWidget {
                     );
                   }
 
+                  if (isOwned) {
+                    items.add(
+                      CheckedPopupMenuItem<String>(
+                        value: 'toggle_push',
+                        checked: vault.pushEnabled,
+                        child: const Text('Alert stewards with push'),
+                      ),
+                    );
+                  }
+
                   items.add(
-                    const PopupMenuItem(
+                    const PopupMenuItem<String>(
                       value: 'delete',
                       child: Row(
                         children: [
@@ -139,6 +149,8 @@ class VaultDetailScreen extends ConsumerWidget {
                     _showDeleteDialog(context, ref, vault);
                   } else if (value == 'redistribute') {
                     _showRedistributeDialog(context, ref, vault);
+                  } else if (value == 'toggle_push') {
+                    _togglePushEnabled(context, ref, vault);
                   }
                 },
               );
@@ -204,6 +216,36 @@ class VaultDetailScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _togglePushEnabled(
+    BuildContext context,
+    WidgetRef ref,
+    Vault vault,
+  ) async {
+    final repository = ref.read(vaultRepositoryProvider);
+    final nextValue = !vault.pushEnabled;
+    try {
+      await repository.setPushEnabled(vault.id, nextValue);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            nextValue
+                ? 'Push notifications enabled for this vault'
+                : 'Push notifications disabled for this vault',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update push notifications: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Vault vault) {
