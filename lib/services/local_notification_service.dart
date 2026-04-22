@@ -2,9 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../main.dart';
+import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../providers/vault_provider.dart';
-import '../utils/nostr_display.dart';
+import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
 
@@ -120,11 +121,15 @@ class LocalNotificationService {
       'Showing notification for recovery request: ${request.id}',
     );
     final vault = await _vaultRepository.getVault(request.vaultId);
-    final vaultName = vault?.name ?? 'a vault';
-    final requester = displayNameFromPubkey(vault, request.initiatorPubkey);
+    final text = composeNotificationText(
+      kind: NostrKind.recoveryRequest,
+      vault: vault,
+      senderPubkey: request.initiatorPubkey,
+    );
+    if (text == null) return;
     await showNotification(
-      title: 'Recovery request',
-      body: '$requester is requesting your key to vault "$vaultName".',
+      title: text.title,
+      body: text.body,
       payload: 'recovery_request:${request.id}',
     );
   }
@@ -135,14 +140,16 @@ class LocalNotificationService {
       'Showing notification for recovery response ($status): ${response.recoveryRequestId}',
     );
     final vault = await _vaultRepository.getVault(response.vaultId);
-    final vaultName = vault?.name ?? 'your vault';
-    final steward = displayNameFromPubkey(vault, response.senderPubkey);
-    final body = response.approved
-        ? '$steward approved recovery of "$vaultName".'
-        : '$steward denied recovery of "$vaultName".';
+    final text = composeNotificationText(
+      kind: NostrKind.recoveryResponse,
+      vault: vault,
+      senderPubkey: response.senderPubkey,
+      recoveryApproved: response.approved,
+    );
+    if (text == null) return;
     await showNotification(
-      title: 'Recovery response',
-      body: body,
+      title: text.title,
+      body: text.body,
       payload: 'recovery_response:${response.recoveryRequestId}',
     );
   }
