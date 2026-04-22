@@ -4,6 +4,7 @@ import '../widgets/row_button.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../services/push_notification_receiver.dart';
 import 'backup_config_screen.dart';
 import 'vault_list_screen.dart';
 
@@ -29,6 +30,9 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   final _contentController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  /// When true, new vaults use [Vault.pushEnabled] and we prompt for global push opt-in if needed.
+  bool _alertStewardsWithPush = true;
 
   @override
   void initState() {
@@ -66,6 +70,30 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
                     contentController: _contentController,
                     ownerNameController: _ownerNameController,
                   ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _alertStewardsWithPush,
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => _alertStewardsWithPush = v);
+                        }
+                      },
+                      title: Text(
+                        'Alert stewards with push notifications',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      subtitle: Text(
+                        'When you distribute keys or start recovery, stewards can be '
+                        'notified on their device. Requires notification permission.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -82,11 +110,31 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   }
 
   Future<void> _saveVault() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_alertStewardsWithPush && PushNotificationReceiver.isSupported) {
+      final pushReceiver = ref.read(pushNotificationReceiverProvider);
+      if (!await pushReceiver.isOptedIn()) {
+        final optedIn = await pushReceiver.optIn();
+        if (!optedIn && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Push permission was not granted. Stewards will not receive device '
+                'alerts until you enable push in Settings.',
+              ),
+            ),
+          );
+        }
+      }
+    }
+
     final vaultId = await saveVault(
       formKey: _formKey,
       name: _nameController.text,
       content: _contentController.text,
       ownerName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
+      pushEnabledForNewVault: _alertStewardsWithPush,
     );
 
     if (vaultId != null && mounted) {
