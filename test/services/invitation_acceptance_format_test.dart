@@ -19,6 +19,18 @@ import '../helpers/shared_preferences_mock.dart';
 
 import 'invitation_acceptance_format_test.mocks.dart';
 
+/// Synthesizes a minimal signed gift wrap event for stubs that only care
+/// that [NdkService.publishEncryptedEvent] "succeeded". The tests below
+/// verify what we asked the service to publish, not the specifics of the
+/// returned event.
+Nip01Event _stubGiftWrap() => Nip01Event(
+      kind: NostrKind.giftWrap.value,
+      pubKey: 'a' * 64,
+      content: 'stub',
+      tags: const [],
+      createdAt: 1,
+    );
+
 @GenerateMocks([
   NdkService,
   LoginService,
@@ -96,7 +108,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedContent = invocation.namedArguments[#content] as String;
-          return 'test-event-id';
+          return _stubGiftWrap();
         });
 
         // Act: Call sendInvitationAcceptanceEvent
@@ -343,7 +355,7 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         capturedContent = invocation.namedArguments[#content] as String;
-        return 'test-event-id';
+        return _stubGiftWrap();
       });
 
       // Act
@@ -408,7 +420,7 @@ void main() {
           capturedRecipientPubkey = invocation.namedArguments[#recipientPubkey] as String;
           capturedRelays = invocation.namedArguments[#relays] as List<String>;
           capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
-          return 'test-event-id-123';
+          return _stubGiftWrap();
         });
 
         // Act
@@ -419,7 +431,7 @@ void main() {
         );
 
         // Assert
-        expect(result, 'test-event-id-123');
+        expect(result, _stubGiftWrap().id);
         expect(capturedKind, NostrKind.invitationAcceptance.value);
         expect(capturedRecipientPubkey, ownerPubkey);
         expect(capturedRelays, relayUrls);
@@ -452,7 +464,7 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         capturedContent = invocation.namedArguments[#content] as String;
-        return 'test-event-id';
+        return _stubGiftWrap();
       });
 
       // Act
@@ -574,7 +586,7 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
-        return 'test-event-id';
+        return _stubGiftWrap();
       });
 
       // Act
@@ -617,7 +629,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedContent = invocation.namedArguments[#content] as String;
-          return 'test-event-id';
+          return _stubGiftWrap();
         });
 
         // Act

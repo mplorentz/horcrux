@@ -7,12 +7,15 @@ import 'dart:async' as _i5;
 
 import 'package:horcrux/models/backup_status.dart' as _i6;
 import 'package:horcrux/models/event_status.dart' as _i15;
+import 'package:horcrux/models/nostr_kinds.dart' as _i19;
 import 'package:horcrux/models/recovery_request.dart' as _i12;
 import 'package:horcrux/models/shard_data.dart' as _i9;
 import 'package:horcrux/models/steward.dart' as _i7;
 import 'package:horcrux/models/steward_status.dart' as _i10;
+import 'package:horcrux/models/vault.dart' as _i18;
 import 'package:horcrux/providers/vault_provider.dart' as _i3;
 import 'package:horcrux/services/backup_service.dart' as _i4;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
 import 'package:horcrux/services/local_notification_service.dart' as _i11;
 import 'package:horcrux/services/ndk_service.dart' as _i13;
 import 'package:horcrux/services/shard_distribution_service.dart' as _i14;
@@ -56,6 +59,16 @@ class _FakeNdk_1 extends _i1.SmartFake implements _i2.Ndk {
 
 class _FakeVaultRepository_2 extends _i1.SmartFake implements _i3.VaultRepository {
   _FakeVaultRepository_2(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeNip01Event_3 extends _i1.SmartFake implements _i2.Nip01Event {
+  _FakeNip01Event_3(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -1237,7 +1250,7 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> publishEncryptedEvent({
+  _i5.Future<_i2.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -1258,11 +1271,11 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i5.Future<_i2.Nip01Event?>.value(),
+      ) as _i5.Future<_i2.Nip01Event?>);
 
   @override
-  _i5.Future<List<String>> publishEncryptedEventToMultiple({
+  _i5.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -1283,8 +1296,8 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i5.Future<List<String>>.value(<String>[]),
-      ) as _i5.Future<List<String>>);
+        returnValue: _i5.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+      ) as _i5.Future<List<_i2.Nip01Event?>>);
 
   @override
   _i5.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
@@ -1627,4 +1640,436 @@ class MockVaultShareService extends _i1.Mock implements _i16.VaultShareService {
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+}
+
+/// A class which mocks [HorcruxNotificationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
+  MockHorcruxNotificationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<String> getBaseUrl() => (super.noSuchMethod(
+        Invocation.method(
+          #getBaseUrl,
+          [],
+        ),
+        returnValue: _i5.Future<String>.value(_i8.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getBaseUrl,
+            [],
+          ),
+        )),
+      ) as _i5.Future<String>);
+
+  @override
+  _i5.Future<void> setBaseUrl(String? override) => (super.noSuchMethod(
+        Invocation.method(
+          #setBaseUrl,
+          [override],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> register({
+    required String? fcmToken,
+    required _i17.NotifierPlatform? platform,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #register,
+          [],
+          {
+            #fcmToken: fcmToken,
+            #platform: platform,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deregister() => (super.noSuchMethod(
+        Invocation.method(
+          #deregister,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> updateToken({
+    required String? newToken,
+    required _i17.NotifierPlatform? platform,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateToken,
+          [],
+          {
+            #newToken: newToken,
+            #platform: platform,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
+        Invocation.method(
+          #replaceConsents,
+          [authorizedSenders],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  List<String> computeConsentList({
+    required String? currentUserPubkey,
+    required List<_i18.Vault>? vaults,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #computeConsentList,
+          [],
+          {
+            #currentUserPubkey: currentUserPubkey,
+            #vaults: vaults,
+          },
+        ),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  _i5.Future<void> syncConsentList() => (super.noSuchMethod(
+        Invocation.method(
+          #syncConsentList,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deleteConsent(String? senderPubkey) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteConsent,
+          [senderPubkey],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> tryPushForEvent({
+    required _i2.Nip01Event? event,
+    required _i19.NostrKind? kind,
+    required _i18.Vault? vault,
+    List<String>? relayHints,
+    bool? recoveryApproved,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #tryPushForEvent,
+          [],
+          {
+            #event: event,
+            #kind: kind,
+            #vault: vault,
+            #relayHints: relayHints,
+            #recoveryApproved: recoveryApproved,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> push({
+    required String? recipientPubkey,
+    required String? title,
+    required String? body,
+    Map<String, dynamic>? eventJson,
+    String? eventId,
+    List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #push,
+          [],
+          {
+            #recipientPubkey: recipientPubkey,
+            #title: title,
+            #body: body,
+            #eventJson: eventJson,
+            #eventId: eventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [Nip01Event].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
+  MockNip01Event() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  String get id => (super.noSuchMethod(
+        Invocation.getter(#id),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.getter(#id),
+        ),
+      ) as String);
+
+  @override
+  set id(String? _id) => super.noSuchMethod(
+        Invocation.setter(
+          #id,
+          _id,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  String get pubKey => (super.noSuchMethod(
+        Invocation.getter(#pubKey),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.getter(#pubKey),
+        ),
+      ) as String);
+
+  @override
+  int get createdAt => (super.noSuchMethod(
+        Invocation.getter(#createdAt),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  set createdAt(int? _createdAt) => super.noSuchMethod(
+        Invocation.setter(
+          #createdAt,
+          _createdAt,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  int get kind => (super.noSuchMethod(
+        Invocation.getter(#kind),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  List<List<String>> get tags => (super.noSuchMethod(
+        Invocation.getter(#tags),
+        returnValue: <List<String>>[],
+      ) as List<List<String>>);
+
+  @override
+  set tags(List<List<String>>? _tags) => super.noSuchMethod(
+        Invocation.setter(
+          #tags,
+          _tags,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  String get content => (super.noSuchMethod(
+        Invocation.getter(#content),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.getter(#content),
+        ),
+      ) as String);
+
+  @override
+  set content(String? _content) => super.noSuchMethod(
+        Invocation.setter(
+          #content,
+          _content,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  String get sig => (super.noSuchMethod(
+        Invocation.getter(#sig),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.getter(#sig),
+        ),
+      ) as String);
+
+  @override
+  set sig(String? _sig) => super.noSuchMethod(
+        Invocation.setter(
+          #sig,
+          _sig,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  set validSig(bool? _validSig) => super.noSuchMethod(
+        Invocation.setter(
+          #validSig,
+          _validSig,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  List<String> get sources => (super.noSuchMethod(
+        Invocation.getter(#sources),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  set sources(List<String>? _sources) => super.noSuchMethod(
+        Invocation.setter(
+          #sources,
+          _sources,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  bool get isIdValid => (super.noSuchMethod(
+        Invocation.getter(#isIdValid),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  List<String> get tTags => (super.noSuchMethod(
+        Invocation.getter(#tTags),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  List<String> get pTags => (super.noSuchMethod(
+        Invocation.getter(#pTags),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  List<String> get replyETags => (super.noSuchMethod(
+        Invocation.getter(#replyETags),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  Map<String, dynamic> toJson() => (super.noSuchMethod(
+        Invocation.method(
+          #toJson,
+          [],
+        ),
+        returnValue: <String, dynamic>{},
+      ) as Map<String, dynamic>);
+
+  @override
+  String toBase64() => (super.noSuchMethod(
+        Invocation.method(
+          #toBase64,
+          [],
+        ),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.method(
+            #toBase64,
+            [],
+          ),
+        ),
+      ) as String);
+
+  @override
+  void sign(String? privateKey) => super.noSuchMethod(
+        Invocation.method(
+          #sign,
+          [privateKey],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  List<String> getTags(String? tag) => (super.noSuchMethod(
+        Invocation.method(
+          #getTags,
+          [tag],
+        ),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  String? getFirstTag(String? name) => (super.noSuchMethod(Invocation.method(
+        #getFirstTag,
+        [name],
+      )) as String?);
+
+  @override
+  _i2.Nip01Event copyWith({
+    String? pubKey,
+    int? createdAt,
+    int? kind,
+    List<List<String>>? tags,
+    String? content,
+    String? sig,
+    List<String>? sources,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #copyWith,
+          [],
+          {
+            #pubKey: pubKey,
+            #createdAt: createdAt,
+            #kind: kind,
+            #tags: tags,
+            #content: content,
+            #sig: sig,
+            #sources: sources,
+          },
+        ),
+        returnValue: _FakeNip01Event_3(
+          this,
+          Invocation.method(
+            #copyWith,
+            [],
+            {
+              #pubKey: pubKey,
+              #createdAt: createdAt,
+              #kind: kind,
+              #tags: tags,
+              #content: content,
+              #sig: sig,
+              #sources: sources,
+            },
+          ),
+        ),
+      ) as _i2.Nip01Event);
 }

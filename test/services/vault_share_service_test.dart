@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:horcrux/models/shard_data.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
+import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/vault_share_service.dart';
@@ -12,7 +13,7 @@ import '../fixtures/test_keys.dart';
 import '../helpers/shared_preferences_mock.dart';
 import 'vault_share_service_test.mocks.dart';
 
-@GenerateMocks([LoginService, NdkService])
+@GenerateMocks([LoginService, NdkService, HorcruxNotificationService])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -32,6 +33,7 @@ void main() {
 
     late MockLoginService mockLoginService;
     late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
     late VaultRepository repository;
     late VaultShareService service;
 
@@ -49,8 +51,13 @@ void main() {
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
 
       mockNdkService = MockNdkService();
+      mockNotificationService = MockHorcruxNotificationService();
       repository = VaultRepository(mockLoginService);
-      service = VaultShareService(repository, () => mockNdkService);
+      service = VaultShareService(
+        repository,
+        () => mockNdkService,
+        () => mockNotificationService,
+      );
     });
 
     ShardData buildShard({required int index, bool? pushEnabled}) {

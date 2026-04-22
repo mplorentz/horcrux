@@ -659,14 +659,16 @@ class NdkService {
     return keyPair?.publicKey;
   }
 
-  /// Publish an encrypted event (rumor + gift wrap)
+  /// Publish an encrypted event (rumor + gift wrap).
   ///
-  /// Creates a rumor event with the given content and kind,
-  /// wraps it in a gift wrap for the recipient,
-  /// and broadcasts it to the specified relays.
+  /// Creates a rumor event with the given content and kind, wraps it in a
+  /// gift wrap for the recipient, and broadcasts it to the specified relays.
   ///
-  /// Returns the gift wrap event ID.
-  Future<String?> publishEncryptedEvent({
+  /// Returns the signed gift wrap event on success, or `null` when every
+  /// relay rejected it. Callers that only care about the event ID can read
+  /// `.id` off the result; callers that need to forward the wrap elsewhere
+  /// (e.g. to `horcrux-notifier` for push) can pass the whole event.
+  Future<Nip01Event?> publishEncryptedEvent({
     required String content,
     required int kind,
     required String recipientPubkey, // Hex format
@@ -680,7 +682,6 @@ class NdkService {
       final pubkeySnippet =
           recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
 
-      // Build the gift wrap event
       final giftWrap = await _buildGiftWrapEvent(
         content: content,
         kind: kind,
@@ -689,7 +690,6 @@ class NdkService {
         customPubkey: customPubkey,
       );
 
-      // Enqueue the signed event for publishing
       final result = await _publishService.enqueueEvent(
         event: giftWrap,
         relays: relays,
@@ -713,7 +713,7 @@ class NdkService {
         );
       }
 
-      return result.eventId;
+      return giftWrap;
     } catch (e, stackTrace) {
       Log.error('Error enqueuing encrypted event', e);
       Log.debug('Encrypted event enqueue stack', stackTrace);
@@ -756,14 +756,16 @@ class NdkService {
     );
   }
 
-  /// Publish an encrypted event to multiple recipients
+  /// Publish an encrypted event to multiple recipients.
   ///
-  /// Creates a rumor event with the given content and kind,
-  /// wraps it in gift wraps for each recipient,
-  /// and broadcasts them to the specified relays.
+  /// Creates a rumor event with the given content and kind, wraps it in a
+  /// distinct gift wrap for each recipient, and broadcasts them to the
+  /// specified relays.
   ///
-  /// Returns list of gift wrap event IDs.
-  Future<List<String>> publishEncryptedEventToMultiple({
+  /// The returned list is positionally aligned with [recipientPubkeys];
+  /// entries for recipients whose publish failed are `null`. Callers that
+  /// only want event IDs can map over the non-null entries and read `.id`.
+  Future<List<Nip01Event?>> publishEncryptedEventToMultiple({
     required String content,
     required int kind,
     required List<String> recipientPubkeys, // Hex format
@@ -773,30 +775,30 @@ class NdkService {
   }) async {
     await _ensureInitialized();
 
-    final eventIds = <String>[];
+    final results = <Nip01Event?>[];
 
     for (final recipientPubkey in recipientPubkeys) {
       try {
-        final eventId = await publishEncryptedEvent(
-          content: content,
-          kind: kind,
-          recipientPubkey: recipientPubkey,
-          relays: relays,
-          tags: tags,
-          customPubkey: customPubkey,
+        results.add(
+          await publishEncryptedEvent(
+            content: content,
+            kind: kind,
+            recipientPubkey: recipientPubkey,
+            relays: relays,
+            tags: tags,
+            customPubkey: customPubkey,
+          ),
         );
-        if (eventId != null) {
-          eventIds.add(eventId);
-        }
       } catch (e) {
         Log.error(
           'Error publishing encrypted event to ${recipientPubkey.substring(0, 8)}...',
           e,
         );
+        results.add(null);
       }
     }
 
-    return eventIds;
+    return results;
   }
 
   /// Get the underlying NDK instance for advanced operations

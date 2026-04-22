@@ -5,7 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
+import 'package:horcrux/models/nostr_kinds.dart' as _i11;
 import 'package:horcrux/models/recovery_request.dart' as _i8;
+import 'package:horcrux/models/vault.dart' as _i10;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
 import 'package:horcrux/services/login_service.dart' as _i4;
 import 'package:horcrux/services/ndk_service.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
@@ -376,7 +379,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> publishEncryptedEvent({
+  _i5.Future<_i3.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -397,11 +400,11 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i5.Future<_i3.Nip01Event?>.value(),
+      ) as _i5.Future<_i3.Nip01Event?>);
 
   @override
-  _i5.Future<List<String>> publishEncryptedEventToMultiple({
+  _i5.Future<List<_i3.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -422,8 +425,8 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i5.Future<List<String>>.value(<String>[]),
-      ) as _i5.Future<List<String>>);
+        returnValue: _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
+      ) as _i5.Future<List<_i3.Nip01Event?>>);
 
   @override
   _i5.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
@@ -458,4 +461,190 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+}
+
+/// A class which mocks [HorcruxNotificationService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNotificationService {
+  MockHorcruxNotificationService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<String> getBaseUrl() => (super.noSuchMethod(
+        Invocation.method(
+          #getBaseUrl,
+          [],
+        ),
+        returnValue: _i5.Future<String>.value(_i6.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getBaseUrl,
+            [],
+          ),
+        )),
+      ) as _i5.Future<String>);
+
+  @override
+  _i5.Future<void> setBaseUrl(String? override) => (super.noSuchMethod(
+        Invocation.method(
+          #setBaseUrl,
+          [override],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> register({
+    required String? fcmToken,
+    required _i9.NotifierPlatform? platform,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #register,
+          [],
+          {
+            #fcmToken: fcmToken,
+            #platform: platform,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deregister() => (super.noSuchMethod(
+        Invocation.method(
+          #deregister,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> updateToken({
+    required String? newToken,
+    required _i9.NotifierPlatform? platform,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateToken,
+          [],
+          {
+            #newToken: newToken,
+            #platform: platform,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
+        Invocation.method(
+          #replaceConsents,
+          [authorizedSenders],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  List<String> computeConsentList({
+    required String? currentUserPubkey,
+    required List<_i10.Vault>? vaults,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #computeConsentList,
+          [],
+          {
+            #currentUserPubkey: currentUserPubkey,
+            #vaults: vaults,
+          },
+        ),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  _i5.Future<void> syncConsentList() => (super.noSuchMethod(
+        Invocation.method(
+          #syncConsentList,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> deleteConsent(String? senderPubkey) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteConsent,
+          [senderPubkey],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> tryPushForEvent({
+    required _i3.Nip01Event? event,
+    required _i11.NostrKind? kind,
+    required _i10.Vault? vault,
+    List<String>? relayHints,
+    bool? recoveryApproved,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #tryPushForEvent,
+          [],
+          {
+            #event: event,
+            #kind: kind,
+            #vault: vault,
+            #relayHints: relayHints,
+            #recoveryApproved: recoveryApproved,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> push({
+    required String? recipientPubkey,
+    required String? title,
+    required String? body,
+    Map<String, dynamic>? eventJson,
+    String? eventId,
+    List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #push,
+          [],
+          {
+            #recipientPubkey: recipientPubkey,
+            #title: title,
+            #body: body,
+            #eventJson: eventJson,
+            #eventId: eventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 }

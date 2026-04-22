@@ -11,6 +11,7 @@ import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
 import 'backup_service.dart';
+import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'ndk_service.dart';
 import 'processed_nostr_event_store.dart';
@@ -27,6 +28,7 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
   final vaultShareService = ref.read(vaultShareServiceProvider);
   final processedStore = ref.read(processedNostrEventStoreProvider);
   final localNotifications = ref.read(localNotificationServiceProvider);
+  final notificationService = ref.read(horcruxNotificationServiceProvider);
   final service = RecoveryService(
     repository,
     backupService,
@@ -34,6 +36,7 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
     vaultShareService,
     processedStore,
     localNotifications,
+    notificationService,
   );
 
   // Clean up streams when disposed
@@ -53,6 +56,7 @@ class RecoveryService {
   final VaultShareService _vaultShareService;
   final ProcessedNostrEventStore _processedStore;
   final LocalNotificationService _localNotifications;
+  final HorcruxNotificationService _notificationService;
 
   static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
   static const String _firstOpenUtcKey = 'horcrux_first_open_utc_ms';
@@ -77,6 +81,7 @@ class RecoveryService {
     this._vaultShareService,
     this._processedStore,
     this._localNotifications,
+    this._notificationService,
   ) {
     _loadViewedNotificationIds();
     _setupNdkStreamListeners();
@@ -1046,11 +1051,14 @@ class RecoveryService {
 
       final requestJson = json.encode(requestData);
 
-      // Send gift wrap to each steward using NdkService
-      final eventIds = await _ndkService.publishEncryptedEventToMultiple(
+      // Send gift wrap to each steward using NdkService. The signed events
+      // come back positionally aligned with the recipient list so we can
+      // pipe each one into [tryPushForEvent] without rebuilding it.
+      final recipients = request.stewardResponses.keys.toList();
+      final publishedEvents = await _ndkService.publishEncryptedEventToMultiple(
         content: requestJson,
         kind: NostrKind.recoveryRequest.value,
-        recipientPubkeys: request.stewardResponses.keys.toList(),
+        recipientPubkeys: recipients,
         relays: relays,
         tags: [
           ['d', 'recovery_request_${request.id}'],
@@ -1060,12 +1068,33 @@ class RecoveryService {
         customPubkey: currentPubkey,
       );
 
+      final eventIds = [
+        for (final event in publishedEvents)
+          if (event != null) event.id,
+      ];
+
       // Update request status to sent
       await updateRecoveryRequestStatus(
         request.id,
         RecoveryRequestStatus.sent,
         nostrEventId: eventIds.isNotEmpty ? eventIds.first : null,
       );
+
+      // Best-effort push to each steward. We look up the vault once so the
+      // per-recipient loop stays cheap; if the vault is missing (owner
+      // bookkeeping error) we skip the push entirely rather than guessing.
+      final vaultForPush = await repository.getVault(request.vaultId);
+      if (vaultForPush != null) {
+        for (final event in publishedEvents) {
+          if (event == null) continue;
+          await _notificationService.tryPushForEvent(
+            event: event,
+            kind: NostrKind.recoveryRequest,
+            vault: vaultForPush,
+            relayHints: relays,
+          );
+        }
+      }
 
       Log.info(
         'Successfully sent recovery request ${request.id} to ${eventIds.length} stewards',
@@ -1115,8 +1144,9 @@ class RecoveryService {
         'Sending recovery response to ${request.initiatorPubkey.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
-      final eventId = await _ndkService.publishEncryptedEvent(
+      // Publish using NdkService. The returned event is the signed gift
+      // wrap, which we forward to the notifier without rebuilding.
+      final publishedEvent = await _ndkService.publishEncryptedEvent(
         content: responseJson,
         kind: NostrKind.recoveryResponse.value,
         recipientPubkey: request.initiatorPubkey,
@@ -1129,8 +1159,23 @@ class RecoveryService {
         ],
       );
 
-      if (eventId == null) {
+      if (publishedEvent == null) {
         throw Exception('Failed to publish recovery response event');
+      }
+      final eventId = publishedEvent.id;
+
+      // Best-effort push to the recovery initiator. Practice responses
+      // still deserve a push because the initiator is actively waiting;
+      // the body text says "sent a shard" / "approved" / "denied".
+      final vaultForPush = await repository.getVault(request.vaultId);
+      if (vaultForPush != null) {
+        await _notificationService.tryPushForEvent(
+          event: publishedEvent,
+          kind: NostrKind.recoveryResponse,
+          vault: vaultForPush,
+          relayHints: relays,
+          recoveryApproved: approved,
+        );
       }
 
       Log.info(

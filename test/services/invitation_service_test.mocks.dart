@@ -211,7 +211,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<String?>);
 
   @override
-  _i6.Future<String?> publishEncryptedEvent({
+  _i6.Future<_i2.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -232,11 +232,11 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i6.Future<_i2.Nip01Event?>.value(),
+      ) as _i6.Future<_i2.Nip01Event?>);
 
   @override
-  _i6.Future<List<String>> publishEncryptedEventToMultiple({
+  _i6.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -257,8 +257,8 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i6.Future<List<String>>.value(<String>[]),
-      ) as _i6.Future<List<String>>);
+        returnValue: _i6.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+      ) as _i6.Future<List<_i2.Nip01Event?>>);
 
   @override
   _i6.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(

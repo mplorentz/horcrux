@@ -5,11 +5,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/nostr_kinds.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import '../utils/push_notification_text.dart';
 import '../utils/validators.dart';
 import '../utils/nip98_auth.dart';
 import 'login_service.dart';
@@ -103,9 +106,10 @@ class HorcruxNotifierException implements Exception {
 /// - **Consent endpoints** -- [replaceConsents], [deleteConsent]. The
 ///   higher-level "derive the allowlist from vault relationships and sync"
 ///   helper lives in a later change.
-/// - **Push triggering** -- [push]. The higher-level `tryPushForEvent` that
-///   composes personalized text and embeds the gift-wrap event lives in a
-///   later change.
+/// - **Push triggering** -- [tryPushForEvent] is the high-level entry
+///   point: it checks opt-in/vault preferences, composes personalized
+///   text, embeds the gift wrap (or just its id when too large), and
+///   POSTs `/push`. [push] is the raw HTTP layer.
 ///
 /// The server URL defaults to [defaultBaseUrl] and can be overridden by the
 /// user via settings (persisted to [SharedPreferences] under
@@ -122,6 +126,13 @@ class HorcruxNotificationService {
   static const Duration _consentDebounce = Duration(milliseconds: 700);
 
   static const Duration _requestTimeout = Duration(seconds: 15);
+
+  /// Upper bound (in UTF-8 bytes) on the serialized gift wrap JSON we embed
+  /// inline on `/push`. Matches the notifier's hard cap on `event_json` and
+  /// leaves headroom inside the FCM data payload (~4 KB total budget) for
+  /// the surrounding envelope. Anything larger degrades to `event_id` +
+  /// `relay_hints` so the recipient can fetch on tap.
+  static const int maxEmbeddedEventBytes = 3072;
 
   final LoginService _loginService;
   final VaultRepository _vaultRepository;
@@ -362,10 +373,120 @@ class HorcruxNotificationService {
 
   // ---------------------------------------------------------------------------
   // Push triggering
-  //
-  // The higher-level `tryPushForEvent` that composes text and embeds the
-  // gift wrap lives in `p4-push-trigger`. This method is the raw HTTP layer.
   // ---------------------------------------------------------------------------
+
+  /// Best-effort push trigger for a freshly-published gift wrap event.
+  ///
+  /// Called from every gift-wrap publish site in the app (backup shard
+  /// distribution, recovery request, recovery response, shard confirmation).
+  /// The method is safe to fire-and-forget: it silently returns when push
+  /// isn't applicable and swallows every error from the notifier. The event
+  /// itself is already on Nostr, so a missed push is a UX degradation, not
+  /// a correctness failure.
+  ///
+  /// [event] is the signed gift wrap returned by
+  /// [NdkService.publishEncryptedEvent]; we forward it to the notifier
+  /// as-is and derive the recipient pubkey from its `p` tag.
+  ///
+  /// [kind] is the *inner rumor* kind (e.g. [NostrKind.shardData]), not the
+  /// gift wrap's outer kind (which is always 1059). The inner kind lives
+  /// inside the NIP-59-encrypted seal, so it can't be recovered from the
+  /// gift wrap without the recipient's key — callers have to pass it.
+  ///
+  /// The flow:
+  ///
+  /// 1. Bail if [vault].pushEnabled is false (owner opted this vault out).
+  /// 2. Bail if the user hasn't globally opted in to push.
+  /// 3. Resolve the current user as the notification sender (the outer gift
+  ///    wrap pubkey is ephemeral per NIP-59, so we use the signer's real
+  ///    pubkey to drive display-name resolution).
+  /// 4. Compose personalized `{title, body}` via [composeNotificationText].
+  ///    If the helper returns `null` for this [kind], we don't push.
+  /// 5. Serialize the event. If the JSON fits under [maxEmbeddedEventBytes]
+  ///    we embed it inline so the recipient can unwrap the event from the
+  ///    push payload without hitting a relay. Otherwise we attach only the
+  ///    event id + relay hints; the client will fetch on tap.
+  /// 6. POST `/push`. 4xx/5xx responses are logged and dropped.
+  ///
+  /// [recoveryApproved] is only meaningful for
+  /// [NostrKind.recoveryResponse]; pass `null` for every other kind.
+  Future<void> tryPushForEvent({
+    required Nip01Event event,
+    required NostrKind kind,
+    required Vault vault,
+    List<String>? relayHints,
+    bool? recoveryApproved,
+  }) async {
+    if (!vault.pushEnabled) {
+      Log.debug('HorcruxNotificationService: skipping push (vault.pushEnabled=false)');
+      return;
+    }
+    if (!await _isPushOptedIn()) {
+      Log.debug('HorcruxNotificationService: skipping push (user not opted in)');
+      return;
+    }
+
+    // Recipient lives in the gift wrap's `p` tag (NIP-59).
+    final recipientPubkey = _extractRecipientPubkey(event);
+    if (recipientPubkey == null) {
+      Log.warning(
+        'HorcruxNotificationService: skipping push (gift wrap missing `p` tag)',
+      );
+      return;
+    }
+
+    final senderPubkey = await _loginService.getCurrentPublicKey();
+    if (senderPubkey == null || !isValidHexPubkey(senderPubkey)) {
+      Log.debug('HorcruxNotificationService: skipping push (no current pubkey)');
+      return;
+    }
+
+    final text = composeNotificationText(
+      kind: kind,
+      vault: vault,
+      senderPubkey: senderPubkey,
+      recoveryApproved: recoveryApproved,
+    );
+    if (text == null) {
+      Log.debug('HorcruxNotificationService: no push text for kind ${kind.value}');
+      return;
+    }
+
+    final eventJson = event.toJson();
+    final encodedBytes = utf8.encode(jsonEncode(eventJson)).length;
+    final embedInline = encodedBytes <= maxEmbeddedEventBytes;
+
+    try {
+      await push(
+        recipientPubkey: recipientPubkey,
+        title: text.title,
+        body: text.body,
+        eventJson: embedInline ? eventJson : null,
+        eventId: embedInline ? null : event.id,
+        relayHints: embedInline ? null : relayHints,
+      );
+      Log.info(
+        'HorcruxNotificationService: pushed kind ${kind.value} '
+        '(${embedInline ? 'inline' : 'id-only'}) to recipient',
+      );
+    } catch (e, st) {
+      // Best-effort: swallow everything. The event is already live on
+      // Nostr, so a missed push is non-fatal.
+      Log.warning('HorcruxNotificationService: tryPushForEvent failed', e, st);
+    }
+  }
+
+  /// Reads the first `p` tag off a gift wrap (the NIP-59 recipient pubkey).
+  /// Returns null when absent or malformed; callers treat that as "skip push".
+  static String? _extractRecipientPubkey(Nip01Event event) {
+    for (final tag in event.tags) {
+      if (tag.length >= 2 && tag[0] == 'p') {
+        final value = tag[1];
+        if (isValidHexPubkey(value)) return value;
+      }
+    }
+    return null;
+  }
 
   /// Triggers an FCM/APNs push to [recipientPubkey] via the notifier.
   ///

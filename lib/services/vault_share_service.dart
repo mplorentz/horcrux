@@ -7,6 +7,7 @@ import '../models/shard_data.dart';
 import '../models/vault.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
+import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
 
@@ -14,7 +15,11 @@ import 'ndk_service.dart';
 /// This service depends on VaultRepository for shard management
 final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
-  return VaultShareService(repository, () => ref.read(ndkServiceProvider));
+  return VaultShareService(
+    repository,
+    () => ref.read(ndkServiceProvider),
+    () => ref.read(horcruxNotificationServiceProvider),
+  );
 });
 
 /// Service for managing vault shares and recovery operations
@@ -25,8 +30,13 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
 class VaultShareService {
   final VaultRepository repository;
   final NdkService Function() _getNdkService;
+  final HorcruxNotificationService Function() _getNotificationService;
 
-  VaultShareService(this.repository, this._getNdkService);
+  VaultShareService(
+    this.repository,
+    this._getNdkService,
+    this._getNotificationService,
+  );
   static const String _shardDataKey = 'shard_data';
   static const String _recoveryShardDataKey = 'recovery_shard_data';
 
@@ -316,14 +326,30 @@ class VaultShareService {
         tags.add(['distribution_version', distributionVersion.toString()]);
       }
 
-      // Publish using NdkService with empty content, all data in tags
-      return await ndkService.publishEncryptedEvent(
+      // Publish using NdkService with empty content, all data in tags.
+      // We reuse the signed event for the best-effort push so the notifier
+      // can forward it to the vault owner's device.
+      final publishedEvent = await ndkService.publishEncryptedEvent(
         content: '',
         kind: NostrKind.shardConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: tags,
       );
+
+      if (publishedEvent != null) {
+        final vaultForPush = await repository.getVault(vaultId);
+        if (vaultForPush != null) {
+          await _getNotificationService().tryPushForEvent(
+            event: publishedEvent,
+            kind: NostrKind.shardConfirmation,
+            vault: vaultForPush,
+            relayHints: relayUrls,
+          );
+        }
+      }
+
+      return publishedEvent?.id;
     } catch (e) {
       Log.error('Error sending shard confirmation event', e);
       return null;

@@ -900,6 +900,14 @@ void main() {
     });
   });
 
+  group('tryPushForEvent', () {
+    _tryPushForEventTests(
+      loginServiceOf: () => loginService,
+      vaultRepositoryOf: () => vaultRepository,
+      keyPairOf: () => keyPair,
+    );
+  });
+
   group('vault stream triggers debounced sync', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({
@@ -966,4 +974,239 @@ class SocketExceptionLike implements Exception {
   const SocketExceptionLike(this.message);
   @override
   String toString() => 'SocketException: $message';
+}
+
+void _tryPushForEventTests({
+  required MockLoginService Function() loginServiceOf,
+  required MockVaultRepository Function() vaultRepositoryOf,
+  required KeyPair Function() keyPairOf,
+}) {
+  // These tests exercise HorcruxNotificationService.tryPushForEvent, the
+  // high-level entry point that every gift-wrap publish site calls.
+  ({
+    HorcruxNotificationService service,
+    List<http.Request> received,
+    List<http.Response Function(http.Request)> responders,
+  }) buildPushService() {
+    final received = <http.Request>[];
+    final responders = <http.Response Function(http.Request)>[];
+    final client = MockClient((request) async {
+      received.add(request);
+      if (responders.isEmpty) {
+        return http.Response(
+          jsonEncode({'status': 'queued', 'fcm_message_id': 'id'}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return responders.removeAt(0)(request);
+    });
+    final service = HorcruxNotificationService(
+      loginService: loginServiceOf(),
+      vaultRepository: vaultRepositoryOf(),
+      httpClient: client,
+    );
+    return (service: service, received: received, responders: responders);
+  }
+
+  /// Synthesizes a plausible gift-wrap-shaped event. The `p` tag carries
+  /// the recipient pubkey that `tryPushForEvent` reads back for the push
+  /// payload, matching how NDK builds real NIP-59 gift wraps.
+  Nip01Event buildGiftWrap({
+    String content = 'ciphertext',
+    String recipientPubkey = TestHexPubkeys.bob,
+  }) {
+    return Nip01Event(
+      kind: NostrKind.giftWrap.value,
+      pubKey: 'a' * 64,
+      content: content,
+      tags: [
+        ['p', recipientPubkey],
+      ],
+      createdAt: 1700000000,
+    );
+  }
+
+  Vault buildVault({bool pushEnabled = true, String? name}) {
+    return Vault(
+      id: 'vault-push-1',
+      name: name ?? 'Family Vault',
+      content: 'decrypted',
+      createdAt: DateTime.utc(2024, 1, 1),
+      ownerPubkey: TestHexPubkeys.alice,
+      pushEnabled: pushEnabled,
+    );
+  }
+
+  test('skips push when vault.pushEnabled is false', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: true,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    when(
+      loginServiceOf().getCurrentPublicKey(),
+    ).thenAnswer((_) async => keyPairOf().publicKey);
+
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(),
+      kind: NostrKind.recoveryRequest,
+      vault: buildVault(pushEnabled: false),
+    );
+
+    expect(harness.received, isEmpty);
+  });
+
+  test('skips push when the user has not opted in', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: false,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    when(
+      loginServiceOf().getCurrentPublicKey(),
+    ).thenAnswer((_) async => keyPairOf().publicKey);
+
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(),
+      kind: NostrKind.recoveryRequest,
+      vault: buildVault(),
+    );
+
+    expect(harness.received, isEmpty);
+  });
+
+  test('skips push when there is no current pubkey', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: true,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    when(loginServiceOf().getCurrentPublicKey()).thenAnswer((_) async => null);
+
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(),
+      kind: NostrKind.recoveryRequest,
+      vault: buildVault(),
+    );
+
+    expect(harness.received, isEmpty);
+  });
+
+  test(
+    'embeds event JSON inline when payload is under the size threshold',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        PushNotificationReceiver.optInFlagKey: true,
+      });
+      final harness = buildPushService();
+      addTearDown(harness.service.dispose);
+      when(
+        loginServiceOf().getCurrentPublicKey(),
+      ).thenAnswer((_) async => keyPairOf().publicKey);
+
+      final event = buildGiftWrap();
+      await harness.service.tryPushForEvent(
+        event: event,
+        kind: NostrKind.recoveryRequest,
+        vault: buildVault(name: 'Family Vault'),
+        relayHints: const ['wss://relay.example.com'],
+      );
+
+      expect(harness.received, hasLength(1));
+      final body = json.decode(harness.received.single.body) as Map<String, dynamic>;
+      expect(body['recipient_pubkey'], TestHexPubkeys.bob);
+      expect(body['title'], isA<String>());
+      expect(body['body'], isA<String>());
+      expect(body.containsKey('event_json'), isTrue);
+      expect(body.containsKey('event_id'), isFalse);
+      expect(body.containsKey('relay_hints'), isFalse);
+      final embedded = body['event_json'] as Map<String, dynamic>;
+      expect(embedded['kind'], NostrKind.giftWrap.value);
+      expect(embedded['content'], event.content);
+    },
+  );
+
+  test(
+    'falls back to event_id + relay hints when payload exceeds the size threshold',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        PushNotificationReceiver.optInFlagKey: true,
+      });
+      final harness = buildPushService();
+      addTearDown(harness.service.dispose);
+      when(
+        loginServiceOf().getCurrentPublicKey(),
+      ).thenAnswer((_) async => keyPairOf().publicKey);
+
+      // Oversize ciphertext forces the service down the id+hints path.
+      final bigEvent = buildGiftWrap(
+        content: 'x' * (HorcruxNotificationService.maxEmbeddedEventBytes + 1),
+      );
+      await harness.service.tryPushForEvent(
+        event: bigEvent,
+        kind: NostrKind.recoveryRequest,
+        vault: buildVault(),
+        relayHints: const ['wss://relay.example.com'],
+      );
+
+      expect(harness.received, hasLength(1));
+      final body = json.decode(harness.received.single.body) as Map<String, dynamic>;
+      expect(body.containsKey('event_json'), isFalse);
+      expect(body['event_id'], bigEvent.id);
+      expect(body['relay_hints'], ['wss://relay.example.com']);
+    },
+  );
+
+  test('swallows notifier errors (best-effort semantics)', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: true,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    harness.responders.add(
+      (_) => http.Response(
+        jsonEncode({'error': 'server went splat'}),
+        500,
+        headers: {'content-type': 'application/json'},
+      ),
+    );
+    when(
+      loginServiceOf().getCurrentPublicKey(),
+    ).thenAnswer((_) async => keyPairOf().publicKey);
+
+    // Must not throw.
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(),
+      kind: NostrKind.recoveryRequest,
+      vault: buildVault(),
+    );
+
+    expect(harness.received, hasLength(1));
+  });
+
+  test('passes recoveryApproved to text composition for recoveryResponse', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: true,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    when(
+      loginServiceOf().getCurrentPublicKey(),
+    ).thenAnswer((_) async => keyPairOf().publicKey);
+
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(),
+      kind: NostrKind.recoveryResponse,
+      vault: buildVault(name: 'Family Vault'),
+      recoveryApproved: false,
+    );
+
+    expect(harness.received, hasLength(1));
+    final body = json.decode(harness.received.single.body) as Map<String, dynamic>;
+    // Denied recoveries use a distinct copy from approvals. We only care
+    // that composeNotificationText was consulted with the flag, not about
+    // the exact wording.
+    expect(body['title'], isNot(contains('approved')));
+  });
 }
