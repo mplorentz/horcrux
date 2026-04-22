@@ -296,6 +296,91 @@ class NdkService {
     await _handleIncomingNostrEvent(event, relayUrl: _fcmForegroundPushRelayUrl);
   }
 
+  /// Fetches a kind-1059 gift wrap by [eventIdHex] using [relayHints] first, then
+  /// any [getActiveRelays] entries — for FCM payloads that omit inline `event_json`.
+  Future<Nip01Event?> fetchGiftWrapByIdForPush({
+    required String eventIdHex,
+    List<String>? relayHints,
+  }) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+
+    final relays = <String>{
+      ...?relayHints,
+      ..._activeRelays,
+    }.toList();
+    if (relays.isEmpty) {
+      Log.warning(
+        'fetchGiftWrapByIdForPush: no relays (empty hints and no active subscriptions)',
+      );
+      return null;
+    }
+
+    try {
+      final filter = Filter(
+        kinds: [NostrKind.giftWrap.value],
+        ids: [eventIdHex],
+      );
+      final response = _ndk!.requests.query(
+        filters: [filter],
+        explicitRelays: relays,
+      );
+      final events = await response.future;
+      if (events.isEmpty) {
+        Log.warning('fetchGiftWrapByIdForPush: relay returned no events for $eventIdHex');
+        return null;
+      }
+      for (final e in events) {
+        if (e.id == eventIdHex) return e;
+      }
+      return events.first;
+    } catch (e, st) {
+      Log.warning('fetchGiftWrapByIdForPush failed', e, st);
+      return null;
+    }
+  }
+
+  /// Best-effort [Vault.id] for navigation after a push — unwraps once and reads
+  /// inner JSON/tags. Returns `null` when unknown or unwrap fails.
+  Future<String?> resolveVaultIdForGiftWrap(Nip01Event giftWrap) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+    try {
+      final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
+      switch (inner.kind) {
+        case 1337: // [NostrKind.shardData]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vaultId'] as String? ?? m['vault_id'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1338: // [NostrKind.recoveryRequest]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vault_id'] as String? ?? m['vaultId'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1339: // [NostrKind.recoveryResponse]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vault_id'] as String? ?? m['vaultId'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1342: // [NostrKind.shardConfirmation]
+          return _firstTagValue(inner.tags, 'vault_id');
+        default:
+          return null;
+      }
+    } catch (e, st) {
+      Log.debug('resolveVaultIdForGiftWrap failed', e, st);
+      return null;
+    }
+  }
+
+  String? _firstTagValue(List<List<String>> tags, String name) {
+    for (final t in tags) {
+      if (t.length >= 2 && t[0] == name) {
+        final v = t[1];
+        return v.isEmpty ? null : v;
+      }
+    }
+    return null;
+  }
+
   /// Handle incoming Nostr events
   /// Routes to appropriate handler based on the inner kind.
   Future<void> _handleIncomingNostrEvent(

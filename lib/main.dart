@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
 import 'services/logger.dart';
@@ -16,8 +17,6 @@ import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/app_initialization.dart';
 import 'widgets/theme.dart';
-
-final navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // Initialize Marionette only in debug mode

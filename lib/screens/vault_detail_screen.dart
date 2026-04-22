@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../main.dart';
+import '../app_navigator.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';

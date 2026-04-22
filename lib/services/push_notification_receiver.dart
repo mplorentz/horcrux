@@ -5,11 +5,14 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app_navigator.dart';
 import '../firebase_options.dart';
+import '../screens/vault_detail_screen.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
@@ -58,6 +61,7 @@ class PushNotificationReceiver {
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _openedAppSubscription;
   String? _cachedToken;
   String? _lastRegisteredToken;
   bool _initialized = false;
@@ -117,6 +121,7 @@ class PushNotificationReceiver {
       await _registerWithNotifierIfNeeded(force: true);
       await _notifierService.syncConsentList();
       await _setOptInFlag(true);
+      await _processLaunchNotificationIfAny();
       Log.info('PushNotificationReceiver: user opted in to push notifications');
       return true;
     } catch (e, st) {
@@ -152,6 +157,8 @@ class PushNotificationReceiver {
     _tokenRefreshSubscription = null;
     await _foregroundMessageSubscription?.cancel();
     _foregroundMessageSubscription = null;
+    await _openedAppSubscription?.cancel();
+    _openedAppSubscription = null;
     _cachedToken = null;
     _lastRegisteredToken = null;
     _initialized = false;
@@ -172,6 +179,7 @@ class PushNotificationReceiver {
       await _initializeMessaging();
       await _fetchAndStoreToken();
       await _registerWithNotifierIfNeeded();
+      await _processLaunchNotificationIfAny();
     } catch (e, st) {
       Log.warning('PushNotificationReceiver: maybeInitialize failed', e, st);
     }
@@ -197,6 +205,7 @@ class PushNotificationReceiver {
     await _loadCachedToken();
     _subscribeToTokenRefreshes();
     _subscribeToForegroundMessages();
+    _subscribeToNotificationOpens();
     _initialized = true;
     Log.info('PushNotificationReceiver initialized');
   }
@@ -329,6 +338,91 @@ class PushNotificationReceiver {
     );
   }
 
+  void _subscribeToNotificationOpens() {
+    if (_messaging == null) return;
+    _openedAppSubscription?.cancel();
+    _openedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
+      (RemoteMessage message) {
+        unawaited(_onPushNotificationOpened(message));
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        Log.warning('FCM onMessageOpenedApp error', error, stackTrace);
+      },
+    );
+  }
+
+  /// Cold-start: user opened the app by tapping a notification.
+  Future<void> _processLaunchNotificationIfAny() async {
+    final messaging = _messaging;
+    if (messaging == null) return;
+    try {
+      final initial = await messaging.getInitialMessage();
+      if (initial != null) {
+        await _onPushNotificationOpened(initial);
+      }
+    } catch (e, st) {
+      Log.warning('PushNotificationReceiver: getInitialMessage failed', e, st);
+    }
+  }
+
+  Future<void> _onPushNotificationOpened(RemoteMessage message) async {
+    Log.info(
+      'FCM notification open: messageId=${message.messageId}, data=${message.data}',
+    );
+
+    Nip01Event? giftWrap;
+    final embedded = parseFcmEmbeddedEventJson(message.data);
+    if (embedded != null) {
+      try {
+        giftWrap = Nip01Event.fromJson(embedded);
+      } catch (e, st) {
+        Log.warning('FCM tap: invalid embedded event_json', e, st);
+        return;
+      }
+    } else {
+      final eventId = parseFcmEventId(message.data);
+      if (eventId == null || eventId.isEmpty) {
+        Log.warning('FCM tap: no event_json and no event_id');
+        return;
+      }
+      final hints = parseFcmRelayHints(message.data);
+      giftWrap = await _ndkService.fetchGiftWrapByIdForPush(
+        eventIdHex: eventId,
+        relayHints: hints,
+      );
+      if (giftWrap == null) {
+        Log.warning('FCM tap: could not fetch gift wrap for $eventId');
+        return;
+      }
+    }
+
+    final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
+    try {
+      await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
+    } catch (e, st) {
+      Log.warning('FCM tap: gift wrap processing failed', e, st);
+    }
+    if (vaultId != null) {
+      await _navigateToVaultWhenReady(vaultId);
+    }
+  }
+
+  Future<void> _navigateToVaultWhenReady(String vaultId) async {
+    for (var i = 0; i < 40; i++) {
+      final nav = navigatorKey.currentState;
+      if (nav != null && nav.mounted) {
+        await nav.push(
+          MaterialPageRoute<void>(
+            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+          ),
+        );
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    Log.warning('FCM tap: navigator not ready; skipped navigation to vault $vaultId');
+  }
+
   Future<void> _onForegroundRemoteMessage(RemoteMessage message) async {
     Log.info(
       'FCM foreground message received: messageId=${message.messageId}, '
@@ -389,6 +483,8 @@ class PushNotificationReceiver {
     _tokenRefreshSubscription = null;
     _foregroundMessageSubscription?.cancel();
     _foregroundMessageSubscription = null;
+    _openedAppSubscription?.cancel();
+    _openedAppSubscription = null;
   }
 }
 
@@ -409,6 +505,34 @@ Map<String, dynamic>? parseFcmEmbeddedEventJson(Map<String, dynamic> data) {
       final decoded = json.decode(raw);
       if (decoded is Map<String, dynamic>) return decoded;
       if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+  }
+  return null;
+}
+
+/// Parses `event_id` (hex) from FCM [RemoteMessage.data] for id-only pushes.
+@visibleForTesting
+String? parseFcmEventId(Map<String, dynamic> data) {
+  final raw = data['event_id'];
+  if (raw == null) return null;
+  final s = raw is String ? raw : raw.toString();
+  return s.isEmpty ? null : s;
+}
+
+/// Parses `relay_hints` as a JSON array or list of relay URLs.
+@visibleForTesting
+List<String>? parseFcmRelayHints(Map<String, dynamic> data) {
+  final raw = data['relay_hints'];
+  if (raw == null) return null;
+  if (raw is List) {
+    return raw.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+      }
     } catch (_) {}
   }
   return null;

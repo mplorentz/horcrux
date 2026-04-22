@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../main.dart';
+import '../app_navigator.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';

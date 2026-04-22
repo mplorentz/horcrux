@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../main.dart';
+import '../app_navigator.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../providers/vault_provider.dart';
