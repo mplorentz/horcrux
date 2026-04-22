@@ -240,6 +240,17 @@ class HorcruxNotificationService {
     );
   }
 
+  /// Syncs the consent allowlist to the notifier.
+  ///
+  /// Full derivation from vault relationships is implemented in `p4-consent-sync`.
+  /// For now this keeps the opt-in flow stable and explicitly performs no network
+  /// mutation.
+  Future<void> syncConsentList() async {
+    Log.debug(
+      'HorcruxNotificationService: syncConsentList is not yet wired to relationship derivation',
+    );
+  }
+
   /// Removes a single sender from the caller's consent allowlist.
   ///
   /// Treats 404 as success (the entry was already absent).

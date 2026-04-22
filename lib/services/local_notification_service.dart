@@ -58,7 +58,7 @@ class LocalNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    await _requestPlatformNotificationPermissions();
+    await requestPlatformNotificationPermissions();
 
     Log.info('LocalNotificationService initialized');
   }
@@ -78,12 +78,15 @@ class LocalNotificationService {
   /// - **Android 13+:** `POST_NOTIFICATIONS` runtime dialog via the plugin. On older Android,
   ///   notifications are allowed by default (result may be null).
   /// - **iOS / macOS:** Requests alert, badge, and sound via the plugin.
-  Future<void> _requestPlatformNotificationPermissions() async {
+  Future<bool> requestPlatformNotificationPermissions() async {
+    var anyPromptFailed = false;
+
     final android =
         _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     final androidGranted = await android?.requestNotificationsPermission();
     if (androidGranted != null) {
       Log.info('Android POST_NOTIFICATIONS granted: $androidGranted');
+      if (!androidGranted) anyPromptFailed = true;
     }
 
     final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
@@ -94,6 +97,7 @@ class LocalNotificationService {
     );
     if (iosGranted != null) {
       Log.info('iOS notification permissions granted: $iosGranted');
+      if (!iosGranted) anyPromptFailed = true;
     }
 
     final macOS =
@@ -105,7 +109,10 @@ class LocalNotificationService {
     );
     if (macGranted != null) {
       Log.info('macOS notification permissions granted: $macGranted');
+      if (!macGranted) anyPromptFailed = true;
     }
+
+    return !anyPromptFailed;
   }
 
   Future<void> _showRecoveryRequestNotification(RecoveryRequest request) async {

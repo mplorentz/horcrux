@@ -1,17 +1,24 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../firebase_options.dart';
+import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
 
 final pushNotificationReceiverProvider = Provider<PushNotificationReceiver>((ref) {
   final localNotifications = ref.watch(localNotificationServiceProvider);
-  final receiver = PushNotificationReceiver(localNotifications: localNotifications);
+  final notifierService = ref.watch(horcruxNotificationServiceProvider);
+  final receiver = PushNotificationReceiver(
+    localNotifications: localNotifications,
+    notifierService: notifierService,
+  );
   ref.onDispose(() => receiver.dispose());
   return receiver;
 });
@@ -37,17 +44,23 @@ class PushNotificationReceiver {
 
   static const _fcmTokenKey = 'fcm_device_token';
   static const _fcmTokenUpdatedAtKey = 'fcm_device_token_updated_at';
+  static const _registeredFcmTokenKey = 'fcm_registered_token';
 
   final LocalNotificationService _localNotifications;
+  final HorcruxNotificationService _notifierService;
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   String? _cachedToken;
+  String? _lastRegisteredToken;
   bool _initialized = false;
 
-  PushNotificationReceiver({required LocalNotificationService localNotifications})
-      : _localNotifications = localNotifications;
+  PushNotificationReceiver({
+    required LocalNotificationService localNotifications,
+    required HorcruxNotificationService notifierService,
+  })  : _localNotifications = localNotifications,
+        _notifierService = notifierService;
 
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
@@ -59,13 +72,109 @@ class PushNotificationReceiver {
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
-  Future<void> initialize() async {
-    if (_initialized) return;
+  /// Returns whether the user has globally opted into push notifications.
+  Future<bool> isOptedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(optInFlagKey) ?? false;
+  }
+
+  /// Global push opt-in flow.
+  ///
+  /// Initializes Firebase lazily, requests permission, obtains an FCM token,
+  /// registers this device with horcrux-notifier, and syncs consent state.
+  /// Returns `true` on success, `false` if permission is denied or setup fails.
+  Future<bool> optIn() async {
     if (!isSupported) {
-      Log.info('PushNotificationReceiver: platform unsupported, skipping FCM init');
-      return;
+      Log.info('PushNotificationReceiver: push unsupported on this platform');
+      return false;
     }
 
+    try {
+      await _ensureFirebaseInitialized();
+      await _initializeMessaging();
+
+      final messaging = _messaging;
+      if (messaging == null) {
+        Log.warning('PushNotificationReceiver: messaging unavailable after init');
+        return false;
+      }
+
+      final granted = await _localNotifications.requestPlatformNotificationPermissions();
+      if (!granted) {
+        Log.info('PushNotificationReceiver: notification permission not granted');
+        return false;
+      }
+
+      await _fetchAndStoreToken();
+      await _registerWithNotifierIfNeeded(force: true);
+      await _notifierService.syncConsentList();
+      await _setOptInFlag(true);
+      Log.info('PushNotificationReceiver: user opted in to push notifications');
+      return true;
+    } catch (e, st) {
+      Log.warning('PushNotificationReceiver: optIn failed', e, st);
+      return false;
+    }
+  }
+
+  /// Global push opt-out flow.
+  ///
+  /// Best-effort deregisters with horcrux-notifier and then clears all local
+  /// FCM state regardless of network conditions.
+  Future<void> optOut() async {
+    try {
+      await _notifierService.deregister();
+    } catch (e, st) {
+      Log.warning('PushNotificationReceiver: notifier deregister failed', e, st);
+    }
+
+    try {
+      final messaging = _messaging;
+      if (messaging != null) {
+        await messaging.deleteToken();
+      }
+    } catch (e, st) {
+      Log.warning('PushNotificationReceiver: failed to delete FCM token', e, st);
+    }
+
+    await _clearPersistedTokenState();
+    await _setOptInFlag(false);
+
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+    await _foregroundMessageSubscription?.cancel();
+    _foregroundMessageSubscription = null;
+    _cachedToken = null;
+    _lastRegisteredToken = null;
+    _initialized = false;
+
+    Log.info('PushNotificationReceiver: user opted out of push notifications');
+  }
+
+  /// Startup path for push initialization.
+  ///
+  /// No-ops unless the global opt-in flag is set. Keeps token/registration
+  /// current across launches.
+  Future<void> maybeInitialize() async {
+    if (!isSupported) return;
+    if (!await isOptedIn()) return;
+
+    try {
+      await _ensureFirebaseInitialized();
+      await _initializeMessaging();
+      await _fetchAndStoreToken();
+      await _registerWithNotifierIfNeeded();
+    } catch (e, st) {
+      Log.warning('PushNotificationReceiver: maybeInitialize failed', e, st);
+    }
+  }
+
+  Future<void> initialize() async {
+    await maybeInitialize();
+  }
+
+  Future<void> _initializeMessaging() async {
+    if (_initialized) return;
     try {
       _messaging = FirebaseMessaging.instance;
     } catch (e, st) {
@@ -78,18 +187,22 @@ class PushNotificationReceiver {
     }
 
     await _loadCachedToken();
-    await _fetchAndStoreToken();
     _subscribeToTokenRefreshes();
     _subscribeToForegroundMessages();
-
     _initialized = true;
     Log.info('PushNotificationReceiver initialized');
+  }
+
+  Future<void> _ensureFirebaseInitialized() async {
+    if (Firebase.apps.isNotEmpty) return;
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 
   Future<void> _loadCachedToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _cachedToken = prefs.getString(_fcmTokenKey);
+      _lastRegisteredToken = prefs.getString(_registeredFcmTokenKey);
       if (_cachedToken != null) {
         Log.debug('Loaded cached FCM token from SharedPreferences');
       }
@@ -147,12 +260,54 @@ class PushNotificationReceiver {
       (fcmToken) async {
         Log.info('FCM token refreshed');
         await _persistToken(fcmToken);
+        await _registerWithNotifierIfNeeded();
         _logTokenForTesting(fcmToken);
       },
       onError: (Object error, StackTrace stackTrace) {
         Log.warning('FCM onTokenRefresh error', error, stackTrace);
       },
     );
+  }
+
+  Future<void> _registerWithNotifierIfNeeded({bool force = false}) async {
+    final token = _cachedToken;
+    if (token == null || token.isEmpty) return;
+
+    final platform = NotifierPlatform.currentDevice();
+    if (platform == null) {
+      Log.info(
+        'PushNotificationReceiver: notifier registration skipped on unsupported platform',
+      );
+      return;
+    }
+
+    if (!force && token == _lastRegisteredToken) return;
+
+    await _notifierService.register(fcmToken: token, platform: platform);
+    _lastRegisteredToken = token;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_registeredFcmTokenKey, token);
+    } catch (e, st) {
+      Log.warning('Failed to persist registered FCM token', e, st);
+    }
+  }
+
+  Future<void> _setOptInFlag(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(optInFlagKey, value);
+  }
+
+  Future<void> _clearPersistedTokenState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_fcmTokenKey);
+      await prefs.remove(_fcmTokenUpdatedAtKey);
+      await prefs.remove(_registeredFcmTokenKey);
+    } catch (e, st) {
+      Log.warning('Failed to clear persisted FCM token state', e, st);
+    }
   }
 
   void _subscribeToForegroundMessages() {

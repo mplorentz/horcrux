@@ -3,6 +3,7 @@ import '../main.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';
+import '../services/push_notification_receiver.dart';
 import '../services/recovery_service.dart';
 import '../services/relay_scan_service.dart';
 
@@ -33,6 +34,7 @@ Future<void> initializeAppServices(
   // opts into push notifications at vault creation, invitation acceptance,
   // or from settings. See [PushNotificationReceiver.optIn]. Users who haven't
   // opted in never have Firebase initialized on their device.
+  await ref.read(pushNotificationReceiverProvider).maybeInitialize();
 
   // Recovery dedupe + notification timeline before relay traffic.
   await ref.read(recoveryServiceProvider).initialize();
