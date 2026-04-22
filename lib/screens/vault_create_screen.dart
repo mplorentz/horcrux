@@ -4,7 +4,6 @@ import '../widgets/row_button.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../services/push_notification_receiver.dart';
 import 'backup_config_screen.dart';
 import 'vault_list_screen.dart';
 
@@ -31,7 +30,10 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   final _ownerNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  /// When true, new vaults use [Vault.pushEnabled] and we prompt for global push opt-in if needed.
+  /// When true, new vaults use [Vault.pushEnabled]. The owner-side OS
+  /// permission prompt is deferred until they navigate away from the vault
+  /// or recovery plan screen, so we don't pop an OS dialog during the
+  /// initial vault creation tap.
   bool _alertStewardsWithPush = true;
 
   @override
@@ -111,23 +113,6 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
 
   Future<void> _saveVault() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_alertStewardsWithPush && PushNotificationReceiver.isSupported) {
-      final pushReceiver = ref.read(pushNotificationReceiverProvider);
-      if (!await pushReceiver.isOptedIn()) {
-        final optedIn = await pushReceiver.optIn();
-        if (!optedIn && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Push permission was not granted. Stewards will not receive device '
-                'alerts until you enable push in Settings.',
-              ),
-            ),
-          );
-        }
-      }
-    }
 
     final vaultId = await saveVault(
       formKey: _formKey,

@@ -11,6 +11,7 @@ import 'package:horcrux/models/vault.dart' as _i10;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
 import 'package:horcrux/services/login_service.dart' as _i4;
 import 'package:horcrux/services/ndk_service.dart' as _i7;
+import 'package:horcrux/services/push_notification_receiver.dart' as _i12;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:ndk/ndk.dart' as _i3;
@@ -309,6 +310,42 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> processGiftWrapFromForegroundPush(_i3.Nip01Event? event) => (super.noSuchMethod(
+        Invocation.method(
+          #processGiftWrapFromForegroundPush,
+          [event],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<_i3.Nip01Event?> fetchGiftWrapByIdForPush({
+    required String? eventIdHex,
+    List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchGiftWrapByIdForPush,
+          [],
+          {
+            #eventIdHex: eventIdHex,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i5.Future<_i3.Nip01Event?>.value(),
+      ) as _i5.Future<_i3.Nip01Event?>);
+
+  @override
+  _i5.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
+        Invocation.method(
+          #resolveVaultIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
 
   @override
   _i5.Future<String?> publishRecoveryRequest({
@@ -634,6 +671,72 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
             #eventId: eventId,
             #relayHints: relayHints,
           },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [PushNotificationReceiver].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockPushNotificationReceiver extends _i1.Mock implements _i12.PushNotificationReceiver {
+  MockPushNotificationReceiver() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i5.Future<bool> isOptedIn() => (super.noSuchMethod(
+        Invocation.method(
+          #isOptedIn,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> optIn() => (super.noSuchMethod(
+        Invocation.method(
+          #optIn,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> optOut() => (super.noSuchMethod(
+        Invocation.method(
+          #optOut,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> maybeInitialize() => (super.noSuchMethod(
+        Invocation.method(
+          #maybeInitialize,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> initialize() => (super.noSuchMethod(
+        Invocation.method(
+          #initialize,
+          [],
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),

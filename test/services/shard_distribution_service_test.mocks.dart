@@ -1269,6 +1269,42 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> processGiftWrapFromForegroundPush(_i2.Nip01Event? event) => (super.noSuchMethod(
+        Invocation.method(
+          #processGiftWrapFromForegroundPush,
+          [event],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<_i2.Nip01Event?> fetchGiftWrapByIdForPush({
+    required String? eventIdHex,
+    List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchGiftWrapByIdForPush,
+          [],
+          {
+            #eventIdHex: eventIdHex,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i4.Future<_i2.Nip01Event?>.value(),
+      ) as _i4.Future<_i2.Nip01Event?>);
+
+  @override
+  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+        Invocation.method(
+          #resolveVaultIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i4.Future<String?>.value(),
+      ) as _i4.Future<String?>);
+
+  @override
   _i4.Future<String?> publishRecoveryRequest({
     required String? vaultId,
     required List<String>? stewardPubkeys,

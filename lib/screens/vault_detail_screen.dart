@@ -5,6 +5,7 @@ import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
+import '../utils/owner_push_opt_in_prompt.dart';
 import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
 import '../widgets/vault_status_banner.dart';
@@ -63,6 +64,28 @@ class VaultDetailScreen extends ConsumerWidget {
   Widget _buildVaultDetail(BuildContext context, WidgetRef ref, Vault vault) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await maybePromptOwnerForVaultPush(
+          context: context,
+          ref: ref,
+          vaultId: vault.id,
+        );
+        if (!context.mounted) return;
+        Navigator.of(context).pop(result);
+      },
+      child: _buildScaffold(context, ref, vault, currentPubkeyAsync),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    WidgetRef ref,
+    Vault vault,
+    AsyncValue<String?> currentPubkeyAsync,
+  ) {
     return HorcruxScaffold(
       showNotificationBanner: true,
       appBar: AppBar(

@@ -10,6 +10,7 @@ import '../providers/vault_provider.dart';
 import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
+import 'push_notification_receiver.dart';
 
 /// Provider for VaultShareService
 /// This service depends on VaultRepository for shard management
@@ -19,6 +20,7 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
     repository,
     () => ref.read(ndkServiceProvider),
     () => ref.read(horcruxNotificationServiceProvider),
+    () => ref.read(pushNotificationReceiverProvider),
   );
 });
 
@@ -31,11 +33,13 @@ class VaultShareService {
   final VaultRepository repository;
   final NdkService Function() _getNdkService;
   final HorcruxNotificationService Function() _getNotificationService;
+  final PushNotificationReceiver Function() _getPushReceiver;
 
   VaultShareService(
     this.repository,
     this._getNdkService,
     this._getNotificationService,
+    this._getPushReceiver,
   );
   static const String _shardDataKey = 'shard_data';
   static const String _recoveryShardDataKey = 'recovery_shard_data';
@@ -247,6 +251,20 @@ class VaultShareService {
 
     // Store the shard first
     await addVaultShare(vaultId, shardData);
+
+    // Stewards opt into push globally (not per invitation URL). When the owner
+    // distributes with push enabled on the shard, prompt once for device
+    // permission + notifier registration if not already opted in.
+    if (shardData.pushEnabled == true && PushNotificationReceiver.isSupported) {
+      try {
+        final receiver = _getPushReceiver();
+        if (!await receiver.isOptedIn()) {
+          await receiver.optIn();
+        }
+      } catch (e, st) {
+        Log.warning('Steward push opt-in after shard delivery failed', e, st);
+      }
+    }
 
     // Send shard confirmation event after successfully storing the shard
     // This is required for invitation flow - the owner needs to know the invitee received the shard

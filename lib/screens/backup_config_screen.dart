@@ -14,6 +14,7 @@ import '../services/invitation_sending_service.dart';
 import '../services/logger.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import '../utils/owner_push_opt_in_prompt.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -258,9 +259,14 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
 
     return PopScope(
-      canPop: !_hasUnsavedChanges,
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+
+        if (!_hasUnsavedChanges) {
+          await _popWithOwnerPushPrompt();
+          return;
+        }
 
         final dialogResult = await showDialog<String>(
           context: context,
@@ -289,7 +295,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (dialogResult == 'save') {
           await _saveBackup();
         } else if (dialogResult == 'discard') {
-          Navigator.of(context).pop();
+          await _popWithOwnerPushPrompt();
         }
       },
       child: HorcruxScaffold(
@@ -584,6 +590,19 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
   bool _canCreateBackup() {
     return _stewards.isNotEmpty && _relays.isNotEmpty;
+  }
+
+  /// Runs the owner push opt-in nudge (a no-op when the user is not the
+  /// owner, the vault doesn't have push enabled, or they've already been
+  /// prompted) and then pops this screen with [result].
+  Future<void> _popWithOwnerPushPrompt([Object? result]) async {
+    await maybePromptOwnerForVaultPush(
+      context: context,
+      ref: ref,
+      vaultId: widget.vaultId,
+    );
+    if (!mounted) return;
+    Navigator.of(context).pop(result);
   }
 
   Future<void> _addRelay() async {
@@ -1344,21 +1363,19 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         } else if (result == 'discard') {
           await _restoreInitialConfig();
           if (!mounted) return;
-          // Pop with vaultId so the vault detail screen is shown
-          Navigator.of(context).pop(widget.vaultId);
+          await _popWithOwnerPushPrompt(widget.vaultId);
         }
       } else {
-        // Pop with vaultId so the vault detail screen is shown
-        Navigator.of(context).pop(widget.vaultId);
+        await _popWithOwnerPushPrompt(widget.vaultId);
       }
     }
   }
 
   /// Skip saving backup config (when no stewards are configured)
   /// Just navigates without saving any backup configuration
-  void _handleSkip() {
+  Future<void> _handleSkip() async {
     if (!mounted) return;
-    Navigator.pop(context, widget.vaultId);
+    await _popWithOwnerPushPrompt(widget.vaultId);
   }
 
   Future<void> _saveBackup() async {
@@ -1484,9 +1501,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
 
         if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (mounted) {
-              Navigator.pop(context, widget.vaultId);
+              await _popWithOwnerPushPrompt(widget.vaultId);
             }
           });
         }
