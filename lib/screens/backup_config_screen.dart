@@ -58,6 +58,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   BackupConfig? _initialBackupConfig;
   StreamSubscription<void>? _invitationSubscription;
 
+  /// Per-vault push (see [Vault.pushEnabled]), configurable on this screen.
+  bool _alertStewardsWithPush = true;
+  bool _initialPushEnabled = true;
+
   @override
   void initState() {
     super.initState();
@@ -211,6 +215,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     try {
       final repository = ref.read(vaultRepositoryProvider);
       final existingConfig = await repository.getBackupConfig(widget.vaultId);
+      final vault = await repository.getVault(widget.vaultId);
+      final pushEnabled = vault?.pushEnabled ?? true;
 
       if (existingConfig != null && mounted) {
         _initialBackupConfig = backupConfigFromJson(backupConfigToJson(existingConfig));
@@ -227,6 +233,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _thresholdManuallyChanged = true; // Existing plan means threshold was already set
           // Check if owner is already included as a steward
           _includeSelfAsSteward = hasOwnerSteward(existingConfig);
+          _alertStewardsWithPush = pushEnabled;
+          _initialPushEnabled = pushEnabled;
         });
 
         // Load existing invitations and match them to stewards
@@ -237,6 +245,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           setState(() {
             _isLoading = false;
             _isEditingExistingPlan = false; // We're creating a new plan
+            _alertStewardsWithPush = pushEnabled;
+            _initialPushEnabled = pushEnabled;
           });
         }
       }
@@ -382,6 +392,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                         ),
                                       ),
                                       Switch(
+                                        key: const ValueKey('self_steward_switch'),
                                         value: _includeSelfAsSteward,
                                         onChanged: _handleSelfStewardToggle,
                                       ),
@@ -460,6 +471,13 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                             setState(() {
                               _threshold = newThreshold;
                               _thresholdManuallyChanged = true; // Mark as manually changed
+                              _hasUnsavedChanges = true;
+                            });
+                          },
+                          alertStewardsWithPush: _alertStewardsWithPush,
+                          onAlertStewardsWithPushChanged: (v) {
+                            setState(() {
+                              _alertStewardsWithPush = v;
                               _hasUnsavedChanges = true;
                             });
                           },
@@ -571,9 +589,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             RowButtonStack(
               buttons: [
                 RowButtonConfig(onPressed: _handleCancel, icon: Icons.close, text: 'Cancel'),
-                // Show Skip if no stewards, Save otherwise
                 if (_stewards.isEmpty)
-                  RowButtonConfig(onPressed: _handleSkip, icon: Icons.skip_next, text: 'Skip')
+                  RowButtonConfig(onPressed: _handleSkip, icon: Icons.save, text: 'Save')
                 else
                   RowButtonConfig(
                     onPressed: !_isCreating ? _saveBackup : null,
@@ -1283,12 +1300,18 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (vault?.backupConfig != null) {
           await repository.saveVault(vault!.copyWith(backupConfig: null));
         }
-        return;
+      } else {
+        await repository.updateBackupConfig(widget.vaultId, _initialBackupConfig!);
       }
-
-      await repository.updateBackupConfig(widget.vaultId, _initialBackupConfig!);
     } catch (e) {
       debugPrint('Error restoring initial backup config: $e');
+    }
+
+    try {
+      final repository = ref.read(vaultRepositoryProvider);
+      await repository.setPushEnabled(widget.vaultId, _initialPushEnabled);
+    } catch (e) {
+      debugPrint('Error restoring initial push flag: $e');
     }
   }
 
@@ -1371,10 +1394,24 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Skip saving backup config (when no stewards are configured)
-  /// Just navigates without saving any backup configuration
+  /// Save when no stewards are configured. Persists the push notification
+  /// preference and navigates back without writing a backup config.
   Future<void> _handleSkip() async {
     if (!mounted) return;
+    try {
+      final repository = ref.read(vaultRepositoryProvider);
+      await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update push notification preference: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     await _popWithOwnerPushPrompt(widget.vaultId);
   }
 
@@ -1458,6 +1495,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         );
       }
 
+      await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
+
       // Automatically distribute keys if:
       // 1. New config was created, OR
       // 2. Config was updated and distribution version incremented
@@ -1491,6 +1530,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       if (mounted) {
         setState(() {
           _hasUnsavedChanges = false;
+          _initialPushEnabled = _alertStewardsWithPush;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(

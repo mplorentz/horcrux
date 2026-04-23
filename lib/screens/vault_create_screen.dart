@@ -30,12 +30,6 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   final _ownerNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  /// When true, new vaults use [Vault.pushEnabled]. The owner-side OS
-  /// permission prompt is deferred until they navigate away from the vault
-  /// or recovery plan screen, so we don't pop an OS dialog during the
-  /// initial vault creation tap.
-  bool _alertStewardsWithPush = true;
-
   @override
   void initState() {
     super.initState();
@@ -72,30 +66,6 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
                     contentController: _contentController,
                     ownerNameController: _ownerNameController,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _alertStewardsWithPush,
-                      onChanged: (v) {
-                        if (v != null) {
-                          setState(() => _alertStewardsWithPush = v);
-                        }
-                      },
-                      title: Text(
-                        'Alert stewards with push notifications',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      subtitle: Text(
-                        'When you distribute keys or start recovery, stewards can be '
-                        'notified on their device. Requires notification permission.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -119,7 +89,6 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
       name: _nameController.text,
       content: _contentController.text,
       ownerName: _ownerNameController.text.trim().isEmpty ? null : _ownerNameController.text.trim(),
-      pushEnabledForNewVault: _alertStewardsWithPush,
     );
 
     if (vaultId != null && mounted) {

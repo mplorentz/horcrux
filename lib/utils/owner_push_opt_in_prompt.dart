@@ -15,8 +15,8 @@ import '../services/push_notification_receiver.dart';
 /// short snackbar letting them know they can re-enable via Settings.
 ///
 /// The prompt fires every time the owner navigates away from a push-enabled
-/// vault; to silence it they can uncheck "Alert stewards with push
-/// notifications" on the vault (which flips [Vault.pushEnabled] to false).
+/// vault; to silence it they can disable push for that vault on the
+/// recovery plan screen (which flips [Vault.pushEnabled] to false).
 ///
 /// Silent (swallows errors, shows nothing) when:
 ///  - push isn't supported on the platform,

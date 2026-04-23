@@ -1,16 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/vault.dart';
-import '../providers/key_provider.dart';
-import '../providers/vault_provider.dart';
 import '../services/horcrux_notification_service.dart';
 import '../services/logger.dart';
 import '../services/push_notification_receiver.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/push_privacy_learn_more_text.dart';
 
-/// Settings screen for managing push notification opt-in, notifier server
-/// URL, and per-vault push preferences (owned vaults only).
+/// Settings screen for global push opt-in and notifier server URL.
 class PushNotificationSettingsScreen extends ConsumerStatefulWidget {
   const PushNotificationSettingsScreen({super.key});
 
@@ -69,6 +67,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
                 'Push permission was not granted. Enable notifications in '
                 'your device settings and try again.',
               ),
+              backgroundColor: Colors.red,
             ),
           );
         }
@@ -136,22 +135,6 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     }
   }
 
-  Future<void> _toggleVaultPushEnabled(Vault vault, bool enabled) async {
-    try {
-      final repository = ref.read(vaultRepositoryProvider);
-      await repository.setPushEnabled(vault.id, enabled);
-    } catch (e, st) {
-      Log.warning('Failed to toggle per-vault push', e, st);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update vault: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -168,10 +151,10 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
                   _buildUnsupportedBanner(theme)
                 else ...[
                   _buildGlobalToggleTile(theme),
-                  const Divider(height: 1),
-                  _buildServerUrlSection(theme),
-                  const Divider(height: 1),
-                  _buildOwnedVaultsSection(theme),
+                  if (kDebugMode) ...[
+                    const Divider(height: 1),
+                    _buildServerUrlSection(theme),
+                  ],
                 ],
               ],
             ),
@@ -202,12 +185,15 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
   }
 
   Widget _buildGlobalToggleTile(ThemeData theme) {
-    final subtitle = _optedIn
-        ? 'Registered for push notifications on this device.'
-        : 'Receive alerts when stewards or vault owners reach out.';
     return SwitchListTile.adaptive(
       title: const Text('Enable push notifications'),
-      subtitle: Text(subtitle),
+      subtitle: const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: PushPrivacyLearnMoreText(
+          prefixText:
+              'Push notifications notify you immediately when important events like recovery requests need your attention. For maximum security you may want to disable push notifications. ',
+        ),
+      ),
       value: _optedIn,
       onChanged: _mutatingOptIn ? null : (value) => _toggleOptIn(value),
       secondary: _mutatingOptIn
@@ -229,7 +215,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Notifier server', style: theme.textTheme.titleMedium),
+          Text('Push Notification Server', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
             'Default: ${HorcruxNotificationService.defaultBaseUrl}',
@@ -276,106 +262,6 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildOwnedVaultsSection(ThemeData theme) {
-    final vaultsAsync = ref.watch(vaultListProvider);
-    final pubkeyAsync = ref.watch(currentPublicKeyProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(
-            'Your vaults',
-            style: theme.textTheme.titleMedium,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Text(
-            'Toggle whether each vault you own triggers push notifications '
-            'to stewards.',
-            style: theme.textTheme.bodySmall,
-          ),
-        ),
-        vaultsAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Failed to load vaults: $error',
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ),
-          data: (vaults) => pubkeyAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (error, _) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Failed to load account: $error',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-            ),
-            data: (currentPubkey) => _buildOwnedVaultsList(theme, vaults, currentPubkey),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOwnedVaultsList(
-    ThemeData theme,
-    List<Vault> vaults,
-    String? currentPubkey,
-  ) {
-    if (currentPubkey == null) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          'No account loaded.',
-          style: theme.textTheme.bodyMedium,
-        ),
-      );
-    }
-
-    final ownedVaults = vaults.where((v) => v.isOwned(currentPubkey)).toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-    if (ownedVaults.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          "You don't own any vaults yet.",
-          style: theme.textTheme.bodyMedium,
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: ownedVaults.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final vault = ownedVaults[index];
-        return SwitchListTile.adaptive(
-          title: Text(vault.name),
-          subtitle: Text(
-            vault.pushEnabled ? 'Push alerts enabled for stewards' : 'Push alerts disabled',
-          ),
-          value: vault.pushEnabled,
-          onChanged: (value) => _toggleVaultPushEnabled(vault, value),
-        );
-      },
     );
   }
 }

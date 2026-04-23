@@ -54,10 +54,9 @@ class Vault with _$Vault {
     // into push notifications will simply never send or receive any, even
     // for vaults where `pushEnabled` is `true`.
     //
-    // Defaults to `true` for newly-created vaults (opt-in at creation, since
-    // users see the checkbox) and `false` for vaults persisted before this
-    // field existed -- legacy vaults stay off until the owner explicitly
-    // turns push on.
+    // Defaults to `true` for newly-created vaults (set on the recovery plan
+    // screen) and `false` for vaults persisted before this field existed --
+    // legacy vaults stay off until the owner explicitly turns push on.
     @Default(true) bool pushEnabled,
   }) = _Vault;
 

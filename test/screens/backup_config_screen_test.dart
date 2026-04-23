@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
@@ -62,7 +63,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.text('Enable push notifications'), findsOneWidget);
+      expect(find.byType(Switch), findsNWidgets(2));
 
       container.dispose();
     });
@@ -86,8 +88,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify the toggle starts disabled
-      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      // Verify the "Include yourself" toggle starts disabled
+      final switchWidget = tester.widget<Switch>(find.byKey(const ValueKey('self_steward_switch')));
       expect(switchWidget.value, isFalse);
 
       container.dispose();
@@ -122,8 +124,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify the toggle is enabled when owner steward exists
-      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      // Verify the "Include yourself" toggle is on when owner steward exists
+      final switchWidget = tester.widget<Switch>(find.byKey(const ValueKey('self_steward_switch')));
       expect(switchWidget.value, isTrue);
 
       container.dispose();
@@ -140,5 +142,18 @@ class _MockVaultRepository extends VaultRepository {
   @override
   Future<BackupConfig?> getBackupConfig(String vaultId) async {
     return _backupConfig;
+  }
+
+  @override
+  Future<Vault?> getVault(String vaultId) async {
+    if (vaultId != 'test-vault') return null;
+    return Vault(
+      id: 'test-vault',
+      name: 'Test',
+      content: 'secret',
+      createdAt: DateTime(2024, 1, 1),
+      ownerPubkey: 'a' * 64,
+      pushEnabled: true,
+    );
   }
 }
