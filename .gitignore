@@ -49,12 +49,15 @@ app.*.map.json
 # Android signing keys (DO NOT COMMIT)
 /android/key.properties
 
-# Firebase config files (DO NOT COMMIT - contain project API keys)
-# See docs/firebase_setup.md for how to obtain these.
+# Firebase config files
+# Note: lib/firebase_options.dart is safe to commit — Firebase client API
+# keys are public identifiers, not secrets. See docs/firebase_setup.md.
+# The per-platform native config files below may be commit-safe too but are
+# gitignored so each developer can use their own Firebase project if they
+# prefer. See docs/firebase_setup.md.
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
 /macos/Runner/GoogleService-Info.plist
-/lib/firebase_options.dart
 
 # Screenshot (Golden) test failures
 test/**/failures/

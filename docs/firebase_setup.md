@@ -10,15 +10,32 @@ The Flutter/Gradle/iOS wiring for Firebase is already in place:
 - Android has the `com.google.gms.google-services` plugin applied in [android/settings.gradle](../android/settings.gradle) and [android/app/build.gradle](../android/app/build.gradle), with `minSdk = 23`.
 - iOS has `remote-notification` + `fetch` background modes and `FirebaseAppDelegateProxyEnabled=true` in [ios/Runner/Info.plist](../ios/Runner/Info.plist), and the Podfile pins `platform :ios, '13.0'`.
 
-What's still required before the app can build and talk to FCM:
+`lib/firebase_options.dart` is committed to the repo. Firebase's client-side
+config (`apiKey`, `appId`, `projectId`, etc.) are public identifiers, not
+secrets — FlutterFire and Google explicitly document this as safe to commit.
+Real security comes from Firebase Security Rules, App Check, and API key
+restrictions in the GCP console, not from hiding the config. Committing it
+means `flutter analyze` and `flutter test` work on a fresh clone without any
+extra setup.
 
-1. **A Firebase project** on the Google Firebase Console.
-2. **`android/app/google-services.json`** downloaded from that project's Android app registration.
-3. **`ios/Runner/GoogleService-Info.plist`** downloaded from that project's iOS app registration, added to the Xcode project.
-4. **`macos/Runner/GoogleService-Info.plist`** for macOS FCM (same Firebase iOS app as iOS; FlutterFire writes it here). **Do not commit** — it is listed in `.gitignore`. Use `macos/Runner/GoogleService-Info.plist.example` as a shape reference only.
-5. **`lib/firebase_options.dart`** generated via `flutterfire configure` (optional but recommended — required for `Firebase.initializeApp(options: ...)`).
+What's still required before the app can build and talk to FCM on a device:
 
-These files contain project identifiers and API keys that are tied to a specific Firebase account, so they can't be committed by the AI agent. See the instructions below.
+1. **A Firebase project** on the Google Firebase Console (only if you need
+   to swap the default project for your own — see below).
+2. **`android/app/google-services.json`** downloaded from the Android app
+   registration. Gitignored; each developer provides their own or uses the
+   team's copy out of band.
+3. **`ios/Runner/GoogleService-Info.plist`** downloaded from the iOS app
+   registration, added to the Xcode project. Gitignored for the same reason.
+4. **`macos/Runner/GoogleService-Info.plist`** for macOS FCM (same Firebase
+   iOS app as iOS; FlutterFire writes it here). Gitignored. Use
+   `macos/Runner/GoogleService-Info.plist.example` as a shape reference.
+
+> **Swapping Firebase projects**: If you want to use your own Firebase project
+> instead of the default one baked into `lib/firebase_options.dart`, run
+> `flutterfire configure` (see below) and regenerate both the Dart options
+> file and the native config files. Just don't commit your personal
+> `firebase_options.dart` unless you're rotating the repo default.
 
 ## One-time setup steps (do these once per environment)
 
