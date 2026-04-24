@@ -107,9 +107,10 @@ class HorcruxNotifierException implements Exception {
 ///   higher-level "derive the allowlist from vault relationships and sync"
 ///   helper lives in a later change.
 /// - **Push triggering** -- [tryPushForEvent] is the high-level entry
-///   point: it checks opt-in/vault preferences, composes personalized
-///   text, embeds the gift wrap (or just its id when too large), and
-///   POSTs `/push`. [push] is the raw HTTP layer.
+///   point: it checks [Vault.pushEnabled], composes personalized text,
+///   embeds the gift wrap (or just its id when too large), and POSTs
+///   `/push`. Global push opt-in is enforced only on registration and
+///   consent sync, not here. [push] is the raw HTTP layer.
 ///
 /// The server URL defaults to [defaultBaseUrl] and can be overridden by the
 /// user via settings (persisted to [SharedPreferences] under
@@ -402,7 +403,9 @@ class HorcruxNotificationService {
   /// The flow:
   ///
   /// 1. Bail if [vault].pushEnabled is false (owner opted this vault out).
-  /// 2. Bail if the user hasn't globally opted in to push.
+  /// 2. Log whether the sender has globally opted in to push (diagnostics
+  ///    only; does not block — recipient eligibility is [Vault.pushEnabled]
+  ///    and server-side policy).
   /// 3. Resolve the current user as the notification sender (the outer gift
   ///    wrap pubkey is ephemeral per NIP-59, so we use the signer's real
   ///    pubkey to drive display-name resolution).
@@ -425,10 +428,6 @@ class HorcruxNotificationService {
   }) async {
     if (!vault.pushEnabled) {
       Log.debug('HorcruxNotificationService: skipping push (vault.pushEnabled=false)');
-      return;
-    }
-    if (!await _isPushOptedIn()) {
-      Log.debug('HorcruxNotificationService: skipping push (user not opted in)');
       return;
     }
 

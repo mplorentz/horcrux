@@ -1089,24 +1089,29 @@ void _tryPushForEventTests({
     expect(harness.received, isEmpty);
   });
 
-  test('skips push when the user has not opted in', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: false,
-    });
-    final harness = buildPushService();
-    addTearDown(harness.service.dispose);
-    when(
-      loginServiceOf().getCurrentPublicKey(),
-    ).thenAnswer((_) async => keyPairOf().publicKey);
+  test(
+    'still POSTs /push when vault.pushEnabled even if sender is not globally opted in',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        PushNotificationReceiver.optInFlagKey: false,
+      });
+      final harness = buildPushService();
+      addTearDown(harness.service.dispose);
+      when(
+        loginServiceOf().getCurrentPublicKey(),
+      ).thenAnswer((_) async => keyPairOf().publicKey);
 
-    await harness.service.tryPushForEvent(
-      event: buildGiftWrap(),
-      kind: NostrKind.recoveryRequest,
-      vault: buildVault(),
-    );
+      await harness.service.tryPushForEvent(
+        event: buildGiftWrap(),
+        kind: NostrKind.recoveryRequest,
+        vault: buildVault(),
+      );
 
-    expect(harness.received, isEmpty);
-  });
+      expect(harness.received, hasLength(1));
+      expect(harness.received.single.method, 'POST');
+      expect(harness.received.single.url.path, '/push');
+    },
+  );
 
   test('skips push when there is no current pubkey', () async {
     SharedPreferences.setMockInitialValues({
