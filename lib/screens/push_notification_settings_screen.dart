@@ -1,14 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../services/horcrux_notification_service.dart';
 import '../services/logger.dart';
 import '../services/push_notification_receiver.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/push_privacy_learn_more_text.dart';
 
-/// Settings screen for global push opt-in and notifier server URL.
+/// Settings screen for global push opt-in.
 class PushNotificationSettingsScreen extends ConsumerStatefulWidget {
   const PushNotificationSettingsScreen({super.key});
 
@@ -18,13 +16,9 @@ class PushNotificationSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificationSettingsScreen> {
-  final TextEditingController _serverUrlController = TextEditingController();
-
   bool _loading = true;
   bool _optedIn = false;
   bool _mutatingOptIn = false;
-  bool _savingUrl = false;
-  String _resolvedServerUrl = HorcruxNotificationService.defaultBaseUrl;
 
   @override
   void initState() {
@@ -32,22 +26,12 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     _reload();
   }
 
-  @override
-  void dispose() {
-    _serverUrlController.dispose();
-    super.dispose();
-  }
-
   Future<void> _reload() async {
     final receiver = ref.read(pushNotificationReceiverProvider);
-    final notifier = ref.read(horcruxNotificationServiceProvider);
     final optedIn = await receiver.isOptedIn();
-    final url = await notifier.getBaseUrl();
     if (!mounted) return;
     setState(() {
       _optedIn = optedIn;
-      _resolvedServerUrl = url;
-      _serverUrlController.text = url;
       _loading = false;
     });
   }
@@ -89,42 +73,6 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     }
   }
 
-  Future<void> _saveServerUrl() async {
-    final trimmed = _serverUrlController.text.trim();
-    if (trimmed.isNotEmpty) {
-      final parsed = Uri.tryParse(trimmed);
-      if (parsed == null ||
-          !(parsed.isScheme('http') || parsed.isScheme('https')) ||
-          parsed.host.isEmpty) {
-        _showErrorSnackBar(
-          'Enter a valid http(s) URL (e.g. https://notify.example.com).',
-        );
-        return;
-      }
-    }
-
-    setState(() => _savingUrl = true);
-    try {
-      final notifier = ref.read(horcruxNotificationServiceProvider);
-      await notifier.setBaseUrl(trimmed.isEmpty ? null : trimmed);
-      await _reload();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            trimmed.isEmpty ? 'Notifier URL reset to default' : 'Notifier URL updated',
-          ),
-        ),
-      );
-    } catch (e, st) {
-      Log.warning('Failed to save notifier URL', e, st);
-      if (!mounted) return;
-      _showErrorSnackBar('Failed to save notifier URL: $e');
-    } finally {
-      if (mounted) setState(() => _savingUrl = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -139,13 +87,8 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
               children: [
                 if (!PushNotificationReceiver.isSupported)
                   _buildUnsupportedBanner(theme)
-                else ...[
+                else
                   _buildGlobalToggleTile(theme),
-                  if (kDebugMode) ...[
-                    const Divider(height: 1),
-                    _buildServerUrlSection(theme),
-                  ],
-                ],
               ],
             ),
     );
@@ -196,62 +139,6 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
               _optedIn ? Icons.notifications_active : Icons.notifications_off_outlined,
               color: theme.colorScheme.onSurface,
             ),
-    );
-  }
-
-  Widget _buildServerUrlSection(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Push Notification Server', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            'Default: ${HorcruxNotificationService.defaultBaseUrl}',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _serverUrlController,
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: const InputDecoration(
-              labelText: 'Server URL',
-              hintText: 'https://notify.example.com',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: _savingUrl
-                    ? null
-                    : () {
-                        _serverUrlController.text = HorcruxNotificationService.defaultBaseUrl;
-                      },
-                child: const Text('Use default'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _savingUrl || _serverUrlController.text.trim() == _resolvedServerUrl
-                    ? null
-                    : _saveServerUrl,
-                child: _savingUrl
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

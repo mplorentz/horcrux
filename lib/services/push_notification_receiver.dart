@@ -77,13 +77,20 @@ class PushNotificationReceiver {
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
 
+  /// When non-null, overrides the value of [isSupported] (for unit tests on
+  /// hosts where [NotifierPlatform.currentDevice] is null so
+  /// `processVaultShare`-style paths can be exercised with mocked receivers).
+  @visibleForTesting
+  static bool? debugIsSupportedOverride;
+
   /// Whether push is supported end-to-end on this device.
   ///
   /// Matches [NotifierPlatform.currentDevice]: Android and iOS only (the
   /// notifier registration path). Web, macOS, Linux, and Windows return
   /// `false` so [optIn] cannot report success when registration would be
   /// skipped in [_registerWithNotifierIfNeeded].
-  static bool get isSupported => NotifierPlatform.currentDevice() != null;
+  static bool get isSupported =>
+      debugIsSupportedOverride ?? (NotifierPlatform.currentDevice() != null);
 
   /// Returns whether the user has globally opted into push notifications.
   Future<bool> isOptedIn() async {

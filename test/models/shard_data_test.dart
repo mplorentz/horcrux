@@ -223,7 +223,7 @@ void main() {
       expect(() => shardDataFromJson(invalidJson), throwsA(isA<TypeError>()));
     });
 
-    test('shardDataFromJson accepts legacy camelCase keys', () {
+    test('shardDataFromJson rejects camelCase keys (use snake_case wire format)', () {
       final legacy = {
         'shard': validJsonFixture['shard'],
         'threshold': 1,
@@ -234,9 +234,7 @@ void main() {
         'createdAt': validJsonFixture['created_at'],
         'vaultId': 'v1',
       };
-      final shardData = shardDataFromJson(legacy);
-      expect(shardData.vaultId, 'v1');
-      expect(shardData.shardIndex, 0);
+      expect(() => shardDataFromJson(legacy), throwsA(isA<TypeError>()));
     });
 
     test('shardDataToJson omits null optional fields', () {
@@ -643,11 +641,11 @@ void main() {
       final legacyJson = <String, dynamic>{
         'shard': 'abc123',
         'threshold': 2,
-        'shardIndex': 0,
-        'totalShards': 3,
-        'primeMod': 'xyz',
-        'creatorPubkey': creatorPubkey,
-        'createdAt': 1759759657,
+        'shard_index': 0,
+        'total_shards': 3,
+        'prime_mod': 'xyz',
+        'creator_pubkey': creatorPubkey,
+        'created_at': 1759759657,
         // push_enabled intentionally absent.
       };
       final decoded = shardDataFromJson(legacyJson);

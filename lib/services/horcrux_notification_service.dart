@@ -112,10 +112,10 @@ class HorcruxNotifierException implements Exception {
 ///   `/push`. Global push opt-in is enforced only on registration and
 ///   consent sync, not here. [push] is the raw HTTP layer.
 ///
-/// The server URL defaults to [defaultBaseUrl] and can be overridden by the
-/// user via settings (persisted to [SharedPreferences] under
-/// [baseUrlPrefsKey]). Each HTTP method is small and explicit so future
-/// tests can mock individual endpoints.
+/// The server URL defaults to [defaultBaseUrl] and can be overridden
+/// in [SharedPreferences] under [baseUrlPrefsKey] (e.g. for tests or
+/// development). Each HTTP method is small and explicit so future tests
+/// can mock individual endpoints.
 class HorcruxNotificationService {
   /// Default production notifier URL.
   static const String defaultBaseUrl = 'https://dev-notifier.horcruxbackup.com';
@@ -155,7 +155,7 @@ class HorcruxNotificationService {
     _startConsentSyncSubscriptions();
   }
 
-  /// Resolved base URL for notifier requests. Honors the user's override
+  /// Resolved base URL for notifier requests. Honors a persisted override
   /// when set, otherwise falls back to [defaultBaseUrl]. Trailing slashes
   /// are trimmed so [Uri.parse] composition is predictable.
   Future<String> getBaseUrl() async {
@@ -662,10 +662,12 @@ class HorcruxNotificationService {
     try {
       do {
         _syncQueued = false;
-        await syncConsentList();
+        try {
+          await syncConsentList();
+        } catch (e, st) {
+          Log.warning('HorcruxNotificationService: consent sync failed', e, st);
+        }
       } while (_syncQueued);
-    } catch (e, st) {
-      Log.warning('HorcruxNotificationService: consent sync failed', e, st);
     } finally {
       _syncInFlight = false;
     }

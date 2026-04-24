@@ -1,6 +1,6 @@
 # Firebase / FCM Setup
 
-Horcrux uses Firebase Cloud Messaging (FCM) to delivier push notifications for vault events.
+Horcrux uses Firebase Cloud Messaging (FCM) to deliver push notifications for vault events.
 
 ## One-time setup steps (do these once per environment)
 

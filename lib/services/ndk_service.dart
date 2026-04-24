@@ -356,15 +356,15 @@ class NdkService {
       switch (inner.kind) {
         case 1337: // [NostrKind.shardData]
           final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String? ?? m['vaultId'] as String?;
+          final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
           final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String? ?? m['vaultId'] as String?;
+          final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
         case 1339: // [NostrKind.recoveryResponse]
           final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String? ?? m['vaultId'] as String?;
+          final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
         case 1342: // [NostrKind.shardConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
@@ -483,11 +483,9 @@ class NdkService {
       final requestData = json.decode(event.content) as Map<String, dynamic>;
       final senderPubkey = event.pubKey;
 
-      // Create RecoveryRequest object (prefer snake_case; camelCase for legacy payloads).
-      final requestedAtRaw =
-          requestData['requested_at'] as String? ?? requestData['requestedAt'] as String?;
-      final expiresRaw =
-          requestData['expires_at'] as String? ?? requestData['expiresAt'] as String?;
+      // Create RecoveryRequest object (Nostr content uses snake_case keys).
+      final requestedAtRaw = requestData['requested_at'] as String?;
+      final expiresRaw = requestData['expires_at'] as String?;
       final thresholdRaw = requestData['threshold'];
       final threshold = thresholdRaw is int
           ? thresholdRaw
@@ -496,10 +494,8 @@ class NdkService {
               : 1;
 
       final recoveryRequest = RecoveryRequest(
-        id: requestData['recovery_request_id'] as String? ??
-            requestData['recoveryRequestId'] as String? ??
-            event.id,
-        vaultId: (requestData['vault_id'] ?? requestData['vaultId']) as String,
+        id: (requestData['recovery_request_id'] as String?) ?? event.id,
+        vaultId: requestData['vault_id'] as String,
         initiatorPubkey: senderPubkey,
         requestedAt: DateTime.parse(requestedAtRaw!),
         status: RecoveryRequestStatus.sent,
@@ -511,8 +507,7 @@ class NdkService {
         ),
         expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
         stewardResponses: {}, // Will be populated later
-        isPractice:
-            requestData['is_practice'] as bool? ?? requestData['isPractice'] as bool? ?? false,
+        isPractice: requestData['is_practice'] as bool? ?? false,
       );
 
       // Emit recovery request to stream (RecoveryService will listen)
@@ -531,9 +526,8 @@ class NdkService {
       final responseData = json.decode(event.content) as Map<String, dynamic>;
       final senderPubkey = event.pubKey;
 
-      final recoveryRequestId =
-          (responseData['recovery_request_id'] ?? responseData['recoveryRequestId']) as String;
-      final vaultId = (responseData['vault_id'] ?? responseData['vaultId']) as String;
+      final recoveryRequestId = responseData['recovery_request_id'] as String;
+      final vaultId = responseData['vault_id'] as String;
       final approved = responseData['approved'] as bool;
 
       Log.info(
@@ -543,7 +537,7 @@ class NdkService {
       ShardData? shardData;
 
       // If approved, extract and store the shard data FOR RECOVERY
-      final shardPayload = responseData['shard_data'] ?? responseData['shardData'];
+      final shardPayload = responseData['shard_data'];
       if (approved && shardPayload != null) {
         final shardDataJson = shardPayload as Map<String, dynamic>;
         shardData = shardDataFromJson(shardDataJson);

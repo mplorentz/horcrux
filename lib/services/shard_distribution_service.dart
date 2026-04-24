@@ -372,8 +372,8 @@ class ShardDistributionService {
     }
 
     // Validate payload
-    final payloadVaultId = payload['vaultId'] as String?;
-    final payloadShardIndex = payload['shardIndex'] as int?;
+    final payloadVaultId = payload['vault_id'] as String?;
+    final payloadShardIndex = payload['shard_index'] as int?;
     final error = payload['error'] as String? ?? 'Unknown error';
 
     if (payloadVaultId != vaultId) {

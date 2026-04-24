@@ -200,9 +200,10 @@ void main() {
     test(
       'processVaultShare calls global push optIn when shard has pushEnabled and steward is not opted in',
       () async {
-        if (!PushNotificationReceiver.isSupported) {
-          return;
-        }
+        PushNotificationReceiver.debugIsSupportedOverride = true;
+        addTearDown(
+          () => PushNotificationReceiver.debugIsSupportedOverride = null,
+        );
 
         when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => false);
         when(mockPushReceiver.optIn()).thenAnswer((_) async => true);

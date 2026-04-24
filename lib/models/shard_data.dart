@@ -303,44 +303,40 @@ bool? _readBoolNullable(Object? value) {
   throw TypeError();
 }
 
-/// Create from JSON (prefers snake_case; falls back to legacy camelCase for old vault files / peers).
+/// Create from JSON (Nostr / wire format: snake_case keys per project conventions).
 ShardData shardDataFromJson(Map<String, dynamic> json) {
   final stewardsData = json['stewards'];
 
-  final shardIndex = _readIntFlexible(json['shard_index'] ?? json['shardIndex']);
-  final totalShards = _readIntFlexible(json['total_shards'] ?? json['totalShards']);
-  final createdAt = _readIntFlexible(json['created_at'] ?? json['createdAt']);
+  final shardIndex = _readIntFlexible(json['shard_index']);
+  final totalShards = _readIntFlexible(json['total_shards']);
+  final createdAt = _readIntFlexible(json['created_at']);
 
-  final receivedRaw = json['received_at'] ?? json['receivedAt'];
+  final receivedRaw = json['received_at'];
 
   return ShardData(
     shard: json['shard'] as String,
     threshold: _readIntFlexible(json['threshold']),
     shardIndex: shardIndex,
     totalShards: totalShards,
-    primeMod: (json['prime_mod'] ?? json['primeMod']) as String,
-    creatorPubkey: (json['creator_pubkey'] ?? json['creatorPubkey']) as String,
+    primeMod: json['prime_mod'] as String,
+    creatorPubkey: json['creator_pubkey'] as String,
     createdAt: createdAt,
-    vaultId: json['vault_id'] as String? ?? json['vaultId'] as String?,
-    vaultName: json['vault_name'] as String? ?? json['vaultName'] as String?,
+    vaultId: json['vault_id'] as String?,
+    vaultName: json['vault_name'] as String?,
     stewards: stewardsData != null
         ? (stewardsData as List).map((e) => Map<String, String>.from(e as Map)).toList()
         : null,
-    ownerName: json['owner_name'] as String? ?? json['ownerName'] as String?,
+    ownerName: json['owner_name'] as String?,
     instructions: json['instructions'] as String?,
-    recipientPubkey: json['recipient_pubkey'] as String? ?? json['recipientPubkey'] as String?,
-    isReceived: _readBoolNullable(json['is_received'] ?? json['isReceived']),
+    recipientPubkey: json['recipient_pubkey'] as String?,
+    isReceived: _readBoolNullable(json['is_received']),
     receivedAt: receivedRaw != null ? DateTime.parse(receivedRaw as String) : null,
-    nostrEventId: json['nostr_event_id'] as String? ?? json['nostrEventId'] as String?,
-    relayUrls: json['relay_urls'] != null
-        ? List<String>.from(json['relay_urls'] as List)
-        : json['relayUrls'] != null
-            ? List<String>.from(json['relayUrls'] as List)
-            : null,
+    nostrEventId: json['nostr_event_id'] as String?,
+    relayUrls: json['relay_urls'] != null ? List<String>.from(json['relay_urls'] as List) : null,
     distributionVersion: _readIntFlexibleNullable(
-      json['distribution_version'] ?? json['distributionVersion'],
+      json['distribution_version'],
     ),
-    pushEnabled: _readBoolNullable(json['push_enabled'] ?? json['pushEnabled']),
+    pushEnabled: _readBoolNullable(json['push_enabled']),
   );
 }
 
