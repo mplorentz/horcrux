@@ -76,7 +76,7 @@ void main() {
       );
       expect(result, isNotNull);
       expect(result!.title, 'Recovery response');
-      expect(result.body, 'Bob approved recovery of "Family Vault".');
+      expect(result.body, 'Bob approved your recovery request for "Family Vault".');
     });
 
     test('recovery response (denied) -- mirrors LocalNotificationService', () {
@@ -88,7 +88,7 @@ void main() {
       );
       expect(result, isNotNull);
       expect(result!.title, 'Recovery response');
-      expect(result.body, 'Bob denied recovery of "Family Vault".');
+      expect(result.body, 'Bob denied your recovery request for "Family Vault".');
     });
 
     test('recovery response (unknown approval) -- uses a neutral fallback', () {
