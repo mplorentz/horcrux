@@ -165,7 +165,7 @@ class VaultStatusBanner extends ConsumerWidget {
           _StatusData(
             headline: 'Waiting for stewards to join',
             subtext:
-                'Step 2 of 3: Invites sent. ${pendingCount > 0 ? "$pendingCount steward${pendingCount > 1 ? 's' : ''} need" : "Stewards need"} to accept before keys can be distributed.',
+                'Step 2 of 3: Invites sent. ${pendingCount > 0 ? "$pendingCount steward${pendingCount > 1 ? 's need' : ' needs'}" : "Stewards need"} to accept before keys can be distributed.',
             icon: Icons.hourglass_empty,
             accentColor: const Color(0xFF7A4A2F), // Umber
             variant: _StatusVariant.waitingOnStewards,
@@ -236,7 +236,7 @@ class VaultStatusBanner extends ConsumerWidget {
         _StatusData(
           headline: 'Waiting for stewards to join',
           subtext:
-              'Step 2 of 3: Invites sent. ${pendingCount > 0 ? "$pendingCount steward${pendingCount > 1 ? 's' : ''} need" : "Stewards need"} to accept before keys can be distributed.',
+              'Step 2 of 3: Invites sent. ${pendingCount > 0 ? "$pendingCount steward${pendingCount > 1 ? 's need' : ' needs'}" : "Stewards need"} to accept before keys can be distributed.',
           icon: Icons.hourglass_empty,
           accentColor: const Color(0xFF7A4A2F), // Umber
           variant: _StatusVariant.waitingOnStewards,

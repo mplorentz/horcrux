@@ -161,7 +161,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
                 // Explainer text
                 Text(
-                  'Accepting this invitation will grant you a single key to a shared vault. You\'ll then be able to recover the vault in coordination with the other stewards.',
+                  'Accepting this invitation will grant you a single key to this vault. You\'ll then be able to recover the vault in coordination with the other vault stewards.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,

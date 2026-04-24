@@ -49,6 +49,7 @@ Future<void> maybePromptOwnerForVaultPush({
             'Push permission was not granted. Stewards will not receive '
             'device alerts until you enable push in Settings.',
           ),
+          backgroundColor: Colors.red,
         ),
       );
     }

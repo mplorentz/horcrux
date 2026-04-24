@@ -59,8 +59,6 @@ class LocalNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    await requestPlatformNotificationPermissions();
-
     Log.info('LocalNotificationService initialized');
   }
 

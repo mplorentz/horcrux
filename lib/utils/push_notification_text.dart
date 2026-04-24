@@ -68,7 +68,7 @@ PushNotificationText? composeNotificationText({
     case NostrKind.recoveryResponse:
       final String body;
       if (recoveryApproved == true) {
-        body = '$sender approved recovery of "$vaultName".';
+        body = '$sender approved your recovery of "$vaultName".';
       } else if (recoveryApproved == false) {
         body = '$sender denied recovery of "$vaultName".';
       } else {
