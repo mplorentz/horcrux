@@ -52,6 +52,16 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     });
   }
 
+  void _showErrorSnackBar(String message) {
+    final cs = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: cs.onError)),
+        backgroundColor: cs.error,
+      ),
+    );
+  }
+
   Future<void> _toggleOptIn(bool value) async {
     if (_mutatingOptIn) return;
     setState(() => _mutatingOptIn = true);
@@ -61,14 +71,9 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
         final granted = await receiver.optIn();
         if (!mounted) return;
         if (!granted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Push permission was not granted. Enable notifications in '
-                'your device settings and try again.',
-              ),
-              backgroundColor: Colors.red,
-            ),
+          _showErrorSnackBar(
+            'Push permission was not granted. Enable notifications in '
+            'your device settings and try again.',
           );
         }
       } else {
@@ -78,12 +83,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     } catch (e, st) {
       Log.warning('Failed to toggle push opt-in', e, st);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update push notifications: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Failed to update push notifications: $e');
     } finally {
       if (mounted) setState(() => _mutatingOptIn = false);
     }
@@ -96,13 +96,8 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
       if (parsed == null ||
           !(parsed.isScheme('http') || parsed.isScheme('https')) ||
           parsed.host.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Enter a valid http(s) URL (e.g. https://notify.example.com).',
-            ),
-            backgroundColor: Colors.red,
-          ),
+        _showErrorSnackBar(
+          'Enter a valid http(s) URL (e.g. https://notify.example.com).',
         );
         return;
       }
@@ -124,12 +119,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     } catch (e, st) {
       Log.warning('Failed to save notifier URL', e, st);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save notifier URL: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Failed to save notifier URL: $e');
     } finally {
       if (mounted) setState(() => _savingUrl = false);
     }

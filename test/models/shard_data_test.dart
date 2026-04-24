@@ -8,24 +8,24 @@ void main() {
     late Map<String, dynamic> validJsonWithRecoveryMetadata;
 
     setUp(() {
-      // Base fixture from actual shard data
+      // Base fixture: snake_case Nostr / wire format
       validJsonFixture = {
         'shard':
             'J93z0EN6ZfWwx3j6zb4_YpxquwyZhSmVmrWCkwqtzR4=dGVzdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
         'threshold': 1,
-        'shardIndex': 0,
-        'totalShards': 1,
-        'primeMod':
+        'shard_index': 0,
+        'total_shards': 1,
+        'prime_mod':
             'ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmY0Mw==',
-        'creatorPubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
-        'createdAt': 1759759657,
+        'creator_pubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        'created_at': 1759759657,
       };
 
       // Extended fixture with recovery metadata
       validJsonWithRecoveryMetadata = {
         ...validJsonFixture,
-        'vaultId': 'vault-abc-456',
-        'vaultName': 'Shared Vault Test',
+        'vault_id': 'vault-abc-456',
+        'vault_name': 'Shared Vault Test',
         'stewards': [
           {
             'name': 'Alice',
@@ -40,11 +40,11 @@ void main() {
             'pubkey': 'c33ce95f79fa5ab64fa0def735fa774ddfc5d8371e0a1bc08e8263a2e0d9546',
           },
         ],
-        'ownerName': 'Owner',
-        'recipientPubkey': 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
-        'isReceived': true,
-        'receivedAt': '2025-02-06T12:00:00.000Z',
-        'nostrEventId': 'event-xyz-789',
+        'owner_name': 'Owner',
+        'recipient_pubkey': 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
+        'is_received': true,
+        'received_at': '2025-02-06T12:00:00.000Z',
+        'nostr_event_id': 'event-xyz-789',
       };
     });
 
@@ -53,11 +53,11 @@ void main() {
 
       expect(shardData.shard, validJsonFixture['shard']);
       expect(shardData.threshold, validJsonFixture['threshold']);
-      expect(shardData.shardIndex, validJsonFixture['shardIndex']);
-      expect(shardData.totalShards, validJsonFixture['totalShards']);
-      expect(shardData.primeMod, validJsonFixture['primeMod']);
-      expect(shardData.creatorPubkey, validJsonFixture['creatorPubkey']);
-      expect(shardData.createdAt, validJsonFixture['createdAt']);
+      expect(shardData.shardIndex, validJsonFixture['shard_index']);
+      expect(shardData.totalShards, validJsonFixture['total_shards']);
+      expect(shardData.primeMod, validJsonFixture['prime_mod']);
+      expect(shardData.creatorPubkey, validJsonFixture['creator_pubkey']);
+      expect(shardData.createdAt, validJsonFixture['created_at']);
       expect(shardData.vaultId, isNull);
       expect(shardData.vaultName, isNull);
       expect(shardData.stewards, isNull);
@@ -76,20 +76,20 @@ void main() {
         expect(shardData.threshold, validJsonWithRecoveryMetadata['threshold']);
         expect(
           shardData.shardIndex,
-          validJsonWithRecoveryMetadata['shardIndex'],
+          validJsonWithRecoveryMetadata['shard_index'],
         );
         expect(
           shardData.totalShards,
-          validJsonWithRecoveryMetadata['totalShards'],
+          validJsonWithRecoveryMetadata['total_shards'],
         );
-        expect(shardData.primeMod, validJsonWithRecoveryMetadata['primeMod']);
+        expect(shardData.primeMod, validJsonWithRecoveryMetadata['prime_mod']);
         expect(
           shardData.creatorPubkey,
-          validJsonWithRecoveryMetadata['creatorPubkey'],
+          validJsonWithRecoveryMetadata['creator_pubkey'],
         );
-        expect(shardData.createdAt, validJsonWithRecoveryMetadata['createdAt']);
-        expect(shardData.vaultId, validJsonWithRecoveryMetadata['vaultId']);
-        expect(shardData.vaultName, validJsonWithRecoveryMetadata['vaultName']);
+        expect(shardData.createdAt, validJsonWithRecoveryMetadata['created_at']);
+        expect(shardData.vaultId, validJsonWithRecoveryMetadata['vault_id']);
+        expect(shardData.vaultName, validJsonWithRecoveryMetadata['vault_name']);
         expect(shardData.stewards, isNotNull);
         expect(shardData.stewards!.length, 3);
         expect(shardData.stewards![0]['name'], 'Alice');
@@ -100,19 +100,19 @@ void main() {
         expect(shardData.ownerName, 'Owner');
         expect(
           shardData.recipientPubkey,
-          validJsonWithRecoveryMetadata['recipientPubkey'],
+          validJsonWithRecoveryMetadata['recipient_pubkey'],
         );
         expect(
           shardData.isReceived,
-          validJsonWithRecoveryMetadata['isReceived'],
+          validJsonWithRecoveryMetadata['is_received'],
         );
         expect(
           shardData.receivedAt,
-          DateTime.parse(validJsonWithRecoveryMetadata['receivedAt']),
+          DateTime.parse(validJsonWithRecoveryMetadata['received_at'] as String),
         );
         expect(
           shardData.nostrEventId,
-          validJsonWithRecoveryMetadata['nostrEventId'],
+          validJsonWithRecoveryMetadata['nostr_event_id'],
         );
       },
     );
@@ -123,18 +123,18 @@ void main() {
 
       expect(json['shard'], validJsonFixture['shard']);
       expect(json['threshold'], validJsonFixture['threshold']);
-      expect(json['shardIndex'], validJsonFixture['shardIndex']);
-      expect(json['totalShards'], validJsonFixture['totalShards']);
-      expect(json['primeMod'], validJsonFixture['primeMod']);
-      expect(json['creatorPubkey'], validJsonFixture['creatorPubkey']);
-      expect(json['createdAt'], validJsonFixture['createdAt']);
-      expect(json.containsKey('vaultId'), isFalse);
-      expect(json.containsKey('vaultName'), isFalse);
+      expect(json['shard_index'], validJsonFixture['shard_index']);
+      expect(json['total_shards'], validJsonFixture['total_shards']);
+      expect(json['prime_mod'], validJsonFixture['prime_mod']);
+      expect(json['creator_pubkey'], validJsonFixture['creator_pubkey']);
+      expect(json['created_at'], validJsonFixture['created_at']);
+      expect(json.containsKey('vault_id'), isFalse);
+      expect(json.containsKey('vault_name'), isFalse);
       expect(json.containsKey('stewards'), isFalse);
-      expect(json.containsKey('recipientPubkey'), isFalse);
-      expect(json.containsKey('isReceived'), isFalse);
-      expect(json.containsKey('receivedAt'), isFalse);
-      expect(json.containsKey('nostrEventId'), isFalse);
+      expect(json.containsKey('recipient_pubkey'), isFalse);
+      expect(json.containsKey('is_received'), isFalse);
+      expect(json.containsKey('received_at'), isFalse);
+      expect(json.containsKey('nostr_event_id'), isFalse);
     });
 
     test(
@@ -145,31 +145,31 @@ void main() {
 
         expect(json['shard'], validJsonWithRecoveryMetadata['shard']);
         expect(json['threshold'], validJsonWithRecoveryMetadata['threshold']);
-        expect(json['shardIndex'], validJsonWithRecoveryMetadata['shardIndex']);
+        expect(json['shard_index'], validJsonWithRecoveryMetadata['shard_index']);
         expect(
-          json['totalShards'],
-          validJsonWithRecoveryMetadata['totalShards'],
+          json['total_shards'],
+          validJsonWithRecoveryMetadata['total_shards'],
         );
-        expect(json['primeMod'], validJsonWithRecoveryMetadata['primeMod']);
+        expect(json['prime_mod'], validJsonWithRecoveryMetadata['prime_mod']);
         expect(
-          json['creatorPubkey'],
-          validJsonWithRecoveryMetadata['creatorPubkey'],
+          json['creator_pubkey'],
+          validJsonWithRecoveryMetadata['creator_pubkey'],
         );
-        expect(json['createdAt'], validJsonWithRecoveryMetadata['createdAt']);
-        expect(json['vaultId'], validJsonWithRecoveryMetadata['vaultId']);
-        expect(json['vaultName'], validJsonWithRecoveryMetadata['vaultName']);
+        expect(json['created_at'], validJsonWithRecoveryMetadata['created_at']);
+        expect(json['vault_id'], validJsonWithRecoveryMetadata['vault_id']);
+        expect(json['vault_name'], validJsonWithRecoveryMetadata['vault_name']);
         expect(json['stewards'], isNotNull);
         expect(json['stewards'], isA<List>());
-        expect(json['ownerName'], 'Owner');
+        expect(json['owner_name'], 'Owner');
         expect(
-          json['recipientPubkey'],
-          validJsonWithRecoveryMetadata['recipientPubkey'],
+          json['recipient_pubkey'],
+          validJsonWithRecoveryMetadata['recipient_pubkey'],
         );
-        expect(json['isReceived'], validJsonWithRecoveryMetadata['isReceived']);
-        expect(json['receivedAt'], validJsonWithRecoveryMetadata['receivedAt']);
+        expect(json['is_received'], validJsonWithRecoveryMetadata['is_received']);
+        expect(json['received_at'], validJsonWithRecoveryMetadata['received_at']);
         expect(
-          json['nostrEventId'],
-          validJsonWithRecoveryMetadata['nostrEventId'],
+          json['nostr_event_id'],
+          validJsonWithRecoveryMetadata['nostr_event_id'],
         );
       },
     );
@@ -204,7 +204,7 @@ void main() {
 
     test('shardDataFromJson handles null receivedAt correctly', () {
       final jsonWithoutReceivedAt = {...validJsonWithRecoveryMetadata};
-      jsonWithoutReceivedAt.remove('receivedAt');
+      jsonWithoutReceivedAt.remove('received_at');
 
       final shardData = shardDataFromJson(jsonWithoutReceivedAt);
 
@@ -217,22 +217,38 @@ void main() {
       final invalidJson = {
         'shard': 'abc123',
         'threshold': 2,
-        // Missing shardIndex, totalShards, primeMod, creatorPubkey, createdAt
+        // Missing shard_index, total_shards, prime_mod, creator_pubkey, created_at
       };
 
       expect(() => shardDataFromJson(invalidJson), throwsA(isA<TypeError>()));
+    });
+
+    test('shardDataFromJson accepts legacy camelCase keys', () {
+      final legacy = {
+        'shard': validJsonFixture['shard'],
+        'threshold': 1,
+        'shardIndex': 0,
+        'totalShards': 1,
+        'primeMod': validJsonFixture['prime_mod'],
+        'creatorPubkey': validJsonFixture['creator_pubkey'],
+        'createdAt': validJsonFixture['created_at'],
+        'vaultId': 'v1',
+      };
+      final shardData = shardDataFromJson(legacy);
+      expect(shardData.vaultId, 'v1');
+      expect(shardData.shardIndex, 0);
     });
 
     test('shardDataToJson omits null optional fields', () {
       final minimalShardData = shardDataFromJson(validJsonFixture);
       final json = shardDataToJson(minimalShardData);
 
-      expect(json.containsKey('vaultId'), isFalse);
-      expect(json.containsKey('vaultName'), isFalse);
-      expect(json.containsKey('recipientPubkey'), isFalse);
-      expect(json.containsKey('isReceived'), isFalse);
-      expect(json.containsKey('receivedAt'), isFalse);
-      expect(json.containsKey('nostrEventId'), isFalse);
+      expect(json.containsKey('vault_id'), isFalse);
+      expect(json.containsKey('vault_name'), isFalse);
+      expect(json.containsKey('recipient_pubkey'), isFalse);
+      expect(json.containsKey('is_received'), isFalse);
+      expect(json.containsKey('received_at'), isFalse);
+      expect(json.containsKey('nostr_event_id'), isFalse);
     });
   });
 
@@ -596,23 +612,23 @@ void main() {
       expect(buildShard().pushEnabled, isNull);
     });
 
-    test('toJson omits pushEnabled when null (legacy shard)', () {
+    test('toJson omits push_enabled when null (legacy shard)', () {
       final json = shardDataToJson(buildShard());
-      expect(json.containsKey('pushEnabled'), isFalse);
+      expect(json.containsKey('push_enabled'), isFalse);
     });
 
-    test('toJson emits pushEnabled=true when set', () {
+    test('toJson emits push_enabled=true when set', () {
       final json = shardDataToJson(buildShard(pushEnabled: true));
-      expect(json['pushEnabled'], isTrue);
+      expect(json['push_enabled'], isTrue);
     });
 
-    test('toJson emits pushEnabled=false when explicitly opted-out', () {
+    test('toJson emits push_enabled=false when explicitly opted-out', () {
       // We care about the difference between "unspecified" (legacy) and
       // "explicitly false" (owner flipped it off). Both end up having the
       // receiver keep its previous value, but the wire format should still
       // distinguish them so future behaviour can rely on it.
       final json = shardDataToJson(buildShard(pushEnabled: false));
-      expect(json['pushEnabled'], isFalse);
+      expect(json['push_enabled'], isFalse);
     });
 
     test('fromJson round-trips true/false/null', () {
@@ -623,7 +639,7 @@ void main() {
       }
     });
 
-    test('fromJson on a legacy JSON (no pushEnabled key) yields null', () {
+    test('fromJson on a legacy JSON (no push_enabled key) yields null', () {
       final legacyJson = <String, dynamic>{
         'shard': 'abc123',
         'threshold': 2,
@@ -632,7 +648,7 @@ void main() {
         'primeMod': 'xyz',
         'creatorPubkey': creatorPubkey,
         'createdAt': 1759759657,
-        // pushEnabled intentionally absent.
+        // push_enabled intentionally absent.
       };
       final decoded = shardDataFromJson(legacyJson);
       expect(decoded.pushEnabled, isNull);

@@ -437,10 +437,17 @@ class VaultShareService {
   /// Sync mutable vault metadata from the owner's authoritative shardData.
   ///
   /// Runs on every shard arrival so that redistribution picks up owner-side
-  /// changes to fields the steward mirrors locally (currently just
-  /// `pushEnabled`). Creation and stub-upgrade initialization happen in
-  /// [_ensureVaultExists]; this method only issues a write when a field
-  /// actually changed, so it is a no-op immediately after creation.
+  /// changes the steward mirrors locally (`pushEnabled`, name, owner name).
+  ///
+  /// Updates apply only when [ShardData.distributionVersion] is present and
+  /// strictly greater than the newest version already stored in
+  /// [Vault.mostRecentShard] (this runs before [VaultRepository.addShardToVault],
+  /// so "stored" means prior shards only). Legacy or older/equal shards are
+  /// ignored here so they cannot roll back e.g. [Vault.pushEnabled] after a
+  /// newer redistribution. When the version qualifies but [ShardData.pushEnabled]
+  /// is null, the steward keeps the existing vault value (wire null = no
+  /// opinion). Creation and stub-upgrade initialization happen in
+  /// [_ensureVaultExists].
   Future<void> _syncVaultMetadataFromShardData(
     String vaultId,
     ShardData shardData,
@@ -449,20 +456,35 @@ class VaultShareService {
       final vault = await repository.getVault(vaultId);
       if (vault == null) return;
 
+      final storedDistributionVersion = vault.mostRecentShard?.distributionVersion ?? -1;
+      final incoming = shardData.distributionVersion;
+      final canApply = incoming != null && incoming > storedDistributionVersion;
+
+      if (!canApply) {
+        return;
+      }
+
       var next = vault;
 
-      // pushEnabled: a null on the wire (legacy shard, no opinion) collapses
-      // to `false` — stewards stay opted-out until the owner explicitly turns
-      // push on and re-distributes.
-      final desiredPushEnabled = shardData.pushEnabled ?? false;
-      if (desiredPushEnabled != vault.pushEnabled) {
-        next = next.copyWith(pushEnabled: desiredPushEnabled);
+      if (shardData.pushEnabled != null && shardData.pushEnabled != vault.pushEnabled) {
+        next = next.copyWith(pushEnabled: shardData.pushEnabled!);
+      }
+
+      final newName = shardData.vaultName;
+      if (newName != null && newName != vault.name) {
+        next = next.copyWith(name: newName);
+      }
+
+      final newOwnerName = shardData.ownerName;
+      if (newOwnerName != null && newOwnerName != vault.ownerName) {
+        next = next.copyWith(ownerName: newOwnerName);
       }
 
       if (!identical(next, vault)) {
         await repository.saveVault(next);
         Log.info(
-          'Synced vault $vaultId metadata from shardData (pushEnabled=${next.pushEnabled})',
+          'Synced vault $vaultId metadata from shardData '
+          '(distribution_version=$incoming, pushEnabled=${next.pushEnabled})',
         );
       }
     } catch (e) {

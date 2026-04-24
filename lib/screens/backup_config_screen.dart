@@ -1461,6 +1461,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final backupService = ref.read(backupServiceProvider);
       final repository = ref.read(vaultRepositoryProvider);
 
+      final vaultBeforeSave = await repository.getVault(widget.vaultId);
+      final pushBeforeSave = vaultBeforeSave?.pushEnabled ?? true;
+
       // Check if this is the first save or an update
       final existingConfig = await repository.getBackupConfig(widget.vaultId);
       final isNewConfig = existingConfig == null;
@@ -1499,14 +1502,23 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       // Automatically distribute keys if:
       // 1. New config was created, OR
-      // 2. Config was updated and distribution version incremented
+      // 2. Config was updated and distribution version incremented, OR
+      // 3. Only [Vault.pushEnabled] changed — stewards need new shards so
+      //    recovery push behavior matches the owner's preference.
       final updatedConfig = await repository.getBackupConfig(widget.vaultId);
       final configChanged = isNewConfig ||
           (updatedConfig != null && updatedConfig.distributionVersion > oldDistributionVersion);
+      final pushPreferenceChanged = pushBeforeSave != _alertStewardsWithPush;
 
-      if (configChanged && updatedConfig != null && updatedConfig.canDistribute) {
+      if (updatedConfig != null &&
+          updatedConfig.canDistribute &&
+          (configChanged || pushPreferenceChanged)) {
         try {
-          await backupService.createAndDistributeBackup(vaultId: widget.vaultId);
+          if (configChanged) {
+            await backupService.createAndDistributeBackup(vaultId: widget.vaultId);
+          } else {
+            await backupService.redistributeForPushPreferenceChange(vaultId: widget.vaultId);
+          }
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

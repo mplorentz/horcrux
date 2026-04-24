@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:ndk/shared/nips/nip01/bip340.dart';
+
+import 'package:horcrux/models/backup_config.dart';
+import 'package:horcrux/models/backup_status.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/shard_distribution_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 
+import '../helpers/steward_test_helpers.dart';
 import 'backup_service_test.mocks.dart';
 
 @GenerateMocks([
@@ -349,6 +356,142 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('BackupService - redistributeForPushPreferenceChange', () {
+    late BackupService backupService;
+    late MockVaultRepository mockRepository;
+    late MockShardDistributionService mockShardDistributionService;
+    late MockLoginService mockLoginService;
+    late MockRelayScanService mockRelayScanService;
+
+    setUp(() {
+      mockRepository = MockVaultRepository();
+      mockShardDistributionService = MockShardDistributionService();
+      mockLoginService = MockLoginService();
+      mockRelayScanService = MockRelayScanService();
+      backupService = BackupService(
+        mockRepository,
+        mockShardDistributionService,
+        mockLoginService,
+        mockRelayScanService,
+      );
+    });
+
+    const testVaultId = 'vault-push-redist';
+    const testSecret = 'secret for push redistribution test';
+
+    test('no-ops when there is no backup config', () async {
+      when(mockRepository.getBackupConfig(testVaultId)).thenAnswer((_) async => null);
+
+      await backupService.redistributeForPushPreferenceChange(vaultId: testVaultId);
+
+      verifyNever(mockRepository.updateBackupConfig(any, any));
+      verifyNever(
+        mockShardDistributionService.distributeShards(
+          ownerPubkey: anyNamed('ownerPubkey'),
+          config: anyNamed('config'),
+          shards: anyNamed('shards'),
+        ),
+      );
+    });
+
+    test('no-ops when stewards are not all ready (canDistribute is false)', () async {
+      final kp = Bip340.generatePrivateKey();
+      final cfg = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 2,
+        totalKeys: 3,
+        stewards: [
+          createTestSteward(pubkey: kp.publicKey, name: 'Owner', isOwner: true),
+          createTestSteward(
+            pubkey: 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
+            name: 'Peer',
+          ),
+          createTestInvitedSteward(name: 'Invited', inviteCode: 'invite01'),
+        ],
+        relays: const ['wss://relay.example.com'],
+      );
+      expect(cfg.canDistribute, isFalse);
+
+      when(mockRepository.getBackupConfig(testVaultId)).thenAnswer((_) async => cfg);
+
+      await backupService.redistributeForPushPreferenceChange(vaultId: testVaultId);
+
+      verifyNever(mockRepository.updateBackupConfig(any, any));
+      verifyNever(
+        mockShardDistributionService.distributeShards(
+          ownerPubkey: anyNamed('ownerPubkey'),
+          config: anyNamed('config'),
+          shards: anyNamed('shards'),
+        ),
+      );
+    });
+
+    test('bumps distributionVersion and distributes shards', () async {
+      final kp = Bip340.generatePrivateKey();
+      final ownerPk = kp.publicKey;
+
+      final baseCfg = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 2,
+        totalKeys: 3,
+        stewards: [
+          createTestSteward(pubkey: ownerPk, name: 'Owner', isOwner: true),
+          createTestSteward(
+            pubkey: 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
+            name: 'Peer 1',
+          ),
+          createTestSteward(
+            pubkey: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+            name: 'Peer 2',
+          ),
+        ],
+        relays: const ['wss://relay.example.com'],
+      );
+      final cfgAt5 = copyBackupConfig(
+        baseCfg,
+        distributionVersion: 5,
+        status: BackupStatus.active,
+      );
+
+      late BackupConfig current;
+      current = cfgAt5;
+      when(mockRepository.getBackupConfig(testVaultId)).thenAnswer((_) async => current);
+      when(mockRepository.updateBackupConfig(any, any)).thenAnswer((inv) async {
+        current = inv.positionalArguments[1] as BackupConfig;
+      });
+      when(mockLoginService.getStoredNostrKey()).thenAnswer((_) async => kp);
+      when(mockRepository.getVault(testVaultId)).thenAnswer(
+        (_) async => Vault(
+          id: testVaultId,
+          name: 'Vault',
+          content: testSecret,
+          createdAt: DateTime.now().toUtc(),
+          ownerPubkey: ownerPk,
+          pushEnabled: false,
+        ),
+      );
+      when(
+        mockShardDistributionService.distributeShards(
+          ownerPubkey: anyNamed('ownerPubkey'),
+          config: anyNamed('config'),
+          shards: anyNamed('shards'),
+        ),
+      ).thenAnswer((_) async => []);
+
+      await backupService.redistributeForPushPreferenceChange(vaultId: testVaultId);
+
+      expect(current.distributionVersion, 6);
+      expect(current.lastRedistribution, isNotNull);
+      verify(
+        mockShardDistributionService.distributeShards(
+          ownerPubkey: anyNamed('ownerPubkey'),
+          config: anyNamed('config'),
+          shards: anyNamed('shards'),
+        ),
+      ).called(1);
     });
   });
 }

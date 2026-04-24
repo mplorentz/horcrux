@@ -72,7 +72,11 @@ void main() {
       );
     });
 
-    ShardData buildShard({required int index, bool? pushEnabled}) {
+    ShardData buildShard({
+      required int index,
+      bool? pushEnabled,
+      int? distributionVersion,
+    }) {
       return createShardData(
         shard: 'abc123',
         threshold: 2,
@@ -82,6 +86,7 @@ void main() {
         creatorPubkey: ownerPubkey,
         vaultId: vaultId,
         vaultName: 'Vault From Owner',
+        distributionVersion: distributionVersion,
         pushEnabled: pushEnabled,
       );
     }
@@ -142,11 +147,17 @@ void main() {
       'redistribution flips pushEnabled on an already-populated vault',
       () async {
         // First distribution: pushEnabled=false.
-        await service.addVaultShare(vaultId, buildShard(index: 0, pushEnabled: false));
+        await service.addVaultShare(
+          vaultId,
+          buildShard(index: 0, pushEnabled: false, distributionVersion: 1),
+        );
         expect((await repository.getVault(vaultId))!.pushEnabled, isFalse);
 
         // Owner toggles push on and redistributes (new shard for a later index).
-        await service.addVaultShare(vaultId, buildShard(index: 1, pushEnabled: true));
+        await service.addVaultShare(
+          vaultId,
+          buildShard(index: 1, pushEnabled: true, distributionVersion: 2),
+        );
 
         final stored = await repository.getVault(vaultId);
         expect(stored!.pushEnabled, isTrue,
@@ -155,27 +166,32 @@ void main() {
     );
 
     test(
-      'legacy shard (no pushEnabled on the wire) collapses steward to false',
+      'legacy or unversioned shard does not roll back pushEnabled after a newer distribution',
       () async {
-        // Populate with pushEnabled=true.
-        await service.addVaultShare(vaultId, buildShard(index: 0, pushEnabled: true));
+        await service.addVaultShare(
+          vaultId,
+          buildShard(index: 0, pushEnabled: true, distributionVersion: 2),
+        );
         expect((await repository.getVault(vaultId))!.pushEnabled, isTrue);
 
-        // A later shard from an older owner build (or a serialization bug)
-        // omits the flag entirely. Null on the wire is treated as "no opinion
-        // → off", so the steward snaps back to the privacy-preserving default.
+        // Later shard omits distribution_version and pushEnabled (legacy replay).
         await service.addVaultShare(vaultId, buildShard(index: 1));
 
-        expect((await repository.getVault(vaultId))!.pushEnabled, isFalse);
+        expect((await repository.getVault(vaultId))!.pushEnabled, isTrue);
       },
     );
 
     test(
       'repeat shard with the same pushEnabled value is a no-op (no unnecessary writes)',
       () async {
-        await service.addVaultShare(vaultId, buildShard(index: 0, pushEnabled: true));
-        // No exception / no crash; state remains consistent.
-        await service.addVaultShare(vaultId, buildShard(index: 1, pushEnabled: true));
+        await service.addVaultShare(
+          vaultId,
+          buildShard(index: 0, pushEnabled: true, distributionVersion: 1),
+        );
+        await service.addVaultShare(
+          vaultId,
+          buildShard(index: 1, pushEnabled: true, distributionVersion: 2),
+        );
 
         expect((await repository.getVault(vaultId))!.pushEnabled, isTrue);
       },
@@ -217,7 +233,11 @@ void main() {
           ),
         ).thenAnswer((_) async {});
 
-        final shard = buildShard(index: 0, pushEnabled: true).copyWith(
+        final shard = buildShard(
+          index: 0,
+          pushEnabled: true,
+          distributionVersion: 1,
+        ).copyWith(
           relayUrls: ['wss://relay.example.com'],
           nostrEventId: 'process-vault-share-push-opt-in',
         );

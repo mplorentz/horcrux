@@ -246,11 +246,11 @@ void main() {
         final shardDataJson = decoded['shard_data'] as Map<String, dynamic>;
         expect(shardDataJson['shard'], 'test_shard_data_base64');
         expect(shardDataJson['threshold'], 2);
-        expect(shardDataJson['shardIndex'], 0);
-        expect(shardDataJson['totalShards'], 3);
-        expect(shardDataJson['creatorPubkey'], testCreatorPubkey);
-        expect(shardDataJson['vaultId'], testVaultId);
-        expect(shardDataJson['vaultName'], 'Test Vault');
+        expect(shardDataJson['shard_index'], 0);
+        expect(shardDataJson['total_shards'], 3);
+        expect(shardDataJson['creator_pubkey'], testCreatorPubkey);
+        expect(shardDataJson['vault_id'], testVaultId);
+        expect(shardDataJson['vault_name'], 'Test Vault');
       },
     );
 
@@ -680,8 +680,8 @@ void main() {
       final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
       expect(sentShardData['shard'], 'real_shard_secret_BBB=');
       expect(sentShardData['threshold'], 1);
-      expect(sentShardData['shardIndex'], 0);
-      expect(sentShardData['totalShards'], 1);
+      expect(sentShardData['shard_index'], 0);
+      expect(sentShardData['total_shards'], 1);
 
       // Log the captured content for verification
       // ignore: avoid_print

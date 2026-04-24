@@ -26,6 +26,47 @@ final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
   );
 });
 
+/// Reset stewards so a new shard distribution can replace keys / shard metadata.
+///
+/// Invited rows (no pubkey) are unchanged. Everyone else with a pubkey moves to
+/// [StewardStatus.awaitingNewKey] or [StewardStatus.awaitingKey] and drops ack state.
+List<Steward> _stewardsResetForRedistribution(List<Steward> stewards) {
+  return stewards.map((steward) {
+    if (steward.pubkey != null && steward.status != StewardStatus.invited) {
+      final newStatus = steward.status == StewardStatus.holdingKey
+          ? StewardStatus.awaitingNewKey
+          : StewardStatus.awaitingKey;
+      return steward.copyWith(
+        status: newStatus,
+        acknowledgedAt: null,
+        acknowledgmentEventId: null,
+        acknowledgedDistributionVersion: null,
+        keyShare: null,
+        giftWrapEventId: null,
+      );
+    }
+    return steward;
+  }).toList();
+}
+
+/// [config] with [BackupConfig.distributionVersion] incremented and stewards reset.
+///
+/// Optionally sets [lastContentChange] (e.g. vault body edit); otherwise preserves
+/// the existing value.
+BackupConfig _backupConfigWithBumpedDistribution(
+  BackupConfig config, {
+  DateTime? lastContentChange,
+}) {
+  final now = DateTime.now();
+  return copyBackupConfig(
+    config,
+    stewards: _stewardsResetForRedistribution(config.stewards),
+    distributionVersion: config.distributionVersion + 1,
+    lastUpdated: now,
+    lastContentChange: lastContentChange ?? config.lastContentChange,
+  );
+}
+
 /// Service for managing distributed backup using Shamir's Secret Sharing
 class BackupService {
   final VaultRepository _repository;
@@ -400,28 +441,9 @@ class BackupService {
         ? existingConfig.distributionVersion + 1
         : existingConfig.distributionVersion;
 
-    // If distribution version incremented, reset all stewards with pubkeys to awaitingNewKey
-    // (preserve invited stewards without pubkeys)
+    // If distribution version incremented, reset stewards for redistribution
     final finalStewards = newDistributionVersion > existingConfig.distributionVersion
-        ? mergedStewards.map((steward) {
-            // Reset to awaitingNewKey if they have a pubkey and were holding a key
-            // Keep as awaitingKey if they were already awaiting (never received a key)
-            if (steward.pubkey != null && steward.status != StewardStatus.invited) {
-              final newStatus = steward.status == StewardStatus.holdingKey
-                  ? StewardStatus.awaitingNewKey
-                  : StewardStatus.awaitingKey;
-              return steward.copyWith(
-                status: newStatus,
-                acknowledgedAt: null,
-                acknowledgmentEventId: null,
-                acknowledgedDistributionVersion: null,
-                keyShare: null,
-                giftWrapEventId: null,
-                // Preserve contactInfo when resetting steward status
-              );
-            }
-            return steward;
-          }).toList()
+        ? _stewardsResetForRedistribution(mergedStewards)
         : mergedStewards;
 
     // Create merged config
@@ -467,42 +489,49 @@ class BackupService {
       return;
     }
 
-    // Increment distribution version
-    final newDistributionVersion = config.distributionVersion + 1;
-
-    // Reset all stewards with pubkeys to awaitingNewKey (if they were holding) or awaitingKey
-    final updatedStewards = config.stewards.map((steward) {
-      // Reset to awaitingNewKey if they have a pubkey and were holding a key
-      // Keep as awaitingKey if they were already awaiting (never received a key)
-      if (steward.pubkey != null && steward.status != StewardStatus.invited) {
-        final newStatus = steward.status == StewardStatus.holdingKey
-            ? StewardStatus.awaitingNewKey
-            : StewardStatus.awaitingKey;
-        return steward.copyWith(
-          status: newStatus,
-          acknowledgedAt: null,
-          acknowledgmentEventId: null,
-          acknowledgedDistributionVersion: null,
-          keyShare: null,
-          giftWrapEventId: null,
-        );
-      }
-      return steward;
-    }).toList();
-
-    // Update config with new version and reset stewards
-    final updatedConfig = copyBackupConfig(
+    final updatedConfig = _backupConfigWithBumpedDistribution(
       config,
-      stewards: updatedStewards,
-      distributionVersion: newDistributionVersion,
-      lastUpdated: DateTime.now(),
       lastContentChange: DateTime.now(),
     );
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
     Log.info(
-      'Incremented distributionVersion to $newDistributionVersion for vault $vaultId due to content change',
+      'Incremented distributionVersion to ${updatedConfig.distributionVersion} '
+      'for vault $vaultId due to content change',
     );
+  }
+
+  /// Owner changed [Vault.pushEnabled] without other backup-config edits.
+  ///
+  /// Stewards learn `push_enabled` from shard payloads; without a new
+  /// distribution they would keep a stale value and could still trigger
+  /// recovery pushes. Bumps [BackupConfig.distributionVersion], resets
+  /// steward distribution state like [mergeBackupConfig], then runs
+  /// [createAndDistributeBackup] so new shards carry the current preference.
+  ///
+  /// No-ops when there is no config or [BackupConfig.canDistribute] is false.
+  Future<void> redistributeForPushPreferenceChange({required String vaultId}) async {
+    final config = await _repository.getBackupConfig(vaultId);
+    if (config == null) {
+      Log.info('BackupService: skip push redistribution (no backup config)');
+      return;
+    }
+    if (!config.canDistribute) {
+      Log.info(
+        'BackupService: skip push redistribution (not all stewards have pubkeys yet)',
+      );
+      return;
+    }
+
+    final updatedConfig = _backupConfigWithBumpedDistribution(config);
+
+    await _repository.updateBackupConfig(vaultId, updatedConfig);
+    Log.info(
+      'BackupService: incremented distributionVersion to ${updatedConfig.distributionVersion} '
+      'for vault $vaultId (owner push preference)',
+    );
+
+    await createAndDistributeBackup(vaultId: vaultId);
   }
 
   /// Check if keys should be auto-distributed and distribute if necessary

@@ -43,13 +43,15 @@ Future<void> maybePromptOwnerForVaultPush({
 
     final optedIn = await pushReceiver.optIn();
     if (!optedIn && context.mounted) {
+      final cs = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Push permission was not granted. Stewards will not receive '
             'device alerts until you enable push in Settings.',
+            style: TextStyle(color: cs.onError),
           ),
-          backgroundColor: Colors.red,
+          backgroundColor: cs.error,
         ),
       );
     }

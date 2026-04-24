@@ -77,12 +77,13 @@ class PushNotificationReceiver {
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
 
-  /// Whether push notifications are supported on this platform. Currently FCM
-  /// supports Android, iOS, macOS, and web -- not Linux or Windows.
-  static bool get isSupported {
-    if (kIsWeb) return true;
-    return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
-  }
+  /// Whether push is supported end-to-end on this device.
+  ///
+  /// Matches [NotifierPlatform.currentDevice]: Android and iOS only (the
+  /// notifier registration path). Web, macOS, Linux, and Windows return
+  /// `false` so [optIn] cannot report success when registration would be
+  /// skipped in [_registerWithNotifierIfNeeded].
+  static bool get isSupported => NotifierPlatform.currentDevice() != null;
 
   /// Returns whether the user has globally opted into push notifications.
   Future<bool> isOptedIn() async {
@@ -93,8 +94,10 @@ class PushNotificationReceiver {
   /// Global push opt-in flow.
   ///
   /// Initializes Firebase lazily, requests permission, obtains an FCM token,
-  /// registers this device with horcrux-notifier, and syncs consent state.
-  /// Returns `true` on success, `false` if permission is denied or setup fails.
+  /// registers this device with horcrux-notifier, persists the opt-in flag,
+  /// then syncs consent state (the flag must be set first so consent sync is
+  /// not skipped). Returns `true` on success, `false` if permission is denied
+  /// or setup fails.
   Future<bool> optIn() async {
     if (!isSupported) {
       Log.info('PushNotificationReceiver: push unsupported on this platform');
@@ -118,9 +121,14 @@ class PushNotificationReceiver {
       }
 
       await _fetchAndStoreToken();
+      final tokenAfterFetch = _cachedToken;
+      if (tokenAfterFetch == null || tokenAfterFetch.isEmpty) {
+        Log.warning('PushNotificationReceiver: optIn aborted (no FCM token)');
+        return false;
+      }
       await _registerWithNotifierIfNeeded(force: true);
-      await _notifierService.syncConsentList();
       await _setOptInFlag(true);
+      await _notifierService.syncConsentList();
       await _processLaunchNotificationIfAny();
       Log.info('PushNotificationReceiver: user opted in to push notifications');
       return true;
@@ -467,13 +475,11 @@ class PushNotificationReceiver {
     }
   }
 
-  /// Logs the FCM token in a highly visible format so it's easy to copy out of
-  /// the debug console and paste into Firebase Cloud Messaging test tools.
+  /// Debug-only metadata about the token (never log the raw secret).
   void _logTokenForTesting(String fcmToken) {
-    final banner = '=' * 80;
-    // ignore: avoid_print
-    debugPrint('\n$banner\nFCM DEVICE TOKEN:\n$fcmToken\n$banner\n');
-    Log.info('FCM device token obtained (length=${fcmToken.length})');
+    Log.debug(
+      'PushNotificationReceiver: FCM token obtained (length=${fcmToken.length})',
+    );
   }
 
   void dispose() {
