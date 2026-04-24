@@ -292,6 +292,9 @@ class HorcruxNotificationService {
   /// invitee's pubkey until they accept, at which point they appear in
   /// the vault's steward list and the vault stream triggers a resync.
   ///
+  /// Archived vaults are skipped entirely — they do not contribute owner or
+  /// steward pubkeys to the allowlist.
+  ///
   /// Returns deduped, lower-cased, sorted pubkeys.
   List<String> computeConsentList({
     required String currentUserPubkey,
@@ -309,6 +312,9 @@ class HorcruxNotificationService {
     }
 
     for (final vault in vaults) {
+      if (vault.isArchived) {
+        continue;
+      }
       add(vault.ownerPubkey);
 
       for (final steward in vault.backupConfig?.stewards ?? const []) {

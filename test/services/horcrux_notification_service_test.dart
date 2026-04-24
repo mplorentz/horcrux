@@ -607,6 +607,38 @@ void main() {
       svc.dispose();
     });
 
+    test('skips archived vaults (no owner or stewards from them)', () {
+      const archivedOwner = 'e111111111111111111111111111111111111111111111111111111111111111';
+      const archivedCoSteward = 'f222222222222222222222222222222222222222222222222222222222222222';
+      final svc = buildForCompute();
+      final active = ownedVault(
+        id: 'active',
+        owner: TestHexPubkeys.alice,
+        stewards: [createSteward(pubkey: TestHexPubkeys.bob, name: 'Bob')],
+      );
+      final archivedOwned = ownedVault(
+        id: 'archived-owned',
+        owner: TestHexPubkeys.charlie,
+        stewards: [createSteward(pubkey: TestHexPubkeys.diana, name: 'Diana')],
+      ).copyWith(isArchived: true);
+      final archivedSteward = stewardedVault(
+        id: 'archived-steward',
+        owner: archivedOwner,
+        shard: shardFor(
+          owner: archivedOwner,
+          coStewardPubkeys: [archivedCoSteward],
+        ),
+      ).copyWith(isArchived: true);
+
+      final result = svc.computeConsentList(
+        currentUserPubkey: TestHexPubkeys.alice,
+        vaults: [active, archivedOwned, archivedSteward],
+      );
+
+      expect(result, equals(<String>[TestHexPubkeys.bob]));
+      svc.dispose();
+    });
+
     test('dedupes the same pubkey across multiple vaults', () {
       final svc = buildForCompute();
       final ownedByAlice = ownedVault(
