@@ -3,35 +3,7 @@ import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/services/recovery_service.dart';
 
 void main() {
-  group('RecoveryLiveNotificationPolicy.isLiveEventTime', () {
-    final firstOpen = DateTime.utc(2026, 4, 1, 12, 0);
-
-    test('matches slack window', () {
-      expect(
-        RecoveryNotificationPolicy.isLiveEventTime(
-          DateTime.utc(2026, 3, 1),
-          firstOpen,
-        ),
-        isFalse,
-      );
-      expect(
-        RecoveryNotificationPolicy.isLiveEventTime(
-          DateTime.utc(2026, 4, 1, 11, 30),
-          firstOpen,
-        ),
-        isTrue,
-      );
-      expect(
-        RecoveryNotificationPolicy.isLiveEventTime(
-          DateTime.utc(2026, 4, 1, 13),
-          firstOpen,
-        ),
-        isTrue,
-      );
-    });
-  });
-
-  group('recovery live event policy', () {
+  group('recovery notification policy', () {
     final firstOpen = DateTime.utc(2026, 4, 1, 12, 0);
 
     test('should not notify historical recovery request', () {

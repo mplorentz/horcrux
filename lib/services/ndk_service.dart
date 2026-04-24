@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../providers/key_provider.dart';
 import '../utils/date_time_extensions.dart';
+import 'local_notification_service.dart';
 import 'login_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
@@ -278,8 +279,13 @@ class NdkService {
   /// Unwraps and routes a kind-1059 gift wrap received on an FCM foreground message
   /// with inline `event_json` — same pipeline as relay subscription deliveries.
   ///
-  /// No-ops when NDK cannot be initialized (no key). Large pushes that omit inline
-  /// JSON are handled later by the tap / cold-start path.
+  /// Processing flows through [_handleIncomingNostrEvent] which dispatches to
+  /// the per-kind handlers; those handlers are responsible for surfacing any
+  /// user-facing local notification via [LocalNotificationService] (so the
+  /// foreground FCM path does not need its own fallback notification).
+  ///
+  /// No-ops when NDK cannot be initialized (no key). Large pushes that omit
+  /// inline JSON are handled later by the tap / cold-start path.
   Future<void> processGiftWrapFromForegroundPush(Nip01Event event) async {
     if (!_isInitialized) {
       try {
@@ -460,6 +466,11 @@ class NdkService {
 
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
+
+      await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+            event: event,
+            shardData: shardData,
+          );
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
     }
@@ -595,6 +606,14 @@ class NdkService {
         event: event,
       );
       Log.info('Successfully processed shard confirmation event: ${event.id}');
+
+      final vaultId = _firstTagValue(event.tags, 'vault_id');
+      if (vaultId != null) {
+        await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
+              event: event,
+              vaultId: vaultId,
+            );
+      }
     } catch (e) {
       Log.error('Error handling shard confirmation event ${event.id}', e);
     }

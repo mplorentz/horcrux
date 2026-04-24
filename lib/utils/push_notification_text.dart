@@ -68,9 +68,9 @@ PushNotificationText? composeNotificationText({
     case NostrKind.recoveryResponse:
       final String body;
       if (recoveryApproved == true) {
-        body = '$sender approved your recovery of "$vaultName".';
+        body = '$sender approved your recovery request for "$vaultName".';
       } else if (recoveryApproved == false) {
-        body = '$sender denied recovery of "$vaultName".';
+        body = '$sender denied your recovery request for "$vaultName".';
       } else {
         body = '$sender sent a shard for recovery of "$vaultName".';
       }

@@ -423,6 +423,20 @@ class PushNotificationReceiver {
     Log.warning('FCM tap: navigator not ready; skipped navigation to vault $vaultId');
   }
 
+  /// Handles a push that arrives while the app is foregrounded.
+  ///
+  /// iOS/macOS suppress the OS notification display when the app is in the
+  /// foreground, so the user only sees a notification if we surface one
+  /// ourselves. We rely on the normal NDK pipeline to do that: the embedded
+  /// gift wrap is routed through [NdkService.processGiftWrapFromForegroundPush]
+  /// and its per-kind handlers call into [LocalNotificationService] to emit a
+  /// live notification (liveness-gated to ignore relay backfill). This keeps
+  /// foreground FCM deliveries aligned with relay-delivered events and avoids
+  /// double-notifying.
+  ///
+  /// No fallback notification is shown here — if the pipeline decides not to
+  /// notify for this event (e.g. deduped, historical, or a kind we don't
+  /// surface), the push stays silent in the foreground.
   Future<void> _onForegroundRemoteMessage(RemoteMessage message) async {
     Log.info(
       'FCM foreground message received: messageId=${message.messageId}, '
@@ -442,22 +456,6 @@ class PushNotificationReceiver {
           st,
         );
       }
-    }
-
-    // Real pushes from horcrux-notifier always include a `notification`
-    // payload that the OS would normally display on its own. In the
-    // foreground, FCM suppresses the OS display and hands the message to
-    // us, so we surface it via [LocalNotificationService] to keep the UX
-    // consistent across foreground/background.
-    final notification = message.notification;
-    if (notification != null) {
-      unawaited(
-        _localNotifications.showNotification(
-          title: notification.title ?? 'Horcrux',
-          body: notification.body ?? 'Push notification received',
-          payload: 'fcm_test',
-        ),
-      );
     } else if (kDebugMode) {
       unawaited(
         _localNotifications.showNotification(

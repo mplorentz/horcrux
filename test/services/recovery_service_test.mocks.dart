@@ -950,6 +950,42 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<void> notifyShardDataProcessed({
+    required _i2.Nip01Event? event,
+    required _i9.ShardData? shardData,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #notifyShardDataProcessed,
+          [],
+          {
+            #event: event,
+            #shardData: shardData,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> notifyShardConfirmationProcessed({
+    required _i2.Nip01Event? event,
+    required String? vaultId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #notifyShardConfirmationProcessed,
+          [],
+          {
+            #event: event,
+            #vaultId: vaultId,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   _i5.Future<bool> requestPlatformNotificationPermissions() => (super.noSuchMethod(
         Invocation.method(
           #requestPlatformNotificationPermissions,

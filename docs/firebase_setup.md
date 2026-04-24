@@ -1,41 +1,6 @@
 # Firebase / FCM Setup
 
-Horcrux uses Firebase Cloud Messaging (FCM) for silent push wake-up notifications as part of the NIP-9a relay push flow. The push payload is content-free - it just wakes the app, which then connects to its relays and shows local notifications based on what it finds.
-
-## Status
-
-The Flutter/Gradle/iOS wiring for Firebase is already in place:
-
-- `firebase_core` and `firebase_messaging` are declared in [pubspec.yaml](../pubspec.yaml).
-- Android has the `com.google.gms.google-services` plugin applied in [android/settings.gradle](../android/settings.gradle) and [android/app/build.gradle](../android/app/build.gradle), with `minSdk = 23`.
-- iOS has `remote-notification` + `fetch` background modes and `FirebaseAppDelegateProxyEnabled=true` in [ios/Runner/Info.plist](../ios/Runner/Info.plist), and the Podfile pins `platform :ios, '13.0'`.
-
-`lib/firebase_options.dart` is committed to the repo. Firebase's client-side
-config (`apiKey`, `appId`, `projectId`, etc.) are public identifiers, not
-secrets — FlutterFire and Google explicitly document this as safe to commit.
-Real security comes from Firebase Security Rules, App Check, and API key
-restrictions in the GCP console, not from hiding the config. Committing it
-means `flutter analyze` and `flutter test` work on a fresh clone without any
-extra setup.
-
-What's still required before the app can build and talk to FCM on a device:
-
-1. **A Firebase project** on the Google Firebase Console (only if you need
-   to swap the default project for your own — see below).
-2. **`android/app/google-services.json`** downloaded from the Android app
-   registration. Gitignored; each developer provides their own or uses the
-   team's copy out of band.
-3. **`ios/Runner/GoogleService-Info.plist`** downloaded from the iOS app
-   registration, added to the Xcode project. Gitignored for the same reason.
-4. **`macos/Runner/GoogleService-Info.plist`** for macOS FCM (same Firebase
-   iOS app as iOS; FlutterFire writes it here). Gitignored. Use
-   `macos/Runner/GoogleService-Info.plist.example` as a shape reference.
-
-> **Swapping Firebase projects**: If you want to use your own Firebase project
-> instead of the default one baked into `lib/firebase_options.dart`, run
-> `flutterfire configure` (see below) and regenerate both the Dart options
-> file and the native config files. Just don't commit your personal
-> `firebase_options.dart` unless you're rotating the repo default.
+Horcrux uses Firebase Cloud Messaging (FCM) to delivier push notifications for vault events.
 
 ## One-time setup steps (do these once per environment)
 
@@ -47,7 +12,7 @@ What's still required before the app can build and talk to FCM on a device:
 ### 2. Register the Android app
 
 1. In the Firebase Console, click "Add app" → Android.
-2. Use package name **`com.singleoriginsoftware.horcrux`** (must match `applicationId` in [android/app/build.gradle](../android/app/build.gradle)).
+2. Create your own package name like **`com.singleoriginsoftware.horcrux`** (must match `applicationId` in [android/app/build.gradle](../android/app/build.gradle)).
 3. Download `google-services.json`.
 4. Place it at `android/app/google-services.json`.
 5. It is already gitignored - **do not commit** (verify with `git check-ignore android/app/google-services.json`).
@@ -55,7 +20,7 @@ What's still required before the app can build and talk to FCM on a device:
 ### 3. Register the iOS app
 
 1. In the Firebase Console, click "Add app" → iOS.
-2. Use bundle ID **`com.singleoriginsoftware.horcrux`** (must match the iOS `PRODUCT_BUNDLE_IDENTIFIER` in `ios/Runner.xcodeproj/project.pbxproj`).
+2. Create your custom bundle ID like **`com.singleoriginsoftware.horcrux`** (must match the iOS `PRODUCT_BUNDLE_IDENTIFIER` in `ios/Runner.xcodeproj/project.pbxproj`).
 3. Download `GoogleService-Info.plist`.
 4. Open `ios/Runner.xcworkspace` in Xcode, drag `GoogleService-Info.plist` into the `Runner` target (copy if needed, add to target `Runner`).
 5. The file should end up at `ios/Runner/GoogleService-Info.plist` and be referenced from the Xcode project. **Do not commit.**
@@ -75,8 +40,8 @@ firebase login
 flutterfire configure \
   --project=<your-firebase-project-id> \
   --platforms=android,ios,macos \
-  --ios-bundle-id=com.singleoriginsoftware.horcrux \
-  --android-package-name=com.singleoriginsoftware.horcrux
+  --ios-bundle-id=<your-bundle-id> \
+  --android-package-name=<your-package-name>
 ```
 
 This will:
@@ -105,13 +70,3 @@ fvm flutter run -d android   # or -d ios
 - On Android, Gradle should apply `google-services` without error.
 - On iOS, Xcode should build against `GoogleService-Info.plist` without complaint.
 - `Firebase.initializeApp()` in `main.dart` (added in Phase 2) should succeed.
-
-## Privacy note
-
-The FCM payload Horcrux sends is intentionally content-free:
-
-```json
-{ "data": { "type": "relay_event" } }
-```
-
-No event IDs, relay URLs, pubkeys, or secrets are sent through Google's infrastructure. The app wakes up, connects to its own configured relays, and decides locally whether to display a notification.
