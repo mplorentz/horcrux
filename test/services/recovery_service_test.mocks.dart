@@ -654,6 +654,18 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<void> redistributeForPushPreferenceChange({required String? vaultId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #redistributeForPushPreferenceChange,
+          [],
+          {#vaultId: vaultId},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   _i5.Future<void> distributeKeysIfNecessary(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #distributeKeysIfNecessary,
