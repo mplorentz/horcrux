@@ -339,7 +339,10 @@ class NdkService {
       for (final e in events) {
         if (e.id == eventIdHex) return e;
       }
-      return events.first;
+      Log.warning(
+        'fetchGiftWrapByIdForPush: relay returned ${events.length} event(s) but none matched $eventIdHex',
+      );
+      return null;
     } catch (e, st) {
       Log.warning('fetchGiftWrapByIdForPush failed', e, st);
       return null;
