@@ -16,7 +16,8 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$Steward {
-  String get id => throw _privateConstructorUsedError; // Unique identifier for this steward
+  String get id =>
+      throw _privateConstructorUsedError; // Unique identifier for this steward
   String? get pubkey =>
       throw _privateConstructorUsedError; // Hex format - nullable for invited stewards
   String? get name => throw _privateConstructorUsedError;
@@ -60,7 +61,8 @@ abstract class $StewardCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$StewardCopyWithImpl<$Res, $Val extends Steward> implements $StewardCopyWith<$Res> {
+class _$StewardCopyWithImpl<$Res, $Val extends Steward>
+    implements $StewardCopyWith<$Res> {
   _$StewardCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -126,7 +128,8 @@ class _$StewardCopyWithImpl<$Res, $Val extends Steward> implements $StewardCopyW
           ? _value.acknowledgmentEventId
           : acknowledgmentEventId // ignore: cast_nullable_to_non_nullable
               as String?,
-      acknowledgedDistributionVersion: freezed == acknowledgedDistributionVersion
+      acknowledgedDistributionVersion: freezed ==
+              acknowledgedDistributionVersion
           ? _value.acknowledgedDistributionVersion
           : acknowledgedDistributionVersion // ignore: cast_nullable_to_non_nullable
               as int?,
@@ -144,7 +147,8 @@ class _$StewardCopyWithImpl<$Res, $Val extends Steward> implements $StewardCopyW
 
 /// @nodoc
 abstract class _$$StewardImplCopyWith<$Res> implements $StewardCopyWith<$Res> {
-  factory _$$StewardImplCopyWith(_$StewardImpl value, $Res Function(_$StewardImpl) then) =
+  factory _$$StewardImplCopyWith(
+          _$StewardImpl value, $Res Function(_$StewardImpl) then) =
       __$$StewardImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -165,9 +169,11 @@ abstract class _$$StewardImplCopyWith<$Res> implements $StewardCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$StewardImplCopyWithImpl<$Res> extends _$StewardCopyWithImpl<$Res, _$StewardImpl>
+class __$$StewardImplCopyWithImpl<$Res>
+    extends _$StewardCopyWithImpl<$Res, _$StewardImpl>
     implements _$$StewardImplCopyWith<$Res> {
-  __$$StewardImplCopyWithImpl(_$StewardImpl _value, $Res Function(_$StewardImpl) _then)
+  __$$StewardImplCopyWithImpl(
+      _$StewardImpl _value, $Res Function(_$StewardImpl) _then)
       : super(_value, _then);
 
   @pragma('vm:prefer-inline')
@@ -228,7 +234,8 @@ class __$$StewardImplCopyWithImpl<$Res> extends _$StewardCopyWithImpl<$Res, _$St
           ? _value.acknowledgmentEventId
           : acknowledgmentEventId // ignore: cast_nullable_to_non_nullable
               as String?,
-      acknowledgedDistributionVersion: freezed == acknowledgedDistributionVersion
+      acknowledgedDistributionVersion: freezed ==
+              acknowledgedDistributionVersion
           ? _value.acknowledgedDistributionVersion
           : acknowledgedDistributionVersion // ignore: cast_nullable_to_non_nullable
               as int?,
@@ -309,20 +316,26 @@ class _$StewardImpl extends _Steward {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.pubkey, pubkey) || other.pubkey == pubkey) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode) &&
+            (identical(other.inviteCode, inviteCode) ||
+                other.inviteCode == inviteCode) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen) &&
-            (identical(other.keyShare, keyShare) || other.keyShare == keyShare) &&
+            (identical(other.lastSeen, lastSeen) ||
+                other.lastSeen == lastSeen) &&
+            (identical(other.keyShare, keyShare) ||
+                other.keyShare == keyShare) &&
             (identical(other.giftWrapEventId, giftWrapEventId) ||
                 other.giftWrapEventId == giftWrapEventId) &&
             (identical(other.acknowledgedAt, acknowledgedAt) ||
                 other.acknowledgedAt == acknowledgedAt) &&
             (identical(other.acknowledgmentEventId, acknowledgmentEventId) ||
                 other.acknowledgmentEventId == acknowledgmentEventId) &&
-            (identical(other.acknowledgedDistributionVersion, acknowledgedDistributionVersion) ||
-                other.acknowledgedDistributionVersion == acknowledgedDistributionVersion) &&
+            (identical(other.acknowledgedDistributionVersion,
+                    acknowledgedDistributionVersion) ||
+                other.acknowledgedDistributionVersion ==
+                    acknowledgedDistributionVersion) &&
             (identical(other.isOwner, isOwner) || other.isOwner == isOwner) &&
-            (identical(other.contactInfo, contactInfo) || other.contactInfo == contactInfo));
+            (identical(other.contactInfo, contactInfo) ||
+                other.contactInfo == contactInfo));
   }
 
   @override
@@ -394,5 +407,6 @@ abstract class _Steward extends Steward {
   String? get contactInfo;
   @override
   @JsonKey(ignore: true)
-  _$$StewardImplCopyWith<_$StewardImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$StewardImplCopyWith<_$StewardImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }

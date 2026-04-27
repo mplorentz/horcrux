@@ -89,7 +89,8 @@ class MockLoginService extends _i1.Mock implements _i4.LoginService {
       ) as _i5.Future<_i2.KeyPair>);
 
   @override
-  _i5.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
+  _i5.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
+      (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -264,13 +265,15 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
   }
 
   @override
-  _i5.Stream<_i8.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
+  _i5.Stream<_i8.RecoveryRequest> get recoveryRequestStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryRequestStream),
         returnValue: _i5.Stream<_i8.RecoveryRequest>.empty(),
       ) as _i5.Stream<_i8.RecoveryRequest>);
 
   @override
-  _i5.Stream<_i7.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
+  _i5.Stream<_i7.RecoveryResponseEvent> get recoveryResponseStream =>
+      (super.noSuchMethod(
         Invocation.getter(#recoveryResponseStream),
         returnValue: _i5.Stream<_i7.RecoveryResponseEvent>.empty(),
       ) as _i5.Stream<_i7.RecoveryResponseEvent>);
@@ -312,7 +315,8 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processGiftWrapFromForegroundPush(_i3.Nip01Event? event) => (super.noSuchMethod(
+  _i5.Future<void> processGiftWrapFromForegroundPush(_i3.Nip01Event? event) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processGiftWrapFromForegroundPush,
           [event],
@@ -339,7 +343,8 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<_i3.Nip01Event?>);
 
   @override
-  _i5.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
+  _i5.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+      (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
@@ -462,7 +467,8 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
+        returnValue:
+            _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
       ) as _i5.Future<List<_i3.Nip01Event?>>);
 
   @override
@@ -503,7 +509,8 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock
+    implements _i9.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -580,7 +587,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
+  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) =>
+      (super.noSuchMethod(
         Invocation.method(
           #replaceConsents,
           [authorizedSenders],
@@ -689,7 +697,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
 /// A class which mocks [PushNotificationReceiver].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockPushNotificationReceiver extends _i1.Mock implements _i12.PushNotificationReceiver {
+class MockPushNotificationReceiver extends _i1.Mock
+    implements _i12.PushNotificationReceiver {
   MockPushNotificationReceiver() {
     _i1.throwOnMissingStub(this);
   }

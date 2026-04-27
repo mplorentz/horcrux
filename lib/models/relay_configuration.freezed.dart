@@ -102,8 +102,8 @@ class _$RelayConfigurationCopyWithImpl<$Res, $Val extends RelayConfiguration>
 /// @nodoc
 abstract class _$$RelayConfigurationImplCopyWith<$Res>
     implements $RelayConfigurationCopyWith<$Res> {
-  factory _$$RelayConfigurationImplCopyWith(
-          _$RelayConfigurationImpl value, $Res Function(_$RelayConfigurationImpl) then) =
+  factory _$$RelayConfigurationImplCopyWith(_$RelayConfigurationImpl value,
+          $Res Function(_$RelayConfigurationImpl) then) =
       __$$RelayConfigurationImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -121,8 +121,8 @@ abstract class _$$RelayConfigurationImplCopyWith<$Res>
 class __$$RelayConfigurationImplCopyWithImpl<$Res>
     extends _$RelayConfigurationCopyWithImpl<$Res, _$RelayConfigurationImpl>
     implements _$$RelayConfigurationImplCopyWith<$Res> {
-  __$$RelayConfigurationImplCopyWithImpl(
-      _$RelayConfigurationImpl _value, $Res Function(_$RelayConfigurationImpl) _then)
+  __$$RelayConfigurationImplCopyWithImpl(_$RelayConfigurationImpl _value,
+      $Res Function(_$RelayConfigurationImpl) _then)
       : super(_value, _then);
 
   @pragma('vm:prefer-inline')
@@ -213,21 +213,26 @@ class _$RelayConfigurationImpl extends _RelayConfiguration {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.url, url) || other.url == url) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.isEnabled, isEnabled) || other.isEnabled == isEnabled) &&
-            (identical(other.lastScanned, lastScanned) || other.lastScanned == lastScanned) &&
-            (identical(other.scanInterval, scanInterval) || other.scanInterval == scanInterval) &&
-            (identical(other.isTrusted, isTrusted) || other.isTrusted == isTrusted));
+            (identical(other.isEnabled, isEnabled) ||
+                other.isEnabled == isEnabled) &&
+            (identical(other.lastScanned, lastScanned) ||
+                other.lastScanned == lastScanned) &&
+            (identical(other.scanInterval, scanInterval) ||
+                other.scanInterval == scanInterval) &&
+            (identical(other.isTrusted, isTrusted) ||
+                other.isTrusted == isTrusted));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, url, name, isEnabled, lastScanned, scanInterval, isTrusted);
+  int get hashCode => Object.hash(runtimeType, id, url, name, isEnabled,
+      lastScanned, scanInterval, isTrusted);
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$RelayConfigurationImplCopyWith<_$RelayConfigurationImpl> get copyWith =>
-      __$$RelayConfigurationImplCopyWithImpl<_$RelayConfigurationImpl>(this, _$identity);
+      __$$RelayConfigurationImplCopyWithImpl<_$RelayConfigurationImpl>(
+          this, _$identity);
 }
 
 abstract class _RelayConfiguration extends RelayConfiguration {
