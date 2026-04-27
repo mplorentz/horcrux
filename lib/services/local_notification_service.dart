@@ -14,14 +14,13 @@ import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
 import 'notification_recency.dart';
-import 'recovery_service.dart';
+import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
-  final recoveryService = ref.watch(recoveryServiceProvider);
   final service = LocalNotificationService(
     vaultRepository: vaultRepository,
-    recoveryService: recoveryService,
+    getRecoveryService: () => ref.read(recoveryServiceProvider),
   );
   ref.onDispose(() => service.dispose());
   return service;
@@ -36,7 +35,7 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
 /// in, but recency is enforced here as the single source of truth.
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
-  final RecoveryService _recoveryService;
+  final RecoveryService Function() _getRecoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'horcrux_notifications';
@@ -47,9 +46,9 @@ class LocalNotificationService {
 
   LocalNotificationService({
     required VaultRepository vaultRepository,
-    required RecoveryService recoveryService,
+    required RecoveryService Function() getRecoveryService,
   })  : _vaultRepository = vaultRepository,
-        _recoveryService = recoveryService;
+        _getRecoveryService = getRecoveryService;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -316,7 +315,7 @@ class LocalNotificationService {
   }
 
   Future<void> _navigateToRecoveryRequest(String recoveryRequestId) async {
-    final request = await _recoveryService.getRecoveryRequest(recoveryRequestId);
+    final request = await _getRecoveryService().getRecoveryRequest(recoveryRequestId);
     if (request == null) {
       Log.warning('Recovery request $recoveryRequestId not found, skipping navigation');
       return;
