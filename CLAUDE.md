@@ -7,17 +7,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Horcrux is a Flutter app for backup and recovery of sensitive data using Shamir's Secret Sharing. Instead of cloud backups, data is distributed in encrypted shards to friends and family via the Nostr protocol. Recovery requires consent from multiple stewards to reassemble the data.
 
 **Key Technologies:**
+
 - Flutter 3.35.0 with Dart SDK ^3.5.3
 - Nostr protocol via `ndk` package for decentralized communication
 - Riverpod for state management and dependency injection
 - Shamir's Secret Sharing via `ntcdcrypto` package
 - Flutter Secure Storage for key management
 
+## Coding Principles
+
+The most expensive part of coding is having humans read and reason about code. Optimize for this by writing clear, simple, consise code. We want to handle all edge cases but avoid over-engineering, premature optimization, and defensive programming. Try to keep the length of files between 100 and 300 lines and keep the number of components down when possible. It's ok to repeat small amounts code once or twice if it avoids creating more components or complexity, but beyond that refactor into a shared component.
+
+Delivering a clear, consistent developer experience when writing code is largely defined by the names and idioms that appear in APIs. Inclue all words needed to avoid ambiguity for a person reading the code. Omit needless words. Name variables parameters, and associated types according to their roles rather than their type constraints. Compensate for weak type information to clarify a parameter's role. Prefer method and function names that make use sites form grammatical English phrases. Begin names of factory methods with “make”, e.g. x.makeIterator().
+
+Use imperative verbs for functions with side effects (i.e. `processNewData()`) and nouns for pure functions (i.e. `newDataFromJSON()`). Always use named parameters when the language supports it and always document functions with a short summary of their implementation and any unexpected behavior.
+
+Name Mutating/nonmutating method pairs consistently (i.e. `x.sort()` vs. `x.sorted()`). A mutating method will often have a nonmutating variant with similar semantics, but that returns a new value rather than updating an instance in-place. Uses of Boolean methods and properties should read as assertions about the receiver when the use is nonmutating, e.g. x.isEmpty, line1.intersects(line2).
+
+Protocols that describe what something is should read as nouns (e.g. Collection).
+
+Protocols that describe a capability should be named using the suffixes able, ible, or ing (e.g. Equatable, ProgressReporting).
+
+The names of other types, properties, variables, and constants should read as nouns.
+
+Avoid obscure terms if a more common word conveys meaning just as well. Don’t say “epidermis” if “skin” will serve your purpose. Terms of art are an essential communication tool, but should only be used to capture crucial meaning that would otherwise be lost.
+
+Avoid abbreviations. Abbreviations, especially non-standard ones, are effectively terms-of-art, because understanding depends on correctly translating them into their non-abbreviated forms. The intended meaning for any abbreviation you use should be easily found by a web search.
+
+Embrace precedent. Don’t optimize terms for the total beginner at the expense of conformance to existing culture.
+
 ## Common Development Commands
 
 **Note:** This project uses `fvm` (Flutter Version Manager). All flutter commands must be prefixed with `fvm`.
 
 ### Running the App
+
 ```bash
 # Run on default device
 fvm flutter run
@@ -33,6 +57,7 @@ fvm flutter run --release
 ```
 
 ### Testing
+
 ```bash
 # Run all unit tests (excluding golden tests)
 fvm flutter test --exclude-tags=golden
@@ -51,6 +76,7 @@ fvm flutter test --coverage
 ```
 
 ### Code Quality
+
 ```bash
 # Format code
 fvm dart format .
@@ -69,6 +95,7 @@ fvm flutter clean
 ```
 
 ### Building
+
 ```bash
 # Build for web (HTML renderer for testing)
 fvm flutter build web --web-renderer html
@@ -81,6 +108,7 @@ fvm flutter build ios
 ```
 
 ### Web Testing with Playwright
+
 ```bash
 # Build and serve web app for testing (see .vscode/tasks.json)
 fvm flutter build web --web-renderer html
@@ -95,6 +123,7 @@ python3 -m http.server 8084
 All state management uses Riverpod with a strict service-based architecture:
 
 **Services** contain business logic and are always instance classes with dependency injection:
+
 ```dart
 final myServiceProvider = Provider<MyService>((ref) {
   return MyService(
@@ -114,6 +143,7 @@ class MyService {
 **Repositories** are only created when data access is complex (caching, streams, multiple queries, 100+ lines). See `.cursorrules` for detailed guidance. Simple CRUD operations stay in services directly.
 
 **Providers** expose data to UI components using various types:
+
 - `Provider<T>` - For services and singletons
 - `FutureProvider<T>` - For async data loading
 - `StreamProvider<T>` - For reactive streams
@@ -148,10 +178,12 @@ class MyService {
 ### Nostr Protocol Integration
 
 **Event Types** (defined in `lib/models/nostr_kinds.dart`):
+
 - Gift-wrapped events (NIP-44) for encrypted peer-to-peer messaging
 - Custom kinds for shard distribution, confirmations, and recovery
 
 **Key Format Conventions:**
+
 - **Internal**: Hex format (64 chars, no prefix) for storage, processing, API payloads
 - **Display**: Bech32 format (`npub1...`, `nsec1...`) for UI, user input, logs
 
@@ -166,6 +198,7 @@ class MyService {
 **CRITICAL DESIGN RULE**: Orange (#DC714E) appears ONLY on `RowButton` components (primary actions at bottom of screen). All other UI uses Navy-Ink or Umber.
 
 **Key Widgets:**
+
 - `RowButton` - Single primary action (orange, full-width, bottom)
 - `RowButtonStack` - Multiple actions with gradient (orange at bottom)
 - `VaultCard` - List item for vaults
@@ -204,6 +237,7 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 ## Testing Guidelines
 
 ### Golden Tests
+
 - Screenshot tests use `golden_toolkit` package
 - **MUST be run on macOS** for consistent rendering (CI enforces this)
 - Test config in `test/flutter_test_config.dart` loads bundled fonts
@@ -211,11 +245,13 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 - Golden files stored in `test/screens/goldens/`
 
 ### Unit Tests
+
 - Mock dependencies using `mockito` package
 - Run mocks generator: `flutter pub run build_runner build`
 - Test files mirror lib structure: `test/services/`, `test/models/`, etc.
 
 ### CI/CD
+
 - GitHub Actions workflow in `.github/workflows/test.yml`
 - Runs on macOS for golden test consistency
 - Steps: format check → analyze → unit tests → golden tests
@@ -238,6 +274,7 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 **No Thin Wrappers**: Don't create repositories that just delegate to services. Use service directly with providers.
 
 **Nostr Conventions**:
+
 - Hex format for internal data, bech32 for display
 - Snake_case in Nostr event payloads
 - NIP-40 expiration tags on all events
@@ -247,6 +284,7 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 ## Debugging
 
 **Logging**: Use `Log` class from `lib/services/logger.dart`:
+
 ```dart
 Log.info('Message');
 Log.error('Error occurred', exception);
