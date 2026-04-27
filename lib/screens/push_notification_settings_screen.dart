@@ -26,7 +26,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     _reload();
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload({bool showError = true}) async {
     try {
       final receiver = ref.read(pushNotificationReceiverProvider);
       final optedIn = await receiver.isOptedIn();
@@ -35,9 +35,11 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     } catch (e, st) {
       Log.warning('Failed to load push notification opt-in state', e, st);
       if (!mounted) return;
-      _showErrorSnackBar(
-        'Unable to load push notification settings right now. Please try again.',
-      );
+      if (showError) {
+        _showErrorSnackBar(
+          'Unable to load push notification settings right now. Please try again.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -61,6 +63,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
       if (value) {
         final granted = await receiver.optIn();
         if (!mounted) return;
+        setState(() => _optedIn = granted);
         if (!granted) {
           _showErrorSnackBar(
             'Push permission was not granted. Enable notifications in '
@@ -69,8 +72,10 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
         }
       } else {
         await receiver.optOut();
+        if (!mounted) return;
+        setState(() => _optedIn = false);
       }
-      await _reload();
+      await _reload(showError: false);
     } catch (e, st) {
       Log.warning('Failed to toggle push opt-in', e, st);
       if (!mounted) return;
