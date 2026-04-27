@@ -333,6 +333,8 @@ class LocalNotificationService {
       }
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
+    Log.warning(
+        'Local notification tap: navigator not ready; skipped navigation to recovery request $recoveryRequestId');
   }
 
   void dispose() {}
