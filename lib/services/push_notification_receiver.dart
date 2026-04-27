@@ -5,14 +5,12 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../app_navigator.dart';
 import '../firebase_options.dart';
-import '../screens/vault_detail_screen.dart';
+import '../models/nostr_kinds.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
@@ -412,30 +410,24 @@ class PushNotificationReceiver {
     }
 
     final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
+    final recoveryRequestId = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
       await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
     } catch (e, st) {
       Log.warning('FCM tap: gift wrap processing failed', e, st);
     }
-    if (vaultId != null) {
-      await _navigateToVaultWhenReady(vaultId);
-    }
-  }
 
-  Future<void> _navigateToVaultWhenReady(String vaultId) async {
-    for (var i = 0; i < 40; i++) {
-      final nav = navigatorKey.currentState;
-      if (nav != null && nav.mounted) {
-        await nav.push(
-          MaterialPageRoute<void>(
-            builder: (context) => VaultDetailScreen(vaultId: vaultId),
-          ),
-        );
-        return;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+    if (recoveryRequestId != null) {
+      final navigated = await _localNotifications.navigateForKind(
+        NostrKind.recoveryRequest,
+        recoveryRequestId,
+      );
+      if (navigated) return;
+      Log.warning('FCM tap: recovery request $recoveryRequestId not found, falling back to vault');
     }
-    Log.warning('FCM tap: navigator not ready; skipped navigation to vault $vaultId');
+    if (vaultId != null) {
+      await _localNotifications.navigateToVault(vaultId);
+    }
   }
 
   /// Handles a push that arrives while the app is foregrounded.

@@ -380,6 +380,26 @@ class NdkService {
     }
   }
 
+  /// Best-effort recovery_request_id for navigation after a push — unwraps
+  /// once and reads inner JSON. Returns `null` when the inner kind is not a
+  /// recovery request or unwrap fails.
+  Future<String?> resolveRecoveryRequestIdForGiftWrap(
+    Nip01Event giftWrap,
+  ) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+    try {
+      final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
+      if (inner.kind != 1338) return null; // [NostrKind.recoveryRequest]
+      final m = json.decode(inner.content) as Map<String, dynamic>;
+      final id = m['recovery_request_id'] as String?;
+      return (id != null && id.isNotEmpty) ? id : null;
+    } catch (e, st) {
+      Log.debug('resolveRecoveryRequestIdForGiftWrap failed', e, st);
+      return null;
+    }
+  }
+
   String? _firstTagValue(List<List<String>> tags, String name) {
     for (final t in tags) {
       if (t.length >= 2 && t[0] == name) {

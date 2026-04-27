@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
@@ -7,14 +9,20 @@ import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
+import '../screens/recovery_request_detail_screen.dart';
+import '../screens/vault_detail_screen.dart';
 import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
 import 'notification_recency.dart';
+import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
-  final service = LocalNotificationService(vaultRepository: vaultRepository);
+  final service = LocalNotificationService(
+    vaultRepository: vaultRepository,
+    getRecoveryService: () => ref.read(recoveryServiceProvider),
+  );
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -28,6 +36,7 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
 /// in, but recency is enforced here as the single source of truth.
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
+  final RecoveryService Function() _getRecoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'horcrux_notifications';
@@ -36,8 +45,11 @@ class LocalNotificationService {
 
   int _notificationCounter = 0;
 
-  LocalNotificationService({required VaultRepository vaultRepository})
-      : _vaultRepository = vaultRepository;
+  LocalNotificationService({
+    required VaultRepository vaultRepository,
+    required RecoveryService Function() getRecoveryService,
+  })  : _vaultRepository = vaultRepository,
+        _getRecoveryService = getRecoveryService;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -205,7 +217,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: 'recovery_request:${request.id}',
+      payload: '${NostrKind.recoveryRequest.value}:${request.id}',
     );
   }
 
@@ -239,7 +251,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: '${kind.name}:${event.id}',
+      payload: '${kind.value}:${event.id}:$vaultId',
     );
   }
 
@@ -259,7 +271,8 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: 'recovery_response:${response.recoveryRequestId}',
+      payload:
+          '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}:${response.vaultId}',
     );
   }
 
@@ -297,15 +310,89 @@ class LocalNotificationService {
 
     Log.info('Notification tapped with payload: $payload');
 
-    final navigator = navigatorKey.currentState;
-    if (navigator == null) return;
+    final firstColon = payload.indexOf(':');
+    if (firstColon == -1) return;
 
-    // For now, tapping just brings the app to the foreground.
-    // Navigation to specific screens will be added when we have
-    // the routing infrastructure for deep-linking into recovery flows.
-    if (kDebugMode) {
-      Log.debug('Notification payload: $payload');
+    final kindValue = int.tryParse(payload.substring(0, firstColon));
+    if (kindValue == null) return;
+
+    final kind = NostrKind.fromValue(kindValue);
+    if (kind == null) return;
+
+    final rest = payload.substring(firstColon + 1);
+    final secondColon = rest.indexOf(':');
+    final id = secondColon == -1 ? rest : rest.substring(0, secondColon);
+    final vaultId = secondColon == -1 ? null : rest.substring(secondColon + 1);
+
+    final resolvedVaultId = (vaultId?.isEmpty ?? true) ? null : vaultId;
+    unawaited(() async {
+      try {
+        await navigateForKind(kind, id, vaultId: resolvedVaultId);
+      } catch (e, st) {
+        Log.warning('Notification tap: navigation failed for kind $kind, payload: $payload', e, st);
+      }
+    }());
+  }
+
+  /// Navigates to the appropriate screen for the given [kind] and [id].
+  ///
+  /// [vaultId] is required for shard and recovery-response kinds to open
+  /// [VaultDetailScreen]. Returns `true` if navigation succeeded, `false` if
+  /// the target could not be found or required context (e.g. vaultId) is absent.
+  Future<bool> navigateForKind(NostrKind kind, String id, {String? vaultId}) async {
+    switch (kind) {
+      case NostrKind.recoveryRequest:
+        return _navigateToRecoveryRequest(id);
+      case NostrKind.shardData:
+      case NostrKind.shardConfirmation:
+      case NostrKind.recoveryResponse:
+        if (vaultId == null || vaultId.isEmpty) {
+          Log.debug('No vaultId for $kind notification tap, skipping navigation');
+          return false;
+        }
+        await navigateToVault(vaultId);
+        return true;
+      default:
+        Log.debug('No navigation handler for kind $kind');
+        return false;
     }
+  }
+
+  /// Navigates to [VaultDetailScreen] for [vaultId], waiting up to 2 s for
+  /// the navigator to become ready.
+  Future<void> navigateToVault(String vaultId) async {
+    await _pushRouteWhenReady(
+      (context) => VaultDetailScreen(vaultId: vaultId),
+      debugLabel: 'vault $vaultId',
+    );
+  }
+
+  Future<bool> _navigateToRecoveryRequest(String recoveryRequestId) async {
+    final request = await _getRecoveryService().getRecoveryRequest(recoveryRequestId);
+    if (request == null) {
+      Log.warning(
+          'Notification: recovery request $recoveryRequestId not found, skipping navigation');
+      return false;
+    }
+    await _pushRouteWhenReady(
+      (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+      debugLabel: 'recovery request $recoveryRequestId',
+    );
+    return true;
+  }
+
+  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
+    for (var i = 0; i < 40; i++) {
+      final nav = navigatorKey.currentState;
+      if (nav != null && nav.mounted) {
+        await nav.push(MaterialPageRoute<void>(builder: builder));
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    Log.warning(
+      'Notification tap: navigator not ready; skipped navigation${debugLabel != null ? " to $debugLabel" : ""}',
+    );
   }
 
   void dispose() {}

@@ -348,6 +348,16 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<String?>);
 
   @override
+  _i5.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resolveRecoveryRequestIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
+
+  @override
   _i5.Future<String?> publishRecoveryRequest({
     required String? vaultId,
     required List<String>? stewardPubkeys,
