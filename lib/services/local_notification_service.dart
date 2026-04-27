@@ -153,7 +153,11 @@ class LocalNotificationService {
   ///
   /// - **Android 13+:** `POST_NOTIFICATIONS` runtime dialog via the plugin. On older Android,
   ///   notifications are allowed by default (result may be null).
-  /// - **iOS / macOS:** Requests alert, badge, and sound via the plugin.
+  ///
+  /// iOS and macOS are handled by [PushNotificationReceiver._requestNotificationPermission]
+  /// using `FirebaseMessaging.requestPermission()` instead, because Firebase's
+  /// swizzled `UNUserNotificationCenterDelegate` causes this plugin to return
+  /// `false` even when the user has granted permission on those platforms.
   Future<bool> requestPlatformNotificationPermissions() async {
     var anyPromptFailed = false;
 
@@ -163,29 +167,6 @@ class LocalNotificationService {
     if (androidGranted != null) {
       Log.info('Android POST_NOTIFICATIONS granted: $androidGranted');
       if (!androidGranted) anyPromptFailed = true;
-    }
-
-    final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-    final iosGranted = await ios?.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    if (iosGranted != null) {
-      Log.info('iOS notification permissions granted: $iosGranted');
-      if (!iosGranted) anyPromptFailed = true;
-    }
-
-    final macOS =
-        _plugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
-    final macGranted = await macOS?.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    if (macGranted != null) {
-      Log.info('macOS notification permissions granted: $macGranted');
-      if (!macGranted) anyPromptFailed = true;
     }
 
     return !anyPromptFailed;

@@ -121,7 +121,7 @@ class PushNotificationReceiver {
         return false;
       }
 
-      final granted = await _localNotifications.requestPlatformNotificationPermissions();
+      final granted = await _requestNotificationPermission(messaging);
       if (!granted) {
         Log.info('PushNotificationReceiver: notification permission not granted');
         return false;
@@ -202,6 +202,29 @@ class PushNotificationReceiver {
 
   Future<void> initialize() async {
     await maybeInitialize();
+  }
+
+  /// Requests notification permission using the correct API for the current platform.
+  ///
+  /// On iOS/macOS uses Firebase Messaging's `requestPermission()` because
+  /// Firebase installs its own `UNUserNotificationCenterDelegate` via method
+  /// swizzling, which causes `flutter_local_notifications` to return `false`
+  /// even when the user has granted permission. On all other platforms delegates
+  /// to [LocalNotificationService.requestPlatformNotificationPermissions].
+  Future<bool> _requestNotificationPermission(FirebaseMessaging messaging) async {
+    if (Platform.isIOS || Platform.isMacOS) {
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      Log.info(
+        'PushNotificationReceiver: iOS/macOS permission status=${settings.authorizationStatus.name}',
+      );
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    }
+    return _localNotifications.requestPlatformNotificationPermissions();
   }
 
   Future<void> _initializeMessaging() async {
