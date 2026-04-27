@@ -251,7 +251,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: '${kind.value}:${event.id}',
+      payload: '${kind.value}:${event.id}:$vaultId',
     );
   }
 
@@ -271,7 +271,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}',
+      payload: '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}:${response.vaultId}',
     );
   }
 
@@ -309,29 +309,50 @@ class LocalNotificationService {
 
     Log.info('Notification tapped with payload: $payload');
 
-    final colon = payload.indexOf(':');
-    if (colon == -1) return;
+    final firstColon = payload.indexOf(':');
+    if (firstColon == -1) return;
 
-    final kindValue = int.tryParse(payload.substring(0, colon));
+    final kindValue = int.tryParse(payload.substring(0, firstColon));
     if (kindValue == null) return;
 
     final kind = NostrKind.fromValue(kindValue);
     if (kind == null) return;
 
-    unawaited(navigateForKind(kind, payload.substring(colon + 1)));
+    final rest = payload.substring(firstColon + 1);
+    final secondColon = rest.indexOf(':');
+    final id = secondColon == -1 ? rest : rest.substring(0, secondColon);
+    final vaultId = secondColon == -1 ? null : rest.substring(secondColon + 1);
+
+    final resolvedVaultId = (vaultId?.isEmpty ?? true) ? null : vaultId;
+    unawaited(() async {
+      try {
+        await navigateForKind(kind, id, vaultId: resolvedVaultId);
+      } catch (e, st) {
+        Log.warning('Notification tap: navigation failed for kind $kind, payload: $payload', e, st);
+      }
+    }());
   }
 
   /// Navigates to the appropriate screen for the given [kind] and [id].
   ///
-  /// Returns `true` if navigation succeeded, `false` if the target could not
-  /// be found (e.g. recovery request deleted before tap was processed).
-  Future<bool> navigateForKind(NostrKind kind, String id) async {
+  /// [vaultId] is required for shard and recovery-response kinds to open
+  /// [VaultDetailScreen]. Returns `true` if navigation succeeded, `false` if
+  /// the target could not be found or required context (e.g. vaultId) is absent.
+  Future<bool> navigateForKind(NostrKind kind, String id, {String? vaultId}) async {
     switch (kind) {
       case NostrKind.recoveryRequest:
         return _navigateToRecoveryRequest(id);
+      case NostrKind.shardData:
+      case NostrKind.shardConfirmation:
+      case NostrKind.recoveryResponse:
+        if (vaultId == null || vaultId.isEmpty) {
+          Log.debug('No vaultId for $kind notification tap, skipping navigation');
+          return false;
+        }
+        await navigateToVault(vaultId);
+        return true;
       default:
         Log.debug('No navigation handler for kind $kind');
-
         return false;
     }
   }
