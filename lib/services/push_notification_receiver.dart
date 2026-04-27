@@ -5,32 +5,25 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../app_navigator.dart';
 import '../firebase_options.dart';
-import '../models/recovery_request.dart';
-import '../screens/recovery_request_detail_screen.dart';
-import '../screens/vault_detail_screen.dart';
+import '../models/nostr_kinds.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
-import 'recovery_service.dart';
 
 final pushNotificationReceiverProvider = Provider<PushNotificationReceiver>((ref) {
   final localNotifications = ref.watch(localNotificationServiceProvider);
   final notifierService = ref.watch(horcruxNotificationServiceProvider);
   final ndkService = ref.watch(ndkServiceProvider);
-  final recoveryService = ref.watch(recoveryServiceProvider);
   final receiver = PushNotificationReceiver(
     localNotifications: localNotifications,
     notifierService: notifierService,
     ndkService: ndkService,
-    recoveryService: recoveryService,
   );
   ref.onDispose(() => receiver.dispose());
   return receiver;
@@ -62,7 +55,6 @@ class PushNotificationReceiver {
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
   final NdkService _ndkService;
-  final RecoveryService _recoveryService;
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -76,11 +68,9 @@ class PushNotificationReceiver {
     required LocalNotificationService localNotifications,
     required HorcruxNotificationService notifierService,
     required NdkService ndkService,
-    required RecoveryService recoveryService,
   })  : _localNotifications = localNotifications,
         _notifierService = notifierService,
-        _ndkService = ndkService,
-        _recoveryService = recoveryService;
+        _ndkService = ndkService;
 
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
@@ -428,50 +418,16 @@ class PushNotificationReceiver {
     }
 
     if (recoveryRequestId != null) {
-      final request = await _recoveryService.getRecoveryRequest(recoveryRequestId);
-      if (request != null) {
-        await _navigateToRecoveryRequestWhenReady(request);
-        return;
-      }
+      final navigated = await _localNotifications.navigateForKind(
+        NostrKind.recoveryRequest,
+        recoveryRequestId,
+      );
+      if (navigated) return;
       Log.warning('FCM tap: recovery request $recoveryRequestId not found, falling back to vault');
     }
     if (vaultId != null) {
-      await _navigateToVaultWhenReady(vaultId);
+      await _localNotifications.navigateToVault(vaultId);
     }
-  }
-
-  Future<void> _navigateToVaultWhenReady(String vaultId) async {
-    for (var i = 0; i < 40; i++) {
-      final nav = navigatorKey.currentState;
-      if (nav != null && nav.mounted) {
-        await nav.push(
-          MaterialPageRoute<void>(
-            builder: (context) => VaultDetailScreen(vaultId: vaultId),
-          ),
-        );
-        return;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    Log.warning('FCM tap: navigator not ready; skipped navigation to vault $vaultId');
-  }
-
-  Future<void> _navigateToRecoveryRequestWhenReady(RecoveryRequest request) async {
-    for (var i = 0; i < 40; i++) {
-      final nav = navigatorKey.currentState;
-      if (nav != null && nav.mounted) {
-        await nav.push(
-          MaterialPageRoute<void>(
-            builder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
-          ),
-        );
-        return;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    Log.warning(
-      'FCM tap: navigator not ready; skipped navigation to recovery request ${request.id}',
-    );
   }
 
   /// Handles a push that arrives while the app is foregrounded.

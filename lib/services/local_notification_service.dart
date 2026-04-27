@@ -10,6 +10,7 @@ import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
+import '../screens/vault_detail_screen.dart';
 import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
@@ -216,7 +217,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: 'recovery_request:${request.id}',
+      payload: '${NostrKind.recoveryRequest.value}:${request.id}',
     );
   }
 
@@ -250,7 +251,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: '${kind.name}:${event.id}',
+      payload: '${kind.value}:${event.id}',
     );
   }
 
@@ -270,7 +271,7 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: 'recovery_response:${response.recoveryRequestId}',
+      payload: '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}',
     );
   }
 
@@ -308,33 +309,68 @@ class LocalNotificationService {
 
     Log.info('Notification tapped with payload: $payload');
 
-    if (payload.startsWith('recovery_request:')) {
-      final id = payload.substring('recovery_request:'.length);
-      unawaited(_navigateToRecoveryRequest(id));
+    final colon = payload.indexOf(':');
+    if (colon == -1) return;
+
+    final kindValue = int.tryParse(payload.substring(0, colon));
+    if (kindValue == null) return;
+
+    final kind = NostrKind.fromValue(kindValue);
+    if (kind == null) return;
+
+    unawaited(navigateForKind(kind, payload.substring(colon + 1)));
+  }
+
+  /// Navigates to the appropriate screen for the given [kind] and [id].
+  ///
+  /// Returns `true` if navigation succeeded, `false` if the target could not
+  /// be found (e.g. recovery request deleted before tap was processed).
+  Future<bool> navigateForKind(NostrKind kind, String id) async {
+    switch (kind) {
+      case NostrKind.recoveryRequest:
+        return _navigateToRecoveryRequest(id);
+      default:
+        Log.debug('No navigation handler for kind $kind');
+
+        return false;
     }
   }
 
-  Future<void> _navigateToRecoveryRequest(String recoveryRequestId) async {
+  /// Navigates to [VaultDetailScreen] for [vaultId], waiting up to 2 s for
+  /// the navigator to become ready.
+  Future<void> navigateToVault(String vaultId) async {
+    await _pushRouteWhenReady(
+      (context) => VaultDetailScreen(vaultId: vaultId),
+      debugLabel: 'vault $vaultId',
+    );
+  }
+
+  Future<bool> _navigateToRecoveryRequest(String recoveryRequestId) async {
     final request = await _getRecoveryService().getRecoveryRequest(recoveryRequestId);
     if (request == null) {
-      Log.warning('Recovery request $recoveryRequestId not found, skipping navigation');
-      return;
+      Log.warning(
+          'Notification: recovery request $recoveryRequestId not found, skipping navigation');
+      return false;
     }
+    await _pushRouteWhenReady(
+      (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+      debugLabel: 'recovery request $recoveryRequestId',
+    );
+    return true;
+  }
 
+  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
     for (var i = 0; i < 40; i++) {
       final nav = navigatorKey.currentState;
       if (nav != null && nav.mounted) {
-        await nav.push(
-          MaterialPageRoute<void>(
-            builder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
-          ),
-        );
+        await nav.push(MaterialPageRoute<void>(builder: builder));
         return;
       }
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     Log.warning(
-        'Local notification tap: navigator not ready; skipped navigation to recovery request $recoveryRequestId');
+      'Notification tap: navigator not ready; skipped navigation${debugLabel != null ? " to $debugLabel" : ""}',
+    );
   }
 
   void dispose() {}
