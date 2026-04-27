@@ -58,7 +58,7 @@ PushNotificationText? composeNotificationText({
       // display name to personalize the body.
       return (
         title: 'Vault updated',
-        body: "Open Horcrux to save the latest data for $sender's vault $vaultName",
+        body: 'Open Horcrux to save the latest data for $sender\'s vault "$vaultName"',
       );
     case NostrKind.recoveryRequest:
       return (
@@ -78,7 +78,7 @@ PushNotificationText? composeNotificationText({
     case NostrKind.shardConfirmation:
       return (
         title: 'Steward confirmed',
-        body: '$sender has confirmed they have the latest data for vault $vaultName',
+        body: '$sender has confirmed they have the latest data for vault "$vaultName"',
       );
     case NostrKind.seal:
     case NostrKind.giftWrap:
