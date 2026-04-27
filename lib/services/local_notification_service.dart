@@ -10,6 +10,7 @@ import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
+import '../screens/recovery_status_screen.dart';
 import '../screens/vault_detail_screen.dart';
 import '../utils/push_notification_text.dart';
 import 'logger.dart';
@@ -336,16 +337,17 @@ class LocalNotificationService {
 
   /// Navigates to the appropriate screen for the given [kind] and [id].
   ///
-  /// [vaultId] is required for shard and recovery-response kinds to open
-  /// [VaultDetailScreen]. Returns `true` if navigation succeeded, `false` if
-  /// the target could not be found or required context (e.g. vaultId) is absent.
+  /// [vaultId] is required for shard kinds to open [VaultDetailScreen].
+  /// Returns `true` if navigation succeeded, `false` if the target could not
+  /// be found or required context (e.g. vaultId) is absent.
   Future<bool> navigateForKind(NostrKind kind, String id, {String? vaultId}) async {
     switch (kind) {
       case NostrKind.recoveryRequest:
         return _navigateToRecoveryRequest(id);
+      case NostrKind.recoveryResponse:
+        return _navigateToRecoveryStatus(id);
       case NostrKind.shardData:
       case NostrKind.shardConfirmation:
-      case NostrKind.recoveryResponse:
         if (vaultId == null || vaultId.isEmpty) {
           Log.debug('No vaultId for $kind notification tap, skipping navigation');
           return false;
@@ -377,6 +379,18 @@ class LocalNotificationService {
     await _pushRouteWhenReady(
       (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
       debugLabel: 'recovery request $recoveryRequestId',
+    );
+    return true;
+  }
+
+  /// Navigates to [RecoveryStatusScreen] for [recoveryRequestId].
+  ///
+  /// [recoveryRequestId] comes from the notification payload second segment.
+  /// Returns false and logs a warning if the request is not found.
+  Future<bool> _navigateToRecoveryStatus(String recoveryRequestId) async {
+    await _pushRouteWhenReady(
+      (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+      debugLabel: 'recovery status $recoveryRequestId',
     );
     return true;
   }
