@@ -6,20 +6,20 @@
 import 'dart:async' as _i5;
 
 import 'package:horcrux/models/backup_status.dart' as _i6;
-import 'package:horcrux/models/event_status.dart' as _i15;
-import 'package:horcrux/models/nostr_kinds.dart' as _i19;
+import 'package:horcrux/models/event_status.dart' as _i16;
+import 'package:horcrux/models/nostr_kinds.dart' as _i14;
 import 'package:horcrux/models/recovery_request.dart' as _i12;
 import 'package:horcrux/models/shard_data.dart' as _i9;
 import 'package:horcrux/models/steward.dart' as _i7;
 import 'package:horcrux/models/steward_status.dart' as _i10;
-import 'package:horcrux/models/vault.dart' as _i18;
+import 'package:horcrux/models/vault.dart' as _i19;
 import 'package:horcrux/providers/vault_provider.dart' as _i3;
 import 'package:horcrux/services/backup_service.dart' as _i4;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i18;
 import 'package:horcrux/services/local_notification_service.dart' as _i11;
 import 'package:horcrux/services/ndk_service.dart' as _i13;
-import 'package:horcrux/services/shard_distribution_service.dart' as _i14;
-import 'package:horcrux/services/vault_share_service.dart' as _i16;
+import 'package:horcrux/services/shard_distribution_service.dart' as _i15;
+import 'package:horcrux/services/vault_share_service.dart' as _i17;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i8;
 import 'package:ndk/ndk.dart' as _i2;
@@ -1027,6 +1027,34 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<bool> navigateForKind(
+    _i14.NostrKind? kind,
+    String? id, {
+    String? vaultId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #navigateForKind,
+          [
+            kind,
+            id,
+          ],
+          {#vaultId: vaultId},
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> navigateToVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #navigateToVault,
+          [vaultId],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   void dispose() => super.noSuchMethod(
         Invocation.method(
           #dispose,
@@ -1039,7 +1067,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
 /// A class which mocks [ShardDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistributionService {
+class MockShardDistributionService extends _i1.Mock implements _i15.ShardDistributionService {
   MockShardDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1055,7 +1083,7 @@ class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistrib
             DateTime? publishedAt,
             String recipientPubkey,
             int shardIndex,
-            _i15.EventStatus status
+            _i16.EventStatus status
           })>> distributeShards({
     required String? ownerPubkey,
     required ({
@@ -1096,7 +1124,7 @@ class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistrib
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shardIndex,
-                  _i15.EventStatus status
+                  _i16.EventStatus status
                 })>>.value(<({
           String backupConfigId,
           DateTime createdAt,
@@ -1105,7 +1133,7 @@ class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistrib
           DateTime? publishedAt,
           String recipientPubkey,
           int shardIndex,
-          _i15.EventStatus status
+          _i16.EventStatus status
         })>[]),
       ) as _i5.Future<
           List<
@@ -1117,7 +1145,7 @@ class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistrib
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shardIndex,
-                _i15.EventStatus status
+                _i16.EventStatus status
               })>>);
 
   @override
@@ -1132,7 +1160,7 @@ class MockShardDistributionService extends _i1.Mock implements _i14.ShardDistrib
               DateTime? publishedAt,
               String recipientPubkey,
               int shardIndex,
-              _i15.EventStatus status
+              _i16.EventStatus status
             })>?
         shardEvents,
   }) =>
@@ -1431,7 +1459,7 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
 /// A class which mocks [VaultShareService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultShareService extends _i1.Mock implements _i16.VaultShareService {
+class MockVaultShareService extends _i1.Mock implements _i17.VaultShareService {
   MockVaultShareService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1739,7 +1767,7 @@ class MockVaultShareService extends _i1.Mock implements _i16.VaultShareService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1772,7 +1800,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNot
   @override
   _i5.Future<void> register({
     required String? fcmToken,
-    required _i17.NotifierPlatform? platform,
+    required _i18.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1800,7 +1828,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNot
   @override
   _i5.Future<void> updateToken({
     required String? newToken,
-    required _i17.NotifierPlatform? platform,
+    required _i18.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1828,7 +1856,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNot
   @override
   List<String> computeConsentList({
     required String? currentUserPubkey,
-    required List<_i18.Vault>? vaults,
+    required List<_i19.Vault>? vaults,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1865,8 +1893,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNot
   @override
   _i5.Future<void> tryPushForEvent({
     required _i2.Nip01Event? event,
-    required _i19.NostrKind? kind,
-    required _i18.Vault? vault,
+    required _i14.NostrKind? kind,
+    required _i19.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
   }) =>

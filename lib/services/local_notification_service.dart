@@ -271,7 +271,8 @@ class LocalNotificationService {
     await showNotification(
       title: text.title,
       body: text.body,
-      payload: '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}:${response.vaultId}',
+      payload:
+          '${NostrKind.recoveryResponse.value}:${response.recoveryRequestId}:${response.vaultId}',
     );
   }
 
