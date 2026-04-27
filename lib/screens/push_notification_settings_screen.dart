@@ -27,13 +27,20 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
   }
 
   Future<void> _reload() async {
-    final receiver = ref.read(pushNotificationReceiverProvider);
-    final optedIn = await receiver.isOptedIn();
-    if (!mounted) return;
-    setState(() {
-      _optedIn = optedIn;
-      _loading = false;
-    });
+    try {
+      final receiver = ref.read(pushNotificationReceiverProvider);
+      final optedIn = await receiver.isOptedIn();
+      if (!mounted) return;
+      setState(() => _optedIn = optedIn);
+    } catch (e, st) {
+      Log.warning('Failed to load push notification opt-in state', e, st);
+      if (!mounted) return;
+      _showErrorSnackBar(
+        'Unable to load push notification settings right now. Please try again.',
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _showErrorSnackBar(String message) {
