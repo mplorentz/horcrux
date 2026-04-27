@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'vault.dart';
 import '../services/logger.dart';
+import '../utils/date_time_extensions.dart';
 
 part 'shard_data.freezed.dart';
 
@@ -35,6 +36,15 @@ class ShardData with _$ShardData {
     List<String>? relayUrls, // Relay URLs from backup config for sending confirmations
     int?
         distributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
+    // Whether the vault owner has push notifications enabled for this vault.
+    //
+    // Nullable for backward compatibility: pre-push shards arrive without this
+    // field, in which case receivers should preserve whatever push setting
+    // their local Vault already has (don't silently flip anything). When the
+    // owner re-distributes after changing the flag, the new value overrides.
+    // The owner is the only party whose opinion matters here because they are
+    // the one whose pubkey/IP/contact-graph leaks to the notifier.
+    bool? pushEnabled,
   }) = _ShardData;
 
   const ShardData._();
@@ -133,7 +143,7 @@ class ShardData with _$ShardData {
 
   /// Get the age of this shard data in seconds
   int get ageInSeconds {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final now = secondsSinceEpoch();
     return now - createdAt;
   }
 
@@ -172,6 +182,7 @@ ShardData createShardData({
   String? nostrEventId,
   List<String>? relayUrls,
   int? distributionVersion,
+  bool? pushEnabled,
 }) {
   if (shard.isEmpty) {
     throw ArgumentError('Shard cannot be empty');
@@ -233,7 +244,7 @@ ShardData createShardData({
     totalShards: totalShards,
     primeMod: primeMod,
     creatorPubkey: creatorPubkey,
-    createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unix timestamp
+    createdAt: secondsSinceEpoch(),
     vaultId: vaultId,
     vaultName: vaultName,
     stewards: stewards,
@@ -245,58 +256,87 @@ ShardData createShardData({
     nostrEventId: nostrEventId,
     relayUrls: relayUrls,
     distributionVersion: distributionVersion,
+    pushEnabled: pushEnabled,
   );
 }
 
-/// Convert to JSON for storage
+/// Nostr / wire format: snake_case keys (see project Nostr payload conventions).
 Map<String, dynamic> shardDataToJson(ShardData shardData) {
   return {
     'shard': shardData.shard,
     'threshold': shardData.threshold,
-    'shardIndex': shardData.shardIndex,
-    'totalShards': shardData.totalShards,
-    'primeMod': shardData.primeMod,
-    'creatorPubkey': shardData.creatorPubkey,
-    'createdAt': shardData.createdAt,
-    if (shardData.vaultId != null) 'vaultId': shardData.vaultId,
-    if (shardData.vaultName != null) 'vaultName': shardData.vaultName,
+    'shard_index': shardData.shardIndex,
+    'total_shards': shardData.totalShards,
+    'prime_mod': shardData.primeMod,
+    'creator_pubkey': shardData.creatorPubkey,
+    'created_at': shardData.createdAt,
+    if (shardData.vaultId != null) 'vault_id': shardData.vaultId,
+    if (shardData.vaultName != null) 'vault_name': shardData.vaultName,
     if (shardData.stewards != null) 'stewards': shardData.stewards,
-    if (shardData.ownerName != null) 'ownerName': shardData.ownerName,
+    if (shardData.ownerName != null) 'owner_name': shardData.ownerName,
     if (shardData.instructions != null) 'instructions': shardData.instructions,
-    if (shardData.recipientPubkey != null) 'recipientPubkey': shardData.recipientPubkey,
-    if (shardData.isReceived != null) 'isReceived': shardData.isReceived,
-    if (shardData.receivedAt != null) 'receivedAt': shardData.receivedAt!.toIso8601String(),
-    if (shardData.nostrEventId != null) 'nostrEventId': shardData.nostrEventId,
-    if (shardData.relayUrls != null) 'relayUrls': shardData.relayUrls,
-    if (shardData.distributionVersion != null) 'distributionVersion': shardData.distributionVersion,
+    if (shardData.recipientPubkey != null) 'recipient_pubkey': shardData.recipientPubkey,
+    if (shardData.isReceived != null) 'is_received': shardData.isReceived,
+    if (shardData.receivedAt != null) 'received_at': shardData.receivedAt!.toIso8601String(),
+    if (shardData.nostrEventId != null) 'nostr_event_id': shardData.nostrEventId,
+    if (shardData.relayUrls != null) 'relay_urls': shardData.relayUrls,
+    if (shardData.distributionVersion != null)
+      'distribution_version': shardData.distributionVersion,
+    if (shardData.pushEnabled != null) 'push_enabled': shardData.pushEnabled,
   };
 }
 
-/// Create from JSON
+int _readIntFlexible(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  throw TypeError();
+}
+
+int? _readIntFlexibleNullable(Object? value) {
+  if (value == null) return null;
+  return _readIntFlexible(value);
+}
+
+bool? _readBoolNullable(Object? value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  throw TypeError();
+}
+
+/// Create from JSON (Nostr / wire format: snake_case keys per project conventions).
 ShardData shardDataFromJson(Map<String, dynamic> json) {
   final stewardsData = json['stewards'];
 
+  final shardIndex = _readIntFlexible(json['shard_index']);
+  final totalShards = _readIntFlexible(json['total_shards']);
+  final createdAt = _readIntFlexible(json['created_at']);
+
+  final receivedRaw = json['received_at'];
+
   return ShardData(
     shard: json['shard'] as String,
-    threshold: json['threshold'] as int,
-    shardIndex: json['shardIndex'] as int,
-    totalShards: json['totalShards'] as int,
-    primeMod: json['primeMod'] as String,
-    creatorPubkey: json['creatorPubkey'] as String,
-    createdAt: json['createdAt'] as int,
-    vaultId: json['vaultId'] as String?,
-    vaultName: json['vaultName'] as String?,
+    threshold: _readIntFlexible(json['threshold']),
+    shardIndex: shardIndex,
+    totalShards: totalShards,
+    primeMod: json['prime_mod'] as String,
+    creatorPubkey: json['creator_pubkey'] as String,
+    createdAt: createdAt,
+    vaultId: json['vault_id'] as String?,
+    vaultName: json['vault_name'] as String?,
     stewards: stewardsData != null
         ? (stewardsData as List).map((e) => Map<String, String>.from(e as Map)).toList()
         : null,
-    ownerName: json['ownerName'] as String?,
+    ownerName: json['owner_name'] as String?,
     instructions: json['instructions'] as String?,
-    recipientPubkey: json['recipientPubkey'] as String?,
-    isReceived: json['isReceived'] as bool?,
-    receivedAt: json['receivedAt'] != null ? DateTime.parse(json['receivedAt'] as String) : null,
-    nostrEventId: json['nostrEventId'] as String?,
-    relayUrls: json['relayUrls'] != null ? List<String>.from(json['relayUrls'] as List) : null,
-    distributionVersion: json['distributionVersion'] as int?,
+    recipientPubkey: json['recipient_pubkey'] as String?,
+    isReceived: _readBoolNullable(json['is_received']),
+    receivedAt: receivedRaw != null ? DateTime.parse(receivedRaw as String) : null,
+    nostrEventId: json['nostr_event_id'] as String?,
+    relayUrls: json['relay_urls'] != null ? List<String>.from(json['relay_urls'] as List) : null,
+    distributionVersion: _readIntFlexibleNullable(
+      json['distribution_version'],
+    ),
+    pushEnabled: _readBoolNullable(json['push_enabled']),
   );
 }
 

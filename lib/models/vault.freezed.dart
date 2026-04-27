@@ -45,7 +45,18 @@ mixin _$Vault {
   })? get backupConfig => throw _privateConstructorUsedError; // Optional backup configuration
   bool get isArchived => throw _privateConstructorUsedError; // Whether this vault is archived
   DateTime? get archivedAt => throw _privateConstructorUsedError; // When the vault was archived
-  String? get archivedReason => throw _privateConstructorUsedError;
+  String? get archivedReason => throw _privateConstructorUsedError; // Reason for archiving
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (set on the recovery plan
+// screen) and `false` for vaults persisted before this field existed --
+// legacy vaults stay off until the owner explicitly turns push on.
+  bool get pushEnabled => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $VaultCopyWith<Vault> get copyWith => throw _privateConstructorUsedError;
@@ -82,7 +93,8 @@ abstract class $VaultCopyWith<$Res> {
       })? backupConfig,
       bool isArchived,
       DateTime? archivedAt,
-      String? archivedReason});
+      String? archivedReason,
+      bool pushEnabled});
 }
 
 /// @nodoc
@@ -109,6 +121,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
     Object? isArchived = null,
     Object? archivedAt = freezed,
     Object? archivedReason = freezed,
+    Object? pushEnabled = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -174,6 +187,10 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
           ? _value.archivedReason
           : archivedReason // ignore: cast_nullable_to_non_nullable
               as String?,
+      pushEnabled: null == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -211,7 +228,8 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
       })? backupConfig,
       bool isArchived,
       DateTime? archivedAt,
-      String? archivedReason});
+      String? archivedReason,
+      bool pushEnabled});
 }
 
 /// @nodoc
@@ -235,6 +253,7 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
     Object? isArchived = null,
     Object? archivedAt = freezed,
     Object? archivedReason = freezed,
+    Object? pushEnabled = null,
   }) {
     return _then(_$VaultImpl(
       id: null == id
@@ -300,6 +319,10 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
           ? _value.archivedReason
           : archivedReason // ignore: cast_nullable_to_non_nullable
               as String?,
+      pushEnabled: null == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -319,7 +342,8 @@ class _$VaultImpl extends _Vault {
       this.backupConfig,
       this.isArchived = false,
       this.archivedAt,
-      this.archivedReason})
+      this.archivedReason,
+      this.pushEnabled = true})
       : _shards = shards,
         _recoveryRequests = recoveryRequests,
         super._();
@@ -388,10 +412,24 @@ class _$VaultImpl extends _Vault {
 // When the vault was archived
   @override
   final String? archivedReason;
+// Reason for archiving
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (set on the recovery plan
+// screen) and `false` for vaults persisted before this field existed --
+// legacy vaults stay off until the owner explicitly turns push on.
+  @override
+  @JsonKey()
+  final bool pushEnabled;
 
   @override
   String toString() {
-    return 'Vault(id: $id, name: $name, content: $content, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, shards: $shards, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, isArchived: $isArchived, archivedAt: $archivedAt, archivedReason: $archivedReason)';
+    return 'Vault(id: $id, name: $name, content: $content, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, shards: $shards, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, isArchived: $isArchived, archivedAt: $archivedAt, archivedReason: $archivedReason, pushEnabled: $pushEnabled)';
   }
 
   @override
@@ -411,7 +449,8 @@ class _$VaultImpl extends _Vault {
             (identical(other.isArchived, isArchived) || other.isArchived == isArchived) &&
             (identical(other.archivedAt, archivedAt) || other.archivedAt == archivedAt) &&
             (identical(other.archivedReason, archivedReason) ||
-                other.archivedReason == archivedReason));
+                other.archivedReason == archivedReason) &&
+            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -428,7 +467,8 @@ class _$VaultImpl extends _Vault {
       backupConfig,
       isArchived,
       archivedAt,
-      archivedReason);
+      archivedReason,
+      pushEnabled);
 
   @JsonKey(ignore: true)
   @override
@@ -465,7 +505,8 @@ abstract class _Vault extends Vault {
       })? backupConfig,
       final bool isArchived,
       final DateTime? archivedAt,
-      final String? archivedReason}) = _$VaultImpl;
+      final String? archivedReason,
+      final bool pushEnabled}) = _$VaultImpl;
   const _Vault._() : super._();
 
   @override
@@ -507,6 +548,18 @@ abstract class _Vault extends Vault {
   DateTime? get archivedAt;
   @override // When the vault was archived
   String? get archivedReason;
+  @override // Reason for archiving
+// Whether the vault owner has opted this vault into push notifications.
+//
+// This is independent of the per-user global opt-in (see
+// `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+// into push notifications will simply never send or receive any, even
+// for vaults where `pushEnabled` is `true`.
+//
+// Defaults to `true` for newly-created vaults (set on the recovery plan
+// screen) and `false` for vaults persisted before this field existed --
+// legacy vaults stay off until the owner explicitly turns push on.
+  bool get pushEnabled;
   @override
   @JsonKey(ignore: true)
   _$$VaultImplCopyWith<_$VaultImpl> get copyWith => throw _privateConstructorUsedError;

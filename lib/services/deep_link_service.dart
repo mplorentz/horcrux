@@ -56,7 +56,7 @@ class DeepLinkService {
 
     // Handle initial link (app opened via link on cold start)
     try {
-      final initialLink = await _appLinks.getInitialAppLink();
+      final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
         Log.info('App opened via deep link: $initialLink');
         await _processLink(initialLink);
@@ -86,7 +86,7 @@ class DeepLinkService {
   /// Routes to appropriate handler.
   Future<void> handleInitialLink() async {
     try {
-      final initialLink = await _appLinks.getInitialAppLink();
+      final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
         Log.info('Handling initial link: $initialLink');
         await _processLink(initialLink);

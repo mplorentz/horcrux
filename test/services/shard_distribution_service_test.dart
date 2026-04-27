@@ -9,6 +9,7 @@ import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/shard_data.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/event_status.dart';
+import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/shard_distribution_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/login_service.dart';
@@ -27,6 +28,7 @@ import 'shard_distribution_service_test.mocks.dart';
   VaultRepository,
   LoginService,
   NdkService,
+  HorcruxNotificationService,
 ])
 void main() {
   group('ShardDistributionService', () {
@@ -38,6 +40,7 @@ void main() {
     late MockVaultRepository mockRepository;
     late MockLoginService mockLoginService;
     late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
     late ShardDistributionService shardDistributionService;
 
     setUp(() {
@@ -45,8 +48,21 @@ void main() {
       mockRepository = MockVaultRepository();
       mockLoginService = MockLoginService();
       mockNdkService = MockNdkService();
+      mockNotificationService = MockHorcruxNotificationService();
 
-      // Stub publishEncryptedEvent to return a mock event ID (64-char hex string)
+      // Stub publishEncryptedEvent to return a synthetic signed gift wrap.
+      // Building a real [Nip01Event] gives us a deterministic `.id` the
+      // service code can feed back into the push pipeline.
+      Nip01Event nextGiftWrap() {
+        return Nip01Event(
+          kind: 1059,
+          pubKey: 'a' * 64,
+          content: 'stub-${DateTime.now().microsecondsSinceEpoch}',
+          tags: const [],
+          createdAt: 1,
+        );
+      }
+
       when(
         mockNdkService.publishEncryptedEvent(
           content: anyNamed('content'),
@@ -56,20 +72,28 @@ void main() {
           tags: anyNamed('tags'),
           customPubkey: anyNamed('customPubkey'),
         ),
-      ).thenAnswer((_) async {
-        // Generate a valid 64-character hex event ID (Nostr event IDs are 64 hex chars, lowercase)
-        // Use timestamp and a counter to ensure uniqueness
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final counter = (timestamp % 1000000).toRadixString(16);
-        // Create a 64-char hex string by padding with '0'
-        final hexId = counter.padLeft(64, '0');
-        return hexId;
-      });
+      ).thenAnswer((_) async => nextGiftWrap());
+
+      // tryPushForEvent is best-effort, stub to no-op.
+      when(
+        mockNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      // distributeShards looks up the vault to feed [tryPushForEvent]; the
+      // push helper no-ops on null, which is what these tests want.
+      when(mockRepository.getVault(any)).thenAnswer((_) async => null);
 
       shardDistributionService = ShardDistributionService(
         mockRepository,
         mockLoginService,
         mockNdkService,
+        mockNotificationService,
       );
 
       // Derive real public keys from the test nsec keys

@@ -47,6 +47,17 @@ class Vault with _$Vault {
     @Default(false) bool isArchived, // Whether this vault is archived
     DateTime? archivedAt, // When the vault was archived
     String? archivedReason, // Reason for archiving
+    // Whether the vault owner has opted this vault into push notifications.
+    //
+    // This is independent of the per-user global opt-in (see
+    // `PushNotificationReceiver.optInFlagKey`): a user who has never opted
+    // into push notifications will simply never send or receive any, even
+    // for vaults where `pushEnabled` is `true`.
+    //
+    // Defaults to `true` for newly-created vaults (set on the recovery plan
+    // screen) and `false` for vaults persisted before this field existed --
+    // legacy vaults stay off until the owner explicitly turns push on.
+    @Default(true) bool pushEnabled,
   }) = _Vault;
 
   const Vault._();
@@ -125,6 +136,7 @@ class Vault with _$Vault {
       'isArchived': isArchived,
       if (archivedAt != null) 'archivedAt': archivedAt!.toIso8601String(),
       if (archivedReason != null) 'archivedReason': archivedReason,
+      'pushEnabled': pushEnabled,
     };
   }
 
@@ -157,6 +169,11 @@ class Vault with _$Vault {
       isArchived: json['isArchived'] as bool? ?? false,
       archivedAt: json['archivedAt'] != null ? DateTime.parse(json['archivedAt'] as String) : null,
       archivedReason: json['archivedReason'] as String?,
+      // Legacy vaults (persisted before `pushEnabled` existed) default to
+      // `false`. The owner opts in explicitly -- their metadata is what
+      // leaks to the notifier, so we never turn push on for an existing
+      // vault without their say-so.
+      pushEnabled: json['pushEnabled'] as bool? ?? false,
     );
   }
 

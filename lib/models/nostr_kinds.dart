@@ -11,6 +11,12 @@ enum NostrKind {
   /// Used for private, encrypted messages with sender anonymity
   giftWrap(1059),
 
+  /// NIP-98: HTTP Auth
+  /// Used to authenticate HTTP requests by signing an ephemeral event
+  /// whose pubkey is the authenticated principal. Attached to the request
+  /// as `Authorization: Nostr <base64>`.
+  httpAuth(27235),
+
   /// Horcrux custom: Shard data distribution
   /// Used to distribute Shamir secret shares to stewards
   shardData(1337),

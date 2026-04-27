@@ -65,10 +65,11 @@ class TestShardData {
       (index) => {
         'shard': 'test-shard-data-$index',
         'threshold': threshold,
-        'shardIndex': index,
-        'totalShards': totalShards,
-        'primeMod': testPrimeMod,
-        'creatorPubkey': testCreatorPubkey,
+        'shard_index': index,
+        'total_shards': totalShards,
+        'prime_mod': testPrimeMod,
+        'creator_pubkey': testCreatorPubkey,
+        'created_at': 1759759657,
       },
     );
   }

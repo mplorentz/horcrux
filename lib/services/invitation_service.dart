@@ -381,6 +381,10 @@ class InvitationService {
         ownerName: invitation.ownerName, // Include owner name from invitation
         shards: [], // No shards yet - awaiting key distribution
         backupConfig: null,
+        // Stub created at acceptance time; the authoritative push setting
+        // comes from the owner later via ShardData. Start opted-out so we
+        // never advertise push before the owner's intent is on the wire.
+        pushEnabled: false,
       );
 
       await repository.addVault(vaultStub);

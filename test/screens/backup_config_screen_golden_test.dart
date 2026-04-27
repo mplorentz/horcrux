@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
@@ -354,5 +355,18 @@ class _MockVaultRepository extends VaultRepository {
       return completer.future; // This will never complete
     }
     return _backupConfig;
+  }
+
+  @override
+  Future<Vault?> getVault(String vaultId) async {
+    if (vaultId != 'test-vault') return null;
+    return Vault(
+      id: 'test-vault',
+      name: 'Test',
+      content: 'secret',
+      createdAt: DateTime(2024, 1, 1),
+      ownerPubkey: 'a' * 64,
+      pushEnabled: true,
+    );
   }
 }

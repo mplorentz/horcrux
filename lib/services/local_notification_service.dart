@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../main.dart';
+import 'package:ndk/ndk.dart';
+import '../app_navigator.dart';
+import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
+import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
-import '../utils/nostr_display.dart';
+import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
+import 'notification_recency.dart';
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
@@ -17,8 +21,11 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
 
 /// Service that displays OS notifications to the user for things like recovery events.
 ///
-/// [RecoveryService] calls [notifyRecoveryRequestProcessed] / [notifyRecoveryResponseProcessed]
-/// after it finishes handling Nostr events and applies live-vs-historical rules.
+/// All `notifyXxxProcessed` entry points are gated on [isEventRecent] against
+/// [getFirstAppOpenUtc], so relay backfill of historical events does not spam
+/// notifications after a fresh install. Upstream services may apply additional
+/// domain filters (e.g. "initiator only hears peer responses") before calling
+/// in, but recency is enforced here as the single source of truth.
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
@@ -58,19 +65,88 @@ class LocalNotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    await _requestPlatformNotificationPermissions();
-
     Log.info('LocalNotificationService initialized');
   }
 
   /// Called by [RecoveryService] after a recovery request event is processed successfully.
+  ///
+  /// Recency-gated via [isEventRecent] using the inner event creation time
+  /// (falling back to [RecoveryRequest.requestedAt]) so relay backfill does
+  /// not surface historical requests as notifications.
   Future<void> notifyRecoveryRequestProcessed(RecoveryRequest request) async {
+    final anchor = request.eventCreationTime ?? request.requestedAt;
+    if (!await _isRecentForNotification(anchor, label: 'recovery request', id: request.id)) {
+      return;
+    }
     await _showRecoveryRequestNotification(request);
   }
 
   /// Called by [RecoveryService] after a recovery response event is processed successfully.
+  ///
+  /// Recency-gated via [isEventRecent] using [RecoveryResponseEvent.createdAt];
+  /// responses without an inner creation time are treated as non-recent.
   Future<void> notifyRecoveryResponseProcessed(RecoveryResponseEvent response) async {
+    final anchor = response.createdAt;
+    if (anchor == null ||
+        !await _isRecentForNotification(
+          anchor,
+          label: 'recovery response',
+          id: response.recoveryRequestId,
+        )) {
+      return;
+    }
     await _showRecoveryResponseNotification(response);
+  }
+
+  /// Called by [NdkService] after a kind-1337 shard-data event is processed successfully.
+  ///
+  /// Shows a local notification on the steward's device announcing that the
+  /// owner has sent them a (re)distributed shard. [event] is the unwrapped
+  /// rumor (not the outer gift wrap) so [Nip01Event.createdAt] and
+  /// [Nip01Event.pubKey] identify the real sender and creation time.
+  ///
+  /// Recency-gated via [isEventRecent] so relay backfill of historical events
+  /// does not spam notifications on first launch.
+  Future<void> notifyShardDataProcessed({
+    required Nip01Event event,
+    required ShardData shardData,
+  }) async {
+    await _showShardNotification(
+      kind: NostrKind.shardData,
+      event: event,
+      vaultId: shardData.vaultId,
+    );
+  }
+
+  /// Called by [NdkService] after a kind-1342 shard-confirmation event is processed successfully.
+  ///
+  /// Shows a local notification on the vault owner's device announcing that a
+  /// steward has confirmed receipt of the latest shard. [event] is the
+  /// unwrapped rumor.
+  ///
+  /// Recency-gated via [isEventRecent] to suppress relay backfill.
+  Future<void> notifyShardConfirmationProcessed({
+    required Nip01Event event,
+    required String vaultId,
+  }) async {
+    await _showShardNotification(
+      kind: NostrKind.shardConfirmation,
+      event: event,
+      vaultId: vaultId,
+    );
+  }
+
+  /// Returns whether [eventUtc] is recent enough to notify for, logging a
+  /// skip with [label] / [id] when it is not.
+  Future<bool> _isRecentForNotification(
+    DateTime eventUtc, {
+    required String label,
+    required String id,
+  }) async {
+    final firstOpen = await getFirstAppOpenUtc();
+    if (isEventRecent(eventUtc, firstOpen)) return true;
+    Log.debug('Skipping $label notification $id: event predates first app open');
+    return false;
   }
 
   /// Asks the OS for permission to show notifications.
@@ -78,12 +154,15 @@ class LocalNotificationService {
   /// - **Android 13+:** `POST_NOTIFICATIONS` runtime dialog via the plugin. On older Android,
   ///   notifications are allowed by default (result may be null).
   /// - **iOS / macOS:** Requests alert, badge, and sound via the plugin.
-  Future<void> _requestPlatformNotificationPermissions() async {
+  Future<bool> requestPlatformNotificationPermissions() async {
+    var anyPromptFailed = false;
+
     final android =
         _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     final androidGranted = await android?.requestNotificationsPermission();
     if (androidGranted != null) {
       Log.info('Android POST_NOTIFICATIONS granted: $androidGranted');
+      if (!androidGranted) anyPromptFailed = true;
     }
 
     final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
@@ -94,6 +173,7 @@ class LocalNotificationService {
     );
     if (iosGranted != null) {
       Log.info('iOS notification permissions granted: $iosGranted');
+      if (!iosGranted) anyPromptFailed = true;
     }
 
     final macOS =
@@ -105,7 +185,10 @@ class LocalNotificationService {
     );
     if (macGranted != null) {
       Log.info('macOS notification permissions granted: $macGranted');
+      if (!macGranted) anyPromptFailed = true;
     }
+
+    return !anyPromptFailed;
   }
 
   Future<void> _showRecoveryRequestNotification(RecoveryRequest request) async {
@@ -113,12 +196,50 @@ class LocalNotificationService {
       'Showing notification for recovery request: ${request.id}',
     );
     final vault = await _vaultRepository.getVault(request.vaultId);
-    final vaultName = vault?.name ?? 'a vault';
-    final requester = displayNameFromPubkey(vault, request.initiatorPubkey);
+    final text = composeNotificationText(
+      kind: NostrKind.recoveryRequest,
+      vault: vault,
+      senderPubkey: request.initiatorPubkey,
+    );
+    if (text == null) return;
     await showNotification(
-      title: 'Recovery request',
-      body: '$requester is requesting your key to vault "$vaultName".',
+      title: text.title,
+      body: text.body,
       payload: 'recovery_request:${request.id}',
+    );
+  }
+
+  Future<void> _showShardNotification({
+    required NostrKind kind,
+    required Nip01Event event,
+    required String? vaultId,
+  }) async {
+    if (vaultId == null || vaultId.isEmpty) {
+      Log.debug('Skipping ${kind.name} notification: missing vault id');
+      return;
+    }
+
+    final eventUtc = DateTime.fromMillisecondsSinceEpoch(
+      event.createdAt * 1000,
+      isUtc: true,
+    );
+    if (!await _isRecentForNotification(eventUtc, label: kind.name, id: event.id)) {
+      return;
+    }
+
+    final vault = await _vaultRepository.getVault(vaultId);
+    final text = composeNotificationText(
+      kind: kind,
+      vault: vault,
+      senderPubkey: event.pubKey,
+    );
+    if (text == null) return;
+
+    Log.info('Showing notification for ${kind.name} event: ${event.id}');
+    await showNotification(
+      title: text.title,
+      body: text.body,
+      payload: '${kind.name}:${event.id}',
     );
   }
 
@@ -128,14 +249,16 @@ class LocalNotificationService {
       'Showing notification for recovery response ($status): ${response.recoveryRequestId}',
     );
     final vault = await _vaultRepository.getVault(response.vaultId);
-    final vaultName = vault?.name ?? 'your vault';
-    final steward = displayNameFromPubkey(vault, response.senderPubkey);
-    final body = response.approved
-        ? '$steward approved recovery of "$vaultName".'
-        : '$steward denied recovery of "$vaultName".';
+    final text = composeNotificationText(
+      kind: NostrKind.recoveryResponse,
+      vault: vault,
+      senderPubkey: response.senderPubkey,
+      recoveryApproved: response.approved,
+    );
+    if (text == null) return;
     await showNotification(
-      title: 'Recovery response',
-      body: body,
+      title: text.title,
+      body: text.body,
       payload: 'recovery_response:${response.recoveryRequestId}',
     );
   }

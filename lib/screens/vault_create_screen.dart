@@ -82,6 +82,8 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   }
 
   Future<void> _saveVault() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final vaultId = await saveVault(
       formKey: _formKey,
       name: _nameController.text,

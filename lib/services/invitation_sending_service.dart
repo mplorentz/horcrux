@@ -54,7 +54,7 @@ class InvitationSendingService {
       );
 
       // Publish using NdkService
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: acceptanceJson,
         kind: NostrKind.invitationAcceptance.value,
         recipientPubkey: ownerPubkey,
@@ -64,6 +64,7 @@ class InvitationSendingService {
           ['invite', inviteCode],
         ],
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending invitation acceptance event', e);
       return null;
@@ -109,7 +110,7 @@ class InvitationSendingService {
       );
 
       // Publish using NdkService
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: denialJson,
         kind: NostrKind.invitationDenial.value,
         recipientPubkey: ownerPubkey,
@@ -119,6 +120,7 @@ class InvitationSendingService {
           ['invite', inviteCode],
         ],
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending denial event', e);
       return null;
@@ -174,13 +176,14 @@ class InvitationSendingService {
         tags.add(['distribution_version', distributionVersion.toString()]);
       }
 
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: confirmationJson,
         kind: NostrKind.shardConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: tags,
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending shard confirmation event', e);
       return null;
@@ -226,7 +229,7 @@ class InvitationSendingService {
       );
 
       // Publish using NdkService
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: errorJson,
         kind: NostrKind.shardError.value,
         recipientPubkey: ownerPubkey,
@@ -237,6 +240,7 @@ class InvitationSendingService {
           ['shard_index', shardIndex.toString()],
         ],
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending shard error event', e);
       return null;
@@ -280,7 +284,7 @@ class InvitationSendingService {
       );
 
       // Publish using NdkService
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: invalidJson,
         kind: NostrKind.invitationInvalid.value,
         recipientPubkey: inviteePubkey,
@@ -290,6 +294,7 @@ class InvitationSendingService {
           ['invite_code', inviteCode],
         ],
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending invitation invalid event', e);
       return null;
@@ -332,7 +337,7 @@ class InvitationSendingService {
       );
 
       // Publish using NdkService
-      return await ndkService.publishEncryptedEvent(
+      final event = await ndkService.publishEncryptedEvent(
         content: removalJson,
         kind: NostrKind.keyHolderRemoved.value,
         recipientPubkey: removedStewardPubkey,
@@ -343,6 +348,7 @@ class InvitationSendingService {
           ['removed_pubkey', removedStewardPubkey],
         ],
       );
+      return event?.id;
     } catch (e) {
       Log.error('Error sending steward removal event', e);
       return null;

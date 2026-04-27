@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
+import 'package:horcrux/utils/date_time_extensions.dart';
 
 void main() {
   group('computeSinceTime', () {
@@ -23,8 +24,8 @@ void main() {
 
     test('recent lastSeen still includes full rolling window', () {
       final now = DateTime.utc(2026, 4, 14, 12);
-      final threeDaysAgo = now.subtract(const Duration(days: 3)).millisecondsSinceEpoch ~/ 1000;
-      final oneHourAgo = now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
+      final threeDaysAgo = now.subtract(const Duration(days: 3)).secondsSinceEpoch;
+      final oneHourAgo = now.subtract(const Duration(hours: 1)).secondsSinceEpoch;
       expect(oneHourAgo > threeDaysAgo, isTrue);
       final since = computeSinceTime(
         nowUtc: now,
@@ -35,8 +36,8 @@ void main() {
 
     test('stale lastSeen extends back to cursor (not capped to rolling window)', () {
       final now = DateTime.utc(2026, 4, 14, 12);
-      final threeDaysAgo = now.subtract(const Duration(days: 3)).millisecondsSinceEpoch ~/ 1000;
-      final tenDaysAgo = now.subtract(const Duration(days: 10)).millisecondsSinceEpoch ~/ 1000;
+      final threeDaysAgo = now.subtract(const Duration(days: 3)).secondsSinceEpoch;
+      final tenDaysAgo = now.subtract(const Duration(days: 10)).secondsSinceEpoch;
       expect(tenDaysAgo < threeDaysAgo, isTrue);
       final since = computeSinceTime(
         nowUtc: now,
@@ -47,7 +48,7 @@ void main() {
 
     test('very stale lastSeen (e.g. weeks) uses that bound', () {
       final now = DateTime.utc(2026, 4, 14, 12);
-      final threeWeeksAgo = now.subtract(const Duration(days: 21)).millisecondsSinceEpoch ~/ 1000;
+      final threeWeeksAgo = now.subtract(const Duration(days: 21)).secondsSinceEpoch;
       final since = computeSinceTime(
         nowUtc: now,
         lastSeenEventCreatedAtUnix: threeWeeksAgo,

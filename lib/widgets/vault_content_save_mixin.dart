@@ -17,6 +17,9 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
     required String content,
     String? vaultId, // null for create, value for update
     String? ownerName,
+
+    /// Only used when creating a new vault ([vaultId] is null).
+    bool pushEnabledForNewVault = true,
   }) async {
     if (!formKey.currentState!.validate()) return null;
 
@@ -25,7 +28,12 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
 
       if (vaultId == null) {
         // Create new vault
-        final vault = await _createNewVault(name, content, ownerName);
+        final vault = await _createNewVault(
+          name,
+          content,
+          ownerName,
+          pushEnabled: pushEnabledForNewVault,
+        );
         await repository.addVault(vault);
         return vault.id;
       } else {
@@ -93,8 +101,9 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
   Future<Vault> _createNewVault(
     String name,
     String content,
-    String? ownerName,
-  ) async {
+    String? ownerName, {
+    required bool pushEnabled,
+  }) async {
     final loginService = ref.read(loginServiceProvider);
     final currentPubkey = await loginService.getCurrentPublicKey();
     if (currentPubkey == null) {
@@ -112,6 +121,7 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
       createdAt: DateTime.now(),
       ownerPubkey: currentPubkey,
       ownerName: ownerName?.trim().isEmpty == true ? null : ownerName?.trim(),
+      pushEnabled: pushEnabled,
     );
   }
 

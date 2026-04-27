@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:ndk/ndk.dart';
+import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/recovery_service.dart';
@@ -26,6 +29,8 @@ import '../helpers/secure_storage_mock.dart';
   ShardDistributionService,
   NdkService,
   VaultShareService,
+  HorcruxNotificationService,
+  Nip01Event,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +99,16 @@ void main() {
       backupService = mockBackupService;
       ndkService = mockNdkService;
       vaultShareService = mockVaultShareService;
+      final mockHorcruxNotificationService = MockHorcruxNotificationService();
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
       recoveryService = RecoveryService(
         repository,
         backupService,
@@ -101,6 +116,7 @@ void main() {
         vaultShareService,
         ProcessedNostrEventStore(),
         mockLocalNotificationService,
+        mockHorcruxNotificationService,
       );
       await recoveryService.clearAll();
       await repository.clearAll();
@@ -230,11 +246,11 @@ void main() {
         final shardDataJson = decoded['shard_data'] as Map<String, dynamic>;
         expect(shardDataJson['shard'], 'test_shard_data_base64');
         expect(shardDataJson['threshold'], 2);
-        expect(shardDataJson['shardIndex'], 0);
-        expect(shardDataJson['totalShards'], 3);
-        expect(shardDataJson['creatorPubkey'], testCreatorPubkey);
-        expect(shardDataJson['vaultId'], testVaultId);
-        expect(shardDataJson['vaultName'], 'Test Vault');
+        expect(shardDataJson['shard_index'], 0);
+        expect(shardDataJson['total_shards'], 3);
+        expect(shardDataJson['creator_pubkey'], testCreatorPubkey);
+        expect(shardDataJson['vault_id'], testVaultId);
+        expect(shardDataJson['vault_name'], 'Test Vault');
       },
     );
 
@@ -520,7 +536,15 @@ void main() {
           ),
         ).thenAnswer((invocation) {
           capturedContent = invocation.namedArguments[#content] as String?;
-          return Future.value('mock_event_id_12345');
+          return Future.value(
+            Nip01Event(
+              kind: NostrKind.giftWrap.value,
+              pubKey: 'a' * 64,
+              content: 'mock',
+              tags: const [],
+              createdAt: 1,
+            ),
+          );
         });
 
         // Act: Respond to the practice recovery request with approval
@@ -604,7 +628,15 @@ void main() {
         ),
       ).thenAnswer((invocation) {
         capturedContent = invocation.namedArguments[#content] as String?;
-        return Future.value('mock_event_id_67890');
+        return Future.value(
+          Nip01Event(
+            kind: NostrKind.giftWrap.value,
+            pubKey: 'a' * 64,
+            content: 'mock',
+            tags: const [],
+            createdAt: 1,
+          ),
+        );
       });
 
       // Act: Respond to the REAL recovery request with approval
@@ -648,8 +680,8 @@ void main() {
       final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
       expect(sentShardData['shard'], 'real_shard_secret_BBB=');
       expect(sentShardData['threshold'], 1);
-      expect(sentShardData['shardIndex'], 0);
-      expect(sentShardData['totalShards'], 1);
+      expect(sentShardData['shard_index'], 0);
+      expect(sentShardData['total_shards'], 1);
 
       // Log the captured content for verification
       // ignore: avoid_print

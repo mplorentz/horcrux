@@ -225,4 +225,70 @@ void main() {
       );
     });
   });
+
+  group('setPushEnabled', () {
+    test('flips pushEnabled and persists the change', () async {
+      final loginService = LoginService();
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      final ownerPubkey = keyPair.publicKey;
+
+      final repository = VaultRepository(loginService);
+
+      final vault = Vault(
+        id: 'push-vault',
+        name: 'Push Vault',
+        content: 'content',
+        createdAt: DateTime(2024, 1, 1),
+        ownerPubkey: ownerPubkey,
+        pushEnabled: true,
+      );
+      await repository.addVault(vault);
+
+      await repository.setPushEnabled('push-vault', false);
+
+      final disabled = await repository.getVault('push-vault');
+      expect(disabled, isNotNull);
+      expect(disabled!.pushEnabled, isFalse);
+
+      // Re-enabling round-trips too.
+      await repository.setPushEnabled('push-vault', true);
+      final enabled = await repository.getVault('push-vault');
+      expect(enabled!.pushEnabled, isTrue);
+    });
+
+    test('is a no-op when the value is unchanged', () async {
+      final loginService = LoginService();
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      final ownerPubkey = keyPair.publicKey;
+
+      final repository = VaultRepository(loginService);
+      final vault = Vault(
+        id: 'noop-vault',
+        name: 'Noop Vault',
+        content: null,
+        createdAt: DateTime(2024, 1, 1),
+        ownerPubkey: ownerPubkey,
+        pushEnabled: true,
+      );
+      await repository.addVault(vault);
+
+      // Should not throw and should leave the vault untouched.
+      await repository.setPushEnabled('noop-vault', true);
+
+      final after = await repository.getVault('noop-vault');
+      expect(after!.pushEnabled, isTrue);
+    });
+
+    test('throws ArgumentError when vault is missing', () async {
+      final loginService = LoginService();
+      await loginService.generateAndStoreNostrKey();
+
+      final repository = VaultRepository(loginService);
+
+      expect(
+        () => repository.setPushEnabled('missing-vault', true),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
 }

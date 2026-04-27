@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/debug_info_sheet.dart';
 import '../widgets/horcrux_scaffold.dart';
-import 'relay_management_screen.dart';
 import 'account_management_screen.dart';
+import 'push_notification_settings_screen.dart';
+import 'relay_management_screen.dart';
 
 /// Settings screen with debug and relay management options
 class SettingsScreen extends ConsumerWidget {
@@ -65,6 +66,33 @@ class SettingsScreen extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const RelayManagementScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            title: const Text('Push Notifications'),
+            subtitle: const Text(
+              'Opt in and choose which vaults trigger alerts',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PushNotificationSettingsScreen(),
                 ),
               );
             },

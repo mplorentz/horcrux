@@ -11,8 +11,10 @@ import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
 import 'backup_service.dart';
+import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'ndk_service.dart';
+import 'notification_recency.dart';
 import 'processed_nostr_event_store.dart';
 import 'vault_share_service.dart';
 import 'logger.dart';
@@ -27,6 +29,7 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
   final vaultShareService = ref.read(vaultShareServiceProvider);
   final processedStore = ref.read(processedNostrEventStoreProvider);
   final localNotifications = ref.read(localNotificationServiceProvider);
+  final notificationService = ref.read(horcruxNotificationServiceProvider);
   final service = RecoveryService(
     repository,
     backupService,
@@ -34,6 +37,7 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
     vaultShareService,
     processedStore,
     localNotifications,
+    notificationService,
   );
 
   // Clean up streams when disposed
@@ -53,11 +57,9 @@ class RecoveryService {
   final VaultShareService _vaultShareService;
   final ProcessedNostrEventStore _processedStore;
   final LocalNotificationService _localNotifications;
+  final HorcruxNotificationService _notificationService;
 
   static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
-  static const String _firstOpenUtcKey = 'horcrux_first_open_utc_ms';
-
-  DateTime? _firstOpenUtcCached;
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
@@ -77,6 +79,7 @@ class RecoveryService {
     this._vaultShareService,
     this._processedStore,
     this._localNotifications,
+    this._notificationService,
   ) {
     _loadViewedNotificationIds();
     _setupNdkStreamListeners();
@@ -150,20 +153,6 @@ class RecoveryService {
     _recoveryRequestController.close();
   }
 
-  Future<DateTime> _firstAppOpen() async {
-    if (_firstOpenUtcCached != null) return _firstOpenUtcCached!;
-    final prefs = await SharedPreferences.getInstance();
-    final ms = prefs.getInt(_firstOpenUtcKey);
-    if (ms != null) {
-      _firstOpenUtcCached = DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
-      return _firstOpenUtcCached!;
-    }
-    final now = DateTime.now().toUtc();
-    await prefs.setInt(_firstOpenUtcKey, now.millisecondsSinceEpoch);
-    _firstOpenUtcCached = now;
-    return _firstOpenUtcCached!;
-  }
-
   /// Initialize the service: first-open UTC, processed Nostr event ids, viewed-notification ids.
   ///
   /// Call from app startup after [LocalNotificationService.initialize] and before relay traffic
@@ -174,7 +163,7 @@ class RecoveryService {
     }
 
     try {
-      await _firstAppOpen();
+      await getFirstAppOpenUtc();
       await _processedStore.ensureLoaded();
       await _loadViewedNotificationIds();
     } catch (e) {
@@ -245,7 +234,7 @@ class RecoveryService {
   /// does not surface historical requests as pending).
   Future<List<RecoveryRequest>> _pendingRecoveryRequests() async {
     await initialize();
-    final firstOpen = await _firstAppOpen();
+    final firstOpen = await getFirstAppOpenUtc();
     final currentPubkey = await _ndkService.getCurrentPubkey();
     final allRequests = await repository.getAllRecoveryRequests();
 
@@ -512,7 +501,7 @@ class RecoveryService {
     // Emit notification update
     await _emitNotificationUpdate();
 
-    final firstOpen = await _firstAppOpen();
+    final firstOpen = await getFirstAppOpenUtc();
     final myPubkey = await _ndkService.getCurrentPubkey();
     if (RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
       request,
@@ -682,7 +671,7 @@ class RecoveryService {
     await _emitNotificationUpdate();
 
     if (recoveryResponseSourceEvent != null) {
-      final firstOpen = await _firstAppOpen();
+      final firstOpen = await getFirstAppOpenUtc();
       final myPubkey = await _ndkService.getCurrentPubkey();
       if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(
         responseCreatedAt: recoveryResponseSourceEvent.createdAt,
@@ -1046,11 +1035,14 @@ class RecoveryService {
 
       final requestJson = json.encode(requestData);
 
-      // Send gift wrap to each steward using NdkService
-      final eventIds = await _ndkService.publishEncryptedEventToMultiple(
+      // Send gift wrap to each steward using NdkService. The signed events
+      // come back positionally aligned with the recipient list so we can
+      // pipe each one into [tryPushForEvent] without rebuilding it.
+      final recipients = request.stewardResponses.keys.toList();
+      final publishedEvents = await _ndkService.publishEncryptedEventToMultiple(
         content: requestJson,
         kind: NostrKind.recoveryRequest.value,
-        recipientPubkeys: request.stewardResponses.keys.toList(),
+        recipientPubkeys: recipients,
         relays: relays,
         tags: [
           ['d', 'recovery_request_${request.id}'],
@@ -1060,12 +1052,33 @@ class RecoveryService {
         customPubkey: currentPubkey,
       );
 
+      final eventIds = [
+        for (final event in publishedEvents)
+          if (event != null) event.id,
+      ];
+
       // Update request status to sent
       await updateRecoveryRequestStatus(
         request.id,
         RecoveryRequestStatus.sent,
         nostrEventId: eventIds.isNotEmpty ? eventIds.first : null,
       );
+
+      // Best-effort push to each steward. We look up the vault once so the
+      // per-recipient loop stays cheap; if the vault is missing (owner
+      // bookkeeping error) we skip the push entirely rather than guessing.
+      final vaultForPush = await repository.getVault(request.vaultId);
+      if (vaultForPush != null) {
+        for (final event in publishedEvents) {
+          if (event == null) continue;
+          await _notificationService.tryPushForEvent(
+            event: event,
+            kind: NostrKind.recoveryRequest,
+            vault: vaultForPush,
+            relayHints: relays,
+          );
+        }
+      }
 
       Log.info(
         'Successfully sent recovery request ${request.id} to ${eventIds.length} stewards',
@@ -1115,8 +1128,9 @@ class RecoveryService {
         'Sending recovery response to ${request.initiatorPubkey.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
-      final eventId = await _ndkService.publishEncryptedEvent(
+      // Publish using NdkService. The returned event is the signed gift
+      // wrap, which we forward to the notifier without rebuilding.
+      final publishedEvent = await _ndkService.publishEncryptedEvent(
         content: responseJson,
         kind: NostrKind.recoveryResponse.value,
         recipientPubkey: request.initiatorPubkey,
@@ -1129,8 +1143,23 @@ class RecoveryService {
         ],
       );
 
-      if (eventId == null) {
+      if (publishedEvent == null) {
         throw Exception('Failed to publish recovery response event');
+      }
+      final eventId = publishedEvent.id;
+
+      // Best-effort push to the recovery initiator. Practice responses
+      // still deserve a push because the initiator is actively waiting;
+      // the body text says "sent a shard" / "approved" / "denied".
+      final vaultForPush = await repository.getVault(request.vaultId);
+      if (vaultForPush != null) {
+        await _notificationService.tryPushForEvent(
+          event: publishedEvent,
+          kind: NostrKind.recoveryResponse,
+          vault: vaultForPush,
+          relayHints: relays,
+          recoveryApproved: approved,
+        );
       }
 
       Log.info(
@@ -1231,19 +1260,15 @@ class RecoveryService {
   }
 }
 
-/// Live vs historical replay rules for recovery-related local notifications and steward UI
+/// Recent-vs-historical replay rules for recovery-related local notifications and steward UI
 /// ([RecoveryService._pendingRecoveryRequests]).
 ///
-/// Kept next to [RecoveryService] and referenced from tests via this type.
+/// Recency itself is defined by [isEventRecent] in `notification_recency.dart`;
+/// this policy layers the domain rules on top (self-origin filtering, initiator-
+/// only-hears-peer-responses, terminal-session filtering). Kept next to
+/// [RecoveryService] and referenced from tests via this type.
 class RecoveryNotificationPolicy {
   RecoveryNotificationPolicy._();
-
-  static const Duration slack = Duration(hours: 1);
-
-  /// Whether [eventUtc] is recent enough relative to first app open to surface as live
-  /// (vs relay historical replay).
-  static bool isLiveEventTime(DateTime eventUtc, DateTime firstOpenUtc) =>
-      eventUtc.isAfter(firstOpenUtc.subtract(slack));
 
   /// Prefer [RecoveryRequest.eventCreationTime]; fall back to [RecoveryRequest.requestedAt].
   ///
@@ -1259,12 +1284,12 @@ class RecoveryNotificationPolicy {
       return false;
     }
     final anchor = request.eventCreationTime ?? request.requestedAt;
-    return isLiveEventTime(anchor, firstOpenUtc);
+    return isEventRecent(anchor, firstOpenUtc);
   }
 
   /// Whether to show a local OS notification for an incoming recovery **response** event.
   ///
-  /// Combines: inner [responseCreatedAt] must exist and fall in the [isLiveEventTime] window;
+  /// Combines: inner [responseCreatedAt] must exist and fall in the [isEventRecent] window;
   /// [requestBeforeApply] / [currentPubkeyHex] must be known; only the **initiator** is notified
   /// of peers' responses; not when the response is the user's own relay echo; not when the
   /// session is already terminal.
@@ -1278,7 +1303,7 @@ class RecoveryNotificationPolicy {
     if (responseCreatedAt == null) {
       return false;
     }
-    if (!isLiveEventTime(responseCreatedAt, firstOpenUtc)) {
+    if (!isEventRecent(responseCreatedAt, firstOpenUtc)) {
       return false;
     }
     if (requestBeforeApply == null || currentPubkeyHex == null) {

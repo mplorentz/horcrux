@@ -9,6 +9,8 @@ import '../models/steward_status.dart';
 import '../models/event_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import '../utils/date_time_extensions.dart';
+import 'horcrux_notification_service.dart';
 import 'login_service.dart';
 import 'ndk_service.dart';
 import 'logger.dart';
@@ -20,6 +22,7 @@ final Provider<ShardDistributionService> shardDistributionServiceProvider =
     ref.read(vaultRepositoryProvider),
     ref.read(loginServiceProvider),
     ref.read(ndkServiceProvider),
+    ref.read(horcruxNotificationServiceProvider),
   );
 });
 
@@ -28,8 +31,14 @@ class ShardDistributionService {
   final VaultRepository _repository;
   final LoginService _loginService;
   final NdkService _ndkService;
+  final HorcruxNotificationService _notificationService;
 
-  ShardDistributionService(this._repository, this._loginService, this._ndkService);
+  ShardDistributionService(
+    this._repository,
+    this._loginService,
+    this._ndkService,
+    this._notificationService,
+  );
 
   /// Distribute shards to all stewards
   Future<List<ShardEvent>> distributeShards({
@@ -69,8 +78,10 @@ class ShardDistributionService {
 
           Log.debug('recipient pubkey: ${keyHolder.pubkey}');
 
-          // Publish using NdkService
-          final eventId = await _ndkService.publishEncryptedEvent(
+          // Publish using NdkService. The method returns the signed gift
+          // wrap so we can pipe it to [tryPushForEvent] below without
+          // rebuilding it.
+          final publishedEvent = await _ndkService.publishEncryptedEvent(
             content: shardString,
             kind: NostrKind.shardData.value,
             recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
@@ -83,8 +94,24 @@ class ShardDistributionService {
             customPubkey: ownerPubkey, // Vault owner signs the rumor
           );
 
-          if (eventId == null) {
+          if (publishedEvent == null) {
             throw Exception('Failed to publish shard event');
+          }
+          final eventId = publishedEvent.id;
+
+          // Best-effort push to the steward. The event is already on Nostr,
+          // so a notifier/FCM failure is non-fatal and swallowed inside
+          // [tryPushForEvent].
+          if (keyHolder.pubkey != ownerPubkey) {
+            final vault = await _repository.getVault(config.vaultId);
+            if (vault != null) {
+              await _notificationService.tryPushForEvent(
+                event: publishedEvent,
+                kind: NostrKind.shardData,
+                vault: vault,
+                relayHints: config.relays,
+              );
+            }
           }
 
           // If this is the owner's own shard, immediately store it locally and acknowledge it
@@ -164,7 +191,7 @@ class ShardDistributionService {
           final filter = Filter(
             kinds: [1059], // Gift wrap events
             authors: [shardEvent.recipientPubkey], // Hex format
-            since: shardEvent.createdAt.millisecondsSinceEpoch ~/ 1000,
+            since: shardEvent.createdAt.secondsSinceEpoch,
           );
 
           final acknowledgmentResponse = ndk.requests.query(filters: [filter]);
@@ -345,8 +372,8 @@ class ShardDistributionService {
     }
 
     // Validate payload
-    final payloadVaultId = payload['vaultId'] as String?;
-    final payloadShardIndex = payload['shardIndex'] as int?;
+    final payloadVaultId = payload['vault_id'] as String?;
+    final payloadShardIndex = payload['shard_index'] as int?;
     final error = payload['error'] as String? ?? 'Unknown error';
 
     if (payloadVaultId != vaultId) {

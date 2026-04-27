@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../providers/key_provider.dart';
+import '../utils/date_time_extensions.dart';
+import 'local_notification_service.dart';
 import 'login_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
@@ -32,7 +34,7 @@ int computeSinceTime({
   required int? lastSeenEventCreatedAtUnix,
   Duration recentWindow = const Duration(days: 3),
 }) {
-  final windowStartSec = nowUtc.subtract(recentWindow).millisecondsSinceEpoch ~/ 1000;
+  final windowStartSec = nowUtc.subtract(recentWindow).secondsSinceEpoch;
   final last = lastSeenEventCreatedAtUnix;
   if (last == null || last <= 0) {
     return 0;
@@ -83,6 +85,9 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
 /// Service for managing NDK (Nostr Development Kit) connections and subscriptions
 /// Handles real-time listening for recovery requests and key share events
 class NdkService {
+  /// Pseudo-relay URL for FCM-delivered gift wraps ([processGiftWrapFromForegroundPush]).
+  static const _fcmForegroundPushRelayUrl = 'push://horcrux-fcm';
+
   final Ref _ref;
   final LoginService _loginService;
   final ProcessedNostrEventStore _processedEventStore;
@@ -271,6 +276,120 @@ class NdkService {
     );
   }
 
+  /// Unwraps and routes a kind-1059 gift wrap received on an FCM foreground message
+  /// with inline `event_json` — same pipeline as relay subscription deliveries.
+  ///
+  /// Processing flows through [_handleIncomingNostrEvent] which dispatches to
+  /// the per-kind handlers; those handlers are responsible for surfacing any
+  /// user-facing local notification via [LocalNotificationService] (so the
+  /// foreground FCM path does not need its own fallback notification).
+  ///
+  /// No-ops when NDK cannot be initialized (no key). Large pushes that omit
+  /// inline JSON are handled later by the tap / cold-start path.
+  Future<void> processGiftWrapFromForegroundPush(Nip01Event event) async {
+    if (!_isInitialized) {
+      try {
+        await initialize();
+      } catch (e, st) {
+        Log.warning(
+          'NDK could not initialize; skipping FCM foreground gift-wrap',
+          e,
+          st,
+        );
+        return;
+      }
+    }
+    await _handleIncomingNostrEvent(event, relayUrl: _fcmForegroundPushRelayUrl);
+  }
+
+  /// Fetches a kind-1059 gift wrap by [eventIdHex] using [relayHints] first, then
+  /// any [getActiveRelays] entries — for FCM payloads that omit inline `event_json`.
+  Future<Nip01Event?> fetchGiftWrapByIdForPush({
+    required String eventIdHex,
+    List<String>? relayHints,
+  }) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+
+    final relays = <String>{
+      ...?relayHints,
+      ..._activeRelays,
+    }.toList();
+    if (relays.isEmpty) {
+      Log.warning(
+        'fetchGiftWrapByIdForPush: no relays (empty hints and no active subscriptions)',
+      );
+      return null;
+    }
+
+    try {
+      final filter = Filter(
+        kinds: [NostrKind.giftWrap.value],
+        ids: [eventIdHex],
+      );
+      final response = _ndk!.requests.query(
+        filters: [filter],
+        explicitRelays: relays,
+      );
+      final events = await response.future;
+      if (events.isEmpty) {
+        Log.warning('fetchGiftWrapByIdForPush: relay returned no events for $eventIdHex');
+        return null;
+      }
+      for (final e in events) {
+        if (e.id == eventIdHex) return e;
+      }
+      Log.warning(
+        'fetchGiftWrapByIdForPush: relay returned ${events.length} event(s) but none matched $eventIdHex',
+      );
+      return null;
+    } catch (e, st) {
+      Log.warning('fetchGiftWrapByIdForPush failed', e, st);
+      return null;
+    }
+  }
+
+  /// Best-effort [Vault.id] for navigation after a push — unwraps once and reads
+  /// inner JSON/tags. Returns `null` when unknown or unwrap fails.
+  Future<String?> resolveVaultIdForGiftWrap(Nip01Event giftWrap) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+    try {
+      final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
+      switch (inner.kind) {
+        case 1337: // [NostrKind.shardData]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vault_id'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1338: // [NostrKind.recoveryRequest]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vault_id'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1339: // [NostrKind.recoveryResponse]
+          final m = json.decode(inner.content) as Map<String, dynamic>;
+          final id = m['vault_id'] as String?;
+          return (id != null && id.isNotEmpty) ? id : null;
+        case 1342: // [NostrKind.shardConfirmation]
+          return _firstTagValue(inner.tags, 'vault_id');
+        default:
+          return null;
+      }
+    } catch (e, st) {
+      Log.debug('resolveVaultIdForGiftWrap failed', e, st);
+      return null;
+    }
+  }
+
+  String? _firstTagValue(List<List<String>> tags, String name) {
+    for (final t in tags) {
+      if (t.length >= 2 && t[0] == name) {
+        final v = t[1];
+        return v.isEmpty ? null : v;
+      }
+    }
+    return null;
+  }
+
   /// Handle incoming Nostr events
   /// Routes to appropriate handler based on the inner kind.
   Future<void> _handleIncomingNostrEvent(
@@ -343,13 +462,18 @@ class NdkService {
       final vaultId = shardData.vaultId;
       if (vaultId == null || vaultId.isEmpty) {
         Log.error(
-          'Cannot process shard data event ${event.id}: missing vaultId in shard data',
+          'Cannot process shard data event ${event.id}: missing vault_id in shard data',
         );
         return;
       }
 
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
+
+      await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+            event: event,
+            shardData: shardData,
+          );
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
     }
@@ -362,25 +486,31 @@ class NdkService {
       final requestData = json.decode(event.content) as Map<String, dynamic>;
       final senderPubkey = event.pubKey;
 
-      // Create RecoveryRequest object
+      // Create RecoveryRequest object (Nostr content uses snake_case keys).
+      final requestedAtRaw = requestData['requested_at'] as String?;
+      final expiresRaw = requestData['expires_at'] as String?;
+      final thresholdRaw = requestData['threshold'];
+      final threshold = thresholdRaw is int
+          ? thresholdRaw
+          : thresholdRaw is num
+              ? thresholdRaw.toInt()
+              : 1;
+
       final recoveryRequest = RecoveryRequest(
-        id: requestData['recovery_request_id'] as String? ?? event.id,
+        id: (requestData['recovery_request_id'] as String?) ?? event.id,
         vaultId: requestData['vault_id'] as String,
         initiatorPubkey: senderPubkey,
-        requestedAt: DateTime.parse(requestData['requested_at'] as String),
+        requestedAt: DateTime.parse(requestedAtRaw!),
         status: RecoveryRequestStatus.sent,
-        threshold: requestData['threshold'] as int? ?? 1, // Default to 1 if not present
+        threshold: threshold,
         nostrEventId: event.id,
         eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
           event.createdAt * 1000,
           isUtc: true,
         ),
-        expiresAt: requestData['expires_at'] != null
-            ? DateTime.parse(requestData['expires_at'] as String)
-            : null,
+        expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
         stewardResponses: {}, // Will be populated later
-        isPractice:
-            requestData['is_practice'] as bool? ?? false, // Read is_practice from Nostr payload
+        isPractice: requestData['is_practice'] as bool? ?? false,
       );
 
       // Emit recovery request to stream (RecoveryService will listen)
@@ -410,8 +540,9 @@ class NdkService {
       ShardData? shardData;
 
       // If approved, extract and store the shard data FOR RECOVERY
-      if (approved && responseData.containsKey('shard_data')) {
-        final shardDataJson = responseData['shard_data'] as Map<String, dynamic>;
+      final shardPayload = responseData['shard_data'];
+      if (approved && shardPayload != null) {
+        final shardDataJson = shardPayload as Map<String, dynamic>;
         shardData = shardDataFromJson(shardDataJson);
 
         // Store as a recovery shard (not a steward shard)
@@ -485,6 +616,14 @@ class NdkService {
         event: event,
       );
       Log.info('Successfully processed shard confirmation event: ${event.id}');
+
+      final vaultId = _firstTagValue(event.tags, 'vault_id');
+      if (vaultId != null) {
+        await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
+              event: event,
+              vaultId: vaultId,
+            );
+      }
     } catch (e) {
       Log.error('Error handling shard confirmation event ${event.id}', e);
     }
@@ -547,7 +686,7 @@ class NdkService {
           tags: [
             ['p', keyHolderPubkey], // Recipient
           ],
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          createdAt: secondsSinceEpoch(),
         );
 
         // Sign and broadcast the event
@@ -612,7 +751,7 @@ class NdkService {
           ['p', initiatorPubkey], // Send to initiator
           ['e', recoveryRequestId], // Reference to original request
         ],
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        createdAt: secondsSinceEpoch(),
       );
 
       // Sign and broadcast the event
@@ -658,14 +797,16 @@ class NdkService {
     return keyPair?.publicKey;
   }
 
-  /// Publish an encrypted event (rumor + gift wrap)
+  /// Publish an encrypted event (rumor + gift wrap).
   ///
-  /// Creates a rumor event with the given content and kind,
-  /// wraps it in a gift wrap for the recipient,
-  /// and broadcasts it to the specified relays.
+  /// Creates a rumor event with the given content and kind, wraps it in a
+  /// gift wrap for the recipient, and broadcasts it to the specified relays.
   ///
-  /// Returns the gift wrap event ID.
-  Future<String?> publishEncryptedEvent({
+  /// Returns the signed gift wrap event on success, or `null` when every
+  /// relay rejected it. Callers that only care about the event ID can read
+  /// `.id` off the result; callers that need to forward the wrap elsewhere
+  /// (e.g. to `horcrux-notifier` for push) can pass the whole event.
+  Future<Nip01Event?> publishEncryptedEvent({
     required String content,
     required int kind,
     required String recipientPubkey, // Hex format
@@ -679,7 +820,6 @@ class NdkService {
       final pubkeySnippet =
           recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
 
-      // Build the gift wrap event
       final giftWrap = await _buildGiftWrapEvent(
         content: content,
         kind: kind,
@@ -688,7 +828,6 @@ class NdkService {
         customPubkey: customPubkey,
       );
 
-      // Enqueue the signed event for publishing
       final result = await _publishService.enqueueEvent(
         event: giftWrap,
         relays: relays,
@@ -712,7 +851,7 @@ class NdkService {
         );
       }
 
-      return result.eventId;
+      return giftWrap;
     } catch (e, stackTrace) {
       Log.error('Error enqueuing encrypted event', e);
       Log.debug('Encrypted event enqueue stack', stackTrace);
@@ -755,14 +894,16 @@ class NdkService {
     );
   }
 
-  /// Publish an encrypted event to multiple recipients
+  /// Publish an encrypted event to multiple recipients.
   ///
-  /// Creates a rumor event with the given content and kind,
-  /// wraps it in gift wraps for each recipient,
-  /// and broadcasts them to the specified relays.
+  /// Creates a rumor event with the given content and kind, wraps it in a
+  /// distinct gift wrap for each recipient, and broadcasts them to the
+  /// specified relays.
   ///
-  /// Returns list of gift wrap event IDs.
-  Future<List<String>> publishEncryptedEventToMultiple({
+  /// The returned list is positionally aligned with [recipientPubkeys];
+  /// entries for recipients whose publish failed are `null`. Callers that
+  /// only want event IDs can map over the non-null entries and read `.id`.
+  Future<List<Nip01Event?>> publishEncryptedEventToMultiple({
     required String content,
     required int kind,
     required List<String> recipientPubkeys, // Hex format
@@ -772,30 +913,30 @@ class NdkService {
   }) async {
     await _ensureInitialized();
 
-    final eventIds = <String>[];
+    final results = <Nip01Event?>[];
 
     for (final recipientPubkey in recipientPubkeys) {
       try {
-        final eventId = await publishEncryptedEvent(
-          content: content,
-          kind: kind,
-          recipientPubkey: recipientPubkey,
-          relays: relays,
-          tags: tags,
-          customPubkey: customPubkey,
+        results.add(
+          await publishEncryptedEvent(
+            content: content,
+            kind: kind,
+            recipientPubkey: recipientPubkey,
+            relays: relays,
+            tags: tags,
+            customPubkey: customPubkey,
+          ),
         );
-        if (eventId != null) {
-          eventIds.add(eventId);
-        }
       } catch (e) {
         Log.error(
           'Error publishing encrypted event to ${recipientPubkey.substring(0, 8)}...',
           e,
         );
+        results.add(null);
       }
     }
 
-    return eventIds;
+    return results;
   }
 
   /// Get the underlying NDK instance for advanced operations

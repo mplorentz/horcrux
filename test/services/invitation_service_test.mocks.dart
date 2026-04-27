@@ -143,6 +143,42 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<void>);
 
   @override
+  _i6.Future<void> processGiftWrapFromForegroundPush(_i2.Nip01Event? event) => (super.noSuchMethod(
+        Invocation.method(
+          #processGiftWrapFromForegroundPush,
+          [event],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<_i2.Nip01Event?> fetchGiftWrapByIdForPush({
+    required String? eventIdHex,
+    List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #fetchGiftWrapByIdForPush,
+          [],
+          {
+            #eventIdHex: eventIdHex,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i6.Future<_i2.Nip01Event?>.value(),
+      ) as _i6.Future<_i2.Nip01Event?>);
+
+  @override
+  _i6.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+        Invocation.method(
+          #resolveVaultIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
   _i6.Future<String?> publishRecoveryRequest({
     required String? vaultId,
     required List<String>? stewardPubkeys,
@@ -211,7 +247,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<String?>);
 
   @override
-  _i6.Future<String?> publishEncryptedEvent({
+  _i6.Future<_i2.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -232,11 +268,11 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i6.Future<_i2.Nip01Event?>.value(),
+      ) as _i6.Future<_i2.Nip01Event?>);
 
   @override
-  _i6.Future<List<String>> publishEncryptedEventToMultiple({
+  _i6.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -257,8 +293,8 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i6.Future<List<String>>.value(<String>[]),
-      ) as _i6.Future<List<String>>);
+        returnValue: _i6.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+      ) as _i6.Future<List<_i2.Nip01Event?>>);
 
   @override
   _i6.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
@@ -575,6 +611,23 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             id,
             name,
             content,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> setPushEnabled(
+    String? vaultId,
+    bool? enabled,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setPushEnabled,
+          [
+            vaultId,
+            enabled,
           ],
         ),
         returnValue: _i6.Future<void>.value(),
@@ -1511,6 +1564,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
     required List<Map<String, String>>? stewards,
     String? ownerName,
     String? instructions,
+    bool? pushEnabled,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1526,6 +1580,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
             #stewards: stewards,
             #ownerName: ownerName,
             #instructions: instructions,
+            #pushEnabled: pushEnabled,
           },
         ),
         returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
@@ -1742,6 +1797,18 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
         Invocation.method(
           #handleContentChange,
           [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> redistributeForPushPreferenceChange({required String? vaultId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #redistributeForPushPreferenceChange,
+          [],
+          {#vaultId: vaultId},
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
