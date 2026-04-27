@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
@@ -7,14 +9,20 @@ import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
+import '../screens/recovery_request_detail_screen.dart';
 import '../utils/push_notification_text.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
 import 'notification_recency.dart';
+import 'recovery_service.dart';
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
-  final service = LocalNotificationService(vaultRepository: vaultRepository);
+  final recoveryService = ref.watch(recoveryServiceProvider);
+  final service = LocalNotificationService(
+    vaultRepository: vaultRepository,
+    recoveryService: recoveryService,
+  );
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -28,6 +36,7 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
 /// in, but recency is enforced here as the single source of truth.
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
+  final RecoveryService _recoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'horcrux_notifications';
@@ -36,8 +45,11 @@ class LocalNotificationService {
 
   int _notificationCounter = 0;
 
-  LocalNotificationService({required VaultRepository vaultRepository})
-      : _vaultRepository = vaultRepository;
+  LocalNotificationService({
+    required VaultRepository vaultRepository,
+    required RecoveryService recoveryService,
+  })  : _vaultRepository = vaultRepository,
+        _recoveryService = recoveryService;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -297,14 +309,30 @@ class LocalNotificationService {
 
     Log.info('Notification tapped with payload: $payload');
 
-    final navigator = navigatorKey.currentState;
-    if (navigator == null) return;
+    if (payload.startsWith('recovery_request:')) {
+      final id = payload.substring('recovery_request:'.length);
+      unawaited(_navigateToRecoveryRequest(id));
+    }
+  }
 
-    // For now, tapping just brings the app to the foreground.
-    // Navigation to specific screens will be added when we have
-    // the routing infrastructure for deep-linking into recovery flows.
-    if (kDebugMode) {
-      Log.debug('Notification payload: $payload');
+  Future<void> _navigateToRecoveryRequest(String recoveryRequestId) async {
+    final request = await _recoveryService.getRecoveryRequest(recoveryRequestId);
+    if (request == null) {
+      Log.warning('Recovery request $recoveryRequestId not found, skipping navigation');
+      return;
+    }
+
+    for (var i = 0; i < 40; i++) {
+      final nav = navigatorKey.currentState;
+      if (nav != null && nav.mounted) {
+        await nav.push(
+          MaterialPageRoute<void>(
+            builder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+          ),
+        );
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
     }
   }
 
