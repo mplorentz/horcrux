@@ -732,66 +732,6 @@ class NdkService {
     }
   }
 
-  /// Publish a recovery response
-  Future<String?> publishRecoveryResponse({
-    required String initiatorPubkey,
-    required String recoveryRequestId,
-    required bool approved,
-    String? shardDataJson,
-  }) async {
-    if (!_isInitialized || _ndk == null) {
-      throw Exception('NDK not initialized');
-    }
-
-    try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair == null) {
-        throw Exception('No key pair available');
-      }
-
-      // Create response payload
-      final responsePayload = {
-        'recoveryRequestId': recoveryRequestId,
-        'approved': approved,
-        'shardData': shardDataJson,
-        'respondedAt': DateTime.now().toIso8601String(),
-      };
-
-      final responseJson = json.encode(responsePayload);
-
-      // Encrypt for initiator
-      final encryptedContent = await _loginService.encryptForRecipient(
-        plaintext: responseJson,
-        recipientPubkey: initiatorPubkey,
-      );
-
-      // Create kind 4 DM event
-      final dmEvent = Nip01Event(
-        kind: NostrKind.recoveryResponse.value,
-        pubKey: keyPair.publicKey,
-        content: encryptedContent,
-        tags: [
-          ['p', initiatorPubkey], // Send to initiator
-          ['e', recoveryRequestId], // Reference to original request
-        ],
-        createdAt: secondsSinceEpoch(),
-      );
-
-      // Sign and broadcast the event
-      await _ndk!.accounts.sign(dmEvent);
-      _ndk!.broadcast.broadcast(
-        nostrEvent: dmEvent,
-        specificRelays: _activeRelays.isNotEmpty ? _activeRelays : null,
-      );
-
-      Log.info('Published recovery response: ${dmEvent.id}');
-      return dmEvent.id;
-    } catch (e) {
-      Log.error('Error publishing recovery response', e);
-      return null;
-    }
-  }
-
   /// Close all active subscriptions
   Future<void> closeSubscriptions() async {
     for (final sub in _subscriptionStreamSubs) {
