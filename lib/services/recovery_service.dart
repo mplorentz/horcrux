@@ -82,69 +82,6 @@ class RecoveryService {
     this._notificationService,
   ) {
     _loadViewedNotificationIds();
-    _setupNdkStreamListeners();
-  }
-
-  /// Set up listeners for incoming NDK events
-  void _setupNdkStreamListeners() {
-    _ndkService.recoveryRequestStream.listen(
-      _onIncomingRecoveryRequestFromNdk,
-      onError: (error) {
-        Log.error('Error in recovery request stream', error);
-      },
-    );
-
-    _ndkService.recoveryResponseStream.listen(
-      _onIncomingRecoveryResponseFromNdk,
-      onError: (error) {
-        Log.error('Error in recovery response stream', error);
-      },
-    );
-
-    Log.info('RecoveryService listening to NdkService event streams');
-  }
-
-  Future<void> _onIncomingRecoveryRequestFromNdk(RecoveryRequest recoveryRequest) async {
-    final id = recoveryRequest.nostrEventId;
-    if (id != null && await _processedStore.contains(id)) {
-      Log.debug('Skipping already-processed recovery request event $id');
-      return;
-    }
-    try {
-      await processRecoveryRequest(recoveryRequest);
-      if (id != null) {
-        await _processedStore.recordProcessed(id);
-      }
-    } catch (e, st) {
-      Log.error(
-        'Error processing incoming recovery request from stream',
-        e,
-        st,
-      );
-    }
-  }
-
-  Future<void> _onIncomingRecoveryResponseFromNdk(RecoveryResponseEvent responseEvent) async {
-    final id = responseEvent.nostrEventId;
-    if (id != null && await _processedStore.contains(id)) {
-      Log.debug('Skipping already-processed recovery response event $id');
-      return;
-    }
-    try {
-      await processRecoveryResponse(
-        responseEvent.recoveryRequestId,
-        responseEvent.senderPubkey,
-        responseEvent.approved,
-        shardData: responseEvent.shardData,
-        nostrEventId: responseEvent.nostrEventId,
-        recoveryResponseSourceEvent: responseEvent,
-      );
-      if (id != null) {
-        await _processedStore.recordProcessed(id);
-      }
-    } catch (e, st) {
-      Log.error('Error processing recovery response from stream', e, st);
-    }
   }
 
   /// Dispose resources

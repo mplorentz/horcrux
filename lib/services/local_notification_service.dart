@@ -10,6 +10,7 @@ import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
+import '../screens/recovery_status_screen.dart';
 import '../screens/vault_detail_screen.dart';
 import '../utils/push_notification_text.dart';
 import 'logger.dart';
@@ -336,16 +337,27 @@ class LocalNotificationService {
 
   /// Navigates to the appropriate screen for the given [kind] and [id].
   ///
-  /// [vaultId] is required for shard and recovery-response kinds to open
-  /// [VaultDetailScreen]. Returns `true` if navigation succeeded, `false` if
-  /// the target could not be found or required context (e.g. vaultId) is absent.
+  /// - [NostrKind.recoveryRequest]: opens [RecoveryRequestDetailScreen] for [id]
+  ///   (the recovery request id).
+  /// - [NostrKind.recoveryResponse]: opens [RecoveryStatusScreen] (a.k.a. the
+  ///   "Manage Recovery" screen) for [id] (the recovery request id), so the
+  ///   recovery initiator lands directly on the request whose status just
+  ///   changed. Falls back to [VaultDetailScreen] when the recovery request
+  ///   can't be found locally.
+  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: opens
+  ///   [VaultDetailScreen] for [vaultId].
+  ///
+  /// [vaultId] is required for shard kinds and used as a fallback for recovery
+  /// responses. Returns `true` if navigation succeeded, `false` if the target
+  /// could not be found or required context (e.g. vaultId) is absent.
   Future<bool> navigateForKind(NostrKind kind, String id, {String? vaultId}) async {
     switch (kind) {
       case NostrKind.recoveryRequest:
         return _navigateToRecoveryRequest(id);
+      case NostrKind.recoveryResponse:
+        return _navigateToRecoveryStatus(id, fallbackVaultId: vaultId);
       case NostrKind.shardData:
       case NostrKind.shardConfirmation:
-      case NostrKind.recoveryResponse:
         if (vaultId == null || vaultId.isEmpty) {
           Log.debug('No vaultId for $kind notification tap, skipping navigation');
           return false;
@@ -377,6 +389,29 @@ class LocalNotificationService {
     await _pushRouteWhenReady(
       (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
       debugLabel: 'recovery request $recoveryRequestId',
+    );
+    return true;
+  }
+
+  /// Opens [RecoveryStatusScreen] for [recoveryRequestId] when the request is
+  /// known locally; otherwise falls back to [navigateToVault] using
+  /// [fallbackVaultId] if provided.
+  Future<bool> _navigateToRecoveryStatus(
+    String recoveryRequestId, {
+    String? fallbackVaultId,
+  }) async {
+    final request = await _getRecoveryService().getRecoveryRequest(recoveryRequestId);
+    if (request == null) {
+      Log.warning(
+        'Notification: recovery request $recoveryRequestId not found for response navigation',
+      );
+      if (fallbackVaultId == null || fallbackVaultId.isEmpty) return false;
+      await navigateToVault(fallbackVaultId);
+      return true;
+    }
+    await _pushRouteWhenReady(
+      (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+      debugLabel: 'recovery status $recoveryRequestId',
     );
     return true;
   }
