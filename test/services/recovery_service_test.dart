@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -84,14 +83,6 @@ void main() {
         mockLocalNotificationService.notifyRecoveryResponseProcessed(any),
       ).thenAnswer((_) async {});
 
-      // Stub the streams that RecoveryService accesses in its constructor
-      when(
-        mockNdkService.recoveryRequestStream,
-      ).thenAnswer((_) => const Stream<RecoveryRequest>.empty());
-      when(
-        mockNdkService.recoveryResponseStream,
-      ).thenAnswer((_) => const Stream<RecoveryResponseEvent>.empty());
-      // Stub getCurrentPubkey to return the test creator pubkey
       when(
         mockNdkService.getCurrentPubkey(),
       ).thenAnswer((_) async => testCreatorPubkey);

@@ -1210,18 +1210,6 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
-  _i5.Stream<_i12.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryRequestStream),
-        returnValue: _i5.Stream<_i12.RecoveryRequest>.empty(),
-      ) as _i5.Stream<_i12.RecoveryRequest>);
-
-  @override
-  _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryResponseStream),
-        returnValue: _i5.Stream<_i13.RecoveryResponseEvent>.empty(),
-      ) as _i5.Stream<_i13.RecoveryResponseEvent>);
-
-  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
@@ -1294,14 +1282,14 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #resolveRecoveryRequestIdForGiftWrap,
-          [giftWrap],
-        ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+  _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>
+      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+            Invocation.method(
+              #resolveRecoveryRequestIdForGiftWrap,
+              [giftWrap],
+            ),
+            returnValue: _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i5.Future<String?> publishRecoveryRequest({

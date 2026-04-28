@@ -5,13 +5,12 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
-import 'package:horcrux/models/nostr_kinds.dart' as _i11;
-import 'package:horcrux/models/recovery_request.dart' as _i8;
+import 'package:horcrux/models/nostr_kinds.dart' as _i8;
 import 'package:horcrux/models/vault.dart' as _i10;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
 import 'package:horcrux/services/login_service.dart' as _i4;
 import 'package:horcrux/services/ndk_service.dart' as _i7;
-import 'package:horcrux/services/push_notification_receiver.dart' as _i12;
+import 'package:horcrux/services/push_notification_receiver.dart' as _i11;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:ndk/ndk.dart' as _i3;
@@ -264,18 +263,6 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
   }
 
   @override
-  _i5.Stream<_i8.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryRequestStream),
-        returnValue: _i5.Stream<_i8.RecoveryRequest>.empty(),
-      ) as _i5.Stream<_i8.RecoveryRequest>);
-
-  @override
-  _i5.Stream<_i7.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryResponseStream),
-        returnValue: _i5.Stream<_i7.RecoveryResponseEvent>.empty(),
-      ) as _i5.Stream<_i7.RecoveryResponseEvent>);
-
-  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
@@ -348,14 +335,15 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+  _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i3.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i5.Future<String?> publishRecoveryRequest({
@@ -639,7 +627,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   _i5.Future<void> tryPushForEvent({
     required _i3.Nip01Event? event,
-    required _i11.NostrKind? kind,
+    required _i8.NostrKind? kind,
     required _i10.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
@@ -699,7 +687,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
 /// A class which mocks [PushNotificationReceiver].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockPushNotificationReceiver extends _i1.Mock implements _i12.PushNotificationReceiver {
+class MockPushNotificationReceiver extends _i1.Mock implements _i11.PushNotificationReceiver {
   MockPushNotificationReceiver() {
     _i1.throwOnMissingStub(this);
   }
