@@ -1130,6 +1130,26 @@ void _tryPushForEventTests({
     expect(harness.received, isEmpty);
   });
 
+  test('skips push when recipient is the current user (self)', () async {
+    SharedPreferences.setMockInitialValues({
+      PushNotificationReceiver.optInFlagKey: true,
+    });
+    final harness = buildPushService();
+    addTearDown(harness.service.dispose);
+    final selfPubkey = keyPairOf().publicKey;
+    when(
+      loginServiceOf().getCurrentPublicKey(),
+    ).thenAnswer((_) async => selfPubkey);
+
+    await harness.service.tryPushForEvent(
+      event: buildGiftWrap(recipientPubkey: selfPubkey),
+      kind: NostrKind.recoveryRequest,
+      vault: buildVault(),
+    );
+
+    expect(harness.received, isEmpty);
+  });
+
   test(
     'embeds event JSON inline when payload is under the size threshold',
     () async {

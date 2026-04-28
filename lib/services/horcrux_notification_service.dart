@@ -446,6 +446,18 @@ class HorcruxNotificationService {
       return;
     }
 
+    // The notifier rejects self-pushes (sender == recipient) with 400, and
+    // the result wouldn't be useful anyway: the local app already knows
+    // about events it just published. This commonly happens when a user
+    // is a steward of their own vault, so the publish-to-stewards loop
+    // includes their own pubkey.
+    if (recipientPubkey.toLowerCase() == senderPubkey.toLowerCase()) {
+      Log.debug(
+        'HorcruxNotificationService: skipping push (recipient is self)',
+      );
+      return;
+    }
+
     final text = composeNotificationText(
       kind: kind,
       vault: vault,
