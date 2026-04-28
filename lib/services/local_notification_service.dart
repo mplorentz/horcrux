@@ -203,6 +203,53 @@ class LocalNotificationService {
     return !anyPromptFailed;
   }
 
+  /// Reads the current OS-level notification permission state without prompting.
+  ///
+  /// Used to detect divergence between our persisted opt-in flag (which can
+  /// survive an uninstall + reinstall via Android Auto Backup or iCloud
+  /// SharedPreferences sync) and the OS, whose runtime permission can be
+  /// reset by the package replacement. When the persisted flag claims
+  /// "opted in" but this method returns `false`, callers should treat the
+  /// user as not opted in and re-run the request flow.
+  ///
+  /// Returns `true` on platforms where the plugin does not expose a check
+  /// (e.g. web, Linux, Windows) so we don't loop on uncertainty. Errors are
+  /// swallowed and logged; the safe default is also `true` to avoid
+  /// re-prompting based on a flaky probe.
+  Future<bool> areOsNotificationsEnabled() async {
+    try {
+      final android =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        final granted = await android.areNotificationsEnabled();
+        // Pre-Android-13 has no runtime gate; the plugin returns null.
+        return granted ?? true;
+      }
+
+      final ios =
+          _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        return _hasAnyEnabledOption(await ios.checkPermissions());
+      }
+
+      final macOS =
+          _plugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
+      if (macOS != null) {
+        return _hasAnyEnabledOption(await macOS.checkPermissions());
+      }
+
+      return true;
+    } catch (e, st) {
+      Log.warning('areOsNotificationsEnabled probe failed', e, st);
+      return true;
+    }
+  }
+
+  bool _hasAnyEnabledOption(NotificationsEnabledOptions? options) {
+    if (options == null) return false;
+    return options.isAlertEnabled || options.isBadgeEnabled || options.isSoundEnabled;
+  }
+
   Future<void> _showRecoveryRequestNotification(RecoveryRequest request) async {
     Log.info(
       'Showing notification for recovery request: ${request.id}',
