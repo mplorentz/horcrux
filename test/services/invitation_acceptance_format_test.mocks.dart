@@ -5,22 +5,22 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i6;
 
-import 'package:horcrux/models/backup_status.dart' as _i13;
-import 'package:horcrux/models/nostr_kinds.dart' as _i8;
-import 'package:horcrux/models/recovery_request.dart' as _i7;
+import 'package:horcrux/models/backup_status.dart' as _i12;
+import 'package:horcrux/models/nostr_kinds.dart' as _i7;
+import 'package:horcrux/models/recovery_request.dart' as _i16;
 import 'package:horcrux/models/relay_configuration.dart' as _i18;
-import 'package:horcrux/models/shard_data.dart' as _i16;
-import 'package:horcrux/models/steward.dart' as _i14;
-import 'package:horcrux/models/steward_status.dart' as _i15;
-import 'package:horcrux/models/vault.dart' as _i12;
-import 'package:horcrux/providers/vault_provider.dart' as _i11;
+import 'package:horcrux/models/shard_data.dart' as _i15;
+import 'package:horcrux/models/steward.dart' as _i13;
+import 'package:horcrux/models/steward_status.dart' as _i14;
+import 'package:horcrux/models/vault.dart' as _i11;
+import 'package:horcrux/providers/vault_provider.dart' as _i10;
 import 'package:horcrux/services/backup_service.dart' as _i19;
 import 'package:horcrux/services/invitation_sending_service.dart' as _i17;
-import 'package:horcrux/services/login_service.dart' as _i9;
+import 'package:horcrux/services/login_service.dart' as _i8;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
 import 'package:horcrux/services/relay_scan_service.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i10;
+import 'package:mockito/src/dummies.dart' as _i9;
 import 'package:ndk/ndk.dart' as _i2;
 import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i3;
 
@@ -96,18 +96,6 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
   }
 
   @override
-  _i6.Stream<_i7.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryRequestStream),
-        returnValue: _i6.Stream<_i7.RecoveryRequest>.empty(),
-      ) as _i6.Stream<_i7.RecoveryRequest>);
-
-  @override
-  _i6.Stream<_i4.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryResponseStream),
-        returnValue: _i6.Stream<_i4.RecoveryResponseEvent>.empty(),
-      ) as _i6.Stream<_i4.RecoveryResponseEvent>);
-
-  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
@@ -180,15 +168,15 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<String?>);
 
   @override
-  _i6.Future<({_i8.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+  _i6.Future<({_i7.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
           _i2.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i6.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
-      ) as _i6.Future<({_i8.NostrKind kind, String recoveryRequestId})?>);
+        returnValue: _i6.Future<({_i7.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i6.Future<({_i7.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i6.Future<String?> publishRecoveryRequest({
@@ -346,7 +334,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
 /// A class which mocks [LoginService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLoginService extends _i1.Mock implements _i9.LoginService {
+class MockLoginService extends _i1.Mock implements _i8.LoginService {
   MockLoginService() {
     _i1.throwOnMissingStub(this);
   }
@@ -444,7 +432,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
           #encryptText,
           [plaintext],
         ),
-        returnValue: _i6.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
           this,
           Invocation.method(
             #encryptText,
@@ -459,7 +447,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
           #decryptText,
           [encryptedText],
         ),
-        returnValue: _i6.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
           this,
           Invocation.method(
             #decryptText,
@@ -507,7 +495,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
             #recipientPubkey: recipientPubkey,
           },
         ),
-        returnValue: _i6.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
           this,
           Invocation.method(
             #encryptForRecipient,
@@ -534,7 +522,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
             #senderPubkey: senderPubkey,
           },
         ),
-        returnValue: _i6.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
           this,
           Invocation.method(
             #decryptFromSender,
@@ -551,16 +539,16 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
 /// A class which mocks [VaultRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
+class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
   MockVaultRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i6.Stream<List<_i12.Vault>> get vaultsStream => (super.noSuchMethod(
+  _i6.Stream<List<_i11.Vault>> get vaultsStream => (super.noSuchMethod(
         Invocation.getter(#vaultsStream),
-        returnValue: _i6.Stream<List<_i12.Vault>>.empty(),
-      ) as _i6.Stream<List<_i12.Vault>>);
+        returnValue: _i6.Stream<List<_i11.Vault>>.empty(),
+      ) as _i6.Stream<List<_i11.Vault>>);
 
   @override
   _i6.Future<void> initialize() => (super.noSuchMethod(
@@ -573,25 +561,25 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i12.Vault>> getAllVaults() => (super.noSuchMethod(
+  _i6.Future<List<_i11.Vault>> getAllVaults() => (super.noSuchMethod(
         Invocation.method(
           #getAllVaults,
           [],
         ),
-        returnValue: _i6.Future<List<_i12.Vault>>.value(<_i12.Vault>[]),
-      ) as _i6.Future<List<_i12.Vault>>);
+        returnValue: _i6.Future<List<_i11.Vault>>.value(<_i11.Vault>[]),
+      ) as _i6.Future<List<_i11.Vault>>);
 
   @override
-  _i6.Future<_i12.Vault?> getVault(String? id) => (super.noSuchMethod(
+  _i6.Future<_i11.Vault?> getVault(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getVault,
           [id],
         ),
-        returnValue: _i6.Future<_i12.Vault?>.value(),
-      ) as _i6.Future<_i12.Vault?>);
+        returnValue: _i6.Future<_i11.Vault?>.value(),
+      ) as _i6.Future<_i11.Vault?>);
 
   @override
-  _i6.Future<void> saveVault(_i12.Vault? vault) => (super.noSuchMethod(
+  _i6.Future<void> saveVault(_i11.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #saveVault,
           [vault],
@@ -601,7 +589,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> addVault(_i12.Vault? vault) => (super.noSuchMethod(
+  _i6.Future<void> addVault(_i11.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #addVault,
           [vault],
@@ -689,8 +677,8 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       DateTime lastUpdated,
       List<String> relays,
       String specVersion,
-      _i13.BackupStatus status,
-      List<_i14.Steward> stewards,
+      _i12.BackupStatus status,
+      List<_i13.Steward> stewards,
       int threshold,
       int totalKeys,
       String vaultId
@@ -720,8 +708,8 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -741,8 +729,8 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -758,8 +746,8 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -769,7 +757,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   _i6.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i15.StewardStatus? status,
+    required _i14.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -794,7 +782,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   @override
   _i6.Future<void> addShardToVault(
     String? vaultId,
-    _i16.ShardData? shard,
+    _i15.ShardData? shard,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -809,13 +797,13 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i16.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<List<_i15.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i16.ShardData>>.value(<_i16.ShardData>[]),
-      ) as _i6.Future<List<_i16.ShardData>>);
+        returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
+      ) as _i6.Future<List<_i15.ShardData>>);
 
   @override
   _i6.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
@@ -849,7 +837,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   @override
   _i6.Future<void> addRecoveryRequestToVault(
     String? vaultId,
-    _i7.RecoveryRequest? request,
+    _i16.RecoveryRequest? request,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -867,7 +855,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   _i6.Future<void> updateRecoveryRequestInVault(
     String? vaultId,
     String? requestId,
-    _i7.RecoveryRequest? updatedRequest,
+    _i16.RecoveryRequest? updatedRequest,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -883,32 +871,33 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i7.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+  _i6.Future<List<_i16.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i7.RecoveryRequest>>.value(<_i7.RecoveryRequest>[]),
-      ) as _i6.Future<List<_i7.RecoveryRequest>>);
+        returnValue: _i6.Future<List<_i16.RecoveryRequest>>.value(<_i16.RecoveryRequest>[]),
+      ) as _i6.Future<List<_i16.RecoveryRequest>>);
 
   @override
-  _i6.Future<_i7.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<_i16.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getActiveRecoveryRequest,
           [vaultId],
         ),
-        returnValue: _i6.Future<_i7.RecoveryRequest?>.value(),
-      ) as _i6.Future<_i7.RecoveryRequest?>);
+        returnValue: _i6.Future<_i16.RecoveryRequest?>.value(),
+      ) as _i6.Future<_i16.RecoveryRequest?>);
 
   @override
-  _i6.Future<List<_i7.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+  _i6.Future<List<_i16.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i6.Future<List<_i7.RecoveryRequest>>.value(<_i7.RecoveryRequest>[]),
-      ) as _i6.Future<List<_i7.RecoveryRequest>>);
+        returnValue: _i6.Future<List<_i16.RecoveryRequest>>.value(<_i16.RecoveryRequest>[]),
+      ) as _i6.Future<List<_i16.RecoveryRequest>>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -1258,8 +1247,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -1267,7 +1256,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i14.Steward>? stewards,
+    required List<_i13.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
     String? contentHash,
@@ -1297,8 +1286,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -1341,7 +1330,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             ),
           ),
           relays: <String>[],
-          specVersion: _i10.dummyValue<String>(
+          specVersion: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #createBackupConfiguration,
@@ -1357,11 +1346,11 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               },
             ),
           ),
-          status: _i13.BackupStatus.pending,
-          stewards: <_i14.Steward>[],
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
           threshold: 0,
           totalKeys: 0,
-          vaultId: _i10.dummyValue<String>(
+          vaultId: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #createBackupConfiguration,
@@ -1389,8 +1378,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1408,8 +1397,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -1429,8 +1418,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -1446,8 +1435,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1466,8 +1455,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1488,8 +1477,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
                   DateTime lastUpdated,
                   List<String> relays,
                   String specVersion,
-                  _i13.BackupStatus status,
-                  List<_i14.Steward> stewards,
+                  _i12.BackupStatus status,
+                  List<_i13.Steward> stewards,
                   int threshold,
                   int totalKeys,
                   String vaultId
@@ -1503,8 +1492,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
           DateTime lastUpdated,
           List<String> relays,
           String specVersion,
-          _i13.BackupStatus status,
-          List<_i14.Steward> stewards,
+          _i12.BackupStatus status,
+          List<_i13.Steward> stewards,
           int threshold,
           int totalKeys,
           String vaultId
@@ -1521,8 +1510,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
                 DateTime lastUpdated,
                 List<String> relays,
                 String specVersion,
-                _i13.BackupStatus status,
-                List<_i14.Steward> stewards,
+                _i12.BackupStatus status,
+                List<_i13.Steward> stewards,
                 int threshold,
                 int totalKeys,
                 String vaultId
@@ -1540,8 +1529,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1566,7 +1555,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i16.ShardData>> generateShamirShares({
+  _i6.Future<List<_i15.ShardData>> generateShamirShares({
     required String? content,
     required int? threshold,
     required int? totalShards,
@@ -1595,18 +1584,18 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #pushEnabled: pushEnabled,
           },
         ),
-        returnValue: _i6.Future<List<_i16.ShardData>>.value(<_i16.ShardData>[]),
-      ) as _i6.Future<List<_i16.ShardData>>);
+        returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
+      ) as _i6.Future<List<_i15.ShardData>>);
 
   @override
-  _i6.Future<String> reconstructFromShares({required List<_i16.ShardData>? shares}) =>
+  _i6.Future<String> reconstructFromShares({required List<_i15.ShardData>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,
           [],
           {#shares: shares},
         ),
-        returnValue: _i6.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
           this,
           Invocation.method(
             #reconstructFromShares,
@@ -1619,7 +1608,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
   @override
   _i6.Future<void> updateBackupStatus(
     String? vaultId,
-    _i13.BackupStatus? status,
+    _i12.BackupStatus? status,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1637,7 +1626,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
   _i6.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i15.StewardStatus? status,
+    required _i14.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
   }) =>
@@ -1678,15 +1667,15 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
       })> mergeBackupConfig({
     required String? vaultId,
     int? threshold,
-    List<_i14.Steward>? stewards,
+    List<_i13.Steward>? stewards,
     List<String>? relays,
     String? instructions,
   }) =>
@@ -1713,8 +1702,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -1753,7 +1742,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             ),
           ),
           relays: <String>[],
-          specVersion: _i10.dummyValue<String>(
+          specVersion: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #mergeBackupConfig,
@@ -1767,11 +1756,11 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               },
             ),
           ),
-          status: _i13.BackupStatus.pending,
-          stewards: <_i14.Steward>[],
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
           threshold: 0,
           totalKeys: 0,
-          vaultId: _i10.dummyValue<String>(
+          vaultId: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #mergeBackupConfig,
@@ -1797,8 +1786,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1848,8 +1837,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -1857,7 +1846,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i14.Steward>? stewards,
+    required List<_i13.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
   }) =>
@@ -1885,8 +1874,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -1927,7 +1916,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             ),
           ),
           relays: <String>[],
-          specVersion: _i10.dummyValue<String>(
+          specVersion: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #saveBackupConfig,
@@ -1942,11 +1931,11 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               },
             ),
           ),
-          status: _i13.BackupStatus.pending,
-          stewards: <_i14.Steward>[],
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
           threshold: 0,
           totalKeys: 0,
-          vaultId: _i10.dummyValue<String>(
+          vaultId: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #saveBackupConfig,
@@ -1973,8 +1962,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId
@@ -1992,8 +1981,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
         DateTime lastUpdated,
         List<String> relays,
         String specVersion,
-        _i13.BackupStatus status,
-        List<_i14.Steward> stewards,
+        _i12.BackupStatus status,
+        List<_i13.Steward> stewards,
         int threshold,
         int totalKeys,
         String vaultId
@@ -2014,8 +2003,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               DateTime lastUpdated,
               List<String> relays,
               String specVersion,
-              _i13.BackupStatus status,
-              List<_i14.Steward> stewards,
+              _i12.BackupStatus status,
+              List<_i13.Steward> stewards,
               int threshold,
               int totalKeys,
               String vaultId
@@ -2042,7 +2031,7 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             ),
           ),
           relays: <String>[],
-          specVersion: _i10.dummyValue<String>(
+          specVersion: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #createAndDistributeBackup,
@@ -2050,11 +2039,11 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
               {#vaultId: vaultId},
             ),
           ),
-          status: _i13.BackupStatus.pending,
-          stewards: <_i14.Steward>[],
+          status: _i12.BackupStatus.pending,
+          stewards: <_i13.Steward>[],
           threshold: 0,
           totalKeys: 0,
-          vaultId: _i10.dummyValue<String>(
+          vaultId: _i9.dummyValue<String>(
             this,
             Invocation.method(
               #createAndDistributeBackup,
@@ -2074,8 +2063,8 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             DateTime lastUpdated,
             List<String> relays,
             String specVersion,
-            _i13.BackupStatus status,
-            List<_i14.Steward> stewards,
+            _i12.BackupStatus status,
+            List<_i13.Steward> stewards,
             int threshold,
             int totalKeys,
             String vaultId

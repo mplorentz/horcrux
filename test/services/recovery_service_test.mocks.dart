@@ -1210,18 +1210,6 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
-  _i5.Stream<_i12.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryRequestStream),
-        returnValue: _i5.Stream<_i12.RecoveryRequest>.empty(),
-      ) as _i5.Stream<_i12.RecoveryRequest>);
-
-  @override
-  _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryResponseStream),
-        returnValue: _i5.Stream<_i13.RecoveryResponseEvent>.empty(),
-      ) as _i5.Stream<_i13.RecoveryResponseEvent>);
-
-  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
