@@ -13,13 +13,40 @@ import '../widgets/vault_owner_display.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Detail/view screen for displaying a vault
-class VaultDetailScreen extends ConsumerWidget {
+class VaultDetailScreen extends ConsumerStatefulWidget {
   final String vaultId;
 
   const VaultDetailScreen({super.key, required this.vaultId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VaultDetailScreen> createState() => _VaultDetailScreenState();
+}
+
+class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
+  bool _ownerPushPromptScheduled = false;
+
+  String get vaultId => widget.vaultId;
+
+  /// Schedules a one-shot owner-side push opt-in nudge after the vault has
+  /// loaded. Idempotent across rebuilds; the underlying prompt is itself a
+  /// no-op when the user is not the owner, the vault doesn't have push
+  /// enabled, or the OS already grants notification permission, so it's safe
+  /// to schedule eagerly without re-checking those conditions here.
+  void _scheduleOwnerPushPromptOnce() {
+    if (_ownerPushPromptScheduled) return;
+    _ownerPushPromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await maybePromptOwnerForVaultPush(
+        context: context,
+        ref: ref,
+        vaultId: vaultId,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
 
     return vaultAsync.when(
@@ -56,6 +83,7 @@ class VaultDetailScreen extends ConsumerWidget {
           );
         }
 
+        _scheduleOwnerPushPromptOnce();
         return _buildVaultDetail(context, ref, vault);
       },
     );

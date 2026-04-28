@@ -50,7 +50,6 @@ class PushNotificationReceiver {
 
   static const _fcmTokenKey = 'fcm_device_token';
   static const _fcmTokenUpdatedAtKey = 'fcm_device_token_updated_at';
-  static const _registeredFcmTokenKey = 'fcm_registered_token';
 
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
@@ -61,7 +60,6 @@ class PushNotificationReceiver {
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
   String? _cachedToken;
-  String? _lastRegisteredToken;
   bool _initialized = false;
 
   PushNotificationReceiver({
@@ -131,7 +129,7 @@ class PushNotificationReceiver {
         Log.warning('PushNotificationReceiver: optIn aborted (no FCM token)');
         return false;
       }
-      await _registerWithNotifierIfNeeded(force: true);
+      await _registerWithNotifierIfNeeded();
       await _setOptInFlag(true);
       await _notifierService.syncConsentList();
       await _processLaunchNotificationIfAny();
@@ -173,7 +171,6 @@ class PushNotificationReceiver {
     await _openedAppSubscription?.cancel();
     _openedAppSubscription = null;
     _cachedToken = null;
-    _lastRegisteredToken = null;
     _initialized = false;
 
     Log.info('PushNotificationReceiver: user opted out of push notifications');
@@ -232,7 +229,6 @@ class PushNotificationReceiver {
     try {
       final prefs = await SharedPreferences.getInstance();
       _cachedToken = prefs.getString(_fcmTokenKey);
-      _lastRegisteredToken = prefs.getString(_registeredFcmTokenKey);
       if (_cachedToken != null) {
         Log.debug('Loaded cached FCM token from SharedPreferences');
       }
@@ -299,7 +295,17 @@ class PushNotificationReceiver {
     );
   }
 
-  Future<void> _registerWithNotifierIfNeeded({bool force = false}) async {
+  /// Re-registers the cached FCM token with horcrux-notifier on every call.
+  ///
+  /// We deliberately do **not** dedupe on the last-registered token: the
+  /// notifier server evicts stale registrations after a quiet period, so
+  /// every app launch needs to refresh our entry to keep push delivery
+  /// healthy. Token-refresh and opt-in flows all funnel through here too;
+  /// they're already infrequent enough that the extra HTTP call is fine.
+  ///
+  /// No-ops when no FCM token is cached or the current platform isn't
+  /// notifier-supported (web / Linux / Windows).
+  Future<void> _registerWithNotifierIfNeeded() async {
     final token = _cachedToken;
     if (token == null || token.isEmpty) return;
 
@@ -311,17 +317,7 @@ class PushNotificationReceiver {
       return;
     }
 
-    if (!force && token == _lastRegisteredToken) return;
-
     await _notifierService.register(fcmToken: token, platform: platform);
-    _lastRegisteredToken = token;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_registeredFcmTokenKey, token);
-    } catch (e, st) {
-      Log.warning('Failed to persist registered FCM token', e, st);
-    }
   }
 
   Future<void> _setOptInFlag(bool value) async {
@@ -334,7 +330,6 @@ class PushNotificationReceiver {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_fcmTokenKey);
       await prefs.remove(_fcmTokenUpdatedAtKey);
-      await prefs.remove(_registeredFcmTokenKey);
     } catch (e, st) {
       Log.warning('Failed to clear persisted FCM token state', e, st);
     }
