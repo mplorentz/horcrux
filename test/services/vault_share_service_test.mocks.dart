@@ -5,10 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
-import 'package:horcrux/models/nostr_kinds.dart' as _i11;
+import 'package:horcrux/models/nostr_kinds.dart' as _i9;
 import 'package:horcrux/models/recovery_request.dart' as _i8;
-import 'package:horcrux/models/vault.dart' as _i10;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
+import 'package:horcrux/models/vault.dart' as _i11;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i10;
 import 'package:horcrux/services/login_service.dart' as _i4;
 import 'package:horcrux/services/ndk_service.dart' as _i7;
 import 'package:horcrux/services/push_notification_receiver.dart' as _i12;
@@ -348,14 +348,15 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+  _i5.Future<({_i9.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i3.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i5.Future<({_i9.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i5.Future<({_i9.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i5.Future<String?> publishRecoveryRequest({
@@ -513,7 +514,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -546,7 +547,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   _i5.Future<void> register({
     required String? fcmToken,
-    required _i9.NotifierPlatform? platform,
+    required _i10.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -574,7 +575,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   _i5.Future<void> updateToken({
     required String? newToken,
-    required _i9.NotifierPlatform? platform,
+    required _i10.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -602,7 +603,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   List<String> computeConsentList({
     required String? currentUserPubkey,
-    required List<_i10.Vault>? vaults,
+    required List<_i11.Vault>? vaults,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -639,8 +640,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   _i5.Future<void> tryPushForEvent({
     required _i3.Nip01Event? event,
-    required _i11.NostrKind? kind,
-    required _i10.Vault? vault,
+    required _i9.NostrKind? kind,
+    required _i11.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
   }) =>

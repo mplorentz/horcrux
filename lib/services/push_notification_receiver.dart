@@ -10,7 +10,6 @@ import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase_options.dart';
-import '../models/nostr_kinds.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
@@ -410,20 +409,24 @@ class PushNotificationReceiver {
     }
 
     final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
-    final recoveryRequestId = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
+    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
       await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
     } catch (e, st) {
       Log.warning('FCM tap: gift wrap processing failed', e, st);
     }
 
-    if (recoveryRequestId != null) {
+    if (recoveryTarget != null) {
       final navigated = await _localNotifications.navigateForKind(
-        NostrKind.recoveryRequest,
-        recoveryRequestId,
+        recoveryTarget.kind,
+        recoveryTarget.recoveryRequestId,
+        vaultId: vaultId,
       );
       if (navigated) return;
-      Log.warning('FCM tap: recovery request $recoveryRequestId not found, falling back to vault');
+      Log.warning(
+        'FCM tap: ${recoveryTarget.kind.name} ${recoveryTarget.recoveryRequestId} '
+        'navigation failed, falling back to vault',
+      );
     }
     if (vaultId != null) {
       await _localNotifications.navigateToVault(vaultId);

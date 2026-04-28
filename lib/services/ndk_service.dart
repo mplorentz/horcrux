@@ -380,20 +380,29 @@ class NdkService {
     }
   }
 
-  /// Best-effort recovery_request_id for navigation after a push — unwraps
-  /// once and reads inner JSON. Returns `null` when the inner kind is not a
-  /// recovery request or unwrap fails.
-  Future<String?> resolveRecoveryRequestIdForGiftWrap(
+  /// Best-effort recovery navigation target for a gift-wrapped event — unwraps
+  /// once and reads the inner JSON to surface both the inner [NostrKind] and
+  /// the `recovery_request_id` payload field, so push-tap callers can route to
+  /// the right recovery screen (request detail vs. recovery status).
+  ///
+  /// Supports inner kinds [NostrKind.recoveryRequest] (1338) and
+  /// [NostrKind.recoveryResponse] (1339). Returns `null` when the inner kind
+  /// is something else, the payload is missing the id, or unwrap fails.
+  Future<({NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
     Nip01Event giftWrap,
   ) async {
     await _ensureInitialized();
     if (_ndk == null) return null;
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
-      if (inner.kind != 1338) return null; // [NostrKind.recoveryRequest]
-      final m = json.decode(inner.content) as Map<String, dynamic>;
-      final id = m['recovery_request_id'] as String?;
-      return (id != null && id.isNotEmpty) ? id : null;
+      final kind = NostrKind.fromValue(inner.kind);
+      if (kind != NostrKind.recoveryRequest && kind != NostrKind.recoveryResponse) {
+        return null;
+      }
+      final payload = json.decode(inner.content) as Map<String, dynamic>;
+      final id = payload['recovery_request_id'] as String?;
+      if (id == null || id.isEmpty) return null;
+      return (kind: kind!, recoveryRequestId: id);
     } catch (e, st) {
       Log.debug('resolveRecoveryRequestIdForGiftWrap failed', e, st);
       return null;

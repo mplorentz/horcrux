@@ -6,14 +6,14 @@
 import 'dart:async' as _i4;
 
 import 'package:horcrux/models/backup_status.dart' as _i9;
-import 'package:horcrux/models/nostr_kinds.dart' as _i17;
+import 'package:horcrux/models/nostr_kinds.dart' as _i16;
 import 'package:horcrux/models/recovery_request.dart' as _i13;
 import 'package:horcrux/models/shard_data.dart' as _i12;
 import 'package:horcrux/models/steward.dart' as _i10;
 import 'package:horcrux/models/steward_status.dart' as _i11;
 import 'package:horcrux/models/vault.dart' as _i8;
 import 'package:horcrux/providers/vault_provider.dart' as _i7;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i16;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
 import 'package:horcrux/services/login_service.dart' as _i14;
 import 'package:horcrux/services/ndk_service.dart' as _i15;
 import 'package:mockito/mockito.dart' as _i1;
@@ -1322,14 +1322,14 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #resolveRecoveryRequestIdForGiftWrap,
-          [giftWrap],
-        ),
-        returnValue: _i4.Future<String?>.value(),
-      ) as _i4.Future<String?>);
+  _i4.Future<({_i16.NostrKind kind, String recoveryRequestId})?>
+      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+            Invocation.method(
+              #resolveRecoveryRequestIdForGiftWrap,
+              [giftWrap],
+            ),
+            returnValue: _i4.Future<({_i16.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i4.Future<({_i16.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i4.Future<String?> publishRecoveryRequest({
@@ -1487,7 +1487,7 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1520,7 +1520,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i4.Future<void> register({
     required String? fcmToken,
-    required _i16.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1548,7 +1548,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i4.Future<void> updateToken({
     required String? newToken,
-    required _i16.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1613,7 +1613,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i4.Future<void> tryPushForEvent({
     required _i2.Nip01Event? event,
-    required _i17.NostrKind? kind,
+    required _i16.NostrKind? kind,
     required _i8.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
