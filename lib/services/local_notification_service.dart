@@ -28,6 +28,21 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
   return service;
 });
 
+/// Stable [RouteSettings.name] for the [VaultDetailScreen] route pushed by
+/// notification taps. Exposed for tests and DevTools route inspection.
+/// Uses a slash-style path so [Navigator] treats it as a relative URI when
+/// it builds [RouteInformation] for system observers (a colon would parse as
+/// a URI scheme and throw).
+String vaultDetailRouteName(String vaultId) => '/vault_detail/$vaultId';
+
+/// Stable [RouteSettings.name] for the [RecoveryStatusScreen] route pushed by
+/// recovery-response notification taps.
+String recoveryStatusRouteName(String recoveryRequestId) => '/recovery_status/$recoveryRequestId';
+
+/// Stable [RouteSettings.name] for the [RecoveryRequestDetailScreen] route
+/// pushed by recovery-request notification taps.
+String recoveryRequestRouteName(String recoveryRequestId) => '/recovery_request/$recoveryRequestId';
+
 /// Service that displays OS notifications to the user for things like recovery events.
 ///
 /// All `notifyXxxProcessed` entry points are gated on [isEventRecent] against
@@ -384,19 +399,22 @@ class LocalNotificationService {
 
   /// Navigates to the appropriate screen for the given [kind] and [id].
   ///
-  /// - [NostrKind.recoveryRequest]: opens [RecoveryRequestDetailScreen] for [id]
-  ///   (the recovery request id).
-  /// - [NostrKind.recoveryResponse]: opens [RecoveryStatusScreen] (a.k.a. the
-  ///   "Manage Recovery" screen) for [id] (the recovery request id), so the
-  ///   recovery initiator lands directly on the request whose status just
-  ///   changed. Resets the navigator stack to the root ([VaultListScreen])
-  ///   and pushes [VaultDetailScreen] for that vault underneath so popping
-  ///   recovery lands on the correct vault, then the vault list — not
-  ///   whatever screen was open before. Falls back to [VaultDetailScreen]
-  ///   alone when the recovery request can't be found locally (same
-  ///   stack-reset behavior via [navigateToVault]).
-  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: opens
-  ///   [VaultDetailScreen] for [vaultId].
+  /// All recovery- and shard-related taps reset the navigator stack to the
+  /// root ([VaultListScreen]) and push [VaultDetailScreen] for the relevant
+  /// vault underneath the destination, so popping always walks back through
+  /// the right vault and then to the vault list — regardless of what was on
+  /// screen when the notification arrived.
+  ///
+  /// - [NostrKind.recoveryRequest]: stack becomes
+  ///   `[VaultList, VaultDetail, RecoveryRequestDetailScreen]` (steward sees
+  ///   the request whose vault the notification refers to).
+  /// - [NostrKind.recoveryResponse]: stack becomes
+  ///   `[VaultList, VaultDetail, RecoveryStatusScreen]` (initiator lands on
+  ///   the "Manage Recovery" screen for the request whose status just
+  ///   changed). Falls back to [VaultDetailScreen] alone when the recovery
+  ///   request can't be found locally.
+  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: stack becomes
+  ///   `[VaultList, VaultDetail]` for [vaultId].
   ///
   /// [vaultId] is required for shard kinds and used as a fallback for recovery
   /// responses. Returns `true` if navigation succeeded, `false` if the target
@@ -431,11 +449,14 @@ class LocalNotificationService {
   Future<void> navigateToVault(String vaultId) async {
     await _whenNavigatorReady(
       (nav) {
-        nav.pushAndRemoveUntil<void>(
-          MaterialPageRoute<void>(
-            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+        unawaited(
+          nav.pushAndRemoveUntil<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: vaultDetailRouteName(vaultId)),
+              builder: (context) => VaultDetailScreen(vaultId: vaultId),
+            ),
+            (route) => route.isFirst,
           ),
-          (route) => route.isFirst,
         );
       },
       navigatorNotReadyWarning:
@@ -450,8 +471,10 @@ class LocalNotificationService {
           'Notification: recovery request $recoveryRequestId not found, skipping navigation');
       return false;
     }
-    await _pushRouteWhenReady(
-      (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+    await _pushVaultThenScreenWhenReady(
+      vaultId: request.vaultId,
+      topScreenBuilder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+      topScreenRouteName: recoveryRequestRouteName(recoveryRequestId),
       debugLabel: 'recovery request $recoveryRequestId',
     );
     return true;
@@ -473,43 +496,58 @@ class LocalNotificationService {
       await navigateToVault(fallbackVaultId);
       return true;
     }
-    await _pushVaultThenRecoveryStatusWhenReady(
+    await _pushVaultThenScreenWhenReady(
       vaultId: request.vaultId,
-      recoveryRequestId: recoveryRequestId,
+      topScreenBuilder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+      topScreenRouteName: recoveryStatusRouteName(recoveryRequestId),
+      debugLabel: 'recovery status $recoveryRequestId',
     );
     return true;
   }
 
-  /// Clears the navigator stack, pushes [VaultDetailScreen], then
-  /// [RecoveryStatusScreen], so the user pops recovery onto the correct vault.
-  Future<void> _pushVaultThenRecoveryStatusWhenReady({
+  /// Resets the navigator stack to the root, pushes [VaultDetailScreen] for
+  /// [vaultId], then pushes the screen built by [topScreenBuilder] on top —
+  /// final stack `[VaultListScreen, VaultDetail, <top screen>]`. Used by all
+  /// recovery-tap paths so popping the destination lands on the correct vault
+  /// and then the vault list, regardless of what was on screen when the
+  /// notification arrived.
+  Future<void> _pushVaultThenScreenWhenReady({
     required String vaultId,
-    required String recoveryRequestId,
+    required WidgetBuilder topScreenBuilder,
+    required String topScreenRouteName,
+    required String debugLabel,
   }) async {
     await _whenNavigatorReady(
       (nav) {
         // Both calls mutate the stack synchronously; the futures they return
-        // are pop notifications we don't await (awaiting would block here
-        // until the pushed route is popped, and the second push would never
-        // fire while the first route is still on screen).
+        // are pop notifications we deliberately drop (awaiting would block
+        // here until the pushed route is popped, and the second push would
+        // never fire while the first route is still on screen).
         //
         // Reset to the root route ([VaultListScreen] via [MaterialApp.home]),
-        // push the recovery vault on top, then push recovery status on top of
-        // that. Final stack: [VaultListScreen, VaultDetail, RecoveryStatus].
-        nav.pushAndRemoveUntil<void>(
-          MaterialPageRoute<void>(
-            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+        // push the relevant vault on top, then push the destination screen
+        // on top of that.
+        unawaited(
+          nav.pushAndRemoveUntil<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: vaultDetailRouteName(vaultId)),
+              builder: (context) => VaultDetailScreen(vaultId: vaultId),
+            ),
+            (route) => route.isFirst,
           ),
-          (route) => route.isFirst,
         );
-        nav.push<void>(
-          MaterialPageRoute<void>(
-            builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+        unawaited(
+          nav.push<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: topScreenRouteName),
+              builder: topScreenBuilder,
+            ),
           ),
         );
       },
-      navigatorNotReadyWarning: 'Notification tap: navigator not ready; skipped navigation to '
-          'recovery status $recoveryRequestId (vault $vaultId)',
+      navigatorNotReadyWarning:
+          'Notification tap: navigator not ready; skipped navigation to $debugLabel '
+          '(vault $vaultId)',
     );
   }
 
@@ -535,16 +573,6 @@ class LocalNotificationService {
       await Future<void>.delayed(interval);
     }
     Log.warning(navigatorNotReadyWarning);
-  }
-
-  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
-    await _whenNavigatorReady(
-      (nav) {
-        nav.push<void>(MaterialPageRoute<void>(builder: builder));
-      },
-      navigatorNotReadyWarning: 'Notification tap: navigator not ready; skipped navigation'
-          '${debugLabel != null ? " to $debugLabel" : ""}',
-    );
   }
 
   void dispose() {}
