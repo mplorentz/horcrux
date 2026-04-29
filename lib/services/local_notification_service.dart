@@ -7,7 +7,6 @@ import 'package:ndk/ndk.dart';
 import '../app_navigator.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
-import '../models/shard_data.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
 import '../screens/recovery_status_screen.dart';
@@ -109,26 +108,6 @@ class LocalNotificationService {
       return;
     }
     await _showRecoveryResponseNotification(response);
-  }
-
-  /// Called by [NdkService] after a kind-1337 shard-data event is processed successfully.
-  ///
-  /// Shows a local notification on the steward's device announcing that the
-  /// owner has sent them a (re)distributed shard. [event] is the unwrapped
-  /// rumor (not the outer gift wrap) so [Nip01Event.createdAt] and
-  /// [Nip01Event.pubKey] identify the real sender and creation time.
-  ///
-  /// Recency-gated via [isEventRecent] so relay backfill of historical events
-  /// does not spam notifications on first launch.
-  Future<void> notifyShardDataProcessed({
-    required Nip01Event event,
-    required ShardData shardData,
-  }) async {
-    await _showShardNotification(
-      kind: NostrKind.shardData,
-      event: event,
-      vaultId: shardData.vaultId,
-    );
   }
 
   /// Called by [NdkService] after a kind-1342 shard-confirmation event is processed successfully.

@@ -298,7 +298,7 @@ class PushNotificationReceiver {
     );
   }
 
-  Future<void> _registerWithNotifierIfNeeded({bool force = false}) async {
+  Future<void> _registerWithNotifierIfNeeded({bool force = true}) async {
     final token = _cachedToken;
     if (token == null || token.isEmpty) return;
 

@@ -488,10 +488,10 @@ class NdkService {
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
 
-      await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
-            event: event,
-            shardData: shardData,
-          );
+      // No local notification here: "Vault updated" is purely informational
+      // and the user is already in the app on this code path (relay-delivered
+      // or foreground FCM). The OS-shown push from horcrux-notifier covers
+      // the backgrounded case.
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
     }

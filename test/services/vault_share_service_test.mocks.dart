@@ -365,27 +365,6 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> publishRecoveryResponse({
-    required String? initiatorPubkey,
-    required String? recoveryRequestId,
-    required bool? approved,
-    String? shardDataJson,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #publishRecoveryResponse,
-          [],
-          {
-            #initiatorPubkey: initiatorPubkey,
-            #recoveryRequestId: recoveryRequestId,
-            #approved: approved,
-            #shardDataJson: shardDataJson,
-          },
-        ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
-
-  @override
   _i5.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeSubscriptions,
