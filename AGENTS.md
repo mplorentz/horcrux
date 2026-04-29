@@ -36,6 +36,8 @@ Avoid abbreviations. Abbreviations, especially non-standard ones, are effectivel
 
 Embrace precedent. Don’t optimize terms for the total beginner at the expense of conformance to existing culture.
 
+Avoid negatives in variable names. Instead of `suppressLocalNotification = false` prefer `showLocalNotification = true`.
+
 ## Common Development Commands
 
 **Note:** This project uses `fvm` (Flutter Version Manager). All flutter commands must be prefixed with `fvm`.

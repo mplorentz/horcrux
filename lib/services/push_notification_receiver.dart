@@ -10,7 +10,6 @@ import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase_options.dart';
-import '../models/nostr_kinds.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
@@ -61,6 +60,15 @@ class PushNotificationReceiver {
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
   String? _cachedToken;
   bool _initialized = false;
+
+  /// FCM tap [RemoteMessage.messageId]s already routed by [handleNotificationTap].
+  ///
+  /// On Android cold-start, FCM dispatches the same tap through both
+  /// [FirebaseMessaging.getInitialMessage] (read by [_processLaunchNotificationIfAny])
+  /// and [FirebaseMessaging.onMessageOpenedApp]. Without dedupe each invocation
+  /// would call [LocalNotificationService.navigateForKind] and we'd push the same
+  /// screen twice. Process-scoped only — recreated on app restart.
+  final Set<String> _handledOpenMessageIds = <String>{};
 
   PushNotificationReceiver({
     required LocalNotificationService localNotifications,
@@ -351,7 +359,7 @@ class PushNotificationReceiver {
     _openedAppSubscription?.cancel();
     _openedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       (RemoteMessage message) {
-        unawaited(_onPushNotificationOpened(message));
+        unawaited(handleNotificationTap(message));
       },
       onError: (Object error, StackTrace stackTrace) {
         Log.warning('FCM onMessageOpenedApp error', error, stackTrace);
@@ -366,16 +374,30 @@ class PushNotificationReceiver {
     try {
       final initial = await messaging.getInitialMessage();
       if (initial != null) {
-        await _onPushNotificationOpened(initial);
+        await handleNotificationTap(initial);
       }
     } catch (e, st) {
       Log.warning('PushNotificationReceiver: getInitialMessage failed', e, st);
     }
   }
 
-  Future<void> _onPushNotificationOpened(RemoteMessage message) async {
+  /// Single entry point for an FCM notification tap, used by both the
+  /// [FirebaseMessaging.onMessageOpenedApp] subscription (background-state taps)
+  /// and [FirebaseMessaging.getInitialMessage] (cold-start taps). Android FCM
+  /// is known to dispatch the same tap through both, so this method dedupes by
+  /// [RemoteMessage.messageId] to avoid double-processing and double-navigation.
+  ///
+  /// Public so unit tests can drive it directly with a synthetic [RemoteMessage].
+  @visibleForTesting
+  Future<void> handleNotificationTap(RemoteMessage message) async {
+    final messageId = message.messageId;
+    if (messageId != null && !_handledOpenMessageIds.add(messageId)) {
+      Log.debug('FCM notification open: ignoring duplicate dispatch for $messageId');
+      return;
+    }
+
     Log.info(
-      'FCM notification open: messageId=${message.messageId}, data=${message.data}',
+      'FCM notification open: messageId=$messageId, data=${message.data}',
     );
 
     Nip01Event? giftWrap;
@@ -405,20 +427,29 @@ class PushNotificationReceiver {
     }
 
     final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
-    final recoveryRequestId = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
+    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
-      await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
+      // Tap path: the user already saw and acted on the FCM notification, so
+      // any per-kind handler must not surface a second local OS notification.
+      await _ndkService.processGiftWrapFromForegroundPush(
+        giftWrap,
+        allowLocalNotification: false,
+      );
     } catch (e, st) {
       Log.warning('FCM tap: gift wrap processing failed', e, st);
     }
 
-    if (recoveryRequestId != null) {
+    if (recoveryTarget != null) {
       final navigated = await _localNotifications.navigateForKind(
-        NostrKind.recoveryRequest,
-        recoveryRequestId,
+        recoveryTarget.kind,
+        recoveryTarget.recoveryRequestId,
+        vaultId: vaultId,
       );
       if (navigated) return;
-      Log.warning('FCM tap: recovery request $recoveryRequestId not found, falling back to vault');
+      Log.warning(
+        'FCM tap: ${recoveryTarget.kind.name} ${recoveryTarget.recoveryRequestId} '
+        'navigation failed, falling back to vault',
+      );
     }
     if (vaultId != null) {
       await _localNotifications.navigateToVault(vaultId);
