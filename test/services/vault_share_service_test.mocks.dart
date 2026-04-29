@@ -5,6 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
+import 'package:firebase_messaging/firebase_messaging.dart' as _i12;
 import 'package:horcrux/models/nostr_kinds.dart' as _i8;
 import 'package:horcrux/models/vault.dart' as _i10;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
@@ -740,6 +741,16 @@ class MockPushNotificationReceiver extends _i1.Mock implements _i11.PushNotifica
         Invocation.method(
           #initialize,
           [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> handleNotificationTap(_i12.RemoteMessage? message) => (super.noSuchMethod(
+        Invocation.method(
+          #handleNotificationTap,
+          [message],
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),

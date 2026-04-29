@@ -61,6 +61,15 @@ class PushNotificationReceiver {
   String? _cachedToken;
   bool _initialized = false;
 
+  /// FCM tap [RemoteMessage.messageId]s already routed by [handleNotificationTap].
+  ///
+  /// On Android cold-start, FCM dispatches the same tap through both
+  /// [FirebaseMessaging.getInitialMessage] (read by [_processLaunchNotificationIfAny])
+  /// and [FirebaseMessaging.onMessageOpenedApp]. Without dedupe each invocation
+  /// would call [LocalNotificationService.navigateForKind] and we'd push the same
+  /// screen twice. Process-scoped only — recreated on app restart.
+  final Set<String> _handledOpenMessageIds = <String>{};
+
   PushNotificationReceiver({
     required LocalNotificationService localNotifications,
     required HorcruxNotificationService notifierService,
@@ -350,7 +359,7 @@ class PushNotificationReceiver {
     _openedAppSubscription?.cancel();
     _openedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       (RemoteMessage message) {
-        unawaited(_onPushNotificationOpened(message));
+        unawaited(handleNotificationTap(message));
       },
       onError: (Object error, StackTrace stackTrace) {
         Log.warning('FCM onMessageOpenedApp error', error, stackTrace);
@@ -365,16 +374,30 @@ class PushNotificationReceiver {
     try {
       final initial = await messaging.getInitialMessage();
       if (initial != null) {
-        await _onPushNotificationOpened(initial);
+        await handleNotificationTap(initial);
       }
     } catch (e, st) {
       Log.warning('PushNotificationReceiver: getInitialMessage failed', e, st);
     }
   }
 
-  Future<void> _onPushNotificationOpened(RemoteMessage message) async {
+  /// Single entry point for an FCM notification tap, used by both the
+  /// [FirebaseMessaging.onMessageOpenedApp] subscription (background-state taps)
+  /// and [FirebaseMessaging.getInitialMessage] (cold-start taps). Android FCM
+  /// is known to dispatch the same tap through both, so this method dedupes by
+  /// [RemoteMessage.messageId] to avoid double-processing and double-navigation.
+  ///
+  /// Public so unit tests can drive it directly with a synthetic [RemoteMessage].
+  @visibleForTesting
+  Future<void> handleNotificationTap(RemoteMessage message) async {
+    final messageId = message.messageId;
+    if (messageId != null && !_handledOpenMessageIds.add(messageId)) {
+      Log.debug('FCM notification open: ignoring duplicate dispatch for $messageId');
+      return;
+    }
+
     Log.info(
-      'FCM notification open: messageId=${message.messageId}, data=${message.data}',
+      'FCM notification open: messageId=$messageId, data=${message.data}',
     );
 
     Nip01Event? giftWrap;
