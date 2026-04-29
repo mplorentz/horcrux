@@ -54,6 +54,14 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   error: (_, __) => const SizedBox.shrink(),
                   data: (recoveryStatus) {
                     final buttons = <RowButtonConfig>[];
+                    final activeReq = recoveryStatus.activeRecoveryRequest;
+                    final hasManageablePracticeSession =
+                        recoveryStatus.hasActiveRecovery && activeReq?.isPractice == true;
+                    final showManageRealRecovery = recoveryStatus.hasActiveRecovery &&
+                        recoveryStatus.isInitiator &&
+                        activeReq != null &&
+                        !activeReq.isPractice;
+                    final showInitiateRealRecovery = !hasManageablePracticeSession;
 
                     // View Instructions Button (only show for stewards)
                     if (isSteward) {
@@ -211,9 +219,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         currentVault.shards.isNotEmpty;
 
                     if (isOwnerSteward) {
-                      // Show "You are the owner" indicator and recovery options
-                      // Show "Manage Recovery" if user initiated active recovery
-                      if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
+                      // Real recovery only: practice is managed via "Manage Practice Recovery" above.
+                      if (showManageRealRecovery) {
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
@@ -230,8 +237,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             text: 'Manage Recovery',
                           ),
                         );
-                      } else {
-                        // Show "Initiate Recovery" for owner-steward
+                      } else if (showInitiateRealRecovery) {
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () => _initiateRecovery(context, ref, vaultId),
@@ -248,8 +254,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         !isOwnerSteward &&
                         currentVault != null &&
                         currentVault.state != VaultState.awaitingKey) {
-                      // Show "Manage Recovery" if user initiated active recovery
-                      if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
+                      if (showManageRealRecovery) {
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
@@ -266,8 +271,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             text: 'Manage Recovery',
                           ),
                         );
-                      } else {
-                        // Show "Initiate Recovery" if no active recovery or user didn't initiate it
+                      } else if (showInitiateRealRecovery) {
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () => _initiateRecovery(context, ref, vaultId),

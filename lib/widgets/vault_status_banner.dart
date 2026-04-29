@@ -64,9 +64,10 @@ class VaultStatusBanner extends ConsumerWidget {
           error: (_, __) => const SizedBox.shrink(),
           data: (recoveryStatus) {
             if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
-              const statusData = _StatusData(
-                headline: 'Recovery in progress',
-                subtext: 'Tap to manage recovery',
+              final isPractice = recoveryStatus.activeRecoveryRequest?.isPractice ?? false;
+              final statusData = _StatusData(
+                headline: isPractice ? 'Practice recovery in progress' : 'Recovery in progress',
+                subtext: isPractice ? 'Tap to manage practice recovery' : 'Tap to manage recovery',
                 icon: Icons.refresh,
                 accentColor: Color(0xFF7A4A2F), // Umber
                 variant: _StatusVariant.recoveryInProgress,

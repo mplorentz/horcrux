@@ -205,17 +205,15 @@ class RecoveryService {
   }) async {
     await initialize();
 
-    // Check if user already has an active recovery request for this vault
+    // Only one active recovery session per vault (practice or real).
     final existingRequests = await repository.getRecoveryRequestsForVault(
       vaultId,
     );
-    final hasActiveRequest = existingRequests.any(
-      (r) => r.initiatorPubkey == initiatorPubkey && r.status.isActive,
-    );
+    final vaultHasActiveRecovery = existingRequests.any((r) => r.status.isActive);
 
-    if (hasActiveRequest) {
+    if (vaultHasActiveRecovery) {
       throw StateError(
-        'You already have an active recovery request for this vault. Please manage your existing recovery request.',
+        'This vault already has an active recovery session. End it before starting a new one.',
       );
     }
 
