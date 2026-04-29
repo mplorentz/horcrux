@@ -23,43 +23,47 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
-    return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Practice Recovery'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
+    return SafeArea(
+      child: HorcruxScaffold(
+        appBar: AppBar(
+          title: const Text('Practice Recovery'),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-      ),
-      body: vaultAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error loading vault: $error')),
-        data: (vault) {
-          if (vault == null) {
-            return const Center(child: Text('Vault not found'));
-          }
+        body: vaultAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text('Error loading vault: $error')),
+          data: (vault) {
+            if (vault == null) {
+              return const Center(child: Text('Vault not found'));
+            }
 
-          return currentPubkeyAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error loading user: $error')),
-            data: (currentPubkey) {
-              // Verify user is owner
-              if (currentPubkey == null || !vault.isOwned(currentPubkey)) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Only the vault owner can practice recovery.',
-                      textAlign: TextAlign.center,
+            return currentPubkeyAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) =>
+                  Center(child: Text('Error loading user: $error')),
+              data: (currentPubkey) {
+                // Verify user is owner
+                if (currentPubkey == null || !vault.isOwned(currentPubkey)) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Only the vault owner can practice recovery.',
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
-                );
-              }
+                  );
+                }
 
-              return _buildContent(context, ref, vault);
-            },
-          );
-        },
+                return _buildContent(context, ref, vault);
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -112,7 +116,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
                   context,
                   stepNumber: 1,
                   title: 'Initiate Recovery',
-                  description: 'You (or a steward) send a recovery request to all other stewards.',
+                  description:
+                      'You (or a steward) send a recovery request to all other stewards.',
                 ),
                 const SizedBox(height: 8),
                 _buildStepCard(
@@ -183,7 +188,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           onPressed: () => _startPracticeRecovery(context, ref, vault),
           icon: Icons.restore,
           text: 'Start Practice Recovery',
-          addBottomSafeArea: true,
+          addBottomSafeArea: false,
         ),
       ],
     );
@@ -353,7 +358,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
+              builder: (context) =>
+                  RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
             ),
           );
         }
