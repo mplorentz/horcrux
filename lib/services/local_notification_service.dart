@@ -389,8 +389,12 @@ class LocalNotificationService {
   /// - [NostrKind.recoveryResponse]: opens [RecoveryStatusScreen] (a.k.a. the
   ///   "Manage Recovery" screen) for [id] (the recovery request id), so the
   ///   recovery initiator lands directly on the request whose status just
-  ///   changed. Falls back to [VaultDetailScreen] when the recovery request
-  ///   can't be found locally.
+  ///   changed. Resets the navigator stack to the root ([VaultListScreen])
+  ///   and pushes [VaultDetailScreen] for that vault underneath so popping
+  ///   recovery lands on the correct vault, then the vault list — not
+  ///   whatever screen was open before. Falls back to [VaultDetailScreen]
+  ///   alone when the recovery request can't be found locally (same
+  ///   stack-reset behavior via [navigateToVault]).
   /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: opens
   ///   [VaultDetailScreen] for [vaultId].
   ///
@@ -419,10 +423,23 @@ class LocalNotificationService {
 
   /// Navigates to [VaultDetailScreen] for [vaultId], waiting up to 2 s for
   /// the navigator to become ready.
+  ///
+  /// Resets the stack down to the root route ([MaterialApp.home], i.e.
+  /// [VaultListScreen]) before pushing so notification-driven vault opens do
+  /// not leave unrelated screens underneath, while still letting the user pop
+  /// back to the vault list.
   Future<void> navigateToVault(String vaultId) async {
-    await _pushRouteWhenReady(
-      (context) => VaultDetailScreen(vaultId: vaultId),
-      debugLabel: 'vault $vaultId',
+    await _whenNavigatorReady(
+      (nav) {
+        nav.pushAndRemoveUntil<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+          ),
+          (route) => route.isFirst,
+        );
+      },
+      navigatorNotReadyWarning:
+          'Notification tap: navigator not ready; skipped navigation to vault $vaultId',
     );
   }
 
@@ -456,24 +473,77 @@ class LocalNotificationService {
       await navigateToVault(fallbackVaultId);
       return true;
     }
-    await _pushRouteWhenReady(
-      (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
-      debugLabel: 'recovery status $recoveryRequestId',
+    await _pushVaultThenRecoveryStatusWhenReady(
+      vaultId: request.vaultId,
+      recoveryRequestId: recoveryRequestId,
     );
     return true;
   }
 
-  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
-    for (var i = 0; i < 40; i++) {
+  /// Clears the navigator stack, pushes [VaultDetailScreen], then
+  /// [RecoveryStatusScreen], so the user pops recovery onto the correct vault.
+  Future<void> _pushVaultThenRecoveryStatusWhenReady({
+    required String vaultId,
+    required String recoveryRequestId,
+  }) async {
+    await _whenNavigatorReady(
+      (nav) {
+        // Both calls mutate the stack synchronously; the futures they return
+        // are pop notifications we don't await (awaiting would block here
+        // until the pushed route is popped, and the second push would never
+        // fire while the first route is still on screen).
+        //
+        // Reset to the root route ([VaultListScreen] via [MaterialApp.home]),
+        // push the recovery vault on top, then push recovery status on top of
+        // that. Final stack: [VaultListScreen, VaultDetail, RecoveryStatus].
+        nav.pushAndRemoveUntil<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+          ),
+          (route) => route.isFirst,
+        );
+        nav.push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+          ),
+        );
+      },
+      navigatorNotReadyWarning: 'Notification tap: navigator not ready; skipped navigation to '
+          'recovery status $recoveryRequestId (vault $vaultId)',
+    );
+  }
+
+  /// Polls up to ~2s for [navigatorKey]'s [NavigatorState] to be mounted, then
+  /// runs [action]. Logs [navigatorNotReadyWarning] if it never becomes ready.
+  ///
+  /// [action] should manipulate the navigator synchronously (e.g. `push`,
+  /// `pushAndRemoveUntil`). Don't `await` the futures those calls return:
+  /// they complete only when the pushed route is popped, which would block
+  /// any subsequent stack work in the same callback.
+  Future<void> _whenNavigatorReady(
+    void Function(NavigatorState nav) action, {
+    required String navigatorNotReadyWarning,
+  }) async {
+    const attempts = 40;
+    const interval = Duration(milliseconds: 50);
+    for (var i = 0; i < attempts; i++) {
       final nav = navigatorKey.currentState;
       if (nav != null && nav.mounted) {
-        await nav.push(MaterialPageRoute<void>(builder: builder));
+        action(nav);
         return;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(interval);
     }
-    Log.warning(
-      'Notification tap: navigator not ready; skipped navigation${debugLabel != null ? " to $debugLabel" : ""}',
+    Log.warning(navigatorNotReadyWarning);
+  }
+
+  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
+    await _whenNavigatorReady(
+      (nav) {
+        nav.push<void>(MaterialPageRoute<void>(builder: builder));
+      },
+      navigatorNotReadyWarning: 'Notification tap: navigator not ready; skipped navigation'
+          '${debugLabel != null ? " to $debugLabel" : ""}',
     );
   }
 
