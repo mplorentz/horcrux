@@ -413,30 +413,34 @@ class RecoveryService {
   /// Unlike [initiateRecovery], this does not create a new request id—it persists an event
   /// the relays delivered. Since events are immutable, we skip if this request id already exists locally.
   ///
-  /// After a new request is persisted, may show a local OS notification per [RecoveryNotificationPolicy].
-  Future<void> processRecoveryRequest(RecoveryRequest request) async {
+  /// After a new request is persisted, may show a local OS notification per
+  /// [RecoveryNotificationPolicy]. Pass `allowLocalNotification: false` when the
+  /// caller has already shown the user a notification for this event (e.g. an FCM
+  /// push the user just tapped) so we do not double-notify.
+  Future<void> processRecoveryRequest(
+    RecoveryRequest request, {
+    bool allowLocalNotification = true,
+  }) async {
     await initialize();
 
-    // Check if request already exists in vault (source of truth)
     final existingRequests = await repository.getRecoveryRequestsForVault(
       request.vaultId,
     );
     final existingRequest = existingRequests.where((r) => r.id == request.id).firstOrNull;
 
     if (existingRequest != null) {
-      // Since events are immutable, skip processing if we already have this request locally
       Log.info(
         'Ignoring incoming recovery request ${request.id} - already exists locally (status: ${existingRequest.status.name})',
       );
       return;
     }
 
-    // Add new request to vault
     await repository.addRecoveryRequestToVault(request.vaultId, request);
     Log.info('Added incoming recovery request ${request.id}');
 
-    // Emit notification update
     await _emitNotificationUpdate();
+
+    if (!allowLocalNotification) return;
 
     final firstOpen = await getFirstAppOpenUtc();
     final myPubkey = await _ndkService.getCurrentPubkey();
@@ -521,7 +525,10 @@ class RecoveryService {
   /// Since events are immutable, we skip processing if the response already exists.
   ///
   /// When [recoveryResponseSourceEvent] is set (relay-delivered event), may show a local OS
-  /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it.
+  /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it. Pass
+  /// `allowLocalNotification: false` when the caller has already shown the user a
+  /// notification for this event (e.g. an FCM push the user just tapped) so we do
+  /// not double-notify.
   Future<void> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
@@ -529,6 +536,7 @@ class RecoveryService {
     ShardData? shardData,
     String? nostrEventId,
     RecoveryResponseEvent? recoveryResponseSourceEvent,
+    bool allowLocalNotification = true,
   }) async {
     await initialize();
 
@@ -607,7 +615,7 @@ class RecoveryService {
     // Emit notification update to refresh banner
     await _emitNotificationUpdate();
 
-    if (recoveryResponseSourceEvent != null) {
+    if (recoveryResponseSourceEvent != null && allowLocalNotification) {
       final firstOpen = await getFirstAppOpenUtc();
       final myPubkey = await _ndkService.getCurrentPubkey();
       if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(

@@ -132,10 +132,15 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> processGiftWrapFromForegroundPush(_i2.Nip01Event? event) => (super.noSuchMethod(
+  _i6.Future<void> processGiftWrapFromForegroundPush(
+    _i2.Nip01Event? event, {
+    bool? allowLocalNotification = true,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processGiftWrapFromForegroundPush,
           [event],
+          {#allowLocalNotification: allowLocalNotification},
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),

@@ -406,7 +406,12 @@ class PushNotificationReceiver {
     final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
     final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
-      await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
+      // Tap path: the user already saw and acted on the FCM notification, so
+      // any per-kind handler must not surface a second local OS notification.
+      await _ndkService.processGiftWrapFromForegroundPush(
+        giftWrap,
+        allowLocalNotification: false,
+      );
     } catch (e, st) {
       Log.warning('FCM tap: gift wrap processing failed', e, st);
     }
