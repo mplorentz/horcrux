@@ -265,17 +265,22 @@ class NdkService {
     );
   }
 
-  /// Unwraps and routes a kind-1059 gift wrap received on an FCM foreground message
-  /// with inline `event_json` — same pipeline as relay subscription deliveries.
+  /// Unwraps and routes a kind-1059 gift wrap received via FCM (foreground delivery
+  /// or a notification tap) — same pipeline as relay subscription deliveries.
   ///
   /// Processing flows through [_handleIncomingNostrEvent] which dispatches to
-  /// the per-kind handlers; those handlers are responsible for surfacing any
-  /// user-facing local notification via [LocalNotificationService] (so the
-  /// foreground FCM path does not need its own fallback notification).
+  /// the per-kind handlers; those handlers surface user-facing local notifications
+  /// via [LocalNotificationService] (so the foreground FCM path does not need its
+  /// own fallback notification). Pass `allowLocalNotification: false` from the tap
+  /// path so the user does not see a second notification on top of the FCM one
+  /// they just acted on.
   ///
   /// No-ops when NDK cannot be initialized (no key). Large pushes that omit
   /// inline JSON are handled later by the tap / cold-start path.
-  Future<void> processGiftWrapFromForegroundPush(Nip01Event event) async {
+  Future<void> processGiftWrapFromForegroundPush(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     if (!_isInitialized) {
       try {
         await initialize();
@@ -288,7 +293,11 @@ class NdkService {
         return;
       }
     }
-    await _handleIncomingNostrEvent(event, relayUrl: _fcmForegroundPushRelayUrl);
+    await _handleIncomingNostrEvent(
+      event,
+      relayUrl: _fcmForegroundPushRelayUrl,
+      allowLocalNotification: allowLocalNotification,
+    );
   }
 
   /// Fetches a kind-1059 gift wrap by [eventIdHex] using [relayHints] first, then
@@ -410,9 +419,14 @@ class NdkService {
 
   /// Handle incoming Nostr events
   /// Routes to appropriate handler based on the inner kind.
+  ///
+  /// [allowLocalNotification] is propagated to handlers that surface OS
+  /// notifications; pass `false` from the FCM tap path so we do not double-notify
+  /// on top of the FCM-displayed notification the user already acted on.
   Future<void> _handleIncomingNostrEvent(
     Nip01Event event, {
     required String relayUrl,
+    bool allowLocalNotification = true,
   }) async {
     if (!await _processedEventStore.claimEvent(event.id)) {
       if (await _processedEventStore.contains(event.id)) {
@@ -424,7 +438,6 @@ class NdkService {
     try {
       Log.info('Received subscription Nostr event: ${event.id}');
 
-      // Unwrap the gift wrap event using NDK
       final unwrappedEvent = await _ndk!.giftWrap.fromGiftWrap(giftWrap: event);
 
       Log.info(
@@ -433,19 +446,30 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
-      // Route based on the inner event kind
       if (unwrappedEvent.kind == NostrKind.shardData.value) {
-        await _handleShardData(unwrappedEvent);
+        await _handleShardData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.recoveryRequest.value) {
-        await _handleRecoveryRequestData(unwrappedEvent);
+        await _handleRecoveryRequestData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.recoveryResponse.value) {
-        await _handleRecoveryResponseData(unwrappedEvent);
+        await _handleRecoveryResponseData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.invitationAcceptance.value) {
         await _handleInvitationAcceptance(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.shardConfirmation.value) {
-        await _handleShardConfirmation(unwrappedEvent);
+        await _handleShardConfirmation(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.keyHolderRemoved.value) {
         await _handleKeyHolderRemoved(unwrappedEvent);
       } else {
@@ -461,22 +485,20 @@ class NdkService {
   }
 
   /// Handle incoming shard data (kind 1337)
-  Future<void> _handleShardData(Nip01Event event) async {
+  Future<void> _handleShardData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     try {
       Log.info('Processing shard data event: ${event.id}');
 
-      // Parse the shard data from the unwrapped content
       final shardJson = json.decode(event.content) as Map<String, dynamic>;
       var shardData = shardDataFromJson(shardJson);
 
-      // Set the nostrEventId from the unwrapped event ID
-      // This is needed for duplicate detection when the owner receives their own shard
       shardData = shardData.copyWith(nostrEventId: event.id);
 
       Log.debug('Shard data: $shardData');
 
-      // Store the shard data and send confirmation event
-      // This handles the complete invitation flow
       final vaultId = shardData.vaultId;
       if (vaultId == null || vaultId.isEmpty) {
         Log.error(
@@ -488,10 +510,12 @@ class NdkService {
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
 
-      await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
-            event: event,
-            shardData: shardData,
-          );
+      if (allowLocalNotification) {
+        await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+              event: event,
+              shardData: shardData,
+            );
+      }
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
     }
@@ -504,7 +528,10 @@ class NdkService {
   /// navigates as soon as [processGiftWrapFromForegroundPush] resolves) always observe
   /// it. Errors propagate to [_handleIncomingNostrEvent] so a failed handler releases
   /// its claim and is not durably marked processed.
-  Future<void> _handleRecoveryRequestData(Nip01Event event) async {
+  Future<void> _handleRecoveryRequestData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     final requestData = json.decode(event.content) as Map<String, dynamic>;
     final senderPubkey = event.pubKey;
 
@@ -534,7 +561,10 @@ class NdkService {
       isPractice: requestData['is_practice'] as bool? ?? false,
     );
 
-    await _ref.read(recoveryServiceProvider).processRecoveryRequest(recoveryRequest);
+    await _ref.read(recoveryServiceProvider).processRecoveryRequest(
+          recoveryRequest,
+          allowLocalNotification: allowLocalNotification,
+        );
 
     Log.info('Persisted incoming recovery request: ${event.id}');
   }
@@ -546,7 +576,10 @@ class NdkService {
   /// [processGiftWrapFromForegroundPush] resolves) sees the updated request. Errors
   /// propagate to [_handleIncomingNostrEvent] so a failed handler releases its claim
   /// and is not durably marked processed.
-  Future<void> _handleRecoveryResponseData(Nip01Event event) async {
+  Future<void> _handleRecoveryResponseData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     final responseData = json.decode(event.content) as Map<String, dynamic>;
     final senderPubkey = event.pubKey;
 
@@ -593,6 +626,7 @@ class NdkService {
           shardData: shardData,
           nostrEventId: event.id,
           recoveryResponseSourceEvent: responseEvent,
+          allowLocalNotification: allowLocalNotification,
         );
 
     Log.info(
@@ -628,7 +662,10 @@ class NdkService {
   }
 
   /// Handle incoming shard confirmation event (kind 1342)
-  Future<void> _handleShardConfirmation(Nip01Event event) async {
+  Future<void> _handleShardConfirmation(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     try {
       Log.info('Processing shard confirmation event: ${event.id}');
       Log.debug('Shard confirmation event tags: ${event.tags}');
@@ -641,7 +678,7 @@ class NdkService {
       Log.info('Successfully processed shard confirmation event: ${event.id}');
 
       final vaultId = _firstTagValue(event.tags, 'vault_id');
-      if (vaultId != null) {
+      if (vaultId != null && allowLocalNotification) {
         await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
               event: event,
               vaultId: vaultId,
