@@ -32,9 +32,12 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     libgdk-pixbuf2.0-dev \
     libatk1.0-dev \
-    # Required by flutter_secure_storage_linux plugin
+    # Required by flutter_secure_storage_linux plugin (build + runtime libsecret)
     libsecret-1-dev \
     libjsoncpp-dev \
+    # Secret Service for libsecret: session D-Bus + gnome-keyring (headless Docker)
+    dbus-x11 \
+    gnome-keyring \
     # Linux desktop GUI runtime libraries
     libglu1-mesa \
     libx11-xcb1 \

@@ -198,6 +198,16 @@ cd /workspace
     export DISPLAY=:99
     export PATH="/tmp:$ABS_BUNDLE:/opt/flutter/bin:$PATH"
     export LD_LIBRARY_PATH="$ABS_BUNDLE/lib:$LD_LIBRARY_PATH"
+
+    # flutter_secure_storage_linux uses libsecret, which needs D-Bus + an unlocked keyring.
+    echo 'Starting session D-Bus and gnome-keyring for libsecret...' >> /tmp/flutter_run.log
+    eval "$(dbus-launch --sh-syntax)"
+    export DBUS_SESSION_BUS_ADDRESS
+    mkdir -p ~/.cache ~/.local/share/keyrings
+    printf '\n' | gnome-keyring-daemon --unlock >> /tmp/flutter_run.log 2>&1 \
+        || echo 'WARNING: gnome-keyring unlock failed (empty password)' >> /tmp/flutter_run.log
+    gnome-keyring-daemon --start --components=secrets --daemonize >> /tmp/flutter_run.log 2>&1 \
+        || echo 'WARNING: gnome-keyring daemon start failed' >> /tmp/flutter_run.log
     
     echo "Running Flutter app with hot reload support..." >> /tmp/flutter_run.log
     # Use flutter run with file watching enabled (default) for hot reload
