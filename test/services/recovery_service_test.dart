@@ -220,28 +220,60 @@ void main() {
       expect(activeByInitiator[testKeyHolder1], 1);
     });
 
-    test('initiateRecovery succeeds again after a previous attempt fails', () async {
-      // Drive a failure by passing an invalid (non-hex) initiator pubkey;
-      // RecoveryRequest.isValid rejects it and `initiateRecovery` throws.
-      await expectLater(
-        recoveryService.initiateRecovery(
-          testVaultId,
-          initiatorPubkey: 'not-a-valid-hex-pubkey',
-          stewardPubkeys: [testKeyHolder1],
+    test(
+      'initiateRecovery releases the per-(vault, initiator) lock after a failed attempt '
+      'so the same user can retry',
+      () async {
+        // The mutex is keyed by (vaultId, initiatorPubkey). To prove cleanup,
+        // both calls below MUST hit the SAME lock key -- so we keep the
+        // initiator constant and drive the first failure through a path
+        // OTHER than initiator-pubkey rejection. Pre-seeding an active
+        // request for `testCreatorPubkey` makes the per-user exclusivity
+        // check trip after lock acquisition, exercising the `finally` that
+        // removes the entry from `_initiateRecoveryLocks`.
+        final seeded = RecoveryRequest(
+          id: 'seeded-active',
+          vaultId: testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          requestedAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          status: RecoveryRequestStatus.inProgress,
           threshold: 1,
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
+        );
+        await repository.addRecoveryRequestToVault(testVaultId, seeded);
 
-      // Lock must have been released so a valid follow-up succeeds.
-      final ok = await recoveryService.initiateRecovery(
-        testVaultId,
-        initiatorPubkey: testCreatorPubkey,
-        stewardPubkeys: [testKeyHolder1],
-        threshold: 1,
-      );
-      expect(ok.vaultId, testVaultId);
-    });
+        await expectLater(
+          recoveryService.initiateRecovery(
+            testVaultId,
+            initiatorPubkey: testCreatorPubkey,
+            stewardPubkeys: [testKeyHolder1],
+            threshold: 1,
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        // Free the user's slot, then retry with the SAME (vaultId, initiator)
+        // -- if the lock had not been released, the `while` loop in
+        // `initiateRecovery` would spin forever (the entry would still be in
+        // the map even though its future is complete), and the timeout below
+        // would fail the test.
+        await repository.updateRecoveryRequestInVault(
+          testVaultId,
+          seeded.id,
+          seeded.copyWith(status: RecoveryRequestStatus.cancelled),
+        );
+
+        final ok = await recoveryService
+            .initiateRecovery(
+              testVaultId,
+              initiatorPubkey: testCreatorPubkey,
+              stewardPubkeys: [testKeyHolder1],
+              threshold: 1,
+            )
+            .timeout(const Duration(seconds: 5));
+        expect(ok.vaultId, testVaultId);
+        expect(ok.initiatorPubkey, testCreatorPubkey);
+      },
+    );
 
     test('recovery request creation succeeds with valid data', () async {
       // Create a recovery request
