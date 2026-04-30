@@ -187,26 +187,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           buttons.add(
                             RowButtonConfig(
                               onPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  // Modal route clears padding.top; restore from
-                                  // viewPadding so the toolbar clears the status bar
-                                  // without useSafeArea (avoids a mismatched strip above).
-                                  builder: (sheetContext) {
-                                    final mq = MediaQuery.of(sheetContext);
-                                    return MediaQuery(
-                                      data: mq.copyWith(
-                                        padding: mq.padding.copyWith(
-                                          top: mq.viewPadding.top,
-                                        ),
-                                      ),
-                                      child: PracticeRecoveryInfoScreen(
-                                        vaultId: vaultId,
-                                      ),
-                                    );
-                                  },
+                                // Use a full-screen route, not showModalBottomSheet,
+                                // so the AppBar gets normal Scaffold safe-area
+                                // insets on edge-to-edge Android devices.
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    fullscreenDialog: true,
+                                    builder: (_) => PracticeRecoveryInfoScreen(
+                                      vaultId: vaultId,
+                                    ),
+                                  ),
                                 );
                               },
                               icon: Icons.school,

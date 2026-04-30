@@ -383,12 +383,12 @@ void main() {
       container.dispose();
     });
 
-    // Regression: modal route strips MediaQuery.padding.top by default; we
-    // re-inject viewPadding.top in vault_detail_button_stack so the AppBar
-    // clears the status bar without useSafeArea (which left a dim strip above).
-    testGoldens('shown via modal bottom sheet respects status bar', (
-      tester,
-    ) async {
+    // Regression: on edge-to-edge Android (e.g. Pixel 10 Fold) the AppBar
+    // must respect the status-bar safe-area inset. Render the screen inside
+    // a MediaQuery that carries a status-bar padding to lock down the
+    // expected layout: AppBar offset below the status bar, scaffold
+    // background extends to the top edge (no mismatched strip).
+    testGoldens('respects status bar safe area inset', (tester) async {
       final vault = createTestVault(
         id: 'test-vault',
         name: 'My Important Vault',
@@ -414,14 +414,8 @@ void main() {
         ],
       );
 
-      // Custom wrapper: install a status-bar-style top padding ABOVE the
-      // Navigator (via MaterialApp.builder) so the modal route's MediaQuery
-      // actually carries the top inset. Inserting it below the Navigator
-      // would be invisible to the modal route.
       await tester.pumpWidgetBuilder(
-        _ModalBottomSheetLauncher(
-          builder: (_) => const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        ),
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         wrapper: (child) => UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
@@ -436,59 +430,16 @@ void main() {
             home: child,
           ),
         ),
-        // Tall surface so the full modal is visible.
         surfaceSize: const Size(414, 1400),
       );
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(
         tester,
-        'practice_recovery_modal_bottom_sheet',
+        'practice_recovery_status_bar_safe_area',
       );
 
       container.dispose();
     });
   });
-}
-
-/// Test helper that auto-launches a modal bottom sheet on first frame.
-///
-/// Mirrors the production call site in vault_detail_button_stack.dart so
-/// golden tests exercise the same modal route behavior — including the
-/// MediaQuery padding handling that caused the status-bar overlap on
-/// edge-to-edge Android devices.
-class _ModalBottomSheetLauncher extends StatefulWidget {
-  const _ModalBottomSheetLauncher({required this.builder});
-
-  final WidgetBuilder builder;
-
-  @override
-  State<_ModalBottomSheetLauncher> createState() => _ModalBottomSheetLauncherState();
-}
-
-class _ModalBottomSheetLauncherState extends State<_ModalBottomSheetLauncher> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (sheetContext) {
-          final mq = MediaQuery.of(sheetContext);
-          return MediaQuery(
-            data: mq.copyWith(
-              padding: mq.padding.copyWith(top: mq.viewPadding.top),
-            ),
-            child: widget.builder(sheetContext),
-          );
-        },
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => const Scaffold(body: SizedBox.expand());
 }
