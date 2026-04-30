@@ -364,13 +364,19 @@ class LocalNotificationService {
       linux: linuxDetails,
     );
 
-    await _plugin.show(
-      _notificationIdFromEpochAndCounter(),
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    try {
+      await _plugin.show(
+        _notificationIdFromEpochAndCounter(),
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e, st) {
+      // Showing notifications is best-effort (e.g. Linux without
+      // org.freedesktop.Notifications). Must not fail vault/Nostr handling.
+      Log.debug('Skipping local notification (display unavailable)', e, st);
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {

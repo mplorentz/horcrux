@@ -208,6 +208,17 @@ cd /workspace
         || echo 'WARNING: gnome-keyring unlock failed (empty password)' >> /tmp/flutter_run.log
     gnome-keyring-daemon --start --components=secrets --daemonize >> /tmp/flutter_run.log 2>&1 \
         || echo 'WARNING: gnome-keyring daemon start failed' >> /tmp/flutter_run.log
+
+    # Exposes org.freedesktop.Notifications on the session bus for flutter_local_notifications.
+    echo 'Starting notification-daemon...' >> /tmp/flutter_run.log
+    if command -v notification-daemon >/dev/null 2>&1; then
+        notification-daemon >> /tmp/flutter_run.log 2>&1 &
+    elif [ -x /usr/lib/notification-daemon/notification-daemon ]; then
+        /usr/lib/notification-daemon/notification-daemon >> /tmp/flutter_run.log 2>&1 &
+    else
+        echo 'WARNING: notification-daemon not installed; Linux notifications disabled' >> /tmp/flutter_run.log
+    fi
+    sleep 1
     
     echo "Running Flutter app with hot reload support..." >> /tmp/flutter_run.log
     # Use flutter run with file watching enabled (default) for hot reload

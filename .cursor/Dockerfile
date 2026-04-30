@@ -56,6 +56,8 @@ RUN apt-get update && apt-get install -y \
     libcairo-gobject2 \
     libgtk-3-0 \
     libgdk-pixbuf2.0-0 \
+    # Desktop notifications (org.freedesktop.Notifications) for flutter_local_notifications
+    notification-daemon \
     # Virtual display for headless operation
     xvfb \
     # VNC server for remote desktop access
