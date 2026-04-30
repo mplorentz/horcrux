@@ -56,15 +56,27 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   data: (recoveryStatus) {
                     final buttons = <RowButtonConfig>[];
                     final activeReq = recoveryStatus.activeRecoveryRequest;
-                    final ongoingRealRecovery =
-                        activeReq != null && !activeReq.isPractice && activeReq.status.isActive;
-                    final hasManageablePracticeSession =
-                        recoveryStatus.hasActiveRecovery && activeReq?.isPractice == true;
+                    // Exclusivity is per (vault, initiator): each user may have at most one
+                    // active recovery session per vault (practice or real), but different
+                    // users (other stewards, owner) may have their own concurrent sessions
+                    // on the same vault. The gate looks at THIS user's own active requests
+                    // and hides any "start a new session" entry point if they already have
+                    // one in flight. Mirrors RecoveryService.initiateRecovery's per-user
+                    // exclusivity check exactly.
+                    final allActiveRequests =
+                        (currentVault?.recoveryRequests ?? const <RecoveryRequest>[])
+                            .where((r) => r.status.isActive)
+                            .toList();
+                    final hasMyInFlightRecovery = currentPubkey != null &&
+                        allActiveRequests.any((r) => r.initiatorPubkey == currentPubkey);
                     final showManageRealRecovery = recoveryStatus.hasActiveRecovery &&
                         recoveryStatus.isInitiator &&
                         activeReq != null &&
                         !activeReq.isPractice;
-                    final showInitiateRealRecovery = !hasManageablePracticeSession;
+                    // Initiate is hidden when this user already has any of their own session
+                    // (practice or real) in flight on this vault; they should manage that one
+                    // instead. The service would reject the call anyway.
+                    final showInitiateRealRecovery = !hasMyInFlightRecovery;
 
                     // View Instructions Button (only show for stewards)
                     if (isSteward) {
@@ -191,9 +203,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                               text: 'Manage Practice Recovery',
                             ),
                           );
-                        } else if (!ongoingRealRecovery) {
-                          // Show "Practice Recovery" when no active practice session and no real
-                          // recovery in flight (pending/sent/inProgress).
+                        } else if (!hasMyInFlightRecovery) {
+                          // Show "Practice Recovery" only when this user has no session of
+                          // their own in flight (per-user exclusivity).
                           buttons.add(
                             RowButtonConfig(
                               onPressed: () {

@@ -129,6 +129,120 @@ void main() {
       loginService.resetCacheForTest();
     });
 
+    test('concurrent initiateRecovery calls from same user do not create duplicates', () async {
+      // Both calls launched without awaiting; the per-(vault, initiator) lock
+      // must serialize them so the second one observes the first's persisted
+      // active request and rejects, even though they raced through the
+      // existence check.
+      final results = await Future.wait<RecoveryRequest?>([
+        recoveryService
+            .initiateRecovery(
+              testVaultId,
+              initiatorPubkey: testCreatorPubkey,
+              stewardPubkeys: [testKeyHolder1],
+              threshold: 1,
+            )
+            .then<RecoveryRequest?>((r) => r)
+            .catchError((_) => null),
+        recoveryService
+            .initiateRecovery(
+              testVaultId,
+              initiatorPubkey: testCreatorPubkey,
+              stewardPubkeys: [testKeyHolder1],
+              threshold: 1,
+            )
+            .then<RecoveryRequest?>((r) => r)
+            .catchError((_) => null),
+      ]);
+
+      final successes = results.whereType<RecoveryRequest>().toList();
+      expect(successes.length, 1, reason: 'exactly one initiate should succeed for the same user');
+
+      final stored = await repository.getRecoveryRequestsForVault(testVaultId);
+      expect(
+        stored.where((r) => r.status.isActive && r.initiatorPubkey == testCreatorPubkey).length,
+        1,
+        reason: 'only one active recovery for this user should be persisted',
+      );
+    });
+
+    test('same user cannot start a real recovery while their practice is active', () async {
+      // Per-user exclusivity covers practice + real: if I'm holding any active
+      // session on this vault, the service must reject another initiate from me
+      // (the UI relies on this to keep its gating consistent with the service).
+      await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+        isPractice: true,
+      );
+
+      await expectLater(
+        recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+          isPractice: false,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('different users may both have active recoveries on the same vault', () async {
+      // Per-user exclusivity: two distinct initiators may concurrently hold
+      // their own active recovery sessions on the same vault.
+      final results = await Future.wait<RecoveryRequest>([
+        recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+        ),
+        recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testKeyHolder1,
+          stewardPubkeys: [testKeyHolder2],
+          threshold: 1,
+        ),
+      ]);
+
+      expect(results.length, 2);
+      expect(results.map((r) => r.initiatorPubkey).toSet(), {testCreatorPubkey, testKeyHolder1});
+
+      final stored = await repository.getRecoveryRequestsForVault(testVaultId);
+      final activeByInitiator = <String, int>{};
+      for (final r in stored.where((r) => r.status.isActive)) {
+        activeByInitiator[r.initiatorPubkey] = (activeByInitiator[r.initiatorPubkey] ?? 0) + 1;
+      }
+      expect(activeByInitiator[testCreatorPubkey], 1);
+      expect(activeByInitiator[testKeyHolder1], 1);
+    });
+
+    test('initiateRecovery succeeds again after a previous attempt fails', () async {
+      // Drive a failure by passing an invalid (non-hex) initiator pubkey;
+      // RecoveryRequest.isValid rejects it and `initiateRecovery` throws.
+      await expectLater(
+        recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: 'not-a-valid-hex-pubkey',
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Lock must have been released so a valid follow-up succeeds.
+      final ok = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+      expect(ok.vaultId, testVaultId);
+    });
+
     test('recovery request creation succeeds with valid data', () async {
       // Create a recovery request
       final recoveryRequest = await recoveryService.initiateRecovery(

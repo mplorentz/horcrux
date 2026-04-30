@@ -64,6 +64,19 @@ class RecoveryService {
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
 
+  /// Per-(vault, initiator) mutex serializing [initiateRecovery] calls. The
+  /// check-then-act against `getRecoveryRequestsForVault` is async, so without
+  /// this two concurrent callers from the same user (e.g. double-tap, or
+  /// background retry vs. user tap) could both observe "no active recovery for
+  /// me" and persist duplicate active requests. Different users may initiate
+  /// concurrently on the same vault and intentionally do not contend on this
+  /// lock. The lock is released in `finally`, so a failed initiation does not
+  /// leave the (vault, user) permanently locked.
+  final Map<String, Future<void>> _initiateRecoveryLocks = {};
+
+  String _initiateRecoveryLockKey(String vaultId, String initiatorPubkey) =>
+      '$vaultId|$initiatorPubkey';
+
   // Stream for real-time notification updates
   final _notificationController = StreamController<List<RecoveryRequest>>.broadcast();
   Stream<List<RecoveryRequest>> get notificationStream => _notificationController.stream;
@@ -205,56 +218,80 @@ class RecoveryService {
   }) async {
     await initialize();
 
-    // Only one active recovery session per vault (practice or real).
-    final existingRequests = await repository.getRecoveryRequestsForVault(
-      vaultId,
-    );
-    final vaultHasActiveRecovery = existingRequests.any((r) => r.status.isActive);
+    // Wait out any in-flight initiation from this same user on this vault
+    // before checking the active-recovery invariant, so the check-then-write
+    // below is effectively atomic from the caller's point of view. Other
+    // users' concurrent initiations on the same vault do not contend.
+    final lockKey = _initiateRecoveryLockKey(vaultId, initiatorPubkey);
+    while (_initiateRecoveryLocks.containsKey(lockKey)) {
+      try {
+        await _initiateRecoveryLocks[lockKey];
+      } catch (_) {
+        // Previous attempt threw; that's fine -- this caller still gets to try.
+      }
+    }
 
-    if (vaultHasActiveRecovery) {
-      throw StateError(
-        'This vault already has an active recovery session. End it before starting a new one.',
+    final completer = Completer<void>();
+    _initiateRecoveryLocks[lockKey] = completer.future;
+    try {
+      // Each user may have at most one active recovery session per vault
+      // (practice or real). Other users may have their own concurrent
+      // sessions for the same vault.
+      final existingRequests = await repository.getRecoveryRequestsForVault(
+        vaultId,
       );
-    }
-
-    // Create recovery request
-    // Generate cryptographically secure request ID
-    final requestId = '${generateSecureID()}_$vaultId';
-
-    // Initialize steward responses
-    final stewardResponses = <String, RecoveryResponse>{};
-    for (final pubkey in stewardPubkeys) {
-      stewardResponses[pubkey] = RecoveryResponse(
-        pubkey: pubkey,
-        approved: false,
+      final userHasActiveRecovery = existingRequests.any(
+        (r) => r.status.isActive && r.initiatorPubkey == initiatorPubkey,
       );
+
+      if (userHasActiveRecovery) {
+        throw StateError(
+          'You already have an active recovery session for this vault. End it before starting a new one.',
+        );
+      }
+
+      // Create recovery request
+      // Generate cryptographically secure request ID
+      final requestId = '${generateSecureID()}_$vaultId';
+
+      // Initialize steward responses
+      final stewardResponses = <String, RecoveryResponse>{};
+      for (final pubkey in stewardPubkeys) {
+        stewardResponses[pubkey] = RecoveryResponse(
+          pubkey: pubkey,
+          approved: false,
+        );
+      }
+
+      final recoveryRequest = RecoveryRequest(
+        id: requestId,
+        vaultId: vaultId,
+        initiatorPubkey: initiatorPubkey,
+        requestedAt: DateTime.now(),
+        status: RecoveryRequestStatus.pending,
+        threshold: threshold,
+        expiresAt: null,
+        stewardResponses: stewardResponses,
+        isPractice: isPractice,
+      );
+
+      // Validate and save
+      if (!recoveryRequest.isValid) {
+        throw ArgumentError('Invalid recovery request');
+      }
+
+      // Add to vault (single source of truth)
+      await repository.addRecoveryRequestToVault(vaultId, recoveryRequest);
+
+      // Emit notification update
+      await _emitNotificationUpdate();
+
+      Log.info('Created recovery request $requestId for vault $vaultId');
+      return recoveryRequest;
+    } finally {
+      _initiateRecoveryLocks.remove(lockKey);
+      completer.complete();
     }
-
-    final recoveryRequest = RecoveryRequest(
-      id: requestId,
-      vaultId: vaultId,
-      initiatorPubkey: initiatorPubkey,
-      requestedAt: DateTime.now(),
-      status: RecoveryRequestStatus.pending,
-      threshold: threshold,
-      expiresAt: null,
-      stewardResponses: stewardResponses,
-      isPractice: isPractice,
-    );
-
-    // Validate and save
-    if (!recoveryRequest.isValid) {
-      throw ArgumentError('Invalid recovery request');
-    }
-
-    // Add to vault (single source of truth)
-    await repository.addRecoveryRequestToVault(vaultId, recoveryRequest);
-
-    // Emit notification update
-    await _emitNotificationUpdate();
-
-    Log.info('Created recovery request $requestId for vault $vaultId');
-    return recoveryRequest;
   }
 
   /// Initiate recovery and send it via Nostr
