@@ -69,7 +69,7 @@ class VaultStatusBanner extends ConsumerWidget {
                 headline: isPractice ? 'Practice recovery in progress' : 'Recovery in progress',
                 subtext: isPractice ? 'Tap to manage practice recovery' : 'Tap to manage recovery',
                 icon: Icons.refresh,
-                accentColor: Color(0xFF7A4A2F), // Umber
+                accentColor: const Color(0xFF7A4A2F), // Umber
                 variant: _StatusVariant.recoveryInProgress,
               );
               return _buildBanner(
