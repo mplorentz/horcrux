@@ -306,5 +306,77 @@ void main() {
         container.dispose();
       },
     );
+
+    // Regression: once enough stewards approve, the user's request transitions
+    // to `RecoveryRequestStatus.completed` but is still manageable -- the user
+    // finalizes the recovery from the same Manage screen by tapping "Recover
+    // Vault". If the widget filters by `isActive` only, that path disappears
+    // and the user is incorrectly offered "Initiate Recovery" again.
+    testWidgets(
+      'shows Manage Recovery when the current user\'s own request is completed',
+      (tester) async {
+        final stewardShard = createShardData(
+          shard: 'steward-shard-data',
+          threshold: 1,
+          shardIndex: 0,
+          totalShards: 2,
+          primeMod: 'test-prime-mod',
+          creatorPubkey: otherPubkey,
+          vaultId: 'test-vault',
+          vaultName: 'Test Vault',
+          distributionVersion: 1,
+        );
+
+        final myCompletedRequest = RecoveryRequest(
+          id: 'my-completed-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: testPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.completed,
+          threshold: 1,
+        );
+
+        final vault = Vault(
+          id: 'test-vault',
+          name: 'Test Vault',
+          content: null,
+          createdAt: DateTime(2024, 1, 1),
+          ownerPubkey: otherPubkey,
+          shards: [stewardShard],
+          recoveryRequests: [myCompletedRequest],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+            recoveryStatusProvider.overrideWith((ref, vaultId) {
+              return AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: true,
+                  canRecover: true,
+                  activeRecoveryRequest: myCompletedRequest,
+                  isInitiator: true,
+                ),
+              );
+            }),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Manage Recovery'), findsOneWidget);
+        expect(find.text('Initiate Recovery'), findsNothing);
+
+        container.dispose();
+      },
+    );
   });
 }

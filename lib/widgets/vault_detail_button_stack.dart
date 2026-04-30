@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../models/backup_config.dart';
-import '../models/recovery_request.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../providers/recovery_provider.dart';
@@ -58,28 +57,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     // Exclusivity is per (vault, initiator): each user may have at most one
                     // active recovery session per vault (practice or real), but different
                     // users (other stewards, owner) may have their own concurrent sessions
-                    // on the same vault. recoveryStatusProvider only surfaces the single
+                    // on the same vault. `recoveryStatusProvider` only surfaces the single
                     // most-recent manageable request, which can belong to another user --
-                    // so we resolve the current user's own sessions from the full list of
-                    // recovery requests on the vault rather than from `activeReq`.
-                    final allActiveRequests =
-                        (currentVault?.recoveryRequests ?? const <RecoveryRequest>[])
-                            .where((r) => r.status.isActive)
-                            .toList();
-                    final myActiveRealRecovery = currentPubkey == null
-                        ? null
-                        : allActiveRequests.cast<RecoveryRequest?>().firstWhere(
-                              (r) =>
-                                  r != null && !r.isPractice && r.initiatorPubkey == currentPubkey,
-                              orElse: () => null,
-                            );
-                    final myActivePracticeRecovery = currentPubkey == null
-                        ? null
-                        : allActiveRequests.cast<RecoveryRequest?>().firstWhere(
-                              (r) =>
-                                  r != null && r.isPractice && r.initiatorPubkey == currentPubkey,
-                              orElse: () => null,
-                            );
+                    // so we resolve the current user's own sessions through
+                    // `Vault.manageableRecoveryFor`, which keys off `initiatorPubkey` and
+                    // includes both in-flight statuses and `completed` (users finalize a
+                    // recovery from the same Manage screen once enough stewards approve).
+                    final myActiveRealRecovery =
+                        currentVault?.manageableRecoveryFor(currentPubkey, isPractice: false);
+                    final myActivePracticeRecovery =
+                        currentVault?.manageableRecoveryFor(currentPubkey, isPractice: true);
                     final hasMyInFlightRecovery =
                         myActiveRealRecovery != null || myActivePracticeRecovery != null;
                     final showManageRealRecovery = myActiveRealRecovery != null;
