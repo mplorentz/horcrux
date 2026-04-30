@@ -28,6 +28,21 @@ final localNotificationServiceProvider = Provider<LocalNotificationService>((ref
   return service;
 });
 
+/// Stable [RouteSettings.name] for the [VaultDetailScreen] route pushed by
+/// notification taps. Exposed for tests and DevTools route inspection.
+/// Uses a slash-style path so [Navigator] treats it as a relative URI when
+/// it builds [RouteInformation] for system observers (a colon would parse as
+/// a URI scheme and throw).
+String vaultDetailRouteName(String vaultId) => '/vault_detail/$vaultId';
+
+/// Stable [RouteSettings.name] for the [RecoveryStatusScreen] route pushed by
+/// recovery-response notification taps.
+String recoveryStatusRouteName(String recoveryRequestId) => '/recovery_status/$recoveryRequestId';
+
+/// Stable [RouteSettings.name] for the [RecoveryRequestDetailScreen] route
+/// pushed by recovery-request notification taps.
+String recoveryRequestRouteName(String recoveryRequestId) => '/recovery_request/$recoveryRequestId';
+
 /// Service that displays OS notifications to the user for things like recovery events.
 ///
 /// All `notifyXxxProcessed` entry points are gated on [isEventRecent] against
@@ -67,10 +82,14 @@ class LocalNotificationService {
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
+    const linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open notification',
+    );
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
       macOS: darwinSettings,
+      linux: linuxSettings,
     );
 
     await _plugin.initialize(
@@ -337,19 +356,27 @@ class LocalNotificationService {
       priority: Priority.high,
     );
     const darwinDetails = DarwinNotificationDetails();
+    const linuxDetails = LinuxNotificationDetails();
     const details = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,
+      linux: linuxDetails,
     );
 
-    await _plugin.show(
-      _notificationIdFromEpochAndCounter(),
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    try {
+      await _plugin.show(
+        _notificationIdFromEpochAndCounter(),
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e, st) {
+      // Showing notifications is best-effort (e.g. Linux without
+      // org.freedesktop.Notifications). Must not fail vault/Nostr handling.
+      Log.debug('Skipping local notification (display unavailable)', e, st);
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
@@ -384,15 +411,22 @@ class LocalNotificationService {
 
   /// Navigates to the appropriate screen for the given [kind] and [id].
   ///
-  /// - [NostrKind.recoveryRequest]: opens [RecoveryRequestDetailScreen] for [id]
-  ///   (the recovery request id).
-  /// - [NostrKind.recoveryResponse]: opens [RecoveryStatusScreen] (a.k.a. the
-  ///   "Manage Recovery" screen) for [id] (the recovery request id), so the
-  ///   recovery initiator lands directly on the request whose status just
-  ///   changed. Falls back to [VaultDetailScreen] when the recovery request
-  ///   can't be found locally.
-  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: opens
-  ///   [VaultDetailScreen] for [vaultId].
+  /// All recovery- and shard-related taps reset the navigator stack to the
+  /// root ([VaultListScreen]) and push [VaultDetailScreen] for the relevant
+  /// vault underneath the destination, so popping always walks back through
+  /// the right vault and then to the vault list — regardless of what was on
+  /// screen when the notification arrived.
+  ///
+  /// - [NostrKind.recoveryRequest]: stack becomes
+  ///   `[VaultList, VaultDetail, RecoveryRequestDetailScreen]` (steward sees
+  ///   the request whose vault the notification refers to).
+  /// - [NostrKind.recoveryResponse]: stack becomes
+  ///   `[VaultList, VaultDetail, RecoveryStatusScreen]` (initiator lands on
+  ///   the "Manage Recovery" screen for the request whose status just
+  ///   changed). Falls back to [VaultDetailScreen] alone when the recovery
+  ///   request can't be found locally.
+  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: stack becomes
+  ///   `[VaultList, VaultDetail]` for [vaultId].
   ///
   /// [vaultId] is required for shard kinds and used as a fallback for recovery
   /// responses. Returns `true` if navigation succeeded, `false` if the target
@@ -419,10 +453,26 @@ class LocalNotificationService {
 
   /// Navigates to [VaultDetailScreen] for [vaultId], waiting up to 2 s for
   /// the navigator to become ready.
+  ///
+  /// Resets the stack down to the root route ([MaterialApp.home], i.e.
+  /// [VaultListScreen]) before pushing so notification-driven vault opens do
+  /// not leave unrelated screens underneath, while still letting the user pop
+  /// back to the vault list.
   Future<void> navigateToVault(String vaultId) async {
-    await _pushRouteWhenReady(
-      (context) => VaultDetailScreen(vaultId: vaultId),
-      debugLabel: 'vault $vaultId',
+    await _whenNavigatorReady(
+      (nav) {
+        unawaited(
+          nav.pushAndRemoveUntil<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: vaultDetailRouteName(vaultId)),
+              builder: (context) => VaultDetailScreen(vaultId: vaultId),
+            ),
+            (route) => route.isFirst,
+          ),
+        );
+      },
+      navigatorNotReadyWarning:
+          'Notification tap: navigator not ready; skipped navigation to vault $vaultId',
     );
   }
 
@@ -433,8 +483,10 @@ class LocalNotificationService {
           'Notification: recovery request $recoveryRequestId not found, skipping navigation');
       return false;
     }
-    await _pushRouteWhenReady(
-      (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+    await _pushVaultThenScreenWhenReady(
+      vaultId: request.vaultId,
+      topScreenBuilder: (context) => RecoveryRequestDetailScreen(recoveryRequest: request),
+      topScreenRouteName: recoveryRequestRouteName(recoveryRequestId),
       debugLabel: 'recovery request $recoveryRequestId',
     );
     return true;
@@ -456,25 +508,83 @@ class LocalNotificationService {
       await navigateToVault(fallbackVaultId);
       return true;
     }
-    await _pushRouteWhenReady(
-      (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+    await _pushVaultThenScreenWhenReady(
+      vaultId: request.vaultId,
+      topScreenBuilder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequestId),
+      topScreenRouteName: recoveryStatusRouteName(recoveryRequestId),
       debugLabel: 'recovery status $recoveryRequestId',
     );
     return true;
   }
 
-  Future<void> _pushRouteWhenReady(WidgetBuilder builder, {String? debugLabel}) async {
-    for (var i = 0; i < 40; i++) {
+  /// Resets the navigator stack to the root, pushes [VaultDetailScreen] for
+  /// [vaultId], then pushes the screen built by [topScreenBuilder] on top —
+  /// final stack `[VaultListScreen, VaultDetail, <top screen>]`. Used by all
+  /// recovery-tap paths so popping the destination lands on the correct vault
+  /// and then the vault list, regardless of what was on screen when the
+  /// notification arrived.
+  Future<void> _pushVaultThenScreenWhenReady({
+    required String vaultId,
+    required WidgetBuilder topScreenBuilder,
+    required String topScreenRouteName,
+    required String debugLabel,
+  }) async {
+    await _whenNavigatorReady(
+      (nav) {
+        // Both calls mutate the stack synchronously; the futures they return
+        // are pop notifications we deliberately drop (awaiting would block
+        // here until the pushed route is popped, and the second push would
+        // never fire while the first route is still on screen).
+        //
+        // Reset to the root route ([VaultListScreen] via [MaterialApp.home]),
+        // push the relevant vault on top, then push the destination screen
+        // on top of that.
+        unawaited(
+          nav.pushAndRemoveUntil<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: vaultDetailRouteName(vaultId)),
+              builder: (context) => VaultDetailScreen(vaultId: vaultId),
+            ),
+            (route) => route.isFirst,
+          ),
+        );
+        unawaited(
+          nav.push<void>(
+            MaterialPageRoute<void>(
+              settings: RouteSettings(name: topScreenRouteName),
+              builder: topScreenBuilder,
+            ),
+          ),
+        );
+      },
+      navigatorNotReadyWarning:
+          'Notification tap: navigator not ready; skipped navigation to $debugLabel '
+          '(vault $vaultId)',
+    );
+  }
+
+  /// Polls up to ~2s for [navigatorKey]'s [NavigatorState] to be mounted, then
+  /// runs [action]. Logs [navigatorNotReadyWarning] if it never becomes ready.
+  ///
+  /// [action] should manipulate the navigator synchronously (e.g. `push`,
+  /// `pushAndRemoveUntil`). Don't `await` the futures those calls return:
+  /// they complete only when the pushed route is popped, which would block
+  /// any subsequent stack work in the same callback.
+  Future<void> _whenNavigatorReady(
+    void Function(NavigatorState nav) action, {
+    required String navigatorNotReadyWarning,
+  }) async {
+    const attempts = 40;
+    const interval = Duration(milliseconds: 50);
+    for (var i = 0; i < attempts; i++) {
       final nav = navigatorKey.currentState;
       if (nav != null && nav.mounted) {
-        await nav.push(MaterialPageRoute<void>(builder: builder));
+        action(nav);
         return;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(interval);
     }
-    Log.warning(
-      'Notification tap: navigator not ready; skipped navigation${debugLabel != null ? " to $debugLabel" : ""}',
-    );
+    Log.warning(navigatorNotReadyWarning);
   }
 
   void dispose() {}

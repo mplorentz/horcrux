@@ -76,10 +76,10 @@ class StewardList extends ConsumerWidget {
             ),
           ),
           data: (currentPubkey) {
-            // Hide steward list when vault is in awaitingKey state AND current user is a steward
-            // (not the owner) - stewards waiting for their key shouldn't see an empty steward list
-            final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
-            if (vault.state == VaultState.awaitingKey && !isOwner) {
+            // Hide steward list when vault is awaiting a shard and current user is a steward
+            // (not the owner) — stewards waiting for their shard shouldn't see an empty steward list
+            final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+            if (vault.state == VaultState.awaitingShard && !isOwner) {
               // Return empty widget - background fill handled at screen level
               return const SizedBox.shrink();
             }

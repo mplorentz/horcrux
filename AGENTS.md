@@ -304,3 +304,50 @@ Log.debug('Debugging info');
 **Funding**: OpenSats.org (Bitcoin/Nostr open-source development)
 
 **License**: MIT
+
+## Cursor Cloud specific instructions
+
+### Environment overview
+
+Flutter 3.35.0 is installed at `/opt/flutter` and available on PATH alongside `$HOME/.pub-cache/bin`. Node.js 20 is installed for Nostrbook MCP. All Linux desktop system dependencies (GTK3, libsecret, gnome-keyring, Xvfb, x11vnc, etc.) are pre-installed. The project does **not** use `fvm` in the cloud environment — use `flutter` and `dart` directly (no `fvm` prefix).
+
+### Running the app natively (not Docker)
+
+The Linux app requires a virtual display, D-Bus session, and gnome-keyring before launch:
+
+```bash
+# Start Xvfb (if not already running)
+Xvfb :99 -screen 0 600x1024x24 &
+export DISPLAY=:99
+
+# D-Bus + gnome-keyring (required by flutter_secure_storage)
+eval "$(dbus-launch --sh-syntax)"
+mkdir -p ~/.cache ~/.local/share/keyrings
+printf '\n' | gnome-keyring-daemon --unlock 2>/dev/null || true
+gnome-keyring-daemon --start --components=secrets --daemonize 2>/dev/null || true
+
+# Optional: notification daemon for flutter_local_notifications
+notification-daemon &
+
+# Run the app
+cd /workspace
+flutter run -d linux --debug --host-vmservice-port=8181
+```
+
+The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<token>/`). The WebSocket URI for Marionette MCP is `ws://127.0.0.1:8181/<token>/ws`.
+
+### Key gotchas
+
+- **gcc-12 is required**: `linux/CMakeLists.txt` pins `gcc-12`/`g++-12`. The system also has gcc-13 but the Flutter Linux build will fail without gcc-12/g++-12 specifically installed.
+- **Golden tests skip on Linux**: Golden screenshot tests are macOS-only (rendering differs). Always use `--exclude-tags=golden` when running tests on Linux: `flutter test --exclude-tags=golden`
+- **gnome-keyring must be unlocked** before the app starts, otherwise `flutter_secure_storage` will crash. The empty-password unlock shown above is sufficient for dev/test.
+- **Hot reload**: Send `SIGUSR1` to the Flutter process, or type `r` in the `flutter run` terminal.
+
+### MCP servers
+
+- **Marionette MCP**: `marionette_mcp` (Dart global activation, on PATH via `~/.pub-cache/bin`). Configured in `.cursor/mcp.json`.
+- **Nostrbook MCP**: `npx -y @nostrbook/mcp@latest`. Configured in `.cursor/mcp.json`.
+
+### Standard commands reference
+
+See `AGENTS.md` sections above for lint (`flutter analyze`), test (`flutter test --exclude-tags=golden`), build (`flutter build linux --debug`), and format (`dart format .`) commands. Omit the `fvm` prefix in this environment.

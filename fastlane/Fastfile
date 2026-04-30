@@ -3,6 +3,7 @@
 
 # Load environment variables from .env file
 require 'dotenv'
+
 Dotenv.load
 
 # Helper method to get App Store Connect API key using standard fastlane env vars
@@ -24,15 +25,57 @@ def get_api_key
   end
 end
 
-# Helper method to get Google Play service account JSON key filepath
-# Environment variable: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
-# Should be the path to the service account JSON key file
+# Helper method to get Google Play service account JSON key filepath.
+# Reads GOOGLE_PLAY_JSON_KEY_PATH (preferred) or GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
+# This is NOT the Firebase google-services.json — it's a service account key
+# downloaded from Google Cloud Console with Play Developer API access.
 def get_google_play_json_key
-  ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+  ENV["GOOGLE_PLAY_JSON_KEY_PATH"] || ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
 end
 
-# Default platform
+def read_pubspec_version_string
+  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+  pubspec_content = File.read(pubspec_path)
+  m = pubspec_content.match(/^version:\s*(.+)$/)
+  UI.user_error!("Could not parse version from pubspec.yaml") unless m
+  m[1].strip
+end
+
+# Default platform (needed for iOS actions in top-level lanes like set_version)
 default_platform(:ios)
+
+private_lane :ios_increment_build_sync_pubspec do
+  increment_build_number(
+    xcodeproj: "ios/Runner.xcodeproj"
+  )
+
+  current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+  build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
+
+  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+  pubspec_content = File.read(pubspec_path)
+  new_version = "#{current_version}+#{build_number}"
+  pubspec_content.gsub!(/^version: .*$/, "version: #{new_version}")
+  File.write(pubspec_path, pubspec_content)
+
+  UI.success("✅ Build number bumped to #{build_number}")
+  UI.success("✅ Updated pubspec.yaml version to #{new_version}")
+end
+
+desc "Set marketing version on iOS, bump build once, sync pubspec (Flutter/Android versionCode + versionName)"
+desc "Usage: fastlane set_version version:0.8.0 — or VERSION=0.8.0"
+lane :set_version do |options|
+  new_version = (options[:version] || ENV["VERSION"]).to_s.strip
+  UI.user_error!("Provide version: X.Y.Z — e.g. fastlane set_version version:0.8.0") if new_version.empty?
+
+  increment_version_number(
+    version_number: new_version,
+    xcodeproj: "ios/Runner.xcodeproj"
+  )
+
+  ios_increment_build_sync_pubspec
+  UI.success("✅ set_version complete — iOS + pubspec (Android) aligned")
+end
 
 platform :ios do
   desc "Sync code signing certificates using API key"
@@ -96,26 +139,7 @@ platform :ios do
 
   desc "Bump build number only"
   lane :bump_build do
-    increment_build_number(
-      xcodeproj: "ios/Runner.xcodeproj"
-    )
-    
-    # Also update pubspec.yaml build number
-    current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
-    build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
-    
-    # Read pubspec.yaml
-    pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
-    pubspec_content = File.read(pubspec_path)
-    
-    # Update version in pubspec.yaml (format: version: X.Y.Z+BUILD)
-    new_version = "#{current_version}+#{build_number}"
-    pubspec_content.gsub!(/^version: .*$/, "version: #{new_version}")
-    
-    File.write(pubspec_path, pubspec_content)
-    
-    UI.success("✅ Build number bumped to #{build_number}")
-    UI.success("✅ Updated pubspec.yaml version to #{new_version}")
+    ios_increment_build_sync_pubspec
   end
 
   desc "Bump patch version (1.0.0 → 1.0.1)"
@@ -234,12 +258,17 @@ platform :android do
 
   desc "Build and upload Android beta to Google Play Console (Internal Testing)"
   lane :android_beta do
-    # Check for Google Play service account credentials
     json_key_path = get_google_play_json_key
-    if json_key_path.nil? || json_key_path.empty?
-      UI.user_error!("Google Play service account JSON key not configured. Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in .env file")
+    if json_key_path.nil? || json_key_path.to_s.strip.empty?
+      UI.user_error!(<<~MSG)
+        Google Play service account JSON key not configured.
+        Set GOOGLE_PLAY_JSON_KEY_PATH in .env to an absolute path of the
+        service account JSON downloaded from Google Cloud Console.
+        See: https://docs.fastlane.tools/getting-started/android/setup/#collect-your-google-credentials
+        Note: this is NOT android/app/google-services.json (Firebase config).
+      MSG
     end
-    
+
     unless File.exist?(json_key_path)
       UI.user_error!("Google Play service account JSON key file not found at: #{json_key_path}")
     end
@@ -250,15 +279,71 @@ platform :android do
     # Upload to Google Play Console Internal Testing track
     aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
     upload_to_play_store(
+      package_name: "com.singleoriginsoftware.horcrux",
       json_key: json_key_path,
       track: "internal",
       aab: aab_path,
+      release_status: "draft",
       skip_upload_metadata: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
     )
     
     UI.success("✅ Android beta uploaded to Google Play Console Internal Testing")
+  end
+
+  desc "Build release APK and publish to GitHub Releases as a pre-release (uploads app-release.apk)"
+  desc "Uses fastlane built-in set_github_release. Requires GITHUB_TOKEN (or GH_TOKEN) and GITHUB_REPOSITORY=owner/repo. Optional: GITHUB_PRERELEASE_TAG, GITHUB_RELEASE_NAME, GITHUB_RELEASE_BODY. SKIP_BUILD=true skips flutter build. Duplicate tag: delete the release or choose a new tag (built-in action does not attach assets to an existing release)."
+  lane :android_github_prerelease do
+    skip_build = ENV["SKIP_BUILD"].to_s == "true"
+    unless skip_build
+      sh("cd .. && flutter build apk --release")
+    end
+
+    apk_path = File.expand_path("../build/app/outputs/flutter-apk/app-release.apk", __dir__)
+    unless File.exist?(apk_path)
+      UI.user_error!("APK not found at #{apk_path}. Build first or run without SKIP_BUILD.")
+    end
+
+    repository_name = (ENV["GITHUB_REPOSITORY"] || ENV["GITHUB_REPO"]).to_s.strip
+    UI.user_error!("Set GITHUB_REPOSITORY to owner/repo (no URL)") if repository_name.empty?
+    UI.user_error!("Use owner/repo only, not a full GitHub URL") if repository_name.include?("github.com")
+
+    repo_parts = repository_name.split("/")
+    UI.user_error!("GITHUB_REPOSITORY must be exactly owner/repo") unless repo_parts.length == 2 && repo_parts.none?(&:empty?)
+
+    token = (ENV["GITHUB_TOKEN"] || ENV["GH_TOKEN"]).to_s.strip
+    UI.user_error!("Set GITHUB_TOKEN or GH_TOKEN (contents:write / repo scope)") if token.empty?
+
+    # GitHub Actions GITHUB_TOKEN expects Bearer auth; PAT uses api_token path in fastlane.
+    github_auth = ENV["GITHUB_ACTIONS"] == "true" ? { api_bearer: token } : { api_token: token }
+
+    version_string = read_pubspec_version_string
+    tag = (ENV["GITHUB_PRERELEASE_TAG"] || "").strip
+    tag = "v#{version_string.tr('+', '-')}" if tag.empty?
+
+    release_name = (ENV["GITHUB_RELEASE_NAME"] || "").strip
+    release_name = "Horcrux #{version_string} (pre-release)" if release_name.empty?
+
+    release_body = (ENV["GITHUB_RELEASE_BODY"] || "").strip
+    release_body = "Android APK pre-release for #{version_string}." if release_body.empty?
+
+    release = set_github_release(
+      repository_name: repository_name,
+      tag_name: tag,
+      name: release_name,
+      description: release_body,
+      is_prerelease: true,
+      upload_assets: [apk_path],
+      **github_auth
+    )
+
+    if release.nil?
+      UI.user_error!("GitHub release failed (duplicate tag #{tag} or API error—see logs; delete the release or set GITHUB_PRERELEASE_TAG)")
+    end
+
+    UI.success("✅ Published GitHub pre-release #{tag}")
+    UI.success("🔗 #{release['html_url']}") if release["html_url"]
   end
 
   desc "Bump Android build number only"

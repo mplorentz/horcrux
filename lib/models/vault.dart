@@ -23,11 +23,15 @@ class VaultBackupConstraints {
   static const int defaultTotalKeys = 3;
 }
 
-/// Vault state enum indicating the current state of a vault
+/// Local vault material state for the current device (not who owns the vault).
+///
+/// - [unlocked]: decrypted vault content is present locally.
+/// - [holdingShard]: at least one shard is stored locally but content is not decrypted.
+/// - [awaitingShard]: no local content and no shards yet (e.g. invite accepted, shard not received).
 enum VaultState {
-  owned, // Has decrypted content
-  steward, // Has shard but no content
-  awaitingKey, // Invitee has accepted invitation but hasn't received shard yet
+  unlocked,
+  holdingShard,
+  awaitingShard,
 }
 
 /// Data model for a secure vault containing encrypted text content
@@ -62,27 +66,22 @@ class Vault with _$Vault {
 
   const Vault._();
 
-  /// Get the state of this vault based on priority:
-  /// 1. Owned (if has decrypted content)
-  /// 2. Steward (if has shards but no content)
-  /// 3. Awaiting key (if no content and no shards - invitee waiting for shard)
+  /// Derives [VaultState] from locally stored content and shards (see [VaultState]).
   ///
-  /// Note: Recovery state is user-specific (only for the initiator) and should be checked
-  /// using recoveryStatusProvider rather than vault.state, since the vault model doesn't
-  /// have access to the current user's context.
+  /// Recovery state is user-specific (only for the initiator) and should be checked with
+  /// [recoveryStatusProvider], not here.
   VaultState get state {
     if (content != null) {
-      return VaultState.owned;
+      return VaultState.unlocked;
     }
     if (shards.isNotEmpty) {
-      return VaultState.steward;
+      return VaultState.holdingShard;
     }
-    // No content and no shards - invitee is awaiting key distribution
-    return VaultState.awaitingKey;
+    return VaultState.awaitingShard;
   }
 
-  /// Check if the given hex key is the owner of this vault
-  bool isOwned(String hexKey) => ownerPubkey == hexKey;
+  /// Whether [hexPubkey] (hex-encoded Nostr public key) is this vault's owner.
+  bool isVaultOwner(String hexPubkey) => ownerPubkey == hexPubkey;
 
   /// Check if we are a steward for this vault (have shards)
   bool get isSteward => shards.isNotEmpty;
