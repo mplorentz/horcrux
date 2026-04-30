@@ -59,6 +59,16 @@ class MockLoginService extends _i1.Mock implements _i4.LoginService {
   }
 
   @override
+  set onSecureStorageReadFailure(_i5.Future<void> Function()? _onSecureStorageReadFailure) =>
+      super.noSuchMethod(
+        Invocation.setter(
+          #onSecureStorageReadFailure,
+          _onSecureStorageReadFailure,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i5.Future<_i2.KeyPair> generateAndStoreNostrKey() => (super.noSuchMethod(
         Invocation.method(
           #generateAndStoreNostrKey,
