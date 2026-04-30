@@ -230,10 +230,13 @@ class ProcessedNostrEventStore {
   ///
   /// No-op while a [clearAll] is in effect (until the next state-mutating call)
   /// so dispose-time flushes do not resurrect the cursors file we just deleted.
+  /// The suppression flag is checked **inside** [_serialized] so that a flush
+  /// launched concurrently with -- but ordered after -- a [clearAll] sees the
+  /// flag set by the time its body runs, instead of racing against it.
   Future<void> flushToDisk() async {
     _cancelDebouncedPersist();
-    if (_suppressFlushUntilNextWrite) return;
     await _serialized(() async {
+      if (_suppressFlushUntilNextWrite) return;
       await ensureLoaded();
       await _mergeWalIntoLog();
       await _writeCursorsJson();

@@ -89,6 +89,33 @@ void main() {
       expect(await store.contains('wal-only-2'), isFalse);
     });
 
+    test('flushToDisk launched concurrently with clearAll is still suppressed', () async {
+      // Regression for the race where flushToDisk reads the suppression flag
+      // before clearAll's body has set it, then queues behind clearAll in the
+      // serialization chain and recreates the cursors file once clearAll
+      // returns. The flag check must live inside _serialized.
+      final store = ProcessedNostrEventStore();
+
+      await store.recordProcessed('event-A');
+      await store.recordLastSeen('wss://relay.example/', 1700000000);
+      await store.flushToDisk();
+
+      final cursorsFile =
+          File(p.join(tempSupportDir.path, 'nostr_relay_subscription_cursors.json'));
+      expect(cursorsFile.existsSync(), isTrue);
+
+      // Kick off clearAll first so it owns the front of the serialization
+      // chain, then launch flushToDisk synchronously (no await between them)
+      // so it sees the flag as still-false at the time of the call but ends
+      // up queued behind clearAll. Awaiting them together drains both.
+      final clearFuture = store.clearAll();
+      final flushFuture = store.flushToDisk();
+      await Future.wait([clearFuture, flushFuture]);
+
+      expect(cursorsFile.existsSync(), isFalse,
+          reason: 'queued flushToDisk must observe clearAll suppression');
+    });
+
     test('flushToDisk is suppressed after clearAll until the next write', () async {
       final store = ProcessedNostrEventStore();
 
