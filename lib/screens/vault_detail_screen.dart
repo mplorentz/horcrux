@@ -125,8 +125,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
             error: (_, __) => const SizedBox.shrink(),
             data: (currentPubkey) {
               final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-              final canRedistribute =
-                  isVaultOwner && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty;
+              final canRedistribute = isVaultOwner &&
+                  vault.backupConfig != null &&
+                  vault.backupConfig!.stewards.isNotEmpty;
 
               return PopupMenuButton<String>(
                 itemBuilder: (context) {

@@ -33,8 +33,7 @@ class VaultCard extends ConsumerWidget {
       data: (pubkey) => pubkey,
       orElse: () => null,
     );
-    final isVaultOwner =
-        currentPubkey != null && vault.isVaultOwner(currentPubkey);
+    final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
 
     // [VaultState.holdingShard] uses the key icon unless the current user owns the vault.
     IconData stateIcon;
