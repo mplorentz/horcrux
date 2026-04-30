@@ -1007,6 +1007,15 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<bool>);
 
   @override
+  _i5.Future<bool> areOsNotificationsEnabled() => (super.noSuchMethod(
+        Invocation.method(
+          #areOsNotificationsEnabled,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
   _i5.Future<void> showNotification({
     required String? title,
     required String? body,
@@ -1210,18 +1219,6 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
-  _i5.Stream<_i12.RecoveryRequest> get recoveryRequestStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryRequestStream),
-        returnValue: _i5.Stream<_i12.RecoveryRequest>.empty(),
-      ) as _i5.Stream<_i12.RecoveryRequest>);
-
-  @override
-  _i5.Stream<_i13.RecoveryResponseEvent> get recoveryResponseStream => (super.noSuchMethod(
-        Invocation.getter(#recoveryResponseStream),
-        returnValue: _i5.Stream<_i13.RecoveryResponseEvent>.empty(),
-      ) as _i5.Stream<_i13.RecoveryResponseEvent>);
-
-  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
@@ -1258,10 +1255,15 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processGiftWrapFromForegroundPush(_i2.Nip01Event? event) => (super.noSuchMethod(
+  _i5.Future<void> processGiftWrapFromForegroundPush(
+    _i2.Nip01Event? event, {
+    bool? allowLocalNotification = true,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processGiftWrapFromForegroundPush,
           [event],
+          {#allowLocalNotification: allowLocalNotification},
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
@@ -1294,14 +1296,14 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<String?> resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #resolveRecoveryRequestIdForGiftWrap,
-          [giftWrap],
-        ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+  _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>
+      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+            Invocation.method(
+              #resolveRecoveryRequestIdForGiftWrap,
+              [giftWrap],
+            ),
+            returnValue: _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i5.Future<String?> publishRecoveryRequest({
@@ -1317,27 +1319,6 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
             #vaultId: vaultId,
             #stewardPubkeys: stewardPubkeys,
             #expiresAt: expiresAt,
-          },
-        ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
-
-  @override
-  _i5.Future<String?> publishRecoveryResponse({
-    required String? initiatorPubkey,
-    required String? recoveryRequestId,
-    required bool? approved,
-    String? shardDataJson,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #publishRecoveryResponse,
-          [],
-          {
-            #initiatorPubkey: initiatorPubkey,
-            #recoveryRequestId: recoveryRequestId,
-            #approved: approved,
-            #shardDataJson: shardDataJson,
           },
         ),
         returnValue: _i5.Future<String?>.value(),

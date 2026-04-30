@@ -54,8 +54,8 @@ class VaultStatusBanner extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (currentPubkey) {
-        final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
-        final isSteward = currentPubkey != null && !vault.isOwned(currentPubkey);
+        final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+        final isSteward = currentPubkey != null && !vault.isVaultOwner(currentPubkey);
 
         // Only show "Recovery in progress" if the current user initiated an active recovery
         // Use the same recoveryStatusProvider that the button stack uses
@@ -264,7 +264,7 @@ class VaultStatusBanner extends ConsumerWidget {
 
   Widget _buildStewardStatus(BuildContext context, Vault vault) {
     // Awaiting key
-    if (vault.state == VaultState.awaitingKey) {
+    if (vault.state == VaultState.awaitingShard) {
       return _buildBanner(
         context,
         const _StatusData(
@@ -283,7 +283,7 @@ class VaultStatusBanner extends ConsumerWidget {
     // Key holder - stewards have received a shard
     // Note: We don't check backupConfig.status because stewards can't read it
     // (it's encrypted to the owner). If a steward has shards, they're ready to help.
-    if (vault.state == VaultState.steward) {
+    if (vault.state == VaultState.holdingShard) {
       return _buildBanner(
         context,
         const _StatusData(

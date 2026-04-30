@@ -13,13 +13,40 @@ import '../widgets/vault_owner_display.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Detail/view screen for displaying a vault
-class VaultDetailScreen extends ConsumerWidget {
+class VaultDetailScreen extends ConsumerStatefulWidget {
   final String vaultId;
 
   const VaultDetailScreen({super.key, required this.vaultId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VaultDetailScreen> createState() => _VaultDetailScreenState();
+}
+
+class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
+  bool _ownerPushPromptScheduled = false;
+
+  String get vaultId => widget.vaultId;
+
+  /// Schedules a one-shot owner-side push opt-in nudge after the vault has
+  /// loaded. Idempotent across rebuilds; the underlying prompt is itself a
+  /// no-op when the user is not the owner, the vault doesn't have push
+  /// enabled, or the OS already grants notification permission, so it's safe
+  /// to schedule eagerly without re-checking those conditions here.
+  void _scheduleOwnerPushPromptOnce() {
+    if (_ownerPushPromptScheduled) return;
+    _ownerPushPromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await maybePromptOwnerForVaultPush(
+        context: context,
+        ref: ref,
+        vaultId: vaultId,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
 
     return vaultAsync.when(
@@ -56,6 +83,7 @@ class VaultDetailScreen extends ConsumerWidget {
           );
         }
 
+        _scheduleOwnerPushPromptOnce();
         return _buildVaultDetail(context, ref, vault);
       },
     );
@@ -96,9 +124,10 @@ class VaultDetailScreen extends ConsumerWidget {
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
             data: (currentPubkey) {
-              final isOwned = currentPubkey != null && vault.isOwned(currentPubkey);
-              final canRedistribute =
-                  isOwned && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty;
+              final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+              final canRedistribute = isVaultOwner &&
+                  vault.backupConfig != null &&
+                  vault.backupConfig!.stewards.isNotEmpty;
 
               return PopupMenuButton<String>(
                 itemBuilder: (context) {
@@ -151,7 +180,7 @@ class VaultDetailScreen extends ConsumerWidget {
           // Determine background color based on vault state
           // We are doing some stupidly complex background color logic here to make the screen
           // look nice in all the various states.
-          final backgroundColor = vault.state == VaultState.awaitingKey
+          final backgroundColor = vault.state == VaultState.awaitingShard
               ? Theme.of(context).scaffoldBackgroundColor
               : Theme.of(context).colorScheme.surfaceContainer;
 
@@ -165,13 +194,13 @@ class VaultDetailScreen extends ConsumerWidget {
                   child: SingleChildScrollView(
                     child: LayoutBuilder(
                       builder: (context, _) {
-                        // For awaitingKey state, fill remaining space with darker background
-                        final isAwaitingKey = vault.state == VaultState.awaitingKey;
+                        // For awaitingShard state, fill remaining space with darker background
+                        final isAwaitingShard = vault.state == VaultState.awaitingShard;
                         final viewportHeight = constraints.maxHeight;
 
                         return ConstrainedBox(
                           constraints: BoxConstraints(
-                            minHeight: isAwaitingKey ? viewportHeight : 0,
+                            minHeight: isAwaitingShard ? viewportHeight : 0,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

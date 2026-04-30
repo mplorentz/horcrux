@@ -25,7 +25,7 @@ class VaultOwnerDisplay extends ConsumerWidget {
       data: (currentPubkey) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
-        final isCurrentUser = currentPubkey != null && vault.isOwned(currentPubkey);
+        final isCurrentUser = currentPubkey != null && vault.isVaultOwner(currentPubkey);
 
         // Get owner display name
         final ownerDisplayName = isCurrentUser ? (vault.ownerName ?? 'You') : vault.ownerName;

@@ -9,6 +9,7 @@ import '../providers/key_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
 import 'login_service.dart';
+import 'recovery_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
 import 'shard_distribution_service.dart';
@@ -100,18 +101,6 @@ class NdkService {
   final List<String> _activeRelays = [];
 
   late final PublishService _publishService;
-
-  // Event streams for recovery-related events (breaking circular dependency)
-  final StreamController<RecoveryRequest> _recoveryRequestController =
-      StreamController<RecoveryRequest>.broadcast();
-  final StreamController<RecoveryResponseEvent> _recoveryResponseController =
-      StreamController<RecoveryResponseEvent>.broadcast();
-
-  /// Stream of incoming recovery requests
-  Stream<RecoveryRequest> get recoveryRequestStream => _recoveryRequestController.stream;
-
-  /// Stream of incoming recovery responses
-  Stream<RecoveryResponseEvent> get recoveryResponseStream => _recoveryResponseController.stream;
 
   NdkService({
     required Ref ref,
@@ -276,17 +265,22 @@ class NdkService {
     );
   }
 
-  /// Unwraps and routes a kind-1059 gift wrap received on an FCM foreground message
-  /// with inline `event_json` — same pipeline as relay subscription deliveries.
+  /// Unwraps and routes a kind-1059 gift wrap received via FCM (foreground delivery
+  /// or a notification tap) — same pipeline as relay subscription deliveries.
   ///
   /// Processing flows through [_handleIncomingNostrEvent] which dispatches to
-  /// the per-kind handlers; those handlers are responsible for surfacing any
-  /// user-facing local notification via [LocalNotificationService] (so the
-  /// foreground FCM path does not need its own fallback notification).
+  /// the per-kind handlers; those handlers surface user-facing local notifications
+  /// via [LocalNotificationService] (so the foreground FCM path does not need its
+  /// own fallback notification). Pass `allowLocalNotification: false` from the tap
+  /// path so the user does not see a second notification on top of the FCM one
+  /// they just acted on.
   ///
   /// No-ops when NDK cannot be initialized (no key). Large pushes that omit
   /// inline JSON are handled later by the tap / cold-start path.
-  Future<void> processGiftWrapFromForegroundPush(Nip01Event event) async {
+  Future<void> processGiftWrapFromForegroundPush(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     if (!_isInitialized) {
       try {
         await initialize();
@@ -299,7 +293,11 @@ class NdkService {
         return;
       }
     }
-    await _handleIncomingNostrEvent(event, relayUrl: _fcmForegroundPushRelayUrl);
+    await _handleIncomingNostrEvent(
+      event,
+      relayUrl: _fcmForegroundPushRelayUrl,
+      allowLocalNotification: allowLocalNotification,
+    );
   }
 
   /// Fetches a kind-1059 gift wrap by [eventIdHex] using [relayHints] first, then
@@ -380,20 +378,29 @@ class NdkService {
     }
   }
 
-  /// Best-effort recovery_request_id for navigation after a push — unwraps
-  /// once and reads inner JSON. Returns `null` when the inner kind is not a
-  /// recovery request or unwrap fails.
-  Future<String?> resolveRecoveryRequestIdForGiftWrap(
+  /// Best-effort recovery navigation target for a gift-wrapped event — unwraps
+  /// once and reads the inner JSON to surface both the inner [NostrKind] and
+  /// the `recovery_request_id` payload field, so push-tap callers can route to
+  /// the right recovery screen (request detail vs. recovery status).
+  ///
+  /// Supports inner kinds [NostrKind.recoveryRequest] (1338) and
+  /// [NostrKind.recoveryResponse] (1339). Returns `null` when the inner kind
+  /// is something else, the payload is missing the id, or unwrap fails.
+  Future<({NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
     Nip01Event giftWrap,
   ) async {
     await _ensureInitialized();
     if (_ndk == null) return null;
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
-      if (inner.kind != 1338) return null; // [NostrKind.recoveryRequest]
-      final m = json.decode(inner.content) as Map<String, dynamic>;
-      final id = m['recovery_request_id'] as String?;
-      return (id != null && id.isNotEmpty) ? id : null;
+      final kind = NostrKind.fromValue(inner.kind);
+      if (kind != NostrKind.recoveryRequest && kind != NostrKind.recoveryResponse) {
+        return null;
+      }
+      final payload = json.decode(inner.content) as Map<String, dynamic>;
+      final id = payload['recovery_request_id'] as String?;
+      if (id == null || id.isEmpty) return null;
+      return (kind: kind!, recoveryRequestId: id);
     } catch (e, st) {
       Log.debug('resolveRecoveryRequestIdForGiftWrap failed', e, st);
       return null;
@@ -412,9 +419,14 @@ class NdkService {
 
   /// Handle incoming Nostr events
   /// Routes to appropriate handler based on the inner kind.
+  ///
+  /// [allowLocalNotification] is propagated to handlers that surface OS
+  /// notifications; pass `false` from the FCM tap path so we do not double-notify
+  /// on top of the FCM-displayed notification the user already acted on.
   Future<void> _handleIncomingNostrEvent(
     Nip01Event event, {
     required String relayUrl,
+    bool allowLocalNotification = true,
   }) async {
     if (!await _processedEventStore.claimEvent(event.id)) {
       if (await _processedEventStore.contains(event.id)) {
@@ -426,7 +438,6 @@ class NdkService {
     try {
       Log.info('Received subscription Nostr event: ${event.id}');
 
-      // Unwrap the gift wrap event using NDK
       final unwrappedEvent = await _ndk!.giftWrap.fromGiftWrap(giftWrap: event);
 
       Log.info(
@@ -435,19 +446,30 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
-      // Route based on the inner event kind
       if (unwrappedEvent.kind == NostrKind.shardData.value) {
-        await _handleShardData(unwrappedEvent);
+        await _handleShardData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.recoveryRequest.value) {
-        await _handleRecoveryRequestData(unwrappedEvent);
+        await _handleRecoveryRequestData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.recoveryResponse.value) {
-        await _handleRecoveryResponseData(unwrappedEvent);
+        await _handleRecoveryResponseData(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.invitationAcceptance.value) {
         await _handleInvitationAcceptance(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.shardConfirmation.value) {
-        await _handleShardConfirmation(unwrappedEvent);
+        await _handleShardConfirmation(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.keyHolderRemoved.value) {
         await _handleKeyHolderRemoved(unwrappedEvent);
       } else {
@@ -463,22 +485,20 @@ class NdkService {
   }
 
   /// Handle incoming shard data (kind 1337)
-  Future<void> _handleShardData(Nip01Event event) async {
+  Future<void> _handleShardData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     try {
       Log.info('Processing shard data event: ${event.id}');
 
-      // Parse the shard data from the unwrapped content
       final shardJson = json.decode(event.content) as Map<String, dynamic>;
       var shardData = shardDataFromJson(shardJson);
 
-      // Set the nostrEventId from the unwrapped event ID
-      // This is needed for duplicate detection when the owner receives their own shard
       shardData = shardData.copyWith(nostrEventId: event.id);
 
       Log.debug('Shard data: $shardData');
 
-      // Store the shard data and send confirmation event
-      // This handles the complete invitation flow
       final vaultId = shardData.vaultId;
       if (vaultId == null || vaultId.isEmpty) {
         Log.error(
@@ -490,111 +510,128 @@ class NdkService {
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
 
-      await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
-            event: event,
-            shardData: shardData,
-          );
+      if (allowLocalNotification) {
+        await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+              event: event,
+              shardData: shardData,
+            );
+      }
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
     }
   }
 
   /// Handle incoming recovery request data (kind 1338)
-  Future<void> _handleRecoveryRequestData(Nip01Event event) async {
-    try {
-      // Parse the recovery request from the unwrapped content
-      final requestData = json.decode(event.content) as Map<String, dynamic>;
-      final senderPubkey = event.pubKey;
+  ///
+  /// Persists the request through [RecoveryService.processRecoveryRequest] so callers
+  /// that immediately read the request (e.g. the FCM cold-start tap path which
+  /// navigates as soon as [processGiftWrapFromForegroundPush] resolves) always observe
+  /// it. Errors propagate to [_handleIncomingNostrEvent] so a failed handler releases
+  /// its claim and is not durably marked processed.
+  Future<void> _handleRecoveryRequestData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
+    final requestData = json.decode(event.content) as Map<String, dynamic>;
+    final senderPubkey = event.pubKey;
 
-      // Create RecoveryRequest object (Nostr content uses snake_case keys).
-      final requestedAtRaw = requestData['requested_at'] as String?;
-      final expiresRaw = requestData['expires_at'] as String?;
-      final thresholdRaw = requestData['threshold'];
-      final threshold = thresholdRaw is int
-          ? thresholdRaw
-          : thresholdRaw is num
-              ? thresholdRaw.toInt()
-              : 1;
+    final requestedAtRaw = requestData['requested_at'] as String?;
+    final expiresRaw = requestData['expires_at'] as String?;
+    final thresholdRaw = requestData['threshold'];
+    final threshold = thresholdRaw is int
+        ? thresholdRaw
+        : thresholdRaw is num
+            ? thresholdRaw.toInt()
+            : 1;
 
-      final recoveryRequest = RecoveryRequest(
-        id: (requestData['recovery_request_id'] as String?) ?? event.id,
-        vaultId: requestData['vault_id'] as String,
-        initiatorPubkey: senderPubkey,
-        requestedAt: DateTime.parse(requestedAtRaw!),
-        status: RecoveryRequestStatus.sent,
-        threshold: threshold,
-        nostrEventId: event.id,
-        eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
-          event.createdAt * 1000,
-          isUtc: true,
-        ),
-        expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-        stewardResponses: {}, // Will be populated later
-        isPractice: requestData['is_practice'] as bool? ?? false,
-      );
+    final recoveryRequest = RecoveryRequest(
+      id: (requestData['recovery_request_id'] as String?) ?? event.id,
+      vaultId: requestData['vault_id'] as String,
+      initiatorPubkey: senderPubkey,
+      requestedAt: DateTime.parse(requestedAtRaw!),
+      status: RecoveryRequestStatus.sent,
+      threshold: threshold,
+      nostrEventId: event.id,
+      eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
+        event.createdAt * 1000,
+        isUtc: true,
+      ),
+      expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
+      stewardResponses: {},
+      isPractice: requestData['is_practice'] as bool? ?? false,
+    );
 
-      // Emit recovery request to stream (RecoveryService will listen)
-      _recoveryRequestController.add(recoveryRequest);
+    await _ref.read(recoveryServiceProvider).processRecoveryRequest(
+          recoveryRequest,
+          allowLocalNotification: allowLocalNotification,
+        );
 
-      Log.info('Emitted incoming recovery request to stream: ${event.id}');
-    } catch (e) {
-      Log.error('Error handling recovery request data', e);
-    }
+    Log.info('Persisted incoming recovery request: ${event.id}');
   }
 
   /// Handle incoming recovery response data (kind 1339)
-  Future<void> _handleRecoveryResponseData(Nip01Event event) async {
-    try {
-      // Parse the recovery response from the unwrapped content
-      final responseData = json.decode(event.content) as Map<String, dynamic>;
-      final senderPubkey = event.pubKey;
+  ///
+  /// Persists the response through [RecoveryService.processRecoveryResponse] so the
+  /// FCM cold-start tap path (which navigates as soon as
+  /// [processGiftWrapFromForegroundPush] resolves) sees the updated request. Errors
+  /// propagate to [_handleIncomingNostrEvent] so a failed handler releases its claim
+  /// and is not durably marked processed.
+  Future<void> _handleRecoveryResponseData(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
+    final responseData = json.decode(event.content) as Map<String, dynamic>;
+    final senderPubkey = event.pubKey;
 
-      final recoveryRequestId = responseData['recovery_request_id'] as String;
-      final vaultId = responseData['vault_id'] as String;
-      final approved = responseData['approved'] as bool;
+    final recoveryRequestId = responseData['recovery_request_id'] as String;
+    final vaultId = responseData['vault_id'] as String;
+    final approved = responseData['approved'] as bool;
 
-      Log.info(
-        'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
-      );
+    Log.info(
+      'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
+    );
 
-      ShardData? shardData;
+    ShardData? shardData;
 
-      // If approved, extract and store the shard data FOR RECOVERY
-      final shardPayload = responseData['shard_data'];
-      if (approved && shardPayload != null) {
-        final shardDataJson = shardPayload as Map<String, dynamic>;
-        shardData = shardDataFromJson(shardDataJson);
+    final shardPayload = responseData['shard_data'];
+    if (approved && shardPayload != null) {
+      final shardDataJson = shardPayload as Map<String, dynamic>;
+      shardData = shardDataFromJson(shardDataJson);
 
-        // Store as a recovery shard (not a steward shard)
-        final vaultShareService = _ref.read(vaultShareServiceProvider);
-        await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
-
-        Log.info(
-          'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',
-        );
-      }
-
-      // Emit recovery response to stream (RecoveryService will listen)
-      final responseEvent = RecoveryResponseEvent(
-        recoveryRequestId: recoveryRequestId,
-        vaultId: vaultId,
-        senderPubkey: senderPubkey,
-        approved: approved,
-        shardData: shardData,
-        nostrEventId: event.id,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          event.createdAt * 1000,
-          isUtc: true,
-        ),
-      );
-      _recoveryResponseController.add(responseEvent);
+      final vaultShareService = _ref.read(vaultShareServiceProvider);
+      await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
 
       Log.info(
-        'Emitted recovery response to stream: $recoveryRequestId from $senderPubkey',
+        'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',
       );
-    } catch (e) {
-      Log.error('Error handling recovery response data', e);
     }
+
+    final responseEvent = RecoveryResponseEvent(
+      recoveryRequestId: recoveryRequestId,
+      vaultId: vaultId,
+      senderPubkey: senderPubkey,
+      approved: approved,
+      shardData: shardData,
+      nostrEventId: event.id,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        event.createdAt * 1000,
+        isUtc: true,
+      ),
+    );
+
+    await _ref.read(recoveryServiceProvider).processRecoveryResponse(
+          recoveryRequestId,
+          senderPubkey,
+          approved,
+          shardData: shardData,
+          nostrEventId: event.id,
+          recoveryResponseSourceEvent: responseEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
+
+    Log.info(
+      'Persisted recovery response: $recoveryRequestId from $senderPubkey',
+    );
   }
 
   /// Handle incoming invitation acceptance event (kind 1340)
@@ -625,7 +662,10 @@ class NdkService {
   }
 
   /// Handle incoming shard confirmation event (kind 1342)
-  Future<void> _handleShardConfirmation(Nip01Event event) async {
+  Future<void> _handleShardConfirmation(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     try {
       Log.info('Processing shard confirmation event: ${event.id}');
       Log.debug('Shard confirmation event tags: ${event.tags}');
@@ -638,7 +678,7 @@ class NdkService {
       Log.info('Successfully processed shard confirmation event: ${event.id}');
 
       final vaultId = _firstTagValue(event.tags, 'vault_id');
-      if (vaultId != null) {
+      if (vaultId != null && allowLocalNotification) {
         await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
               event: event,
               vaultId: vaultId,
@@ -725,66 +765,6 @@ class NdkService {
       return publishedEventIds.isNotEmpty ? publishedEventIds.first : null;
     } catch (e) {
       Log.error('Error publishing recovery request', e);
-      return null;
-    }
-  }
-
-  /// Publish a recovery response
-  Future<String?> publishRecoveryResponse({
-    required String initiatorPubkey,
-    required String recoveryRequestId,
-    required bool approved,
-    String? shardDataJson,
-  }) async {
-    if (!_isInitialized || _ndk == null) {
-      throw Exception('NDK not initialized');
-    }
-
-    try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair == null) {
-        throw Exception('No key pair available');
-      }
-
-      // Create response payload
-      final responsePayload = {
-        'recoveryRequestId': recoveryRequestId,
-        'approved': approved,
-        'shardData': shardDataJson,
-        'respondedAt': DateTime.now().toIso8601String(),
-      };
-
-      final responseJson = json.encode(responsePayload);
-
-      // Encrypt for initiator
-      final encryptedContent = await _loginService.encryptForRecipient(
-        plaintext: responseJson,
-        recipientPubkey: initiatorPubkey,
-      );
-
-      // Create kind 4 DM event
-      final dmEvent = Nip01Event(
-        kind: NostrKind.recoveryResponse.value,
-        pubKey: keyPair.publicKey,
-        content: encryptedContent,
-        tags: [
-          ['p', initiatorPubkey], // Send to initiator
-          ['e', recoveryRequestId], // Reference to original request
-        ],
-        createdAt: secondsSinceEpoch(),
-      );
-
-      // Sign and broadcast the event
-      await _ndk!.accounts.sign(dmEvent);
-      _ndk!.broadcast.broadcast(
-        nostrEvent: dmEvent,
-        specificRelays: _activeRelays.isNotEmpty ? _activeRelays : null,
-      );
-
-      Log.info('Published recovery response: ${dmEvent.id}');
-      return dmEvent.id;
-    } catch (e) {
-      Log.error('Error publishing recovery response', e);
       return null;
     }
   }
@@ -984,10 +964,6 @@ class NdkService {
   Future<void> dispose() async {
     // Stop listening to all subscriptions first
     await closeSubscriptions();
-
-    // Close event streams
-    await _recoveryRequestController.close();
-    await _recoveryResponseController.close();
 
     // Dispose publish service
     await _publishService.dispose();

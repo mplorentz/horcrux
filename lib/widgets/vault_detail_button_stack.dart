@@ -36,9 +36,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),
           data: (currentPubkey) {
-            final isOwned = currentPubkey != null && vault.isOwned(currentPubkey);
-            final isSteward =
-                currentPubkey != null && !vault.isOwned(currentPubkey) && vault.shards.isNotEmpty;
+            final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+            final isSteward = currentPubkey != null &&
+                !vault.isVaultOwner(currentPubkey) &&
+                vault.shards.isNotEmpty;
 
             // Watch vault for Generate and Distribute Keys button
             final vaultAsync = ref.watch(vaultProvider(vaultId));
@@ -72,7 +73,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     }
 
                     // Edit Vault Button (only show if user owns the vault)
-                    if (isOwned) {
+                    if (isVaultOwner) {
                       // Check if vault has content
                       final hasContent = currentVault?.content != null;
 
@@ -205,7 +206,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
                     // Owner-steward state: owner has deleted content but kept shards
                     // Show special buttons for recovery
-                    final isOwnerSteward = isOwned &&
+                    final isOwnerSteward = isVaultOwner &&
                         currentVault != null &&
                         currentVault.content == null &&
                         currentVault.shards.isNotEmpty;
@@ -243,11 +244,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
-                    // Don't show recovery buttons when steward is waiting for their key (awaitingKey state)
-                    if (!isOwned &&
+                    // Don't show recovery buttons when steward is waiting for their shard
+                    if (!isVaultOwner &&
                         !isOwnerSteward &&
                         currentVault != null &&
-                        currentVault.state != VaultState.awaitingKey) {
+                        currentVault.state != VaultState.awaitingShard) {
                       // Show "Manage Recovery" if user initiated active recovery
                       if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
                         buttons.add(

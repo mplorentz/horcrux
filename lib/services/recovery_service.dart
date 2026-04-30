@@ -82,69 +82,6 @@ class RecoveryService {
     this._notificationService,
   ) {
     _loadViewedNotificationIds();
-    _setupNdkStreamListeners();
-  }
-
-  /// Set up listeners for incoming NDK events
-  void _setupNdkStreamListeners() {
-    _ndkService.recoveryRequestStream.listen(
-      _onIncomingRecoveryRequestFromNdk,
-      onError: (error) {
-        Log.error('Error in recovery request stream', error);
-      },
-    );
-
-    _ndkService.recoveryResponseStream.listen(
-      _onIncomingRecoveryResponseFromNdk,
-      onError: (error) {
-        Log.error('Error in recovery response stream', error);
-      },
-    );
-
-    Log.info('RecoveryService listening to NdkService event streams');
-  }
-
-  Future<void> _onIncomingRecoveryRequestFromNdk(RecoveryRequest recoveryRequest) async {
-    final id = recoveryRequest.nostrEventId;
-    if (id != null && await _processedStore.contains(id)) {
-      Log.debug('Skipping already-processed recovery request event $id');
-      return;
-    }
-    try {
-      await processRecoveryRequest(recoveryRequest);
-      if (id != null) {
-        await _processedStore.recordProcessed(id);
-      }
-    } catch (e, st) {
-      Log.error(
-        'Error processing incoming recovery request from stream',
-        e,
-        st,
-      );
-    }
-  }
-
-  Future<void> _onIncomingRecoveryResponseFromNdk(RecoveryResponseEvent responseEvent) async {
-    final id = responseEvent.nostrEventId;
-    if (id != null && await _processedStore.contains(id)) {
-      Log.debug('Skipping already-processed recovery response event $id');
-      return;
-    }
-    try {
-      await processRecoveryResponse(
-        responseEvent.recoveryRequestId,
-        responseEvent.senderPubkey,
-        responseEvent.approved,
-        shardData: responseEvent.shardData,
-        nostrEventId: responseEvent.nostrEventId,
-        recoveryResponseSourceEvent: responseEvent,
-      );
-      if (id != null) {
-        await _processedStore.recordProcessed(id);
-      }
-    } catch (e, st) {
-      Log.error('Error processing recovery response from stream', e, st);
-    }
   }
 
   /// Dispose resources
@@ -476,30 +413,34 @@ class RecoveryService {
   /// Unlike [initiateRecovery], this does not create a new request id—it persists an event
   /// the relays delivered. Since events are immutable, we skip if this request id already exists locally.
   ///
-  /// After a new request is persisted, may show a local OS notification per [RecoveryNotificationPolicy].
-  Future<void> processRecoveryRequest(RecoveryRequest request) async {
+  /// After a new request is persisted, may show a local OS notification per
+  /// [RecoveryNotificationPolicy]. Pass `allowLocalNotification: false` when the
+  /// caller has already shown the user a notification for this event (e.g. an FCM
+  /// push the user just tapped) so we do not double-notify.
+  Future<void> processRecoveryRequest(
+    RecoveryRequest request, {
+    bool allowLocalNotification = true,
+  }) async {
     await initialize();
 
-    // Check if request already exists in vault (source of truth)
     final existingRequests = await repository.getRecoveryRequestsForVault(
       request.vaultId,
     );
     final existingRequest = existingRequests.where((r) => r.id == request.id).firstOrNull;
 
     if (existingRequest != null) {
-      // Since events are immutable, skip processing if we already have this request locally
       Log.info(
         'Ignoring incoming recovery request ${request.id} - already exists locally (status: ${existingRequest.status.name})',
       );
       return;
     }
 
-    // Add new request to vault
     await repository.addRecoveryRequestToVault(request.vaultId, request);
     Log.info('Added incoming recovery request ${request.id}');
 
-    // Emit notification update
     await _emitNotificationUpdate();
+
+    if (!allowLocalNotification) return;
 
     final firstOpen = await getFirstAppOpenUtc();
     final myPubkey = await _ndkService.getCurrentPubkey();
@@ -584,7 +525,10 @@ class RecoveryService {
   /// Since events are immutable, we skip processing if the response already exists.
   ///
   /// When [recoveryResponseSourceEvent] is set (relay-delivered event), may show a local OS
-  /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it.
+  /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it. Pass
+  /// `allowLocalNotification: false` when the caller has already shown the user a
+  /// notification for this event (e.g. an FCM push the user just tapped) so we do
+  /// not double-notify.
   Future<void> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
@@ -592,6 +536,7 @@ class RecoveryService {
     ShardData? shardData,
     String? nostrEventId,
     RecoveryResponseEvent? recoveryResponseSourceEvent,
+    bool allowLocalNotification = true,
   }) async {
     await initialize();
 
@@ -670,7 +615,7 @@ class RecoveryService {
     // Emit notification update to refresh banner
     await _emitNotificationUpdate();
 
-    if (recoveryResponseSourceEvent != null) {
+    if (recoveryResponseSourceEvent != null && allowLocalNotification) {
       final firstOpen = await getFirstAppOpenUtc();
       final myPubkey = await _ndkService.getCurrentPubkey();
       if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(

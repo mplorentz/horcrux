@@ -10,7 +10,6 @@ import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase_options.dart';
-import '../models/nostr_kinds.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
 import 'logger.dart';
@@ -50,7 +49,6 @@ class PushNotificationReceiver {
 
   static const _fcmTokenKey = 'fcm_device_token';
   static const _fcmTokenUpdatedAtKey = 'fcm_device_token_updated_at';
-  static const _registeredFcmTokenKey = 'fcm_registered_token';
 
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
@@ -61,8 +59,16 @@ class PushNotificationReceiver {
   StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
   String? _cachedToken;
-  String? _lastRegisteredToken;
   bool _initialized = false;
+
+  /// FCM tap [RemoteMessage.messageId]s already routed by [handleNotificationTap].
+  ///
+  /// On Android cold-start, FCM dispatches the same tap through both
+  /// [FirebaseMessaging.getInitialMessage] (read by [_processLaunchNotificationIfAny])
+  /// and [FirebaseMessaging.onMessageOpenedApp]. Without dedupe each invocation
+  /// would call [LocalNotificationService.navigateForKind] and we'd push the same
+  /// screen twice. Process-scoped only — recreated on app restart.
+  final Set<String> _handledOpenMessageIds = <String>{};
 
   PushNotificationReceiver({
     required LocalNotificationService localNotifications,
@@ -131,7 +137,7 @@ class PushNotificationReceiver {
         Log.warning('PushNotificationReceiver: optIn aborted (no FCM token)');
         return false;
       }
-      await _registerWithNotifierIfNeeded(force: true);
+      await _registerWithNotifierIfNeeded();
       await _setOptInFlag(true);
       await _notifierService.syncConsentList();
       await _processLaunchNotificationIfAny();
@@ -173,7 +179,6 @@ class PushNotificationReceiver {
     await _openedAppSubscription?.cancel();
     _openedAppSubscription = null;
     _cachedToken = null;
-    _lastRegisteredToken = null;
     _initialized = false;
 
     Log.info('PushNotificationReceiver: user opted out of push notifications');
@@ -232,7 +237,6 @@ class PushNotificationReceiver {
     try {
       final prefs = await SharedPreferences.getInstance();
       _cachedToken = prefs.getString(_fcmTokenKey);
-      _lastRegisteredToken = prefs.getString(_registeredFcmTokenKey);
       if (_cachedToken != null) {
         Log.debug('Loaded cached FCM token from SharedPreferences');
       }
@@ -299,7 +303,17 @@ class PushNotificationReceiver {
     );
   }
 
-  Future<void> _registerWithNotifierIfNeeded({bool force = false}) async {
+  /// Re-registers the cached FCM token with horcrux-notifier on every call.
+  ///
+  /// We deliberately do **not** dedupe on the last-registered token: the
+  /// notifier server evicts stale registrations after a quiet period, so
+  /// every app launch needs to refresh our entry to keep push delivery
+  /// healthy. Token-refresh and opt-in flows all funnel through here too;
+  /// they're already infrequent enough that the extra HTTP call is fine.
+  ///
+  /// No-ops when no FCM token is cached or the current platform isn't
+  /// notifier-supported (web / Linux / Windows).
+  Future<void> _registerWithNotifierIfNeeded() async {
     final token = _cachedToken;
     if (token == null || token.isEmpty) return;
 
@@ -311,17 +325,7 @@ class PushNotificationReceiver {
       return;
     }
 
-    if (!force && token == _lastRegisteredToken) return;
-
     await _notifierService.register(fcmToken: token, platform: platform);
-    _lastRegisteredToken = token;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_registeredFcmTokenKey, token);
-    } catch (e, st) {
-      Log.warning('Failed to persist registered FCM token', e, st);
-    }
   }
 
   Future<void> _setOptInFlag(bool value) async {
@@ -334,7 +338,6 @@ class PushNotificationReceiver {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_fcmTokenKey);
       await prefs.remove(_fcmTokenUpdatedAtKey);
-      await prefs.remove(_registeredFcmTokenKey);
     } catch (e, st) {
       Log.warning('Failed to clear persisted FCM token state', e, st);
     }
@@ -356,7 +359,7 @@ class PushNotificationReceiver {
     _openedAppSubscription?.cancel();
     _openedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
       (RemoteMessage message) {
-        unawaited(_onPushNotificationOpened(message));
+        unawaited(handleNotificationTap(message));
       },
       onError: (Object error, StackTrace stackTrace) {
         Log.warning('FCM onMessageOpenedApp error', error, stackTrace);
@@ -371,16 +374,30 @@ class PushNotificationReceiver {
     try {
       final initial = await messaging.getInitialMessage();
       if (initial != null) {
-        await _onPushNotificationOpened(initial);
+        await handleNotificationTap(initial);
       }
     } catch (e, st) {
       Log.warning('PushNotificationReceiver: getInitialMessage failed', e, st);
     }
   }
 
-  Future<void> _onPushNotificationOpened(RemoteMessage message) async {
+  /// Single entry point for an FCM notification tap, used by both the
+  /// [FirebaseMessaging.onMessageOpenedApp] subscription (background-state taps)
+  /// and [FirebaseMessaging.getInitialMessage] (cold-start taps). Android FCM
+  /// is known to dispatch the same tap through both, so this method dedupes by
+  /// [RemoteMessage.messageId] to avoid double-processing and double-navigation.
+  ///
+  /// Public so unit tests can drive it directly with a synthetic [RemoteMessage].
+  @visibleForTesting
+  Future<void> handleNotificationTap(RemoteMessage message) async {
+    final messageId = message.messageId;
+    if (messageId != null && !_handledOpenMessageIds.add(messageId)) {
+      Log.debug('FCM notification open: ignoring duplicate dispatch for $messageId');
+      return;
+    }
+
     Log.info(
-      'FCM notification open: messageId=${message.messageId}, data=${message.data}',
+      'FCM notification open: messageId=$messageId, data=${message.data}',
     );
 
     Nip01Event? giftWrap;
@@ -410,20 +427,29 @@ class PushNotificationReceiver {
     }
 
     final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
-    final recoveryRequestId = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
+    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
-      await _ndkService.processGiftWrapFromForegroundPush(giftWrap);
+      // Tap path: the user already saw and acted on the FCM notification, so
+      // any per-kind handler must not surface a second local OS notification.
+      await _ndkService.processGiftWrapFromForegroundPush(
+        giftWrap,
+        allowLocalNotification: false,
+      );
     } catch (e, st) {
       Log.warning('FCM tap: gift wrap processing failed', e, st);
     }
 
-    if (recoveryRequestId != null) {
+    if (recoveryTarget != null) {
       final navigated = await _localNotifications.navigateForKind(
-        NostrKind.recoveryRequest,
-        recoveryRequestId,
+        recoveryTarget.kind,
+        recoveryTarget.recoveryRequestId,
+        vaultId: vaultId,
       );
       if (navigated) return;
-      Log.warning('FCM tap: recovery request $recoveryRequestId not found, falling back to vault');
+      Log.warning(
+        'FCM tap: ${recoveryTarget.kind.name} ${recoveryTarget.recoveryRequestId} '
+        'navigation failed, falling back to vault',
+      );
     }
     if (vaultId != null) {
       await _localNotifications.navigateToVault(vaultId);

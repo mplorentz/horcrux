@@ -87,7 +87,7 @@ class VaultMetadataSection extends ConsumerWidget {
     Vault vault,
     String? currentPubkey,
   ) {
-    final isOwner = currentPubkey == vault.ownerPubkey;
+    final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
     final threshold = vault.mostRecentShard?.threshold;
     final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
       name: vault.ownerName,
@@ -101,8 +101,8 @@ class VaultMetadataSection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isOwner) ...[
-              // Owner state
+            if (isVaultOwner) ...[
+              // Vault owner viewing their own vault
               Row(
                 children: [
                   Icon(
@@ -117,7 +117,7 @@ class VaultMetadataSection extends ConsumerWidget {
                 ],
               ),
             ] else ...[
-              // Key holder state
+              // Recovery key holder (not owner)
               Row(
                 children: [
                   Icon(

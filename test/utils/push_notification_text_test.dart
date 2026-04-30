@@ -48,7 +48,7 @@ void main() {
       expect(result!.title, 'Vault updated');
       expect(
         result.body,
-        "Open Horcrux to save the latest data for Alice's vault Family Vault",
+        'Open Horcrux to save the latest data for Alice\'s vault "Family Vault"',
       );
     });
 
@@ -116,7 +116,7 @@ void main() {
       expect(result!.title, 'Steward confirmed');
       expect(
         result.body,
-        'Bob has confirmed they have the latest data for vault Family Vault',
+        'Bob has confirmed they have the latest data for vault "Family Vault"',
       );
     });
 
