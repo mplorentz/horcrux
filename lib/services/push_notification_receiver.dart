@@ -6,7 +6,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,10 +53,6 @@ class PushNotificationReceiver {
   static const _fcmTokenKey = 'fcm_device_token';
   static const _fcmTokenUpdatedAtKey = 'fcm_device_token_updated_at';
   static const _registeredFcmTokenKey = 'fcm_registered_token';
-
-  /// Native channel implemented in `ios/Runner/AppDelegate.swift` and
-  /// `macos/Runner/AppDelegate.swift` to trigger APNs registration on demand.
-  static const _pushChannel = MethodChannel('horcrux/push');
 
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
@@ -131,13 +126,6 @@ class PushNotificationReceiver {
         Log.info('PushNotificationReceiver: notification permission not granted');
         return false;
       }
-
-      // The Firebase plugin only calls registerForRemoteNotifications once at
-      // app launch. If the user previously denied notifications, that initial
-      // registration produced no APNs token; re-enabling in system Settings
-      // does not automatically re-register. Force a fresh APNs registration
-      // now that permission is granted so getAPNSToken can return a token.
-      await _registerForRemoteNotificationsIfNeeded();
 
       await _fetchAndStoreToken();
       final tokenAfterFetch = _cachedToken;
@@ -260,14 +248,12 @@ class PushNotificationReceiver {
     if (messaging == null) return;
     try {
       // On iOS/macOS getToken returns null until APNs has been registered, so
-      // we ensure APNs token availability first. After registerForRemoteNotifications,
-      // the token arrives asynchronously via the system delegate callback, so
-      // poll briefly before giving up.
+      // we ensure APNs token availability first.
       if (Platform.isIOS || Platform.isMacOS) {
-        final apns = await _waitForApnsToken(messaging);
+        final apns = await messaging.getAPNSToken();
         if (apns == null) {
           Log.warning(
-            'APNs token not available after polling; FCM token fetch will likely fail',
+            'APNs token not yet available; FCM token will be fetched after APNs registration',
           );
         }
       }
@@ -282,40 +268,6 @@ class PushNotificationReceiver {
     } catch (e, st) {
       Log.warning('Failed to fetch FCM token', e, st);
     }
-  }
-
-  /// Asks the platform to (re)register with APNs so subsequent calls to
-  /// [FirebaseMessaging.getAPNSToken] can return a token. No-ops on platforms
-  /// other than iOS/macOS.
-  Future<void> _registerForRemoteNotificationsIfNeeded() async {
-    if (!Platform.isIOS && !Platform.isMacOS) return;
-    try {
-      await _pushChannel.invokeMethod<void>('registerForRemoteNotifications');
-    } on MissingPluginException catch (e, st) {
-      Log.warning(
-        'PushNotificationReceiver: horcrux/push channel unavailable; APNs registration may be stale',
-        e,
-        st,
-      );
-    } catch (e, st) {
-      Log.warning(
-        'PushNotificationReceiver: registerForRemoteNotifications invocation failed',
-        e,
-        st,
-      );
-    }
-  }
-
-  /// Polls [FirebaseMessaging.getAPNSToken] briefly to give the system delegate
-  /// callback time to deliver the token after [registerForRemoteNotifications].
-  Future<String?> _waitForApnsToken(FirebaseMessaging messaging) async {
-    String? apns;
-    for (var i = 0; i < 20; i++) {
-      apns = await messaging.getAPNSToken();
-      if (apns != null && apns.isNotEmpty) return apns;
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-    }
-    return apns;
   }
 
   Future<void> _persistToken(String fcmToken) async {
