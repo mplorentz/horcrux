@@ -82,10 +82,14 @@ class LocalNotificationService {
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
+    const linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open notification',
+    );
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
       macOS: darwinSettings,
+      linux: linuxSettings,
     );
 
     await _plugin.initialize(
@@ -352,19 +356,27 @@ class LocalNotificationService {
       priority: Priority.high,
     );
     const darwinDetails = DarwinNotificationDetails();
+    const linuxDetails = LinuxNotificationDetails();
     const details = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,
+      linux: linuxDetails,
     );
 
-    await _plugin.show(
-      _notificationIdFromEpochAndCounter(),
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    try {
+      await _plugin.show(
+        _notificationIdFromEpochAndCounter(),
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e, st) {
+      // Showing notifications is best-effort (e.g. Linux without
+      // org.freedesktop.Notifications). Must not fail vault/Nostr handling.
+      Log.debug('Skipping local notification (display unavailable)', e, st);
+    }
   }
 
   void _onNotificationTapped(NotificationResponse response) {

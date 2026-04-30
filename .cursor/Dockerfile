@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     pkg-config \
     clang \
+    # linux/CMakeLists.txt pins gcc-12/g++-12
+    gcc-12 \
+    g++-12 \
     # C++ standard library development files
     libstdc++-12-dev \
     # Linux desktop GUI development libraries (required by Flutter CMakeLists.txt)
@@ -29,9 +32,12 @@ RUN apt-get update && apt-get install -y \
     libcairo2-dev \
     libgdk-pixbuf2.0-dev \
     libatk1.0-dev \
-    # Required by flutter_secure_storage_linux plugin
+    # Required by flutter_secure_storage_linux plugin (build + runtime libsecret)
     libsecret-1-dev \
     libjsoncpp-dev \
+    # Secret Service for libsecret: session D-Bus + gnome-keyring (headless Docker)
+    dbus-x11 \
+    gnome-keyring \
     # Linux desktop GUI runtime libraries
     libglu1-mesa \
     libx11-xcb1 \
@@ -50,6 +56,8 @@ RUN apt-get update && apt-get install -y \
     libcairo-gobject2 \
     libgtk-3-0 \
     libgdk-pixbuf2.0-0 \
+    # Desktop notifications (org.freedesktop.Notifications) for flutter_local_notifications
+    notification-daemon \
     # Virtual display for headless operation
     xvfb \
     # VNC server for remote desktop access

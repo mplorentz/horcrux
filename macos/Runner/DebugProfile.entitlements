@@ -18,5 +18,7 @@
 	<array>
 		<string>$(AppIdentifierPrefix)group.flutter.secure.storage</string>
 	</array>
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>
