@@ -33,21 +33,21 @@ class VaultCard extends ConsumerWidget {
       data: (pubkey) => pubkey,
       orElse: () => null,
     );
-    final isOwner =
-        currentPubkey != null && vault.isOwned(currentPubkey);
+    final isVaultOwner =
+        currentPubkey != null && vault.isVaultOwner(currentPubkey);
 
-    // Steward state uses the key icon unless the current user owns the vault.
+    // [VaultState.holdingShard] uses the key icon unless the current user owns the vault.
     IconData stateIcon;
     Color? iconColor;
 
     switch (vault.state) {
-      case VaultState.owned:
+      case VaultState.unlocked:
         stateIcon = Icons.lock_open;
         break;
-      case VaultState.steward:
-        stateIcon = isOwner ? Icons.lock_open : Icons.key;
+      case VaultState.holdingShard:
+        stateIcon = isVaultOwner ? Icons.lock_open : Icons.key;
         break;
-      case VaultState.awaitingKey:
+      case VaultState.awaitingShard:
         stateIcon = Icons.hourglass_empty;
         break;
     }

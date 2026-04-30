@@ -46,7 +46,7 @@ Future<void> maybePromptOwnerForVaultPush({
     if (vault == null || !vault.pushEnabled) return;
 
     final currentPubkey = await ref.read(currentPublicKeyProvider.future);
-    if (currentPubkey == null || !vault.isOwned(currentPubkey)) return;
+    if (currentPubkey == null || !vault.isVaultOwner(currentPubkey)) return;
 
     final pushReceiver = ref.read(pushNotificationReceiverProvider);
     if (await pushReceiver.isOptedIn()) {

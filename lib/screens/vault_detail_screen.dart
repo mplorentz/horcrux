@@ -124,9 +124,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
             data: (currentPubkey) {
-              final isOwned = currentPubkey != null && vault.isOwned(currentPubkey);
+              final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
               final canRedistribute =
-                  isOwned && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty;
+                  isVaultOwner && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty;
 
               return PopupMenuButton<String>(
                 itemBuilder: (context) {
@@ -179,7 +179,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           // Determine background color based on vault state
           // We are doing some stupidly complex background color logic here to make the screen
           // look nice in all the various states.
-          final backgroundColor = vault.state == VaultState.awaitingKey
+          final backgroundColor = vault.state == VaultState.awaitingShard
               ? Theme.of(context).scaffoldBackgroundColor
               : Theme.of(context).colorScheme.surfaceContainer;
 
@@ -193,13 +193,13 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                   child: SingleChildScrollView(
                     child: LayoutBuilder(
                       builder: (context, _) {
-                        // For awaitingKey state, fill remaining space with darker background
-                        final isAwaitingKey = vault.state == VaultState.awaitingKey;
+                        // For awaitingShard state, fill remaining space with darker background
+                        final isAwaitingShard = vault.state == VaultState.awaitingShard;
                         final viewportHeight = constraints.maxHeight;
 
                         return ConstrainedBox(
                           constraints: BoxConstraints(
-                            minHeight: isAwaitingKey ? viewportHeight : 0,
+                            minHeight: isAwaitingShard ? viewportHeight : 0,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
