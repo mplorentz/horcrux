@@ -82,10 +82,14 @@ class LocalNotificationService {
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
+    const linuxSettings = LinuxInitializationSettings(
+      defaultActionName: 'Open notification',
+    );
     const settings = InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
       macOS: darwinSettings,
+      linux: linuxSettings,
     );
 
     await _plugin.initialize(
@@ -352,10 +356,12 @@ class LocalNotificationService {
       priority: Priority.high,
     );
     const darwinDetails = DarwinNotificationDetails();
+    const linuxDetails = LinuxNotificationDetails();
     const details = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,
+      linux: linuxDetails,
     );
 
     await _plugin.show(
