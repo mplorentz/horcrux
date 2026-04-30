@@ -188,12 +188,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           buttons.add(
                             RowButtonConfig(
                               onPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (context) =>
-                                      PracticeRecoveryInfoScreen(vaultId: vaultId),
+                                // Use a full-screen route, not showModalBottomSheet,
+                                // so the AppBar gets normal Scaffold safe-area
+                                // insets on edge-to-edge Android devices.
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    fullscreenDialog: true,
+                                    builder: (_) => PracticeRecoveryInfoScreen(
+                                      vaultId: vaultId,
+                                    ),
+                                  ),
                                 );
                               },
                               icon: Icons.school,
