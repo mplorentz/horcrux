@@ -4,7 +4,6 @@ import '../models/vault.dart';
 import '../models/backup_config.dart';
 import '../models/backup_status.dart';
 import '../providers/key_provider.dart';
-import '../providers/recovery_provider.dart';
 import '../screens/recovery_status_screen.dart';
 
 /// Status variant enum for internal use
@@ -48,7 +47,6 @@ class VaultStatusBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
-    final recoveryStatusAsync = ref.watch(recoveryStatusProvider(vault.id));
 
     return currentPubkeyAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -57,43 +55,39 @@ class VaultStatusBanner extends ConsumerWidget {
         final isOwner = currentPubkey != null && vault.isOwned(currentPubkey);
         final isSteward = currentPubkey != null && !vault.isOwned(currentPubkey);
 
-        // Only show "Recovery in progress" if the current user initiated an active recovery
-        // Use the same recoveryStatusProvider that the button stack uses
-        return recoveryStatusAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
-          data: (recoveryStatus) {
-            if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
-              final isPractice = recoveryStatus.activeRecoveryRequest?.isPractice ?? false;
-              final statusData = _StatusData(
-                headline: isPractice ? 'Practice recovery in progress' : 'Recovery in progress',
-                subtext: isPractice ? 'Tap to manage practice recovery' : 'Tap to manage recovery',
-                icon: Icons.refresh,
-                accentColor: const Color(0xFF7A4A2F), // Umber
-                variant: _StatusVariant.recoveryInProgress,
-              );
-              return _buildBanner(
+        // Show "Recovery in progress" only when the CURRENT user has their own
+        // manageable recovery on this vault. Per-user exclusivity allows other
+        // initiators to hold their own concurrent sessions on the same vault,
+        // and `recoveryStatusProvider` only surfaces the most-recent request
+        // regardless of initiator -- so we resolve THIS user's session through
+        // `Vault.manageableRecoveryFor`, mirroring the button stack.
+        final myRecovery = vault.manageableRecoveryFor(currentPubkey);
+        if (myRecovery != null) {
+          final isPractice = myRecovery.isPractice;
+          final statusData = _StatusData(
+            headline: isPractice ? 'Practice recovery in progress' : 'Recovery in progress',
+            subtext: isPractice ? 'Tap to manage practice recovery' : 'Tap to manage recovery',
+            icon: Icons.refresh,
+            accentColor: const Color(0xFF7A4A2F), // Umber
+            variant: _StatusVariant.recoveryInProgress,
+          );
+          return _buildBanner(
+            context,
+            statusData,
+            isOwner,
+            isSteward,
+            onTap: () {
+              Navigator.push(
                 context,
-                statusData,
-                isOwner,
-                isSteward,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RecoveryStatusScreen(
-                        recoveryRequestId: recoveryStatus.activeRecoveryRequest!.id,
-                      ),
-                    ),
-                  );
-                },
+                MaterialPageRoute(
+                  builder: (context) => RecoveryStatusScreen(recoveryRequestId: myRecovery.id),
+                ),
               );
-            }
+            },
+          );
+        }
 
-            // Continue with normal status display
-            return _buildNormalStatus(context, isOwner, isSteward, vault);
-          },
-        );
+        return _buildNormalStatus(context, isOwner, isSteward, vault);
       },
     );
   }
