@@ -80,6 +80,12 @@ class ProcessedNostrEventStore {
 
   Timer? _persistenceDebounceTimer;
 
+  /// Set true by [clearAll]; cleared by the next state-mutating call. Used to
+  /// short-circuit [flushToDisk] so a dispose-time flush after a logout /
+  /// corruption wipe does not resurrect the cursors file from the now-empty
+  /// in-memory map.
+  bool _suppressFlushUntilNextWrite = false;
+
   /// Serializes log/WAL appends and merge so concurrent calls do not corrupt files.
   Future<void> _chain = Future<void>.value();
 
@@ -221,8 +227,12 @@ class ProcessedNostrEventStore {
   ///
   /// Desktop (e.g. macOS) often never reaches [AppLifecycleState.paused]; call this from
   /// lifecycle transitions so cursors and merged log state survive restarts.
+  ///
+  /// No-op while a [clearAll] is in effect (until the next state-mutating call)
+  /// so dispose-time flushes do not resurrect the cursors file we just deleted.
   Future<void> flushToDisk() async {
     _cancelDebouncedPersist();
+    if (_suppressFlushUntilNextWrite) return;
     await _serialized(() async {
       await ensureLoaded();
       await _mergeWalIntoLog();
@@ -324,6 +334,7 @@ class ProcessedNostrEventStore {
       }
 
       _ingestId(id);
+      _suppressFlushUntilNextWrite = false;
       scheduleFlush = true;
     });
     if (scheduleFlush) {
@@ -353,6 +364,7 @@ class ProcessedNostrEventStore {
       final existing = _relayMaxSeenEventCreatedAtSec[key] ?? 0;
       if (createdAtUnix <= existing) return;
       _relayMaxSeenEventCreatedAtSec[key] = createdAtUnix;
+      _suppressFlushUntilNextWrite = false;
       scheduleFlush = true;
     });
     if (scheduleFlush) {
@@ -371,6 +383,10 @@ class ProcessedNostrEventStore {
   /// Use on logout or when local caches must be discarded because they no longer
   /// match the active identity (e.g. secure-storage decryption failure where the
   /// previous Nostr key is unrecoverable).
+  ///
+  /// Subsequent [flushToDisk] calls are no-ops until a state-mutating call
+  /// (e.g. [recordProcessed], [recordLastSeen]) happens, so a dispose-time
+  /// flush after this method does not resurrect the cursors file.
   Future<void> clearAll() async {
     _cancelDebouncedPersist();
     await _serialized(() async {
@@ -396,6 +412,8 @@ class ProcessedNostrEventStore {
           Log.error('ProcessedNostrEventStore failed to delete ${file.path}', e, st);
         }
       }
+
+      _suppressFlushUntilNextWrite = true;
     });
   }
 }

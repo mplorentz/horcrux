@@ -65,6 +65,56 @@ void main() {
       expect(await store.claimEvent('claim-1'), isTrue);
     });
 
+    test('deletes the WAL when records have not been flushed yet', () async {
+      final store = ProcessedNostrEventStore();
+
+      // recordProcessed appends to the WAL synchronously but only schedules a
+      // debounced merge into the main log. Without a flushToDisk() the WAL is
+      // the only on-disk artifact -- exactly the case where a missing WAL
+      // cleanup in clearAll() would leak the previous identity's events.
+      await store.recordProcessed('wal-only-1');
+      await store.recordProcessed('wal-only-2');
+
+      final walFile = File(p.join(tempSupportDir.path, 'processed_nostr_event_ids.wal'));
+      final logFile = File(p.join(tempSupportDir.path, 'processed_nostr_event_ids.log'));
+      expect(walFile.existsSync(), isTrue,
+          reason: 'WAL must exist before clearAll for this test to be meaningful');
+      expect(logFile.existsSync(), isFalse,
+          reason: 'log should not exist yet -- nothing has been flushed/merged');
+
+      await store.clearAll();
+
+      expect(walFile.existsSync(), isFalse);
+      expect(await store.contains('wal-only-1'), isFalse);
+      expect(await store.contains('wal-only-2'), isFalse);
+    });
+
+    test('flushToDisk is suppressed after clearAll until the next write', () async {
+      final store = ProcessedNostrEventStore();
+
+      await store.recordProcessed('event-A');
+      await store.recordLastSeen('wss://relay.example/', 1700000000);
+      await store.flushToDisk();
+
+      final cursorsFile =
+          File(p.join(tempSupportDir.path, 'nostr_relay_subscription_cursors.json'));
+      expect(cursorsFile.existsSync(), isTrue);
+
+      await store.clearAll();
+      expect(cursorsFile.existsSync(), isFalse);
+
+      // A dispose-time flush after clearAll must not resurrect the cursors
+      // file from the now-empty in-memory map.
+      await store.flushToDisk();
+      expect(cursorsFile.existsSync(), isFalse);
+
+      // Once a real write happens again the suppression lifts and flushes
+      // resume normally.
+      await store.recordLastSeen('wss://relay.example/', 1700000001);
+      await store.flushToDisk();
+      expect(cursorsFile.existsSync(), isTrue);
+    });
+
     test('is safe to call before any state has been written', () async {
       final store = ProcessedNostrEventStore();
       await store.clearAll();

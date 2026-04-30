@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/login_service.dart';
-import '../services/logout_service.dart';
 import '../services/processed_nostr_event_store.dart';
+import '../services/secure_storage_corruption.dart';
 
 /// Provider for LoginService
 /// Riverpod automatically ensures this is a singleton - only one instance exists

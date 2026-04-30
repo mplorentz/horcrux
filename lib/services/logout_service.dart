@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -83,48 +82,5 @@ class LogoutService {
     }
 
     Log.info('LogoutService: logout completed');
-  }
-}
-
-/// Wipes durable on-disk caches that reference the active Nostr identity.
-///
-/// Call when secure-storage decryption fails (e.g. installing the debug build
-/// over the release build, or Android Auto Backup restoring SharedPreferences /
-/// application support files into a process whose keystore key is gone). The
-/// previous private key is unrecoverable, so any caches keyed off it -- the
-/// processed Nostr event log/WAL/cursors, vault metadata in SharedPreferences,
-/// and any half-written ciphertext in secure storage -- must be discarded
-/// before generating a fresh identity.
-///
-/// Unlike [LogoutService.logout], this does not stop relay scanning or tear
-/// down service caches: it is intended for the cold-start corruption path
-/// where no services have been initialised yet.
-Future<void> wipeLocalDataForCorruptedSecureStorage({
-  required ProcessedNostrEventStore processedNostrEventStore,
-}) async {
-  Log.warning('Wiping local caches due to corrupted secure storage');
-
-  try {
-    await processedNostrEventStore.clearAll();
-  } catch (e, st) {
-    Log.error('Failed to clear processed Nostr event store during corruption wipe', e, st);
-  }
-
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-  } catch (e, st) {
-    Log.error('Failed to clear SharedPreferences during corruption wipe', e, st);
-  }
-
-  try {
-    // Match the LoginService secure-storage configuration so resetOnError lines
-    // up with the storage instance that holds the corrupted ciphertext.
-    const storage = FlutterSecureStorage(
-      aOptions: AndroidOptions(resetOnError: true),
-    );
-    await storage.deleteAll();
-  } catch (e, st) {
-    Log.error('Failed to deleteAll secure storage during corruption wipe', e, st);
   }
 }
