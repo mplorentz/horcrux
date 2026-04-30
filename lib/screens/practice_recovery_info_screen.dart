@@ -44,7 +44,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
             error: (error, stack) => Center(child: Text('Error loading user: $error')),
             data: (currentPubkey) {
               // Verify user is owner
-              if (currentPubkey == null || !vault.isOwned(currentPubkey)) {
+              if (currentPubkey == null || !vault.isVaultOwner(currentPubkey)) {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),

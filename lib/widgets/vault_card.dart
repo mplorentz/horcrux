@@ -28,29 +28,28 @@ class VaultCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    // Determine icon based on vault state
-    // Note: Recovery state is user-specific and not part of vault.state anymore
-    IconData stateIcon;
-    Color? iconColor;
-
-    switch (vault.state) {
-      case VaultState.owned:
-        stateIcon = Icons.lock_open;
-        break;
-      case VaultState.steward:
-        stateIcon = Icons.key;
-        break;
-      case VaultState.awaitingKey:
-        stateIcon = Icons.hourglass_empty;
-        break;
-    }
-
-    // Get current user's pubkey and determine owner display
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
     final currentPubkey = currentPubkeyAsync.maybeWhen(
       data: (pubkey) => pubkey,
       orElse: () => null,
     );
+    final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+
+    // [VaultState.holdingShard] uses the key icon unless the current user owns the vault.
+    IconData stateIcon;
+    Color? iconColor;
+
+    switch (vault.state) {
+      case VaultState.unlocked:
+        stateIcon = Icons.lock_open;
+        break;
+      case VaultState.holdingShard:
+        stateIcon = isVaultOwner ? Icons.lock_open : Icons.key;
+        break;
+      case VaultState.awaitingShard:
+        stateIcon = Icons.hourglass_empty;
+        break;
+    }
     final ownerDisplayName = _getOwnerDisplayName(currentPubkey);
     final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
       name: ownerDisplayName,
