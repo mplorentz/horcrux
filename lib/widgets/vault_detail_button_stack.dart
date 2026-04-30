@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../models/backup_config.dart';
+import '../models/recovery_request.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../providers/recovery_provider.dart';
@@ -55,6 +56,8 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   data: (recoveryStatus) {
                     final buttons = <RowButtonConfig>[];
                     final activeReq = recoveryStatus.activeRecoveryRequest;
+                    final ongoingRealRecovery =
+                        activeReq != null && !activeReq.isPractice && activeReq.status.isActive;
                     final hasManageablePracticeSession =
                         recoveryStatus.hasActiveRecovery && activeReq?.isPractice == true;
                     final showManageRealRecovery = recoveryStatus.hasActiveRecovery &&
@@ -188,10 +191,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                               text: 'Manage Practice Recovery',
                             ),
                           );
-                        } else {
-                          // Show "Practice Recovery" button when there's no active practice recovery
-                          // This includes when practice recovery was canceled, since canceled recoveries
-                          // are not considered "active" by the recoveryStatusProvider
+                        } else if (!ongoingRealRecovery) {
+                          // Show "Practice Recovery" when no active practice session and no real
+                          // recovery in flight (pending/sent/inProgress).
                           buttons.add(
                             RowButtonConfig(
                               onPressed: () {
