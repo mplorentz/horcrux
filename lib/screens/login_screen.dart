@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/shared/nips/nip01/key_pair.dart';
 import '../providers/key_provider.dart';
 import '../utils/validators.dart';
 import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../screens/import_success_screen.dart';
+import '../screens/vault_list_screen.dart';
 
 /// Screen for importing existing Nostr keys
 class LoginScreen extends ConsumerStatefulWidget {
@@ -73,13 +72,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final loginService = ref.read(loginServiceProvider);
-      KeyPair? keyPair;
 
       // Auto-detect format and import
       if (isValidNsec(input)) {
-        keyPair = await loginService.importNsecKey(input);
+        await loginService.importNsecKey(input);
       } else if (isValidHexPrivkey(input)) {
-        keyPair = await loginService.importHexPrivateKey(input);
+        await loginService.importHexPrivateKey(input);
       } else if (isValidBunkerUrl(input)) {
         // This should have been caught by validation, but handle it anyway
         throw UnimplementedError('Bunker URLs are not yet supported');
@@ -90,14 +88,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Initialize services and refresh key providers
       await initializeAppAndRefreshKeys(ref);
 
-      // Navigate to import success screen
-      final privateKey = keyPair.privateKeyBech32;
-      if (mounted && privateKey != null) {
-        Navigator.push(
-          context,
+      // Imported accounts skip the key backup flow and go straight to the vault list
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => ImportSuccessScreen(nsec: privateKey),
+            builder: (context) => const VaultListScreen(),
           ),
+          (route) => false,
         );
       }
     } catch (e) {
