@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     pkg-config \
     clang \
+    # linux/CMakeLists.txt pins gcc-12/g++-12
+    gcc-12 \
+    g++-12 \
     # C++ standard library development files
     libstdc++-12-dev \
     # Linux desktop GUI development libraries (required by Flutter CMakeLists.txt)

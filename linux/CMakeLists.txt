@@ -21,6 +21,9 @@ cmake_policy(SET CMP0063 NEW)
 
 # Load bundled libraries from the lib/ directory relative to the binary.
 set(CMAKE_INSTALL_RPATH "$ORIGIN/lib")
+# Build with install RPATH so Ninja does not require an ELF relink step when install
+# RPATH differs from the build tree (fixes Linux arm64 Docker builds).
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # Root filesystem for cross-building.
 if(FLUTTER_TARGET_PLATFORM_SYSROOT)
