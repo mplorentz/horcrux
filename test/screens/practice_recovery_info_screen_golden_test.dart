@@ -10,6 +10,7 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/practice_recovery_info_screen.dart';
+import 'package:horcrux/widgets/theme.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/steward_test_helpers.dart';
 
@@ -381,5 +382,108 @@ void main() {
 
       container.dispose();
     });
+
+    // Regression test: when shown via showModalBottomSheet on a device with a
+    // top safe-area inset (e.g. status bar), the AppBar must NOT be hidden
+    // behind the status bar. Flutter's modal route strips top MediaQuery
+    // padding by default; only useSafeArea: true at the call site preserves it.
+    testGoldens('shown via modal bottom sheet respects status bar', (
+      tester,
+    ) async {
+      final vault = createTestVault(
+        id: 'test-vault',
+        name: 'My Important Vault',
+        ownerPubkey: testPubkey,
+        backupConfig: createTestBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createTestSteward(pubkey: testPubkey, name: 'Owner (You)'),
+            createTestSteward(pubkey: steward1Pubkey, name: 'Alice'),
+            createTestSteward(pubkey: steward2Pubkey, name: 'Bob'),
+          ],
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+      );
+
+      // Custom wrapper: install a status-bar-style top padding ABOVE the
+      // Navigator (via MaterialApp.builder) so the modal route's MediaQuery
+      // actually carries the top inset. Inserting it below the Navigator
+      // would be invisible to the modal route.
+      await tester.pumpWidgetBuilder(
+        _ModalBottomSheetLauncher(
+          builder: (_) => const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
+        ),
+        wrapper: (child) => UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: horcrux3Dark,
+            builder: (context, body) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: const EdgeInsets.only(top: 44, bottom: 34),
+                viewPadding: const EdgeInsets.only(top: 44, bottom: 34),
+              ),
+              child: body!,
+            ),
+            home: child,
+          ),
+        ),
+        // Tall surface so the full modal is visible.
+        surfaceSize: const Size(414, 1400),
+      );
+      await tester.pumpAndSettle();
+
+      await screenMatchesGolden(
+        tester,
+        'practice_recovery_modal_bottom_sheet',
+      );
+
+      container.dispose();
+    });
   });
+}
+
+/// Test helper that auto-launches a modal bottom sheet on first frame.
+///
+/// Mirrors the production call site (showModalBottomSheet with
+/// isScrollControlled + useSafeArea + transparent background) so golden
+/// tests exercise the same modal route behavior — including the top
+/// MediaQuery padding handling that caused the status-bar overlap on
+/// edge-to-edge Android devices.
+class _ModalBottomSheetLauncher extends StatefulWidget {
+  const _ModalBottomSheetLauncher({required this.builder});
+
+  final WidgetBuilder builder;
+
+  @override
+  State<_ModalBottomSheetLauncher> createState() => _ModalBottomSheetLauncherState();
+}
+
+class _ModalBottomSheetLauncherState extends State<_ModalBottomSheetLauncher> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: widget.builder,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: SizedBox.expand());
 }
