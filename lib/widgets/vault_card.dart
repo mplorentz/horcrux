@@ -35,7 +35,8 @@ class VaultCard extends ConsumerWidget {
     );
     final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
 
-    // [VaultState.holdingShard] uses the key icon unless the current user owns the vault.
+    // [VaultState.holdingShard]: stewards see a key; the vault owner without local
+    // plaintext (e.g. deleted content on this device) sees a closed lock.
     IconData stateIcon;
     Color? iconColor;
 
@@ -44,7 +45,7 @@ class VaultCard extends ConsumerWidget {
         stateIcon = Icons.lock_open;
         break;
       case VaultState.holdingShard:
-        stateIcon = isVaultOwner ? Icons.lock_open : Icons.key;
+        stateIcon = isVaultOwner ? Icons.lock : Icons.key;
         break;
       case VaultState.awaitingShard:
         stateIcon = Icons.hourglass_empty;
