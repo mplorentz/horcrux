@@ -55,24 +55,34 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   error: (_, __) => const SizedBox.shrink(),
                   data: (recoveryStatus) {
                     final buttons = <RowButtonConfig>[];
-                    final activeReq = recoveryStatus.activeRecoveryRequest;
                     // Exclusivity is per (vault, initiator): each user may have at most one
                     // active recovery session per vault (practice or real), but different
                     // users (other stewards, owner) may have their own concurrent sessions
-                    // on the same vault. The gate looks at THIS user's own active requests
-                    // and hides any "start a new session" entry point if they already have
-                    // one in flight. Mirrors RecoveryService.initiateRecovery's per-user
-                    // exclusivity check exactly.
+                    // on the same vault. recoveryStatusProvider only surfaces the single
+                    // most-recent manageable request, which can belong to another user --
+                    // so we resolve the current user's own sessions from the full list of
+                    // recovery requests on the vault rather than from `activeReq`.
                     final allActiveRequests =
                         (currentVault?.recoveryRequests ?? const <RecoveryRequest>[])
                             .where((r) => r.status.isActive)
                             .toList();
-                    final hasMyInFlightRecovery = currentPubkey != null &&
-                        allActiveRequests.any((r) => r.initiatorPubkey == currentPubkey);
-                    final showManageRealRecovery = recoveryStatus.hasActiveRecovery &&
-                        recoveryStatus.isInitiator &&
-                        activeReq != null &&
-                        !activeReq.isPractice;
+                    final myActiveRealRecovery = currentPubkey == null
+                        ? null
+                        : allActiveRequests.cast<RecoveryRequest?>().firstWhere(
+                              (r) =>
+                                  r != null && !r.isPractice && r.initiatorPubkey == currentPubkey,
+                              orElse: () => null,
+                            );
+                    final myActivePracticeRecovery = currentPubkey == null
+                        ? null
+                        : allActiveRequests.cast<RecoveryRequest?>().firstWhere(
+                              (r) =>
+                                  r != null && r.isPractice && r.initiatorPubkey == currentPubkey,
+                              orElse: () => null,
+                            );
+                    final hasMyInFlightRecovery =
+                        myActiveRealRecovery != null || myActivePracticeRecovery != null;
+                    final showManageRealRecovery = myActiveRealRecovery != null;
                     // Initiate is hidden when this user already has any of their own session
                     // (practice or real) in flight on this vault; they should manage that one
                     // instead. The service would reject the call anyway.
@@ -179,15 +189,11 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           backupConfig?.allStewardsHoldingCurrentKey ?? false;
 
                       if (allStewardsHoldingCurrentKey) {
-                        // Check if there's an active practice recovery (not canceled/archived)
-                        // Canceled recoveries are filtered out by recoveryStatusProvider (only isActive or completed are included)
-                        final activeRequest = recoveryStatus.activeRecoveryRequest;
-                        final hasActivePracticeRecovery = recoveryStatus.hasActiveRecovery &&
-                            activeRequest?.isPractice == true &&
-                            recoveryStatus.isInitiator;
-
-                        if (hasActivePracticeRecovery) {
-                          // Show "Manage Practice Recovery" if there's an active practice recovery
+                        if (myActivePracticeRecovery != null) {
+                          // Show "Manage Practice Recovery" if THIS user has an active
+                          // practice session of their own. Other users' practice sessions
+                          // are not actionable from here.
+                          final myPracticeId = myActivePracticeRecovery.id;
                           buttons.add(
                             RowButtonConfig(
                               onPressed: () async {
@@ -195,7 +201,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        RecoveryStatusScreen(recoveryRequestId: activeRequest!.id),
+                                        RecoveryStatusScreen(recoveryRequestId: myPracticeId),
                                   ),
                                 );
                               },
@@ -235,15 +241,15 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     if (isOwnerSteward) {
                       // Real recovery only: practice is managed via "Manage Practice Recovery" above.
                       if (showManageRealRecovery) {
+                        final myRecoveryId = myActiveRealRecovery.id;
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => RecoveryStatusScreen(
-                                    recoveryRequestId: recoveryStatus.activeRecoveryRequest!.id,
-                                  ),
+                                  builder: (context) =>
+                                      RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
                                 ),
                               );
                             },
@@ -269,15 +275,15 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         currentVault != null &&
                         currentVault.state != VaultState.awaitingKey) {
                       if (showManageRealRecovery) {
+                        final myRecoveryId = myActiveRealRecovery.id;
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
                               await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => RecoveryStatusScreen(
-                                    recoveryRequestId: recoveryStatus.activeRecoveryRequest!.id,
-                                  ),
+                                  builder: (context) =>
+                                      RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
                                 ),
                               );
                             },
