@@ -25,11 +25,12 @@ def get_api_key
   end
 end
 
-# Helper method to get Google Play service account JSON key filepath
-# Environment variable: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
-# Should be the path to the service account JSON key file
+# Helper method to get Google Play service account JSON key filepath.
+# Reads GOOGLE_PLAY_JSON_KEY_PATH (preferred) or GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
+# This is NOT the Firebase google-services.json — it's a service account key
+# downloaded from Google Cloud Console with Play Developer API access.
 def get_google_play_json_key
-  ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+  ENV["GOOGLE_PLAY_JSON_KEY_PATH"] || ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
 end
 
 def read_pubspec_version_string
@@ -257,12 +258,17 @@ platform :android do
 
   desc "Build and upload Android beta to Google Play Console (Internal Testing)"
   lane :android_beta do
-    # Check for Google Play service account credentials
     json_key_path = get_google_play_json_key
-    if json_key_path.nil? || json_key_path.empty?
-      UI.user_error!("Google Play service account JSON key not configured. Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in .env file")
+    if json_key_path.nil? || json_key_path.to_s.strip.empty?
+      UI.user_error!(<<~MSG)
+        Google Play service account JSON key not configured.
+        Set GOOGLE_PLAY_JSON_KEY_PATH in .env to an absolute path of the
+        service account JSON downloaded from Google Cloud Console.
+        See: https://docs.fastlane.tools/getting-started/android/setup/#collect-your-google-credentials
+        Note: this is NOT android/app/google-services.json (Firebase config).
+      MSG
     end
-    
+
     unless File.exist?(json_key_path)
       UI.user_error!("Google Play service account JSON key file not found at: #{json_key_path}")
     end
@@ -273,9 +279,11 @@ platform :android do
     # Upload to Google Play Console Internal Testing track
     aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
     upload_to_play_store(
+      package_name: "com.singleoriginsoftware.horcrux",
       json_key: json_key_path,
       track: "internal",
       aab: aab_path,
+      release_status: "draft",
       skip_upload_metadata: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
