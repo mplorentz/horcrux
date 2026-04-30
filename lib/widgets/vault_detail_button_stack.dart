@@ -190,13 +190,23 @@ class VaultDetailButtonStack extends ConsumerWidget {
                                 showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
-                                  // useSafeArea so the AppBar isn't hidden behind the
-                                  // status bar; without it Flutter strips top padding
-                                  // from the modal route's MediaQuery.
-                                  useSafeArea: true,
                                   backgroundColor: Colors.transparent,
-                                  builder: (context) =>
-                                      PracticeRecoveryInfoScreen(vaultId: vaultId),
+                                  // Modal route clears padding.top; restore from
+                                  // viewPadding so the toolbar clears the status bar
+                                  // without useSafeArea (avoids a mismatched strip above).
+                                  builder: (sheetContext) {
+                                    final mq = MediaQuery.of(sheetContext);
+                                    return MediaQuery(
+                                      data: mq.copyWith(
+                                        padding: mq.padding.copyWith(
+                                          top: mq.viewPadding.top,
+                                        ),
+                                      ),
+                                      child: PracticeRecoveryInfoScreen(
+                                        vaultId: vaultId,
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                               icon: Icons.school,

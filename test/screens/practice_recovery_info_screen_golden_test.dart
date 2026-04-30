@@ -383,10 +383,9 @@ void main() {
       container.dispose();
     });
 
-    // Regression test: when shown via showModalBottomSheet on a device with a
-    // top safe-area inset (e.g. status bar), the AppBar must NOT be hidden
-    // behind the status bar. Flutter's modal route strips top MediaQuery
-    // padding by default; only useSafeArea: true at the call site preserves it.
+    // Regression: modal route strips MediaQuery.padding.top by default; we
+    // re-inject viewPadding.top in vault_detail_button_stack so the AppBar
+    // clears the status bar without useSafeArea (which left a dim strip above).
     testGoldens('shown via modal bottom sheet respects status bar', (
       tester,
     ) async {
@@ -454,9 +453,8 @@ void main() {
 
 /// Test helper that auto-launches a modal bottom sheet on first frame.
 ///
-/// Mirrors the production call site (showModalBottomSheet with
-/// isScrollControlled + useSafeArea + transparent background) so golden
-/// tests exercise the same modal route behavior — including the top
+/// Mirrors the production call site in vault_detail_button_stack.dart so
+/// golden tests exercise the same modal route behavior — including the
 /// MediaQuery padding handling that caused the status-bar overlap on
 /// edge-to-edge Android devices.
 class _ModalBottomSheetLauncher extends StatefulWidget {
@@ -477,9 +475,16 @@ class _ModalBottomSheetLauncherState extends State<_ModalBottomSheetLauncher> {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        useSafeArea: true,
         backgroundColor: Colors.transparent,
-        builder: widget.builder,
+        builder: (sheetContext) {
+          final mq = MediaQuery.of(sheetContext);
+          return MediaQuery(
+            data: mq.copyWith(
+              padding: mq.padding.copyWith(top: mq.viewPadding.top),
+            ),
+            child: widget.builder(sheetContext),
+          );
+        },
       );
     });
   }
