@@ -20,11 +20,63 @@ class RecoveryStatusScreen extends ConsumerStatefulWidget {
 }
 
 class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
+  /// Avoid duplicate dialogs when [recoveryRequestByIdProvider] rebuilds.
+  bool _alreadyEndedAlertScheduled = false;
+
+  /// Recovery is no longer manageable (cancelled, failed, or archived).
+  bool _isRecoverySessionAlreadyEnded(RecoveryRequest request) {
+    switch (request.status) {
+      case RecoveryRequestStatus.cancelled:
+      case RecoveryRequestStatus.failed:
+      case RecoveryRequestStatus.archived:
+        return true;
+      case RecoveryRequestStatus.pending:
+      case RecoveryRequestStatus.sent:
+      case RecoveryRequestStatus.inProgress:
+      case RecoveryRequestStatus.completed:
+        return false;
+    }
+  }
+
+  void _scheduleAlreadyEndedAlertIfNeeded(RecoveryRequest? request) {
+    if (_alreadyEndedAlertScheduled || request == null) return;
+    if (!_isRecoverySessionAlreadyEnded(request)) return;
+    _alreadyEndedAlertScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showAlreadyEndedSessionAlertAndPop();
+    });
+  }
+
+  Future<void> _showAlreadyEndedSessionAlertAndPop() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Recovery session ended'),
+        content: const Text('This recovery session has already ended.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestAsync = ref.watch(
       recoveryRequestByIdProvider(widget.recoveryRequestId),
     );
+
+    ref.listen<AsyncValue<RecoveryRequest?>>(
+      recoveryRequestByIdProvider(widget.recoveryRequestId),
+      (previous, next) => next.whenData(_scheduleAlreadyEndedAlertIfNeeded),
+    );
+    requestAsync.whenData(_scheduleAlreadyEndedAlertIfNeeded);
 
     return HorcruxScaffold(
       appBar: AppBar(
