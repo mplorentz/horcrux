@@ -14,7 +14,5 @@
 	<array>
 		<string>$(AppIdentifierPrefix)group.flutter.secure.storage</string>
 	</array>
-	<key>aps-environment</key>
-	<string>production</string>
 </dict>
 </plist>
