@@ -261,15 +261,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     if (!isVaultOwner &&
                         !isOwnerSteward &&
                         currentVault != null &&
-<<<<<<< fix/recovery-session-exclusivity
-                        currentVault.state != VaultState.awaitingKey) {
+                        currentVault.state != VaultState.awaitingShard) {
                       if (showManageRealRecovery) {
                         final myRecoveryId = myActiveRealRecovery.id;
-=======
-                        currentVault.state != VaultState.awaitingShard) {
-                      // Show "Manage Recovery" if user initiated active recovery
-                      if (recoveryStatus.hasActiveRecovery && recoveryStatus.isInitiator) {
->>>>>>> main
                         buttons.add(
                           RowButtonConfig(
                             onPressed: () async {
