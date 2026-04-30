@@ -304,3 +304,32 @@ Log.debug('Debugging info');
 **Funding**: OpenSats.org (Bitcoin/Nostr open-source development)
 
 **License**: MIT
+
+## Cursor Cloud specific instructions
+
+### Environment layout
+
+- Flutter SDK is at `/opt/flutter` (version pinned by `.fvmrc`).
+- `fvm` is installed globally via `dart pub global activate fvm`.
+- PATH must include `/opt/flutter/bin` and `$HOME/.pub-cache/bin`.
+- Linux desktop is enabled (`flutter config --enable-linux-desktop`).
+
+### Running the app (Linux headless)
+
+The Cloud VM has no physical display. To run the Flutter Linux desktop app:
+
+```bash
+Xvfb :99 -screen 0 1280x720x24 &>/dev/null &
+export DISPLAY=:99
+fvm flutter run -d linux
+```
+
+On first launch, `flutter_secure_storage` triggers a GNOME keyring password dialog. In headless mode this blocks the app. For automated testing, you can set a blank keyring password or mock the keyring.
+
+### Key caveats
+
+- **Golden tests will NOT match on Linux** — CI runs them on macOS. Only run `--exclude-tags=golden` locally.
+- **`libasound2` package** is named `libasound2t64` on Ubuntu 24.04 Noble.
+- **g++-12** is required by the Flutter Linux build toolchain (CMake looks for it explicitly).
+- After running `build_runner` codegen, always run `fvm dart format .` — generated files may not be formatted.
+- All flutter/dart commands use `fvm` prefix per project convention (see AGENTS.md Common Development Commands).
