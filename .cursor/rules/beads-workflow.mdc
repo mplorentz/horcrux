@@ -1,0 +1,60 @@
+---
+description: Horcrux stage labels, feature vs bug paths, beads writeback for agents using bd CLI (see also upstream beads.mdc from bd setup cursor).
+alwaysApply: true
+---
+
+# Beads workflow (horcrux_app)
+
+Upstream beads integration lives in `beads.mdc` (`bd prime`, `bd ready`, hooks). **This rule adds our stage conventions** and handoff discipline.
+
+## Sources of truth
+
+- **Tracked issues**: `.beads/` + `bd` CLI (agents run shell commands — do **not** rely on MCP for beads).
+- **Stage / blocked workflow**: [.beads/STAGES.md](../../.beads/STAGES.md) — definitive label meanings.
+- **Issue type**: use native `bd` issue type (`bug`, `feature`, `task`), not redundant `type:*` labels.
+
+## Stage labels you must maintain
+
+Exactly **one primary** `stage:*` label should be active per issue during normal flow. Optionally one `blocked-on:*`:
+
+- Stage: `stage:triaged` … `stage:cleanup-needed` (see STAGES.md).
+- Blocked: `blocked-on:human` | `blocked-on:ci` | `blocked-on:agent`.
+
+When advancing a stage:
+
+1. `--remove-label` the old `stage:*` (and old `blocked-on:*` if it no longer applies).
+2. `--add-label` the new labels.
+
+Prefer `bd update <id>` with repeatable `--remove-label` / `--add-label` flags.
+
+Feature path (type `feature`):
+
+`triaged` → `planning` → `plan-review` → `implementing` → `cleanup` → `pre-pr-review` → `pr-open` ↔ `agent-fixing` (if CI/tooling fails) → `pr-review` → `merge-ready` → `cleanup-needed` → closed.
+
+Bug path (type `bug`):
+
+`triaged` → **`implementing` first** (theory-test loop stays here; skip `planning` / `plan-review` unless the bug is exploratory) → `cleanup` → `pre-pr-review` → same tail as features from `pr-open` onward.
+
+## Metadata for PR-linked work
+
+Set or refresh when opening a branch or PR:
+
+- `pr_url`, `branch`, `worktree` (absolute path, or omit if unknown)
+
+via `bd update <id> --metadata '{"pr_url":"…","branch":"…","worktree":"…"}'`.
+
+## Mandatory writeback (every agent turn near completion)
+
+Before you stop or say work is done for this session:
+
+1. `bd show <id>` the issue you touched.
+2. `bd note` or `bd update <id> --append-notes "…"` with: current outcome, failing tests/commands, explicit **next step**, `pr_url`/branch pointers if relevant.
+3. Move **stage labels** to match reality (never leave stale `stage:implementing` if you already moved to cleanup or PR-ready).
+
+Agents must **not** keep working silently after advancing to a human review stage (`plan-review`, `pre-pr-review`, `pr-review`).
+
+If a change affects visible copy or form validators (especially `lib/widgets/*_form*.dart`), re-run matching `*_golden_test.dart` with `--tags golden`; update goldens via `--update-goldens` only when failures are intentional, then commit PNGs.
+
+## Closing protocol
+
+Follow project/session rules in AGENTS.md and `bd prime` for `git push`, `bd dolt push`, and bead closure.

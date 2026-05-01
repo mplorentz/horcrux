@@ -161,7 +161,7 @@ Steward createOwnerSteward({
 }) {
   return createSteward(
     pubkey: pubkey,
-    name: name ?? 'You',
+    name: name,
     id: id,
     isOwner: true,
     contactInfo: contactInfo,
