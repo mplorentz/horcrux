@@ -120,6 +120,32 @@ class Vault with _$Vault {
     }
   }
 
+  /// Return the recovery request the given user is currently entitled to manage
+  /// from this vault, or null. "Manageable" mirrors `recoveryStatusProvider`:
+  /// any in-flight status (`isActive`) plus `completed`, since users finalize a
+  /// recovery from the same Manage screen once enough stewards have approved.
+  ///
+  /// Pass [isPractice] to filter to real (`false`) or practice (`true`) sessions
+  /// only; leave it null to match either kind. Per-user exclusivity guarantees
+  /// at most one match per (kind), so callers do not need to disambiguate.
+  ///
+  /// This intentionally does NOT consult the most-recent request on the vault
+  /// (as `recoveryStatusProvider` does) because in multi-initiator scenarios
+  /// that representative may belong to another user, hiding the current user's
+  /// own manageable session.
+  RecoveryRequest? manageableRecoveryFor(String? pubkey, {bool? isPractice}) {
+    if (pubkey == null) return null;
+    for (final r in recoveryRequests) {
+      if (r.initiatorPubkey != pubkey) continue;
+      if (!(r.status.isActive || r.status == RecoveryRequestStatus.completed)) {
+        continue;
+      }
+      if (isPractice != null && r.isPractice != isPractice) continue;
+      return r;
+    }
+    return null;
+  }
+
   /// Convert to JSON for storage
   Map<String, dynamic> toJson() {
     return {
