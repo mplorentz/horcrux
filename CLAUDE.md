@@ -21,6 +21,7 @@ bd close <id>         # Complete work
 - Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- When you open a pull request for work tracked in bd, include the **bead issue ID** in the PR description (for example `horcrux_app-tco`). Use `bd show <id>` to copy the exact ID string.
 
 ## Session Completion
 
