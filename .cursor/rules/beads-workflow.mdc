@@ -43,6 +43,8 @@ Set or refresh when opening a branch or PR:
 
 via `bd update <id> --metadata '{"pr_url":"…","branch":"…","worktree":"…"}'`.
 
+Put the same **bead issue ID** in the GitHub PR description (see `AGENTS.md` and `CONTRIBUTING.md`) so the PR and bd stay linked for reviewers.
+
 ## Mandatory writeback (every agent turn near completion)
 
 Before you stop or say work is done for this session:

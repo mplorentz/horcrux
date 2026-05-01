@@ -1,5 +1,9 @@
 WIP 
 Install uvx `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+## Pull requests and Beads
+
+This repository uses **bd (beads)** for issue tracking. When a pull request corresponds to bead-tracked work, put the **bead issue ID** in the PR description (for example `horcrux_app-tco`). Run `bd show <id>` to confirm the exact ID. If the PR is not tied to a bead, say so in one short line (for example "No bead — documentation-only"). GitHub also loads `.github/pull_request_template.md` as a starting outline when you open a PR.
 Install spec-kit
 Install Nostrbook MCP
 Install flutter

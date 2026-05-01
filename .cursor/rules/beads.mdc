@@ -10,6 +10,7 @@ This project uses [Beads (bd)](https://github.com/steveyegge/beads) for issue tr
 
 ## Core Rules
 - Track ALL work in bd (never use markdown TODOs or comment-based task lists)
+- When opening a GitHub PR for bd-tracked work, include that **bead issue ID** in the PR description (`bd show <id>`)
 - Use `bd ready` to find available work
 - Use `bd create` to track new issues/tasks/bugs
 - Use `bd dolt push` at end of session to sync with git remote
