@@ -248,6 +248,52 @@ void main() {
       container.dispose();
     });
 
+    testGoldens('owner vault with no local content (holding shard)', (tester) async {
+      // Vault owned by testPubkey but with no content, only a shard
+      // This simulates the owner deleting local content while still holding a recovery shard
+      final ownerHoldingShardVault = Vault(
+        id: 'vault-owner-holding-shard',
+        name: 'Owner Without Content',
+        content: null, // No local content
+        createdAt: DateTime(2024, 10, 5, 12, 0),
+        ownerPubkey: testPubkey, // Owner is current user
+        shards: [
+          // Owner has a shard (e.g. as part of distributed backup)
+          createShardData(
+            shard: 'owner_shard_data',
+            threshold: 2,
+            shardIndex: 1,
+            totalShards: 3,
+            primeMod: 'test_prime_mod',
+            creatorPubkey: testPubkey,
+          ),
+        ],
+        recoveryRequests: [],
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultListProvider.overrideWith(
+            (ref) => Stream.value([ownerHoldingShardVault]),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+      );
+
+      await pumpGoldenWidget(
+        tester,
+        const VaultListScreen(),
+        container: container,
+      );
+
+      await screenMatchesGolden(
+        tester,
+        'vault_list_screen_owner_holding_shard',
+      );
+
+      container.dispose();
+    });
+
     testGoldens('recovery notification', (tester) async {
       // Create a recovery request initiated by someone else (not testPubkey)
       final recoveryRequest = RecoveryRequest(
