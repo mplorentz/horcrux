@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -353,6 +353,7 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 See `AGENTS.md` sections above for lint (`flutter analyze`), test (`flutter test --exclude-tags=golden`), build (`flutter build linux --debug`), and format (`dart format .`) commands. Omit the `fvm` prefix in this environment.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -399,6 +400,7 @@ bd close <id>         # Complete work
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push

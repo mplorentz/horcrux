@@ -6,9 +6,11 @@ Issues use **three status values** (`open`, `in_progress`, `closed`). Workflow p
 
 | Value | Use |
 |-------|-----|
-| `feature` | New behavior or sizable UI work |
-| `bug` | Fixes and regressions |
-| `task` | Maintenance, deps, infra, chores |
+| `bug` | Something broken that needs fixing |
+| `feature` | New functionality |
+| `task` | Work item (tests, docs, refactoring) |
+| `epic` | Large feature with subtasks |
+| `chore` | Maintenance (dependencies, tooling) |
 
 Set with `bd create -t …` / `bd update <id> --type …` when supported.
 
