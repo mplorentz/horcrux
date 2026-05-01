@@ -10,6 +10,7 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/practice_recovery_info_screen.dart';
+import 'package:horcrux/widgets/theme.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/steward_test_helpers.dart';
 
@@ -378,6 +379,65 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_multiple_devices');
+
+      container.dispose();
+    });
+
+    // Regression: on edge-to-edge Android (e.g. Pixel 10 Fold) the AppBar
+    // must respect the status-bar safe-area inset. Render the screen inside
+    // a MediaQuery that carries a status-bar padding to lock down the
+    // expected layout: AppBar offset below the status bar, scaffold
+    // background extends to the top edge (no mismatched strip).
+    testGoldens('respects status bar safe area inset', (tester) async {
+      final vault = createTestVault(
+        id: 'test-vault',
+        name: 'My Important Vault',
+        ownerPubkey: testPubkey,
+        backupConfig: createTestBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createTestSteward(pubkey: testPubkey, name: 'Owner (You)'),
+            createTestSteward(pubkey: steward1Pubkey, name: 'Alice'),
+            createTestSteward(pubkey: steward2Pubkey, name: 'Bob'),
+          ],
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+      );
+
+      await tester.pumpWidgetBuilder(
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
+        wrapper: (child) => UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: horcrux3Dark,
+            builder: (context, body) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: const EdgeInsets.only(top: 44, bottom: 34),
+                viewPadding: const EdgeInsets.only(top: 44, bottom: 34),
+              ),
+              child: body!,
+            ),
+            home: child,
+          ),
+        ),
+        surfaceSize: const Size(414, 1400),
+      );
+      await tester.pumpAndSettle();
+
+      await screenMatchesGolden(
+        tester,
+        'practice_recovery_status_bar_safe_area',
+      );
 
       container.dispose();
     });

@@ -89,6 +89,7 @@ class ImportSuccessScreen extends StatelessWidget {
                         builder: (context) => VaultExplainerScreen(
                           initialContent: nsec,
                           initialName: 'Nostr Key Backup',
+                          isOnboarding: true,
                         ),
                       ),
                       (route) => false, // Clear all previous routes

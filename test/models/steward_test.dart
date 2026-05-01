@@ -113,7 +113,10 @@ void main() {
         final steward = createOwnerSteward(pubkey: hexPubkey);
 
         expect(steward.isOwner, isTrue);
-        expect(steward.name, equals('You')); // Default name for owner
+        // Owner name should not default to "You" because it gets distributed
+        // to other stewards' devices and would mislead them into thinking
+        // the owner is themselves.
+        expect(steward.name, isNull);
       });
 
       test('createOwnerSteward accepts custom name', () {

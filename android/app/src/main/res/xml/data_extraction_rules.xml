@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Disable Android Auto Backup and Device-to-Device transfer for all app data.
+
+  Horcrux stores a Nostr private key in the platform Keystore via
+  flutter_secure_storage; the keystore entry never travels with Auto Backup
+  while ciphertext stored in SharedPreferences would, leaving us unable to
+  decrypt anything on the destination device. The same applies to the
+  on-disk processed Nostr event log/WAL/cursors under getApplicationSupport.
+
+  By excluding every domain we ensure the OS never restores caches that
+  reference an unrecoverable identity.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
