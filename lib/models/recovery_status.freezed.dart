@@ -27,7 +27,9 @@ mixin _$RecoveryStatus {
   bool get canRecover => throw _privateConstructorUsedError;
   DateTime get lastUpdated => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $RecoveryStatusCopyWith<RecoveryStatus> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -58,6 +60,8 @@ class _$RecoveryStatusCopyWithImpl<$Res, $Val extends RecoveryStatus>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of RecoveryStatus
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -139,6 +143,8 @@ class __$$RecoveryStatusImplCopyWithImpl<$Res>
       _$RecoveryStatusImpl _value, $Res Function(_$RecoveryStatusImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of RecoveryStatus
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -274,7 +280,9 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
       canRecover,
       lastUpdated);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryStatusImplCopyWith<_$RecoveryStatusImpl> get copyWith =>
@@ -305,15 +313,18 @@ abstract class _RecoveryStatus extends RecoveryStatus {
   @override
   int get deniedCount;
   @override
-  List<String> get collectedShardIds;
-  @override // List of shard data IDs
+  List<String> get collectedShardIds; // List of shard data IDs
+  @override
   int get threshold;
   @override
   bool get canRecover;
   @override
   DateTime get lastUpdated;
+
+  /// Create a copy of RecoveryStatus
+  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$RecoveryStatusImplCopyWith<_$RecoveryStatusImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

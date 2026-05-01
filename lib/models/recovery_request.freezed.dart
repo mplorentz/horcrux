@@ -25,7 +25,9 @@ mixin _$RecoveryResponse {
   String? get nostrEventId => throw _privateConstructorUsedError;
   String? get errorMessage => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $RecoveryResponseCopyWith<RecoveryResponse> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -55,6 +57,8 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -93,6 +97,8 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
     ) as $Val);
   }
 
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $ShardDataCopyWith<$Res>? get shardData {
@@ -133,6 +139,8 @@ class __$$RecoveryResponseImplCopyWithImpl<$Res>
       _$RecoveryResponseImpl _value, $Res Function(_$RecoveryResponseImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -217,7 +225,9 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
   int get hashCode => Object.hash(
       runtimeType, pubkey, approved, respondedAt, shardData, nostrEventId, errorMessage);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryResponseImplCopyWith<_$RecoveryResponseImpl> get copyWith =>
@@ -235,19 +245,22 @@ abstract class _RecoveryResponse extends RecoveryResponse {
   const _RecoveryResponse._() : super._();
 
   @override
-  String get pubkey;
-  @override // hex format, 64 characters
-  bool get approved;
-  @override // Whether the steward approved the request
+  String get pubkey; // hex format, 64 characters
+  @override
+  bool get approved; // Whether the steward approved the request
+  @override
   DateTime? get respondedAt;
   @override
-  ShardData? get shardData;
-  @override // Actual shard data for reassembly (if approved)
+  ShardData? get shardData; // Actual shard data for reassembly (if approved)
+  @override
   String? get nostrEventId;
   @override
   String? get errorMessage;
+
+  /// Create a copy of RecoveryResponse
+  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$RecoveryResponseImplCopyWith<_$RecoveryResponseImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -271,7 +284,9 @@ mixin _$RecoveryRequest {
       throw _privateConstructorUsedError; // Error message if status is failed
   bool get isPractice => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryRequest
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $RecoveryRequestCopyWith<RecoveryRequest> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -305,6 +320,8 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of RecoveryRequest
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -404,6 +421,8 @@ class __$$RecoveryRequestImplCopyWithImpl<$Res>
       _$RecoveryRequestImpl _value, $Res Function(_$RecoveryRequestImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of RecoveryRequest
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -568,7 +587,9 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
       errorMessage,
       isPractice);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of RecoveryRequest
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryRequestImplCopyWith<_$RecoveryRequestImpl> get copyWith =>
@@ -596,29 +617,32 @@ abstract class _RecoveryRequest extends RecoveryRequest {
   @override
   String get vaultId;
   @override
-  String get initiatorPubkey;
-  @override // hex format, 64 characters
+  String get initiatorPubkey; // hex format, 64 characters
+  @override
   DateTime get requestedAt;
   @override
   RecoveryRequestStatus get status;
   @override
-  int get threshold;
-  @override // Shamir threshold needed for recovery
-  String? get nostrEventId;
+  int get threshold; // Shamir threshold needed for recovery
   @override
+  String? get nostrEventId;
 
   /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
+  @override
   DateTime? get eventCreationTime;
   @override
   DateTime? get expiresAt;
   @override
-  Map<String, RecoveryResponse> get stewardResponses;
-  @override // pubkey -> response
-  String? get errorMessage;
-  @override // Error message if status is failed
-  bool get isPractice;
+  Map<String, RecoveryResponse> get stewardResponses; // pubkey -> response
   @override
-  @JsonKey(ignore: true)
+  String? get errorMessage; // Error message if status is failed
+  @override
+  bool get isPractice;
+
+  /// Create a copy of RecoveryRequest
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$RecoveryRequestImplCopyWith<_$RecoveryRequestImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
