@@ -372,6 +372,12 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
+### Task tracking in Cursor
+
+- **Upstream beads rule** (auto-generated; re-run `bd setup cursor` to refresh): [.cursor/rules/beads.mdc](.cursor/rules/beads.mdc)
+- **Horcrux stage workflows** (feature vs bug, writeback rules): [.cursor/rules/beads-workflow.mdc](.cursor/rules/beads-workflow.mdc)
+- **Label glossary**: [.beads/STAGES.md](.beads/STAGES.md)
+
 ## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
