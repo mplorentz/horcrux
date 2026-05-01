@@ -5,14 +5,33 @@ import 'package:ndk/shared/nips/nip44/nip44.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:meta/meta.dart';
 import 'logger.dart';
+import 'secure_storage_corruption.dart';
 
 /// Login service for managing user's Nostr authentication credentials
 /// Only stores the private key - public key is derived as needed
 class LoginService {
-  static const _storage = FlutterSecureStorage();
+  /// `resetOnError: true` lets the Android plugin wipe its corrupted ciphertext
+  /// when the keystore key is gone (e.g. debug build installed over release,
+  /// or Auto Backup restored prefs without the keystore entry) instead of
+  /// leaving a half-broken state behind.
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(resetOnError: true),
+  );
   static const String _nostrPrivateKeyKey = 'nostr_private_key';
 
   static KeyPair? _cachedKeyPair;
+
+  /// Optional hook invoked from [getStoredNostrKey] when reading the stored
+  /// Nostr private key fails with an error that indicates the encrypted blob
+  /// can never be decrypted again (see [isPermanentSecureStorageReadFailure]).
+  /// Use this to wipe local on-disk caches that would otherwise reference a
+  /// key we can no longer access. The hook runs once per failed read and any
+  /// errors it throws are logged and swallowed.
+  ///
+  /// Transient read failures (e.g. one-shot init races, `KeyStoreException`
+  /// not-found, `NullPointerException`) do **not** invoke the hook so we never
+  /// destroy recoverable data on a flake.
+  Future<void> Function()? onSecureStorageReadFailure;
 
   // Regular constructor - Riverpod manages the singleton behavior
   LoginService();
@@ -127,8 +146,27 @@ class LoginService {
       } else {
         Log.error('No private key found in secure storage');
       }
-    } catch (e) {
-      Log.error('Error reading stored key', e);
+    } catch (e, st) {
+      Log.error('Error reading stored key', e, st);
+      // Only invoke the destructive wipe hook for errors that mean the
+      // ciphertext is unrecoverable (Android Keystore key gone). Transient
+      // failures fall through and let the caller / next read retry; the
+      // FlutterSecureStorage `resetOnError: true` option handles plugin-side
+      // recovery for those.
+      if (isPermanentSecureStorageReadFailure(e)) {
+        final hook = onSecureStorageReadFailure;
+        if (hook != null) {
+          try {
+            await hook();
+          } catch (e2, st2) {
+            Log.error(
+              'onSecureStorageReadFailure hook threw while wiping local caches',
+              e2,
+              st2,
+            );
+          }
+        }
+      }
     }
 
     return null;
