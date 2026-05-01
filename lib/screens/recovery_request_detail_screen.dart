@@ -39,10 +39,35 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         setState(() {
           _currentPubkey = pubkey;
         });
+        final existingResponse = widget.recoveryRequest.stewardResponses[pubkey];
+        if (existingResponse != null && existingResponse.status.isResolved) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showAlreadyRespondedDialog(existingResponse.status);
+          });
+        }
       }
     } catch (e) {
       Log.error('Error loading current pubkey', e);
     }
+  }
+
+  Future<void> _showAlreadyRespondedDialog(RecoveryResponseStatus responseStatus) async {
+    final action = responseStatus == RecoveryResponseStatus.approved ? 'approved' : 'denied';
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Already Responded'),
+        content: Text('You already $action this recovery request.'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _respondToRequest(RecoveryResponseStatus status) async {
@@ -419,7 +444,10 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         ),
 
         // Action buttons (RowButtonStack at bottom)
-        if (request.status.isActive)
+        if (request.status.isActive &&
+            (_currentPubkey == null ||
+                !(widget.recoveryRequest.stewardResponses[_currentPubkey]?.status.isResolved ??
+                    false)))
           RowButtonStack(
             buttons: [
               RowButtonConfig(
