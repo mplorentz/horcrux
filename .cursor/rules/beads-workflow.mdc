@@ -53,6 +53,8 @@ Before you stop or say work is done for this session:
 
 Agents must **not** keep working silently after advancing to a human review stage (`plan-review`, `pre-pr-review`, `pr-review`).
 
+If a change affects visible copy or form validators (especially `lib/widgets/*_form*.dart`), re-run matching `*_golden_test.dart` with `--tags golden`; update goldens via `--update-goldens` only when failures are intentional, then commit PNGs.
+
 ## Closing protocol
 
 Follow project/session rules in AGENTS.md and `bd prime` for `git push`, `bd dolt push`, and bead closure.
