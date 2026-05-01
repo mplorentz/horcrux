@@ -58,6 +58,12 @@ class VaultContentForm extends StatelessWidget {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.person_outline),
               ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter your name';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             Text(
