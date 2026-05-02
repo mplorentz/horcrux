@@ -6,7 +6,11 @@
 # Issue prefix for this repository (used by bd init)
 # If not set, bd init will auto-detect from directory name
 # Example: issue-prefix: "myproject" creates issues like "myproject-1", "myproject-2", etc.
-# issue-prefix: ""
+issue-prefix: "horcrux_app"
+issue_prefix: horcrux_app
+dolt.auto-start: false
+gc.endpoint_origin: inherited_city
+gc.endpoint_status: verified
 
 # Use no-db mode: JSONL-only, no Dolt database
 # When true, bd will use .beads/issues.jsonl as the source of truth

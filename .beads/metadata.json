@@ -1,7 +1,7 @@
 {
-  "database": "dolt",
   "backend": "dolt",
-  "dolt_mode": "embedded",
+  "database": "dolt",
   "dolt_database": "horcrux_app",
+  "dolt_mode": "server",
   "project_id": "a5d45c68-01d5-421d-8bee-a90ec32df60d"
 }
