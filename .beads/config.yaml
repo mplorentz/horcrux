@@ -9,6 +9,9 @@
 issue-prefix: "horcrux_app"
 issue_prefix: horcrux_app
 dolt.auto-start: false
+dolt.host: dolt.lorentz.is
+dolt.port: 3307
+dolt.user: hudson
 gc.endpoint_origin: inherited_city
 gc.endpoint_status: verified
 

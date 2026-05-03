@@ -86,4 +86,3 @@ fastlane/README.md
 # Gas City
 .beads/*
 !.beads/config.yaml
-!.beads/metadata.json
