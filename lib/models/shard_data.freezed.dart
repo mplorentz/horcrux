@@ -47,7 +47,9 @@ mixin _$ShardData {
 // the one whose pubkey/IP/contact-graph leaks to the notifier.
   bool? get pushEnabled => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of ShardData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $ShardDataCopyWith<ShardData> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -87,6 +89,8 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of ShardData
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -225,6 +229,8 @@ class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, 
   __$$ShardDataImplCopyWithImpl(_$ShardDataImpl _value, $Res Function(_$ShardDataImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of ShardData
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -483,7 +489,9 @@ class _$ShardDataImpl extends _ShardData {
         pushEnabled
       ]);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of ShardData
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith =>
@@ -526,18 +534,19 @@ abstract class _ShardData extends ShardData {
   @override
   String get creatorPubkey;
   @override
-  int get createdAt;
-  @override // Recovery metadata (optional fields)
+  int get createdAt; // Recovery metadata (optional fields)
+  @override
   String? get vaultId;
   @override
   String? get vaultName;
   @override
-  List<Map<String, String>>? get stewards;
-  @override // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
-  String? get ownerName;
-  @override // Name of the vault owner (creator)
-  String? get instructions;
-  @override // Instructions for stewards
+  List<Map<String, String>>?
+      get stewards; // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
+  @override
+  String? get ownerName; // Name of the vault owner (creator)
+  @override
+  String? get instructions; // Instructions for stewards
+  @override
   String? get recipientPubkey;
   @override
   bool? get isReceived;
@@ -546,10 +555,10 @@ abstract class _ShardData extends ShardData {
   @override
   String? get nostrEventId;
   @override
-  List<String>? get relayUrls;
-  @override // Relay URLs from backup config for sending confirmations
-  int? get distributionVersion;
-  @override // Version tracking for redistribution detection (nullable for backward compatibility)
+  List<String>? get relayUrls; // Relay URLs from backup config for sending confirmations
+  @override
+  int?
+      get distributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
 // Whether the vault owner has push notifications enabled for this vault.
 //
 // Nullable for backward compatibility: pre-push shards arrive without this
@@ -558,8 +567,12 @@ abstract class _ShardData extends ShardData {
 // owner re-distributes after changing the flag, the new value overrides.
 // The owner is the only party whose opinion matters here because they are
 // the one whose pubkey/IP/contact-graph leaks to the notifier.
-  bool? get pushEnabled;
   @override
-  @JsonKey(ignore: true)
+  bool? get pushEnabled;
+
+  /// Create a copy of ShardData
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith => throw _privateConstructorUsedError;
 }
