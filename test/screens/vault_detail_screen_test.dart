@@ -96,7 +96,6 @@ void main() {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
 
-        final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
         final backupConfig = copyBackupConfig(
           createBackupConfig(
             vaultId: 'test-vault',
@@ -105,9 +104,7 @@ void main() {
             stewards: [ownerSteward, otherSteward],
             relays: ['wss://relay.example.com'],
           ),
-          lastRedistribution: lastRedistributionTime,
-          lastUpdated:
-              lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
+          distributionVersion: 1,
         );
 
         // Vault with content and owner steward configured (after distribution)
@@ -160,7 +157,6 @@ void main() {
       // Only regular stewards, no owner steward
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
 
-      final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
       final backupConfig = copyBackupConfig(
         createBackupConfig(
           vaultId: 'test-vault',
@@ -169,9 +165,7 @@ void main() {
           stewards: [steward1],
           relays: ['wss://relay.example.com'],
         ),
-        lastRedistribution: lastRedistributionTime,
-        lastUpdated:
-            lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
+        distributionVersion: 1,
       );
 
       // Vault with content but no owner steward

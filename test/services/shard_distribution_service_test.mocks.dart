@@ -5,17 +5,16 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:horcrux/models/backup_status.dart' as _i9;
-import 'package:horcrux/models/nostr_kinds.dart' as _i16;
-import 'package:horcrux/models/recovery_request.dart' as _i13;
-import 'package:horcrux/models/shard_data.dart' as _i12;
-import 'package:horcrux/models/steward.dart' as _i10;
-import 'package:horcrux/models/steward_status.dart' as _i11;
+import 'package:horcrux/models/backup_config.dart' as _i9;
+import 'package:horcrux/models/nostr_kinds.dart' as _i15;
+import 'package:horcrux/models/recovery_request.dart' as _i12;
+import 'package:horcrux/models/shard_data.dart' as _i11;
+import 'package:horcrux/models/steward_status.dart' as _i10;
 import 'package:horcrux/models/vault.dart' as _i8;
 import 'package:horcrux/providers/vault_provider.dart' as _i7;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
-import 'package:horcrux/services/login_service.dart' as _i14;
-import 'package:horcrux/services/ndk_service.dart' as _i15;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i16;
+import 'package:horcrux/services/login_service.dart' as _i13;
+import 'package:horcrux/services/ndk_service.dart' as _i14;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
 import 'package:ndk/domain_layer/entities/broadcast_state.dart' as _i6;
@@ -36,8 +35,7 @@ import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeNdkBroadcastResponse_0 extends _i1.SmartFake
-    implements _i2.NdkBroadcastResponse {
+class _FakeNdkBroadcastResponse_0 extends _i1.SmartFake implements _i2.NdkBroadcastResponse {
   _FakeNdkBroadcastResponse_0(
     Object parent,
     Invocation parentInvocation,
@@ -322,8 +320,7 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
       ) as _i4.Future<void>);
 
   @override
-  _i2.NdkResponse requestNostrEvent(_i2.NdkRequest? request) =>
-      (super.noSuchMethod(
+  _i2.NdkResponse requestNostrEvent(_i2.NdkRequest? request) => (super.noSuchMethod(
         Invocation.method(
           #requestNostrEvent,
           [request],
@@ -626,8 +623,7 @@ class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
 /// A class which mocks [NdkBroadcastResponse].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkBroadcastResponse extends _i1.Mock
-    implements _i2.NdkBroadcastResponse {
+class MockNdkBroadcastResponse extends _i1.Mock implements _i2.NdkBroadcastResponse {
   MockNdkBroadcastResponse() {
     _i1.throwOnMissingStub(this);
   }
@@ -642,16 +638,14 @@ class MockNdkBroadcastResponse extends _i1.Mock
       ) as _i2.Nip01Event);
 
   @override
-  _i4.Future<List<_i6.RelayBroadcastResponse>> get broadcastDoneFuture =>
-      (super.noSuchMethod(
+  _i4.Future<List<_i6.RelayBroadcastResponse>> get broadcastDoneFuture => (super.noSuchMethod(
         Invocation.getter(#broadcastDoneFuture),
-        returnValue: _i4.Future<List<_i6.RelayBroadcastResponse>>.value(
-            <_i6.RelayBroadcastResponse>[]),
+        returnValue:
+            _i4.Future<List<_i6.RelayBroadcastResponse>>.value(<_i6.RelayBroadcastResponse>[]),
       ) as _i4.Future<List<_i6.RelayBroadcastResponse>>);
 
   @override
-  _i4.Stream<List<_i6.RelayBroadcastResponse>> get broadcastDone =>
-      (super.noSuchMethod(
+  _i4.Stream<List<_i6.RelayBroadcastResponse>> get broadcastDone => (super.noSuchMethod(
         Invocation.getter(#broadcastDone),
         returnValue: _i4.Stream<List<_i6.RelayBroadcastResponse>>.empty(),
       ) as _i4.Stream<List<_i6.RelayBroadcastResponse>>);
@@ -680,6 +674,15 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
+
+  @override
+  _i4.Stream<_i8.Vault?> watchVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #watchVault,
+          [id],
+        ),
+        returnValue: _i4.Stream<_i8.Vault?>.empty(),
+      ) as _i4.Stream<_i8.Vault?>);
 
   @override
   _i4.Future<List<_i8.Vault>> getAllVaults() => (super.noSuchMethod(
@@ -788,22 +791,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   @override
   _i4.Future<void> updateBackupConfig(
     String? vaultId,
-    ({
-      String? contentHash,
-      DateTime createdAt,
-      int distributionVersion,
-      String? instructions,
-      DateTime? lastContentChange,
-      DateTime? lastRedistribution,
-      DateTime lastUpdated,
-      List<String> relays,
-      String specVersion,
-      _i9.BackupStatus status,
-      List<_i10.Steward> stewards,
-      int threshold,
-      int totalKeys,
-      String vaultId
-    })? config,
+    _i9.BackupConfig? config,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -818,67 +806,19 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i9.BackupStatus status,
-        List<_i10.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<_i9.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
         ),
-        returnValue: _i4.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i9.BackupStatus status,
-              List<_i10.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?>.value(),
-      ) as _i4.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i9.BackupStatus status,
-            List<_i10.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })?>);
+        returnValue: _i4.Future<_i9.BackupConfig?>.value(),
+      ) as _i4.Future<_i9.BackupConfig?>);
 
   @override
   _i4.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i11.StewardStatus? status,
+    required _i10.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -903,7 +843,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   @override
   _i4.Future<void> addShardToVault(
     String? vaultId,
-    _i12.ShardData? shard,
+    _i11.ShardData? shard,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -918,14 +858,13 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i12.ShardData>> getShardsForVault(String? vaultId) =>
-      (super.noSuchMethod(
+  _i4.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i12.ShardData>>.value(<_i12.ShardData>[]),
-      ) as _i4.Future<List<_i12.ShardData>>);
+        returnValue: _i4.Future<List<_i11.ShardData>>.value(<_i11.ShardData>[]),
+      ) as _i4.Future<List<_i11.ShardData>>);
 
   @override
   _i4.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
@@ -959,7 +898,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   @override
   _i4.Future<void> addRecoveryRequestToVault(
     String? vaultId,
-    _i13.RecoveryRequest? request,
+    _i12.RecoveryRequest? request,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -977,7 +916,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   _i4.Future<void> updateRecoveryRequestInVault(
     String? vaultId,
     String? requestId,
-    _i13.RecoveryRequest? updatedRequest,
+    _i12.RecoveryRequest? updatedRequest,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -993,37 +932,33 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i13.RecoveryRequest>> getRecoveryRequestsForVault(
-          String? vaultId) =>
+  _i4.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(
-            <_i13.RecoveryRequest>[]),
-      ) as _i4.Future<List<_i13.RecoveryRequest>>);
+        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
+      ) as _i4.Future<List<_i12.RecoveryRequest>>);
 
   @override
-  _i4.Future<_i13.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
+  _i4.Future<_i12.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getActiveRecoveryRequest,
           [vaultId],
         ),
-        returnValue: _i4.Future<_i13.RecoveryRequest?>.value(),
-      ) as _i4.Future<_i13.RecoveryRequest?>);
+        returnValue: _i4.Future<_i12.RecoveryRequest?>.value(),
+      ) as _i4.Future<_i12.RecoveryRequest?>);
 
   @override
-  _i4.Future<List<_i13.RecoveryRequest>> getAllRecoveryRequests() =>
-      (super.noSuchMethod(
+  _i4.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i4.Future<List<_i13.RecoveryRequest>>.value(
-            <_i13.RecoveryRequest>[]),
-      ) as _i4.Future<List<_i13.RecoveryRequest>>);
+        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
+      ) as _i4.Future<List<_i12.RecoveryRequest>>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -1038,14 +973,13 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
 /// A class which mocks [LoginService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLoginService extends _i1.Mock implements _i14.LoginService {
+class MockLoginService extends _i1.Mock implements _i13.LoginService {
   MockLoginService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  set onSecureStorageReadFailure(
-          _i4.Future<void> Function()? _onSecureStorageReadFailure) =>
+  set onSecureStorageReadFailure(_i4.Future<void> Function()? _onSecureStorageReadFailure) =>
       super.noSuchMethod(
         Invocation.setter(
           #onSecureStorageReadFailure,
@@ -1085,8 +1019,7 @@ class MockLoginService extends _i1.Mock implements _i14.LoginService {
       ) as _i4.Future<_i3.KeyPair>);
 
   @override
-  _i4.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
-      (super.noSuchMethod(
+  _i4.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -1255,7 +1188,7 @@ class MockLoginService extends _i1.Mock implements _i14.LoginService {
 /// A class which mocks [NdkService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkService extends _i1.Mock implements _i15.NdkService {
+class MockNdkService extends _i1.Mock implements _i14.NdkService {
   MockNdkService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1329,8 +1262,7 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
       ) as _i4.Future<_i2.Nip01Event?>);
 
   @override
-  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
+  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
@@ -1339,16 +1271,14 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<({_i16.NostrKind kind, String recoveryRequestId})?>
-      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-          (super.noSuchMethod(
+  _i4.Future<({_i15.NostrKind kind, String recoveryRequestId})?>
+      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
             Invocation.method(
               #resolveRecoveryRequestIdForGiftWrap,
               [giftWrap],
             ),
-            returnValue: _i4.Future<
-                ({_i16.NostrKind kind, String recoveryRequestId})?>.value(),
-          ) as _i4.Future<({_i16.NostrKind kind, String recoveryRequestId})?>);
+            returnValue: _i4.Future<({_i15.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i4.Future<({_i15.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i4.Future<String?> publishRecoveryRequest({
@@ -1444,8 +1374,7 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue:
-            _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+        returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
       ) as _i4.Future<List<_i2.Nip01Event?>>);
 
   @override
@@ -1486,8 +1415,7 @@ class MockNdkService extends _i1.Mock implements _i15.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock
-    implements _i17.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1520,7 +1448,7 @@ class MockHorcruxNotificationService extends _i1.Mock
   @override
   _i4.Future<void> register({
     required String? fcmToken,
-    required _i17.NotifierPlatform? platform,
+    required _i16.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1548,7 +1476,7 @@ class MockHorcruxNotificationService extends _i1.Mock
   @override
   _i4.Future<void> updateToken({
     required String? newToken,
-    required _i17.NotifierPlatform? platform,
+    required _i16.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1564,8 +1492,7 @@ class MockHorcruxNotificationService extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> replaceConsents(List<String>? authorizedSenders) =>
-      (super.noSuchMethod(
+  _i4.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
         Invocation.method(
           #replaceConsents,
           [authorizedSenders],
@@ -1614,7 +1541,7 @@ class MockHorcruxNotificationService extends _i1.Mock
   @override
   _i4.Future<void> tryPushForEvent({
     required _i2.Nip01Event? event,
-    required _i16.NostrKind? kind,
+    required _i15.NostrKind? kind,
     required _i8.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,

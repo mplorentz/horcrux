@@ -47,18 +47,15 @@ void main() {
           reason: 'drift_dev schema dump failed:\n${result.stdout}\n${result.stderr}');
 
       final fresh = File('${tempDir.path}/drift_schema_v1.json');
-      expect(fresh.existsSync(), isTrue,
-          reason: 'drift_dev did not emit drift_schema_v1.json');
+      expect(fresh.existsSync(), isTrue, reason: 'drift_dev did not emit drift_schema_v1.json');
 
-      final committedJson =
-          jsonDecode(await committed.readAsString()) as Object;
+      final committedJson = jsonDecode(await committed.readAsString()) as Object;
       final freshJson = jsonDecode(await fresh.readAsString()) as Object;
 
       expect(
         const JsonEncoder.withIndent('  ').convert(freshJson),
         const JsonEncoder.withIndent('  ').convert(committedJson),
-        reason:
-            'drift schema in code does not match drift_schemas/drift_schema_v1.json. '
+        reason: 'drift schema in code does not match drift_schemas/drift_schema_v1.json. '
             'Either re-dump (after bumping schemaVersion + adding a migration) '
             'or revert the unintended schema change.',
       );

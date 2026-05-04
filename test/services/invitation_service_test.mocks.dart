@@ -3,24 +3,25 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i6;
+import 'dart:async' as _i7;
 
-import 'package:horcrux/models/backup_status.dart' as _i12;
-import 'package:horcrux/models/nostr_kinds.dart' as _i7;
-import 'package:horcrux/models/recovery_request.dart' as _i16;
-import 'package:horcrux/models/relay_configuration.dart' as _i18;
-import 'package:horcrux/models/shard_data.dart' as _i15;
-import 'package:horcrux/models/steward.dart' as _i13;
-import 'package:horcrux/models/steward_status.dart' as _i14;
-import 'package:horcrux/models/vault.dart' as _i11;
-import 'package:horcrux/providers/vault_provider.dart' as _i10;
-import 'package:horcrux/services/backup_service.dart' as _i19;
-import 'package:horcrux/services/invitation_sending_service.dart' as _i17;
-import 'package:horcrux/services/login_service.dart' as _i8;
+import 'package:horcrux/models/backup_config.dart' as _i6;
+import 'package:horcrux/models/backup_status.dart' as _i20;
+import 'package:horcrux/models/nostr_kinds.dart' as _i8;
+import 'package:horcrux/models/recovery_request.dart' as _i15;
+import 'package:horcrux/models/relay_configuration.dart' as _i17;
+import 'package:horcrux/models/shard_data.dart' as _i14;
+import 'package:horcrux/models/steward.dart' as _i19;
+import 'package:horcrux/models/steward_status.dart' as _i13;
+import 'package:horcrux/models/vault.dart' as _i12;
+import 'package:horcrux/providers/vault_provider.dart' as _i11;
+import 'package:horcrux/services/backup_service.dart' as _i18;
+import 'package:horcrux/services/invitation_sending_service.dart' as _i16;
+import 'package:horcrux/services/login_service.dart' as _i9;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
 import 'package:horcrux/services/relay_scan_service.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i9;
+import 'package:mockito/src/dummies.dart' as _i10;
 import 'package:ndk/ndk.dart' as _i2;
 import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i3;
 
@@ -68,8 +69,7 @@ class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
         );
 }
 
-class _FakeScanningStatus_3 extends _i1.SmartFake
-    implements _i5.ScanningStatus {
+class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus {
   _FakeScanningStatus_3(
     Object parent,
     Invocation parentInvocation,
@@ -79,8 +79,8 @@ class _FakeScanningStatus_3 extends _i1.SmartFake
         );
 }
 
-class _FakeDateTime_4 extends _i1.SmartFake implements DateTime {
-  _FakeDateTime_4(
+class _FakeBackupConfig_4 extends _i1.SmartFake implements _i6.BackupConfig {
+  _FakeBackupConfig_4(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -104,37 +104,37 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as bool);
 
   @override
-  _i6.Future<void> initialize() => (super.noSuchMethod(
+  _i7.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> addRelay(String? relayUrl) => (super.noSuchMethod(
+  _i7.Future<void> addRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #addRelay,
           [relayUrl],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
+  _i7.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #removeRelay,
           [relayUrl],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> processGiftWrapFromForegroundPush(
+  _i7.Future<void> processGiftWrapFromForegroundPush(
     _i2.Nip01Event? event, {
     bool? allowLocalNotification = true,
   }) =>
@@ -144,12 +144,12 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
           [event],
           {#allowLocalNotification: allowLocalNotification},
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<_i2.Nip01Event?> fetchGiftWrapByIdForPush({
+  _i7.Future<_i2.Nip01Event?> fetchGiftWrapByIdForPush({
     required String? eventIdHex,
     List<String>? relayHints,
   }) =>
@@ -162,33 +162,31 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i6.Future<_i2.Nip01Event?>.value(),
-      ) as _i6.Future<_i2.Nip01Event?>);
+        returnValue: _i7.Future<_i2.Nip01Event?>.value(),
+      ) as _i7.Future<_i2.Nip01Event?>);
 
   @override
-  _i6.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
+  _i7.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<({_i7.NostrKind kind, String recoveryRequestId})?>
-      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-          (super.noSuchMethod(
-            Invocation.method(
-              #resolveRecoveryRequestIdForGiftWrap,
-              [giftWrap],
-            ),
-            returnValue: _i6.Future<
-                ({_i7.NostrKind kind, String recoveryRequestId})?>.value(),
-          ) as _i6.Future<({_i7.NostrKind kind, String recoveryRequestId})?>);
+  _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i2.Nip01Event? giftWrap) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resolveRecoveryRequestIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?>);
 
   @override
-  _i6.Future<String?> publishRecoveryRequest({
+  _i7.Future<String?> publishRecoveryRequest({
     required String? vaultId,
     required List<String>? stewardPubkeys,
     DateTime? expiresAt,
@@ -203,18 +201,18 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #expiresAt: expiresAt,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<void> closeSubscriptions() => (super.noSuchMethod(
+  _i7.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeSubscriptions,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
   List<String> getActiveRelays() => (super.noSuchMethod(
@@ -226,16 +224,16 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as List<String>);
 
   @override
-  _i6.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
+  _i7.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentPubkey,
           [],
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<_i2.Nip01Event?> publishEncryptedEvent({
+  _i7.Future<_i2.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -256,11 +254,11 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue: _i6.Future<_i2.Nip01Event?>.value(),
-      ) as _i6.Future<_i2.Nip01Event?>);
+        returnValue: _i7.Future<_i2.Nip01Event?>.value(),
+      ) as _i7.Future<_i2.Nip01Event?>);
 
   @override
-  _i6.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
+  _i7.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -281,24 +279,23 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #customPubkey: customPubkey,
           },
         ),
-        returnValue:
-            _i6.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
-      ) as _i6.Future<List<_i2.Nip01Event?>>);
+        returnValue: _i7.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+      ) as _i7.Future<List<_i2.Nip01Event?>>);
 
   @override
-  _i6.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
+  _i7.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
         Invocation.method(
           #getNdk,
           [],
         ),
-        returnValue: _i6.Future<_i2.Ndk>.value(_FakeNdk_0(
+        returnValue: _i7.Future<_i2.Ndk>.value(_FakeNdk_0(
           this,
           Invocation.method(
             #getNdk,
             [],
           ),
         )),
-      ) as _i6.Future<_i2.Ndk>);
+      ) as _i7.Future<_i2.Ndk>);
 
   @override
   void setNdkForTesting(_i2.Ndk? ndk) => super.noSuchMethod(
@@ -310,27 +307,26 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       );
 
   @override
-  _i6.Future<void> dispose() => (super.noSuchMethod(
+  _i7.Future<void> dispose() => (super.noSuchMethod(
         Invocation.method(
           #dispose,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 }
 
 /// A class which mocks [LoginService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLoginService extends _i1.Mock implements _i8.LoginService {
+class MockLoginService extends _i1.Mock implements _i9.LoginService {
   MockLoginService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  set onSecureStorageReadFailure(
-          _i6.Future<void> Function()? _onSecureStorageReadFailure) =>
+  set onSecureStorageReadFailure(_i7.Future<void> Function()? _onSecureStorageReadFailure) =>
       super.noSuchMethod(
         Invocation.setter(
           #onSecureStorageReadFailure,
@@ -340,132 +336,131 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
       );
 
   @override
-  _i6.Future<_i3.KeyPair> generateAndStoreNostrKey() => (super.noSuchMethod(
+  _i7.Future<_i3.KeyPair> generateAndStoreNostrKey() => (super.noSuchMethod(
         Invocation.method(
           #generateAndStoreNostrKey,
           [],
         ),
-        returnValue: _i6.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
+        returnValue: _i7.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
           this,
           Invocation.method(
             #generateAndStoreNostrKey,
             [],
           ),
         )),
-      ) as _i6.Future<_i3.KeyPair>);
+      ) as _i7.Future<_i3.KeyPair>);
 
   @override
-  _i6.Future<_i3.KeyPair> importNsecKey(String? nsec) => (super.noSuchMethod(
+  _i7.Future<_i3.KeyPair> importNsecKey(String? nsec) => (super.noSuchMethod(
         Invocation.method(
           #importNsecKey,
           [nsec],
         ),
-        returnValue: _i6.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
+        returnValue: _i7.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
           this,
           Invocation.method(
             #importNsecKey,
             [nsec],
           ),
         )),
-      ) as _i6.Future<_i3.KeyPair>);
+      ) as _i7.Future<_i3.KeyPair>);
 
   @override
-  _i6.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
-      (super.noSuchMethod(
+  _i7.Future<_i3.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
         ),
-        returnValue: _i6.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
+        returnValue: _i7.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
           this,
           Invocation.method(
             #importHexPrivateKey,
             [hexPrivateKey],
           ),
         )),
-      ) as _i6.Future<_i3.KeyPair>);
+      ) as _i7.Future<_i3.KeyPair>);
 
   @override
-  _i6.Future<_i3.KeyPair?> getStoredNostrKey() => (super.noSuchMethod(
+  _i7.Future<_i3.KeyPair?> getStoredNostrKey() => (super.noSuchMethod(
         Invocation.method(
           #getStoredNostrKey,
           [],
         ),
-        returnValue: _i6.Future<_i3.KeyPair?>.value(),
-      ) as _i6.Future<_i3.KeyPair?>);
+        returnValue: _i7.Future<_i3.KeyPair?>.value(),
+      ) as _i7.Future<_i3.KeyPair?>);
 
   @override
-  _i6.Future<_i3.KeyPair> initializeKey() => (super.noSuchMethod(
+  _i7.Future<_i3.KeyPair> initializeKey() => (super.noSuchMethod(
         Invocation.method(
           #initializeKey,
           [],
         ),
-        returnValue: _i6.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
+        returnValue: _i7.Future<_i3.KeyPair>.value(_FakeKeyPair_1(
           this,
           Invocation.method(
             #initializeKey,
             [],
           ),
         )),
-      ) as _i6.Future<_i3.KeyPair>);
+      ) as _i7.Future<_i3.KeyPair>);
 
   @override
-  _i6.Future<String?> getCurrentPublicKey() => (super.noSuchMethod(
+  _i7.Future<String?> getCurrentPublicKey() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentPublicKey,
           [],
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> getCurrentPublicKeyBech32() => (super.noSuchMethod(
+  _i7.Future<String?> getCurrentPublicKeyBech32() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentPublicKeyBech32,
           [],
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String> encryptText(String? plaintext) => (super.noSuchMethod(
+  _i7.Future<String> encryptText(String? plaintext) => (super.noSuchMethod(
         Invocation.method(
           #encryptText,
           [plaintext],
         ),
-        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
           this,
           Invocation.method(
             #encryptText,
             [plaintext],
           ),
         )),
-      ) as _i6.Future<String>);
+      ) as _i7.Future<String>);
 
   @override
-  _i6.Future<String> decryptText(String? encryptedText) => (super.noSuchMethod(
+  _i7.Future<String> decryptText(String? encryptedText) => (super.noSuchMethod(
         Invocation.method(
           #decryptText,
           [encryptedText],
         ),
-        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
           this,
           Invocation.method(
             #decryptText,
             [encryptedText],
           ),
         )),
-      ) as _i6.Future<String>);
+      ) as _i7.Future<String>);
 
   @override
-  _i6.Future<void> clearStoredKeys() => (super.noSuchMethod(
+  _i7.Future<void> clearStoredKeys() => (super.noSuchMethod(
         Invocation.method(
           #clearStoredKeys,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
   void resetCacheForTest() => super.noSuchMethod(
@@ -483,7 +478,7 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
       )) as String?);
 
   @override
-  _i6.Future<String> encryptForRecipient({
+  _i7.Future<String> encryptForRecipient({
     required String? plaintext,
     required String? recipientPubkey,
   }) =>
@@ -496,7 +491,7 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
             #recipientPubkey: recipientPubkey,
           },
         ),
-        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
           this,
           Invocation.method(
             #encryptForRecipient,
@@ -507,10 +502,10 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
             },
           ),
         )),
-      ) as _i6.Future<String>);
+      ) as _i7.Future<String>);
 
   @override
-  _i6.Future<String> decryptFromSender({
+  _i7.Future<String> decryptFromSender({
     required String? encryptedText,
     required String? senderPubkey,
   }) =>
@@ -523,7 +518,7 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
             #senderPubkey: senderPubkey,
           },
         ),
-        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
           this,
           Invocation.method(
             #decryptFromSender,
@@ -534,73 +529,82 @@ class MockLoginService extends _i1.Mock implements _i8.LoginService {
             },
           ),
         )),
-      ) as _i6.Future<String>);
+      ) as _i7.Future<String>);
 }
 
 /// A class which mocks [VaultRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
+class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   MockVaultRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i6.Stream<List<_i11.Vault>> get vaultsStream => (super.noSuchMethod(
+  _i7.Stream<List<_i12.Vault>> get vaultsStream => (super.noSuchMethod(
         Invocation.getter(#vaultsStream),
-        returnValue: _i6.Stream<List<_i11.Vault>>.empty(),
-      ) as _i6.Stream<List<_i11.Vault>>);
+        returnValue: _i7.Stream<List<_i12.Vault>>.empty(),
+      ) as _i7.Stream<List<_i12.Vault>>);
 
   @override
-  _i6.Future<void> initialize() => (super.noSuchMethod(
+  _i7.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<List<_i11.Vault>> getAllVaults() => (super.noSuchMethod(
+  _i7.Stream<_i12.Vault?> watchVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #watchVault,
+          [id],
+        ),
+        returnValue: _i7.Stream<_i12.Vault?>.empty(),
+      ) as _i7.Stream<_i12.Vault?>);
+
+  @override
+  _i7.Future<List<_i12.Vault>> getAllVaults() => (super.noSuchMethod(
         Invocation.method(
           #getAllVaults,
           [],
         ),
-        returnValue: _i6.Future<List<_i11.Vault>>.value(<_i11.Vault>[]),
-      ) as _i6.Future<List<_i11.Vault>>);
+        returnValue: _i7.Future<List<_i12.Vault>>.value(<_i12.Vault>[]),
+      ) as _i7.Future<List<_i12.Vault>>);
 
   @override
-  _i6.Future<_i11.Vault?> getVault(String? id) => (super.noSuchMethod(
+  _i7.Future<_i12.Vault?> getVault(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getVault,
           [id],
         ),
-        returnValue: _i6.Future<_i11.Vault?>.value(),
-      ) as _i6.Future<_i11.Vault?>);
+        returnValue: _i7.Future<_i12.Vault?>.value(),
+      ) as _i7.Future<_i12.Vault?>);
 
   @override
-  _i6.Future<void> saveVault(_i11.Vault? vault) => (super.noSuchMethod(
+  _i7.Future<void> saveVault(_i12.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #saveVault,
           [vault],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> addVault(_i11.Vault? vault) => (super.noSuchMethod(
+  _i7.Future<void> addVault(_i12.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #addVault,
           [vault],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> updateVault(
+  _i7.Future<void> updateVault(
     String? id,
     String? name,
     String? content,
@@ -614,12 +618,12 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             content,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> setPushEnabled(
+  _i7.Future<void> setPushEnabled(
     String? vaultId,
     bool? enabled,
   ) =>
@@ -631,59 +635,44 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             enabled,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> deleteVault(String? id) => (super.noSuchMethod(
+  _i7.Future<void> deleteVault(String? id) => (super.noSuchMethod(
         Invocation.method(
           #deleteVault,
           [id],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> clearAll() => (super.noSuchMethod(
+  _i7.Future<void> clearAll() => (super.noSuchMethod(
         Invocation.method(
           #clearAll,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> refresh() => (super.noSuchMethod(
+  _i7.Future<void> refresh() => (super.noSuchMethod(
         Invocation.method(
           #refresh,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> updateBackupConfig(
+  _i7.Future<void> updateBackupConfig(
     String? vaultId,
-    ({
-      String? contentHash,
-      DateTime createdAt,
-      int distributionVersion,
-      String? instructions,
-      DateTime? lastContentChange,
-      DateTime? lastRedistribution,
-      DateTime lastUpdated,
-      List<String> relays,
-      String specVersion,
-      _i12.BackupStatus status,
-      List<_i13.Steward> stewards,
-      int threshold,
-      int totalKeys,
-      String vaultId
-    })? config,
+    _i6.BackupConfig? config,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -693,72 +682,24 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             config,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<_i6.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?>.value(),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })?>);
+        returnValue: _i7.Future<_i6.BackupConfig?>.value(),
+      ) as _i7.Future<_i6.BackupConfig?>);
 
   @override
-  _i6.Future<void> updateStewardStatus({
+  _i7.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i14.StewardStatus? status,
+    required _i13.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -776,14 +717,14 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             #acknowledgedDistributionVersion: acknowledgedDistributionVersion,
           },
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> addShardToVault(
+  _i7.Future<void> addShardToVault(
     String? vaultId,
-    _i15.ShardData? shard,
+    _i14.ShardData? shard,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -793,53 +734,52 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             shard,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<List<_i15.ShardData>> getShardsForVault(String? vaultId) =>
-      (super.noSuchMethod(
+  _i7.Future<List<_i14.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
-      ) as _i6.Future<List<_i15.ShardData>>);
+        returnValue: _i7.Future<List<_i14.ShardData>>.value(<_i14.ShardData>[]),
+      ) as _i7.Future<List<_i14.ShardData>>);
 
   @override
-  _i6.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #clearShardsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> deleteVaultContent(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<void> deleteVaultContent(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #deleteVaultContent,
           [vaultId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<bool> isKeyHolderForVault(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<bool> isKeyHolderForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #isKeyHolderForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<bool>.value(false),
-      ) as _i6.Future<bool>);
+        returnValue: _i7.Future<bool>.value(false),
+      ) as _i7.Future<bool>);
 
   @override
-  _i6.Future<void> addRecoveryRequestToVault(
+  _i7.Future<void> addRecoveryRequestToVault(
     String? vaultId,
-    _i16.RecoveryRequest? request,
+    _i15.RecoveryRequest? request,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -849,15 +789,15 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             request,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> updateRecoveryRequestInVault(
+  _i7.Future<void> updateRecoveryRequestInVault(
     String? vaultId,
     String? requestId,
-    _i16.RecoveryRequest? updatedRequest,
+    _i15.RecoveryRequest? updatedRequest,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -868,42 +808,38 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
             updatedRequest,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<List<_i16.RecoveryRequest>> getRecoveryRequestsForVault(
-          String? vaultId) =>
+  _i7.Future<List<_i15.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i16.RecoveryRequest>>.value(
-            <_i16.RecoveryRequest>[]),
-      ) as _i6.Future<List<_i16.RecoveryRequest>>);
+        returnValue: _i7.Future<List<_i15.RecoveryRequest>>.value(<_i15.RecoveryRequest>[]),
+      ) as _i7.Future<List<_i15.RecoveryRequest>>);
 
   @override
-  _i6.Future<_i16.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
+  _i7.Future<_i15.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getActiveRecoveryRequest,
           [vaultId],
         ),
-        returnValue: _i6.Future<_i16.RecoveryRequest?>.value(),
-      ) as _i6.Future<_i16.RecoveryRequest?>);
+        returnValue: _i7.Future<_i15.RecoveryRequest?>.value(),
+      ) as _i7.Future<_i15.RecoveryRequest?>);
 
   @override
-  _i6.Future<List<_i16.RecoveryRequest>> getAllRecoveryRequests() =>
-      (super.noSuchMethod(
+  _i7.Future<List<_i15.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i6.Future<List<_i16.RecoveryRequest>>.value(
-            <_i16.RecoveryRequest>[]),
-      ) as _i6.Future<List<_i16.RecoveryRequest>>);
+        returnValue: _i7.Future<List<_i15.RecoveryRequest>>.value(<_i15.RecoveryRequest>[]),
+      ) as _i7.Future<List<_i15.RecoveryRequest>>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -918,8 +854,7 @@ class MockVaultRepository extends _i1.Mock implements _i10.VaultRepository {
 /// A class which mocks [InvitationSendingService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockInvitationSendingService extends _i1.Mock
-    implements _i17.InvitationSendingService {
+class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSendingService {
   MockInvitationSendingService() {
     _i1.throwOnMissingStub(this);
   }
@@ -934,7 +869,7 @@ class MockInvitationSendingService extends _i1.Mock
       ) as _i4.NdkService);
 
   @override
-  _i6.Future<String?> sendInvitationAcceptanceEvent({
+  _i7.Future<String?> sendInvitationAcceptanceEvent({
     required String? inviteCode,
     required String? ownerPubkey,
     required List<String>? relayUrls,
@@ -949,11 +884,11 @@ class MockInvitationSendingService extends _i1.Mock
             #relayUrls: relayUrls,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> sendDenialEvent({
+  _i7.Future<String?> sendDenialEvent({
     required String? inviteCode,
     required String? ownerPubkey,
     required List<String>? relayUrls,
@@ -970,11 +905,11 @@ class MockInvitationSendingService extends _i1.Mock
             #reason: reason,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> sendShardConfirmationEvent({
+  _i7.Future<String?> sendShardConfirmationEvent({
     required String? vaultId,
     required int? shardIndex,
     required String? ownerPubkey,
@@ -993,11 +928,11 @@ class MockInvitationSendingService extends _i1.Mock
             #distributionVersion: distributionVersion,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> sendShardErrorEvent({
+  _i7.Future<String?> sendShardErrorEvent({
     required String? vaultId,
     required int? shardIndex,
     required String? ownerPubkey,
@@ -1016,11 +951,11 @@ class MockInvitationSendingService extends _i1.Mock
             #error: error,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> sendInvitationInvalidEvent({
+  _i7.Future<String?> sendInvitationInvalidEvent({
     required String? inviteCode,
     required String? inviteePubkey,
     required List<String>? relayUrls,
@@ -1037,11 +972,11 @@ class MockInvitationSendingService extends _i1.Mock
             #reason: reason,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 
   @override
-  _i6.Future<String?> sendKeyHolderRemovalEvent({
+  _i7.Future<String?> sendKeyHolderRemovalEvent({
     required String? vaultId,
     required String? removedStewardPubkey,
     required List<String>? relayUrls,
@@ -1056,8 +991,8 @@ class MockInvitationSendingService extends _i1.Mock
             #relayUrls: relayUrls,
           },
         ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
+        returnValue: _i7.Future<String?>.value(),
+      ) as _i7.Future<String?>);
 }
 
 /// A class which mocks [RelayScanService].
@@ -1078,199 +1013,176 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i4.NdkService);
 
   @override
-  _i6.Future<void> initialize() => (super.noSuchMethod(
+  _i7.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<List<_i18.RelayConfiguration>> getRelayConfigurations(
-          {bool? enabledOnly}) =>
+  _i7.Future<List<_i17.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i6.Future<List<_i18.RelayConfiguration>>.value(
-            <_i18.RelayConfiguration>[]),
-      ) as _i6.Future<List<_i18.RelayConfiguration>>);
+        returnValue: _i7.Future<List<_i17.RelayConfiguration>>.value(<_i17.RelayConfiguration>[]),
+      ) as _i7.Future<List<_i17.RelayConfiguration>>);
 
   @override
-  _i6.Future<_i18.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
+  _i7.Future<_i17.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i6.Future<_i18.RelayConfiguration?>.value(),
-      ) as _i6.Future<_i18.RelayConfiguration?>);
+        returnValue: _i7.Future<_i17.RelayConfiguration?>.value(),
+      ) as _i7.Future<_i17.RelayConfiguration?>);
 
   @override
-  _i6.Future<void> addRelayConfiguration(_i18.RelayConfiguration? relay) =>
-      (super.noSuchMethod(
+  _i7.Future<void> addRelayConfiguration(_i17.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> updateRelayConfiguration(_i18.RelayConfiguration? relay) =>
-      (super.noSuchMethod(
+  _i7.Future<void> updateRelayConfiguration(_i17.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> removeRelayConfiguration(String? relayId) =>
-      (super.noSuchMethod(
+  _i7.Future<void> removeRelayConfiguration(String? relayId) => (super.noSuchMethod(
         Invocation.method(
           #removeRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> startRelayScanning({Duration? scanInterval}) =>
-      (super.noSuchMethod(
+  _i7.Future<void> startRelayScanning({Duration? scanInterval}) => (super.noSuchMethod(
         Invocation.method(
           #startRelayScanning,
           [],
           {#scanInterval: scanInterval},
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> stopRelayScanning() => (super.noSuchMethod(
+  _i7.Future<void> stopRelayScanning() => (super.noSuchMethod(
         Invocation.method(
           #stopRelayScanning,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<bool> isScanningActive() => (super.noSuchMethod(
+  _i7.Future<bool> isScanningActive() => (super.noSuchMethod(
         Invocation.method(
           #isScanningActive,
           [],
         ),
-        returnValue: _i6.Future<bool>.value(false),
-      ) as _i6.Future<bool>);
+        returnValue: _i7.Future<bool>.value(false),
+      ) as _i7.Future<bool>);
 
   @override
-  _i6.Future<_i5.ScanningStatus> getScanningStatus() => (super.noSuchMethod(
+  _i7.Future<_i5.ScanningStatus> getScanningStatus() => (super.noSuchMethod(
         Invocation.method(
           #getScanningStatus,
           [],
         ),
-        returnValue: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValue: _i7.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
           this,
           Invocation.method(
             #getScanningStatus,
             [],
           ),
         )),
-      ) as _i6.Future<_i5.ScanningStatus>);
+      ) as _i7.Future<_i5.ScanningStatus>);
 
   @override
-  _i6.Future<void> scanNow() => (super.noSuchMethod(
+  _i7.Future<void> scanNow() => (super.noSuchMethod(
         Invocation.method(
           #scanNow,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> clearAll() => (super.noSuchMethod(
+  _i7.Future<void> clearAll() => (super.noSuchMethod(
         Invocation.method(
           #clearAll,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> refresh() => (super.noSuchMethod(
+  _i7.Future<void> refresh() => (super.noSuchMethod(
         Invocation.method(
           #refresh,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> syncRelaysFromUrls(List<String>? relayUrls) =>
-      (super.noSuchMethod(
+  _i7.Future<void> syncRelaysFromUrls(List<String>? relayUrls) => (super.noSuchMethod(
         Invocation.method(
           #syncRelaysFromUrls,
           [relayUrls],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> ensureScanningStarted() => (super.noSuchMethod(
+  _i7.Future<void> ensureScanningStarted() => (super.noSuchMethod(
         Invocation.method(
           #ensureScanningStarted,
           [],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 }
 
 /// A class which mocks [BackupService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBackupService extends _i1.Mock implements _i19.BackupService {
+class MockBackupService extends _i1.Mock implements _i18.BackupService {
   MockBackupService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })> createBackupConfiguration({
+  _i7.Future<_i6.BackupConfig> createBackupConfiguration({
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i13.Steward>? stewards,
+    required List<_i19.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
     String? contentHash,
@@ -1289,287 +1201,64 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #contentHash: contentHash,
           },
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })>.value((
-          contentHash: null,
-          createdAt: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #createBackupConfiguration,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-                #contentHash: contentHash,
-              },
-            ),
+        returnValue: _i7.Future<_i6.BackupConfig>.value(_FakeBackupConfig_4(
+          this,
+          Invocation.method(
+            #createBackupConfiguration,
+            [],
+            {
+              #vaultId: vaultId,
+              #threshold: threshold,
+              #totalKeys: totalKeys,
+              #stewards: stewards,
+              #relays: relays,
+              #instructions: instructions,
+              #contentHash: contentHash,
+            },
           ),
-          distributionVersion: 0,
-          instructions: null,
-          lastContentChange: null,
-          lastRedistribution: null,
-          lastUpdated: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #createBackupConfiguration,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-                #contentHash: contentHash,
-              },
-            ),
-          ),
-          relays: <String>[],
-          specVersion: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #createBackupConfiguration,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-                #contentHash: contentHash,
-              },
-            ),
-          ),
-          status: _i12.BackupStatus.pending,
-          stewards: <_i13.Steward>[],
-          threshold: 0,
-          totalKeys: 0,
-          vaultId: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #createBackupConfiguration,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-                #contentHash: contentHash,
-              },
-            ),
-          )
         )),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })>);
+      ) as _i7.Future<_i6.BackupConfig>);
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<_i6.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?>.value(),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })?>);
+        returnValue: _i7.Future<_i6.BackupConfig?>.value(),
+      ) as _i7.Future<_i6.BackupConfig?>);
 
   @override
-  _i6.Future<
-      List<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })>> getAllBackupConfigs() => (super.noSuchMethod(
+  _i7.Future<List<_i6.BackupConfig>> getAllBackupConfigs() => (super.noSuchMethod(
         Invocation.method(
           #getAllBackupConfigs,
           [],
         ),
-        returnValue: _i6.Future<
-            List<
-                ({
-                  String? contentHash,
-                  DateTime createdAt,
-                  int distributionVersion,
-                  String? instructions,
-                  DateTime? lastContentChange,
-                  DateTime? lastRedistribution,
-                  DateTime lastUpdated,
-                  List<String> relays,
-                  String specVersion,
-                  _i12.BackupStatus status,
-                  List<_i13.Steward> stewards,
-                  int threshold,
-                  int totalKeys,
-                  String vaultId
-                })>>.value(<({
-          String? contentHash,
-          DateTime createdAt,
-          int distributionVersion,
-          String? instructions,
-          DateTime? lastContentChange,
-          DateTime? lastRedistribution,
-          DateTime lastUpdated,
-          List<String> relays,
-          String specVersion,
-          _i12.BackupStatus status,
-          List<_i13.Steward> stewards,
-          int threshold,
-          int totalKeys,
-          String vaultId
-        })>[]),
-      ) as _i6.Future<
-          List<
-              ({
-                String? contentHash,
-                DateTime createdAt,
-                int distributionVersion,
-                String? instructions,
-                DateTime? lastContentChange,
-                DateTime? lastRedistribution,
-                DateTime lastUpdated,
-                List<String> relays,
-                String specVersion,
-                _i12.BackupStatus status,
-                List<_i13.Steward> stewards,
-                int threshold,
-                int totalKeys,
-                String vaultId
-              })>>);
+        returnValue: _i7.Future<List<_i6.BackupConfig>>.value(<_i6.BackupConfig>[]),
+      ) as _i7.Future<List<_i6.BackupConfig>>);
 
   @override
-  _i6.Future<void> updateBackupConfig(
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })? config) =>
-      (super.noSuchMethod(
+  _i7.Future<void> updateBackupConfig(_i6.BackupConfig? config) => (super.noSuchMethod(
         Invocation.method(
           #updateBackupConfig,
           [config],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> deleteBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<void> deleteBackupConfig(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #deleteBackupConfig,
           [vaultId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<List<_i15.ShardData>> generateShamirShares({
+  _i7.Future<List<_i14.ShardData>> generateShamirShares({
     required String? content,
     required int? threshold,
     required int? totalShards,
@@ -1598,19 +1287,18 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #pushEnabled: pushEnabled,
           },
         ),
-        returnValue: _i6.Future<List<_i15.ShardData>>.value(<_i15.ShardData>[]),
-      ) as _i6.Future<List<_i15.ShardData>>);
+        returnValue: _i7.Future<List<_i14.ShardData>>.value(<_i14.ShardData>[]),
+      ) as _i7.Future<List<_i14.ShardData>>);
 
   @override
-  _i6.Future<String> reconstructFromShares(
-          {required List<_i15.ShardData>? shares}) =>
+  _i7.Future<String> reconstructFromShares({required List<_i14.ShardData>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,
           [],
           {#shares: shares},
         ),
-        returnValue: _i6.Future<String>.value(_i9.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
           this,
           Invocation.method(
             #reconstructFromShares,
@@ -1618,12 +1306,12 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             {#shares: shares},
           ),
         )),
-      ) as _i6.Future<String>);
+      ) as _i7.Future<String>);
 
   @override
-  _i6.Future<void> updateBackupStatus(
+  _i7.Future<void> updateBackupStatus(
     String? vaultId,
-    _i12.BackupStatus? status,
+    _i20.BackupStatus? status,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1633,15 +1321,15 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             status,
           ],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> updateStewardStatus({
+  _i7.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i14.StewardStatus? status,
+    required _i13.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
   }) =>
@@ -1657,40 +1345,24 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #acknowledgmentEventId: acknowledgmentEventId,
           },
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<bool> isBackupReady(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<bool> isBackupReady(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #isBackupReady,
           [vaultId],
         ),
-        returnValue: _i6.Future<bool>.value(false),
-      ) as _i6.Future<bool>);
+        returnValue: _i7.Future<bool>.value(false),
+      ) as _i7.Future<bool>);
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })> mergeBackupConfig({
+  _i7.Future<_i6.BackupConfig> mergeBackupConfig({
     required String? vaultId,
     int? threshold,
-    List<_i13.Steward>? stewards,
+    List<_i19.Steward>? stewards,
     List<String>? relays,
     String? instructions,
   }) =>
@@ -1706,164 +1378,60 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #instructions: instructions,
           },
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })>.value((
-          contentHash: null,
-          createdAt: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #mergeBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
+        returnValue: _i7.Future<_i6.BackupConfig>.value(_FakeBackupConfig_4(
+          this,
+          Invocation.method(
+            #mergeBackupConfig,
+            [],
+            {
+              #vaultId: vaultId,
+              #threshold: threshold,
+              #stewards: stewards,
+              #relays: relays,
+              #instructions: instructions,
+            },
           ),
-          distributionVersion: 0,
-          instructions: null,
-          lastContentChange: null,
-          lastRedistribution: null,
-          lastUpdated: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #mergeBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          ),
-          relays: <String>[],
-          specVersion: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #mergeBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          ),
-          status: _i12.BackupStatus.pending,
-          stewards: <_i13.Steward>[],
-          threshold: 0,
-          totalKeys: 0,
-          vaultId: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #mergeBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          )
         )),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })>);
+      ) as _i7.Future<_i6.BackupConfig>);
 
   @override
-  _i6.Future<void> handleContentChange(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<void> handleContentChange(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #handleContentChange,
           [vaultId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> redistributeForPushPreferenceChange(
-          {required String? vaultId}) =>
+  _i7.Future<void> redistributeForPushPreferenceChange({required String? vaultId}) =>
       (super.noSuchMethod(
         Invocation.method(
           #redistributeForPushPreferenceChange,
           [],
           {#vaultId: vaultId},
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<void> distributeKeysIfNecessary(String? vaultId) =>
-      (super.noSuchMethod(
+  _i7.Future<void> distributeKeysIfNecessary(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #distributeKeysIfNecessary,
           [vaultId],
         ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })> saveBackupConfig({
+  _i7.Future<_i6.BackupConfig> saveBackupConfig({
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i13.Steward>? stewards,
+    required List<_i19.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
   }) =>
@@ -1880,212 +1448,38 @@ class MockBackupService extends _i1.Mock implements _i19.BackupService {
             #instructions: instructions,
           },
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })>.value((
-          contentHash: null,
-          createdAt: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #saveBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
+        returnValue: _i7.Future<_i6.BackupConfig>.value(_FakeBackupConfig_4(
+          this,
+          Invocation.method(
+            #saveBackupConfig,
+            [],
+            {
+              #vaultId: vaultId,
+              #threshold: threshold,
+              #totalKeys: totalKeys,
+              #stewards: stewards,
+              #relays: relays,
+              #instructions: instructions,
+            },
           ),
-          distributionVersion: 0,
-          instructions: null,
-          lastContentChange: null,
-          lastRedistribution: null,
-          lastUpdated: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #saveBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          ),
-          relays: <String>[],
-          specVersion: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #saveBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          ),
-          status: _i12.BackupStatus.pending,
-          stewards: <_i13.Steward>[],
-          threshold: 0,
-          totalKeys: 0,
-          vaultId: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #saveBackupConfig,
-              [],
-              {
-                #vaultId: vaultId,
-                #threshold: threshold,
-                #totalKeys: totalKeys,
-                #stewards: stewards,
-                #relays: relays,
-                #instructions: instructions,
-              },
-            ),
-          )
         )),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })>);
+      ) as _i7.Future<_i6.BackupConfig>);
 
   @override
-  _i6.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i12.BackupStatus status,
-        List<_i13.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })> createAndDistributeBackup(
-          {required String? vaultId}) =>
+  _i7.Future<_i6.BackupConfig> createAndDistributeBackup({required String? vaultId}) =>
       (super.noSuchMethod(
         Invocation.method(
           #createAndDistributeBackup,
           [],
           {#vaultId: vaultId},
         ),
-        returnValue: _i6.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i12.BackupStatus status,
-              List<_i13.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })>.value((
-          contentHash: null,
-          createdAt: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #createAndDistributeBackup,
-              [],
-              {#vaultId: vaultId},
-            ),
+        returnValue: _i7.Future<_i6.BackupConfig>.value(_FakeBackupConfig_4(
+          this,
+          Invocation.method(
+            #createAndDistributeBackup,
+            [],
+            {#vaultId: vaultId},
           ),
-          distributionVersion: 0,
-          instructions: null,
-          lastContentChange: null,
-          lastRedistribution: null,
-          lastUpdated: _FakeDateTime_4(
-            this,
-            Invocation.method(
-              #createAndDistributeBackup,
-              [],
-              {#vaultId: vaultId},
-            ),
-          ),
-          relays: <String>[],
-          specVersion: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #createAndDistributeBackup,
-              [],
-              {#vaultId: vaultId},
-            ),
-          ),
-          status: _i12.BackupStatus.pending,
-          stewards: <_i13.Steward>[],
-          threshold: 0,
-          totalKeys: 0,
-          vaultId: _i9.dummyValue<String>(
-            this,
-            Invocation.method(
-              #createAndDistributeBackup,
-              [],
-              {#vaultId: vaultId},
-            ),
-          )
         )),
-      ) as _i6.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i12.BackupStatus status,
-            List<_i13.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })>);
+      ) as _i7.Future<_i6.BackupConfig>);
 }

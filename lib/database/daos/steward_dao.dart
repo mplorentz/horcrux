@@ -6,37 +6,32 @@ import '../tables/stewards.dart';
 part 'steward_dao.g.dart';
 
 @DriftAccessor(tables: [Stewards])
-class StewardDao extends DatabaseAccessor<AppDatabase>
-    with _$StewardDaoMixin {
+class StewardDao extends DatabaseAccessor<AppDatabase> with _$StewardDaoMixin {
   StewardDao(super.db);
 
-  Future<List<StewardRow>> activeForVault(String vaultId) =>
-      (select(stewards)
-            ..where((s) => s.vaultId.equals(vaultId) & s.leftAt.isNull())
-            ..orderBy([(s) => OrderingTerm.asc(s.shareIndex)]))
-          .get();
+  Future<List<StewardRow>> activeForVault(String vaultId) => (select(stewards)
+        ..where((s) => s.vaultId.equals(vaultId) & s.leftAt.isNull())
+        ..orderBy([(s) => OrderingTerm.asc(s.shareIndex)]))
+      .get();
 
-  Stream<List<StewardRow>> watchActiveForVault(String vaultId) =>
-      (select(stewards)
-            ..where((s) => s.vaultId.equals(vaultId) & s.leftAt.isNull())
-            ..orderBy([(s) => OrderingTerm.asc(s.shareIndex)]))
-          .watch();
+  Stream<List<StewardRow>> watchActiveForVault(String vaultId) => (select(stewards)
+        ..where((s) => s.vaultId.equals(vaultId) & s.leftAt.isNull())
+        ..orderBy([(s) => OrderingTerm.asc(s.shareIndex)]))
+      .watch();
 
   Future<List<StewardRow>> historyForVaultPosition({
     required String vaultId,
     required int shareIndex,
   }) =>
       (select(stewards)
-            ..where((s) =>
-                s.vaultId.equals(vaultId) & s.shareIndex.equals(shareIndex))
+            ..where((s) => s.vaultId.equals(vaultId) & s.shareIndex.equals(shareIndex))
             ..orderBy([(s) => OrderingTerm.asc(s.joinedAt)]))
           .get();
 
   Future<StewardRow?> getById(String id) =>
       (select(stewards)..where((s) => s.id.equals(id))).getSingleOrNull();
 
-  Future<void> upsert(StewardsCompanion row) =>
-      into(stewards).insertOnConflictUpdate(row);
+  Future<void> upsert(StewardsCompanion row) => into(stewards).insertOnConflictUpdate(row);
 
   /// Append-on-replace: mark the active row at `(vaultId, shareIndex)` as
   /// left at `leftAt`, then insert `replacement` (which must have the same
@@ -52,9 +47,7 @@ class StewardDao extends DatabaseAccessor<AppDatabase>
     await transaction(() async {
       await (update(stewards)
             ..where((s) =>
-                s.vaultId.equals(vaultId) &
-                s.shareIndex.equals(shareIndex) &
-                s.leftAt.isNull()))
+                s.vaultId.equals(vaultId) & s.shareIndex.equals(shareIndex) & s.leftAt.isNull()))
           .write(StewardsCompanion(
         leftAt: Value(leftAt),
         removalReason: Value(removalReason),

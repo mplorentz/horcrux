@@ -4,7 +4,6 @@ import 'package:mockito/mockito.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
@@ -453,7 +452,6 @@ void main() {
       final cfgAt5 = copyBackupConfig(
         baseCfg,
         distributionVersion: 5,
-        status: BackupStatus.active,
       );
 
       late BackupConfig current;
@@ -484,7 +482,7 @@ void main() {
       await backupService.redistributeForPushPreferenceChange(vaultId: testVaultId);
 
       expect(current.distributionVersion, 6);
-      expect(current.lastRedistribution, isNotNull);
+      expect(current.hasBeenDistributed, isTrue);
       verify(
         mockShardDistributionService.distributeShards(
           ownerPubkey: anyNamed('ownerPubkey'),

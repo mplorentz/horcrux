@@ -8,8 +8,7 @@ import 'vaults.dart';
 @DataClassName('VaultRelayRow')
 class VaultRelays extends Table {
   TextColumn get id => text()();
-  TextColumn get vaultId =>
-      text().references(Vaults, #id, onDelete: KeyAction.cascade)();
+  TextColumn get vaultId => text().references(Vaults, #id, onDelete: KeyAction.cascade)();
   TextColumn get url => text()();
   TextColumn get role => text()(); // 'owner' | 'steward'
   IntColumn get addedAt => integer()();

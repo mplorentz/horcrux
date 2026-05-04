@@ -7,7 +7,6 @@ import 'package:horcrux/models/shard_data.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
@@ -381,8 +380,6 @@ void main() {
           stewards: [ownerSteward, stewardB, stewardC],
           relays: ['wss://relay.example.com'],
         ),
-        status: BackupStatus.active,
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
         distributionVersion: 1,
       );
 
@@ -448,8 +445,6 @@ void main() {
           stewards: [ownerSteward, stewardB, stewardC],
           relays: ['wss://relay.example.com'],
         ),
-        status: BackupStatus.active,
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
         distributionVersion: 1,
       );
 

@@ -51,25 +51,21 @@ void main() {
     required int totalKeys,
     required List<Steward> stewards,
     List<String>? relays,
+    // Retained for source compatibility with the legacy fixture signature.
+    // The persisted `status` field is gone in Phase 1; callers passing
+    // `BackupStatus.active` should also pass `distributionVersion >= 1`.
     BackupStatus status = BackupStatus.pending,
     DateTime? lastRedistribution,
     int distributionVersion = 0,
   }) {
-    return (
+    return BackupConfig(
       vaultId: vaultId,
-      specVersion: '1.0.0',
       threshold: threshold,
-      totalKeys: totalKeys,
       stewards: stewards,
-      relays: relays ?? ['wss://relay.example.com'],
-      instructions: null,
+      relays: relays ?? const ['wss://relay.example.com'],
       createdAt: DateTime.now().subtract(const Duration(days: 7)),
-      lastUpdated: DateTime.now().subtract(const Duration(hours: 2)),
-      lastContentChange: null,
-      lastRedistribution: lastRedistribution,
-      contentHash: null,
-      status: status,
-      distributionVersion: distributionVersion,
+      distributionVersion:
+          lastRedistribution != null && distributionVersion == 0 ? 1 : distributionVersion,
     );
   }
 

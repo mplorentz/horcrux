@@ -1,10 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'backup_config.dart';
-import 'backup_status.dart';
 import 'recovery_request.dart';
 import 'shard_data.dart';
-import 'steward.dart';
 
 part 'vault.freezed.dart';
 
@@ -144,62 +142,6 @@ class Vault with _$Vault {
       return r;
     }
     return null;
-  }
-
-  /// Convert to JSON for storage
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'content': content,
-      'createdAt': createdAt.toIso8601String(),
-      'ownerPubkey': ownerPubkey,
-      if (ownerName != null) 'ownerName': ownerName,
-      'shards': shards.map((shard) => shardDataToJson(shard)).toList(),
-      'recoveryRequests': recoveryRequests.map((request) => request.toJson()).toList(),
-      'backupConfig': backupConfig != null ? backupConfigToJson(backupConfig!) : null,
-      'isArchived': isArchived,
-      if (archivedAt != null) 'archivedAt': archivedAt!.toIso8601String(),
-      if (archivedReason != null) 'archivedReason': archivedReason,
-      'pushEnabled': pushEnabled,
-    };
-  }
-
-  /// Create from JSON
-  factory Vault.fromJson(Map<String, dynamic> json) {
-    return Vault(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      content: json['content'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      ownerPubkey: json['ownerPubkey'] as String,
-      ownerName: json['ownerName'] as String?,
-      shards: json['shards'] != null
-          ? (json['shards'] as List)
-              .map(
-                (shardJson) => shardDataFromJson(shardJson as Map<String, dynamic>),
-              )
-              .toList()
-          : [],
-      recoveryRequests: json['recoveryRequests'] != null
-          ? (json['recoveryRequests'] as List)
-              .map(
-                (reqJson) => RecoveryRequest.fromJson(reqJson as Map<String, dynamic>),
-              )
-              .toList()
-          : [],
-      backupConfig: json['backupConfig'] != null
-          ? backupConfigFromJson(json['backupConfig'] as Map<String, dynamic>)
-          : null,
-      isArchived: json['isArchived'] as bool? ?? false,
-      archivedAt: json['archivedAt'] != null ? DateTime.parse(json['archivedAt'] as String) : null,
-      archivedReason: json['archivedReason'] as String?,
-      // Legacy vaults (persisted before `pushEnabled` existed) default to
-      // `false`. The owner opts in explicitly -- their metadata is what
-      // leaks to the notifier, so we never turn push on for an existing
-      // vault without their say-so.
-      pushEnabled: json['pushEnabled'] as bool? ?? false,
-    );
   }
 
   /// Create a copy with content explicitly cleared (set to null)

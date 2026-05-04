@@ -659,7 +659,6 @@ class InvitationService {
             final updatedConfig = copyBackupConfig(
               backupConfig,
               stewards: updatedStewards,
-              lastUpdated: DateTime.now(),
             );
             await repository.updateBackupConfig(
               invitation.vaultId,
@@ -930,7 +929,6 @@ class InvitationService {
         backupConfig: backupConfig,
         stewards: stewardsWithNew,
         newStewardPubkey: pubkey,
-        totalKeys: stewardsWithNew.length,
       );
       await repository.updateBackupConfig(vaultId, updatedConfig);
       Log.info(
@@ -952,7 +950,6 @@ class InvitationService {
     required BackupConfig backupConfig,
     required List<Steward> stewards,
     required String newStewardPubkey,
-    int? totalKeys,
   }) {
     final newDistributionVersion = backupConfig.distributionVersion + 1;
     final updatedStewards = stewards.map((steward) {
@@ -973,9 +970,7 @@ class InvitationService {
     return copyBackupConfig(
       backupConfig,
       stewards: updatedStewards,
-      totalKeys: totalKeys,
       distributionVersion: newDistributionVersion,
-      lastUpdated: DateTime.now(),
     );
   }
 
@@ -1051,9 +1046,7 @@ class InvitationService {
       final updatedConfig = copyBackupConfig(
         backupConfig,
         stewards: updatedStewards,
-        totalKeys: updatedStewards.length,
         relays: relayUrls.isNotEmpty ? relayUrls : backupConfig.relays,
-        lastUpdated: DateTime.now(),
       );
       await repository.updateBackupConfig(vaultId, updatedConfig);
       Log.info(

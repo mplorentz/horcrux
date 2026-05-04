@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
@@ -54,8 +53,6 @@ void main() {
       // Update status to active and set lastRedistribution
       backupConfig = copyBackupConfig(
         backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
         distributionVersion: 1,
       );
 
@@ -268,8 +265,6 @@ void main() {
       // Update status to active and set lastRedistribution
       backupConfig = copyBackupConfig(
         backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
         distributionVersion: 1,
       );
 

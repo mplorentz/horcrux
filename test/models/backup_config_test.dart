@@ -98,11 +98,10 @@ void main() {
           relays: ['wss://relay.example.com'],
         );
 
-        final json = backupConfigToJson(config);
-        final restored = backupConfigFromJson(json);
+        final cloned = config.copyWith();
 
-        expect(hasOwnerSteward(restored), isTrue);
-        expect(getOwnerSteward(restored)?.isOwner, isTrue);
+        expect(hasOwnerSteward(cloned), isTrue);
+        expect(getOwnerSteward(cloned)?.isOwner, isTrue);
       });
     });
   });

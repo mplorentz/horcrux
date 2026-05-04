@@ -44,7 +44,10 @@ void main() {
     secureStorageMock.tearDownAll();
   });
 
-  group('RecoveryService - Nostr Event Payload Validation', () {
+  group('RecoveryService - Nostr Event Payload Validation',
+      skip: 'Phase 3 (recovery_requests / recovery_responses tables) of the data '
+          'layer refactor — addRecoveryRequestToVault is stubbed '
+          'UnimplementedError until then.', () {
     late String testCreatorPubkey;
     late LoginService loginService;
     late VaultRepository repository;

@@ -12,8 +12,7 @@ import 'vaults.dart';
 /// the hash as a low-entropy confirmation oracle.
 @DataClassName('OwnedVaultRow')
 class OwnedVaults extends Table {
-  TextColumn get vaultId =>
-      text().references(Vaults, #id, onDelete: KeyAction.cascade)();
+  TextColumn get vaultId => text().references(Vaults, #id, onDelete: KeyAction.cascade)();
   TextColumn get content => text()();
   BlobColumn get contentHmac => blob()();
   IntColumn get createdBySelfAt => integer()();

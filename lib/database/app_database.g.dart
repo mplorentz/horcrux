@@ -10,40 +10,32 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
   $VaultsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, false,
+  late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _ownerPubkeyMeta =
-      const VerificationMeta('ownerPubkey');
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta('ownerPubkey');
   @override
   late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
       'owner_pubkey', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _ownerNameMeta =
-      const VerificationMeta('ownerName');
+  static const VerificationMeta _ownerNameMeta = const VerificationMeta('ownerName');
   @override
   late final GeneratedColumn<String> ownerName = GeneratedColumn<String>(
       'owner_name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _thresholdMeta =
-      const VerificationMeta('threshold');
+  static const VerificationMeta _thresholdMeta = const VerificationMeta('threshold');
   @override
-  late final GeneratedColumn<int> threshold = GeneratedColumn<int>(
-      'threshold', aliasedName, false,
+  late final GeneratedColumn<int> threshold = GeneratedColumn<int>('threshold', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _primeModMeta =
-      const VerificationMeta('primeMod');
+  static const VerificationMeta _primeModMeta = const VerificationMeta('primeMod');
   @override
   late final GeneratedColumn<String> primeMod = GeneratedColumn<String>(
       'prime_mod', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _totalSharesMeta =
-      const VerificationMeta('totalShares');
+  static const VerificationMeta _totalSharesMeta = const VerificationMeta('totalShares');
   @override
   late final GeneratedColumn<int> totalShares = GeneratedColumn<int>(
       'total_shares', aliasedName, false,
@@ -51,50 +43,40 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
   static const VerificationMeta _currentDistributionVersionMeta =
       const VerificationMeta('currentDistributionVersion');
   @override
-  late final GeneratedColumn<int> currentDistributionVersion =
-      GeneratedColumn<int>('current_distribution_version', aliasedName, false,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          defaultValue: const Constant(0));
-  static const VerificationMeta _instructionsMeta =
-      const VerificationMeta('instructions');
+  late final GeneratedColumn<int> currentDistributionVersion = GeneratedColumn<int>(
+      'current_distribution_version', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false, defaultValue: const Constant(0));
+  static const VerificationMeta _instructionsMeta = const VerificationMeta('instructions');
   @override
   late final GeneratedColumn<String> instructions = GeneratedColumn<String>(
       'instructions', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _pushEnabledMeta =
-      const VerificationMeta('pushEnabled');
+  static const VerificationMeta _pushEnabledMeta = const VerificationMeta('pushEnabled');
   @override
   late final GeneratedColumn<bool> pushEnabled = GeneratedColumn<bool>(
       'push_enabled', aliasedName, false,
       type: DriftSqlType.bool,
       requiredDuringInsert: false,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'CHECK ("push_enabled" IN (0, 1))'),
+      defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("push_enabled" IN (0, 1))'),
       defaultValue: const Constant(true));
-  static const VerificationMeta _archivedAtMeta =
-      const VerificationMeta('archivedAt');
+  static const VerificationMeta _archivedAtMeta = const VerificationMeta('archivedAt');
   @override
   late final GeneratedColumn<int> archivedAt = GeneratedColumn<int>(
       'archived_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _archivedReasonMeta =
-      const VerificationMeta('archivedReason');
+  static const VerificationMeta _archivedReasonMeta = const VerificationMeta('archivedReason');
   @override
   late final GeneratedColumn<String> archivedReason = GeneratedColumn<String>(
       'archived_reason', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _lastSyncedAtMeta =
-      const VerificationMeta('lastSyncedAt');
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta('lastSyncedAt');
   @override
   late final GeneratedColumn<int> lastSyncedAt = GeneratedColumn<int>(
       'last_synced_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
-      'created_at', aliasedName, false,
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>('created_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [
@@ -119,8 +101,7 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
   String get actualTableName => $name;
   static const String $name = 'vaults';
   @override
-  VerificationContext validateIntegrity(Insertable<VaultRow> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(Insertable<VaultRow> instance, {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
@@ -129,38 +110,33 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
       context.missing(_idMeta);
     }
     if (data.containsKey('name')) {
-      context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
     if (data.containsKey('owner_pubkey')) {
-      context.handle(
-          _ownerPubkeyMeta,
-          ownerPubkey.isAcceptableOrUnknown(
-              data['owner_pubkey']!, _ownerPubkeyMeta));
+      context.handle(_ownerPubkeyMeta,
+          ownerPubkey.isAcceptableOrUnknown(data['owner_pubkey']!, _ownerPubkeyMeta));
     } else if (isInserting) {
       context.missing(_ownerPubkeyMeta);
     }
     if (data.containsKey('owner_name')) {
-      context.handle(_ownerNameMeta,
-          ownerName.isAcceptableOrUnknown(data['owner_name']!, _ownerNameMeta));
+      context.handle(
+          _ownerNameMeta, ownerName.isAcceptableOrUnknown(data['owner_name']!, _ownerNameMeta));
     }
     if (data.containsKey('threshold')) {
-      context.handle(_thresholdMeta,
-          threshold.isAcceptableOrUnknown(data['threshold']!, _thresholdMeta));
+      context.handle(
+          _thresholdMeta, threshold.isAcceptableOrUnknown(data['threshold']!, _thresholdMeta));
     } else if (isInserting) {
       context.missing(_thresholdMeta);
     }
     if (data.containsKey('prime_mod')) {
-      context.handle(_primeModMeta,
-          primeMod.isAcceptableOrUnknown(data['prime_mod']!, _primeModMeta));
+      context.handle(
+          _primeModMeta, primeMod.isAcceptableOrUnknown(data['prime_mod']!, _primeModMeta));
     }
     if (data.containsKey('total_shares')) {
-      context.handle(
-          _totalSharesMeta,
-          totalShares.isAcceptableOrUnknown(
-              data['total_shares']!, _totalSharesMeta));
+      context.handle(_totalSharesMeta,
+          totalShares.isAcceptableOrUnknown(data['total_shares']!, _totalSharesMeta));
     } else if (isInserting) {
       context.missing(_totalSharesMeta);
     }
@@ -168,42 +144,31 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
       context.handle(
           _currentDistributionVersionMeta,
           currentDistributionVersion.isAcceptableOrUnknown(
-              data['current_distribution_version']!,
-              _currentDistributionVersionMeta));
+              data['current_distribution_version']!, _currentDistributionVersionMeta));
     }
     if (data.containsKey('instructions')) {
-      context.handle(
-          _instructionsMeta,
-          instructions.isAcceptableOrUnknown(
-              data['instructions']!, _instructionsMeta));
+      context.handle(_instructionsMeta,
+          instructions.isAcceptableOrUnknown(data['instructions']!, _instructionsMeta));
     }
     if (data.containsKey('push_enabled')) {
-      context.handle(
-          _pushEnabledMeta,
-          pushEnabled.isAcceptableOrUnknown(
-              data['push_enabled']!, _pushEnabledMeta));
+      context.handle(_pushEnabledMeta,
+          pushEnabled.isAcceptableOrUnknown(data['push_enabled']!, _pushEnabledMeta));
     }
     if (data.containsKey('archived_at')) {
       context.handle(
-          _archivedAtMeta,
-          archivedAt.isAcceptableOrUnknown(
-              data['archived_at']!, _archivedAtMeta));
+          _archivedAtMeta, archivedAt.isAcceptableOrUnknown(data['archived_at']!, _archivedAtMeta));
     }
     if (data.containsKey('archived_reason')) {
-      context.handle(
-          _archivedReasonMeta,
-          archivedReason.isAcceptableOrUnknown(
-              data['archived_reason']!, _archivedReasonMeta));
+      context.handle(_archivedReasonMeta,
+          archivedReason.isAcceptableOrUnknown(data['archived_reason']!, _archivedReasonMeta));
     }
     if (data.containsKey('last_synced_at')) {
-      context.handle(
-          _lastSyncedAtMeta,
-          lastSyncedAt.isAcceptableOrUnknown(
-              data['last_synced_at']!, _lastSyncedAtMeta));
+      context.handle(_lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(data['last_synced_at']!, _lastSyncedAtMeta));
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+          _createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
@@ -216,23 +181,20 @@ class $VaultsTable extends Vaults with TableInfo<$VaultsTable, VaultRow> {
   VaultRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return VaultRow(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       ownerPubkey: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}owner_pubkey'])!,
       ownerName: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}owner_name']),
-      threshold: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}threshold'])!,
+      threshold:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}threshold'])!,
       primeMod: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}prime_mod']),
       totalShares: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}total_shares'])!,
-      currentDistributionVersion: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}current_distribution_version'])!,
+      currentDistributionVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}current_distribution_version'])!,
       instructions: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}instructions']),
       pushEnabled: attachedDatabase.typeMapping
@@ -310,8 +272,7 @@ class VaultRow extends DataClass implements Insertable<VaultRow> {
       map['prime_mod'] = Variable<String>(primeMod);
     }
     map['total_shares'] = Variable<int>(totalShares);
-    map['current_distribution_version'] =
-        Variable<int>(currentDistributionVersion);
+    map['current_distribution_version'] = Variable<int>(currentDistributionVersion);
     if (!nullToAbsent || instructions != null) {
       map['instructions'] = Variable<String>(instructions);
     }
@@ -334,34 +295,24 @@ class VaultRow extends DataClass implements Insertable<VaultRow> {
       id: Value(id),
       name: Value(name),
       ownerPubkey: Value(ownerPubkey),
-      ownerName: ownerName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(ownerName),
+      ownerName: ownerName == null && nullToAbsent ? const Value.absent() : Value(ownerName),
       threshold: Value(threshold),
-      primeMod: primeMod == null && nullToAbsent
-          ? const Value.absent()
-          : Value(primeMod),
+      primeMod: primeMod == null && nullToAbsent ? const Value.absent() : Value(primeMod),
       totalShares: Value(totalShares),
       currentDistributionVersion: Value(currentDistributionVersion),
-      instructions: instructions == null && nullToAbsent
-          ? const Value.absent()
-          : Value(instructions),
+      instructions:
+          instructions == null && nullToAbsent ? const Value.absent() : Value(instructions),
       pushEnabled: Value(pushEnabled),
-      archivedAt: archivedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(archivedAt),
-      archivedReason: archivedReason == null && nullToAbsent
-          ? const Value.absent()
-          : Value(archivedReason),
-      lastSyncedAt: lastSyncedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastSyncedAt),
+      archivedAt: archivedAt == null && nullToAbsent ? const Value.absent() : Value(archivedAt),
+      archivedReason:
+          archivedReason == null && nullToAbsent ? const Value.absent() : Value(archivedReason),
+      lastSyncedAt:
+          lastSyncedAt == null && nullToAbsent ? const Value.absent() : Value(lastSyncedAt),
       createdAt: Value(createdAt),
     );
   }
 
-  factory VaultRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory VaultRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return VaultRow(
       id: serializer.fromJson<String>(json['id']),
@@ -371,8 +322,7 @@ class VaultRow extends DataClass implements Insertable<VaultRow> {
       threshold: serializer.fromJson<int>(json['threshold']),
       primeMod: serializer.fromJson<String?>(json['primeMod']),
       totalShares: serializer.fromJson<int>(json['totalShares']),
-      currentDistributionVersion:
-          serializer.fromJson<int>(json['currentDistributionVersion']),
+      currentDistributionVersion: serializer.fromJson<int>(json['currentDistributionVersion']),
       instructions: serializer.fromJson<String?>(json['instructions']),
       pushEnabled: serializer.fromJson<bool>(json['pushEnabled']),
       archivedAt: serializer.fromJson<int?>(json['archivedAt']),
@@ -392,8 +342,7 @@ class VaultRow extends DataClass implements Insertable<VaultRow> {
       'threshold': serializer.toJson<int>(threshold),
       'primeMod': serializer.toJson<String?>(primeMod),
       'totalShares': serializer.toJson<int>(totalShares),
-      'currentDistributionVersion':
-          serializer.toJson<int>(currentDistributionVersion),
+      'currentDistributionVersion': serializer.toJson<int>(currentDistributionVersion),
       'instructions': serializer.toJson<String?>(instructions),
       'pushEnabled': serializer.toJson<bool>(pushEnabled),
       'archivedAt': serializer.toJson<int?>(archivedAt),
@@ -426,45 +375,31 @@ class VaultRow extends DataClass implements Insertable<VaultRow> {
         threshold: threshold ?? this.threshold,
         primeMod: primeMod.present ? primeMod.value : this.primeMod,
         totalShares: totalShares ?? this.totalShares,
-        currentDistributionVersion:
-            currentDistributionVersion ?? this.currentDistributionVersion,
-        instructions:
-            instructions.present ? instructions.value : this.instructions,
+        currentDistributionVersion: currentDistributionVersion ?? this.currentDistributionVersion,
+        instructions: instructions.present ? instructions.value : this.instructions,
         pushEnabled: pushEnabled ?? this.pushEnabled,
         archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
-        archivedReason:
-            archivedReason.present ? archivedReason.value : this.archivedReason,
-        lastSyncedAt:
-            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+        archivedReason: archivedReason.present ? archivedReason.value : this.archivedReason,
+        lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         createdAt: createdAt ?? this.createdAt,
       );
   VaultRow copyWithCompanion(VaultsCompanion data) {
     return VaultRow(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      ownerPubkey:
-          data.ownerPubkey.present ? data.ownerPubkey.value : this.ownerPubkey,
+      ownerPubkey: data.ownerPubkey.present ? data.ownerPubkey.value : this.ownerPubkey,
       ownerName: data.ownerName.present ? data.ownerName.value : this.ownerName,
       threshold: data.threshold.present ? data.threshold.value : this.threshold,
       primeMod: data.primeMod.present ? data.primeMod.value : this.primeMod,
-      totalShares:
-          data.totalShares.present ? data.totalShares.value : this.totalShares,
+      totalShares: data.totalShares.present ? data.totalShares.value : this.totalShares,
       currentDistributionVersion: data.currentDistributionVersion.present
           ? data.currentDistributionVersion.value
           : this.currentDistributionVersion,
-      instructions: data.instructions.present
-          ? data.instructions.value
-          : this.instructions,
-      pushEnabled:
-          data.pushEnabled.present ? data.pushEnabled.value : this.pushEnabled,
-      archivedAt:
-          data.archivedAt.present ? data.archivedAt.value : this.archivedAt,
-      archivedReason: data.archivedReason.present
-          ? data.archivedReason.value
-          : this.archivedReason,
-      lastSyncedAt: data.lastSyncedAt.present
-          ? data.lastSyncedAt.value
-          : this.lastSyncedAt,
+      instructions: data.instructions.present ? data.instructions.value : this.instructions,
+      pushEnabled: data.pushEnabled.present ? data.pushEnabled.value : this.pushEnabled,
+      archivedAt: data.archivedAt.present ? data.archivedAt.value : this.archivedAt,
+      archivedReason: data.archivedReason.present ? data.archivedReason.value : this.archivedReason,
+      lastSyncedAt: data.lastSyncedAt.present ? data.lastSyncedAt.value : this.lastSyncedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -642,8 +577,7 @@ class VaultsCompanion extends UpdateCompanion<VaultRow> {
       threshold: threshold ?? this.threshold,
       primeMod: primeMod ?? this.primeMod,
       totalShares: totalShares ?? this.totalShares,
-      currentDistributionVersion:
-          currentDistributionVersion ?? this.currentDistributionVersion,
+      currentDistributionVersion: currentDistributionVersion ?? this.currentDistributionVersion,
       instructions: instructions ?? this.instructions,
       pushEnabled: pushEnabled ?? this.pushEnabled,
       archivedAt: archivedAt ?? this.archivedAt,
@@ -679,8 +613,7 @@ class VaultsCompanion extends UpdateCompanion<VaultRow> {
       map['total_shares'] = Variable<int>(totalShares.value);
     }
     if (currentDistributionVersion.present) {
-      map['current_distribution_version'] =
-          Variable<int>(currentDistributionVersion.value);
+      map['current_distribution_version'] = Variable<int>(currentDistributionVersion.value);
     }
     if (instructions.present) {
       map['instructions'] = Variable<String>(instructions.value);
@@ -729,41 +662,34 @@ class VaultsCompanion extends UpdateCompanion<VaultRow> {
   }
 }
 
-class $VaultRelaysTable extends VaultRelays
-    with TableInfo<$VaultRelaysTable, VaultRelayRow> {
+class $VaultRelaysTable extends VaultRelays with TableInfo<$VaultRelaysTable, VaultRelayRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $VaultRelaysTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _vaultIdMeta =
-      const VerificationMeta('vaultId');
+  static const VerificationMeta _vaultIdMeta = const VerificationMeta('vaultId');
   @override
   late final GeneratedColumn<String> vaultId = GeneratedColumn<String>(
       'vault_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES vaults (id) ON DELETE CASCADE'));
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES vaults (id) ON DELETE CASCADE'));
   static const VerificationMeta _urlMeta = const VerificationMeta('url');
   @override
-  late final GeneratedColumn<String> url = GeneratedColumn<String>(
-      'url', aliasedName, false,
+  late final GeneratedColumn<String> url = GeneratedColumn<String>('url', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _roleMeta = const VerificationMeta('role');
   @override
-  late final GeneratedColumn<String> role = GeneratedColumn<String>(
-      'role', aliasedName, false,
+  late final GeneratedColumn<String> role = GeneratedColumn<String>('role', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _addedAtMeta =
-      const VerificationMeta('addedAt');
+  static const VerificationMeta _addedAtMeta = const VerificationMeta('addedAt');
   @override
-  late final GeneratedColumn<int> addedAt = GeneratedColumn<int>(
-      'added_at', aliasedName, false,
+  late final GeneratedColumn<int> addedAt = GeneratedColumn<int>('added_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [id, vaultId, url, role, addedAt];
@@ -783,26 +709,22 @@ class $VaultRelaysTable extends VaultRelays
       context.missing(_idMeta);
     }
     if (data.containsKey('vault_id')) {
-      context.handle(_vaultIdMeta,
-          vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
+      context.handle(_vaultIdMeta, vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
     } else if (isInserting) {
       context.missing(_vaultIdMeta);
     }
     if (data.containsKey('url')) {
-      context.handle(
-          _urlMeta, url.isAcceptableOrUnknown(data['url']!, _urlMeta));
+      context.handle(_urlMeta, url.isAcceptableOrUnknown(data['url']!, _urlMeta));
     } else if (isInserting) {
       context.missing(_urlMeta);
     }
     if (data.containsKey('role')) {
-      context.handle(
-          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+      context.handle(_roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
     } else if (isInserting) {
       context.missing(_roleMeta);
     }
     if (data.containsKey('added_at')) {
-      context.handle(_addedAtMeta,
-          addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta));
+      context.handle(_addedAtMeta, addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta));
     } else if (isInserting) {
       context.missing(_addedAtMeta);
     }
@@ -815,16 +737,13 @@ class $VaultRelaysTable extends VaultRelays
   VaultRelayRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return VaultRelayRow(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       vaultId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}vault_id'])!,
-      url: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}url'])!,
-      role: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
-      addedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}added_at'])!,
+      url: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}url'])!,
+      role: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      addedAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}added_at'])!,
     );
   }
 
@@ -867,8 +786,7 @@ class VaultRelayRow extends DataClass implements Insertable<VaultRelayRow> {
     );
   }
 
-  factory VaultRelayRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory VaultRelayRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return VaultRelayRow(
       id: serializer.fromJson<String>(json['id']),
@@ -890,12 +808,7 @@ class VaultRelayRow extends DataClass implements Insertable<VaultRelayRow> {
     };
   }
 
-  VaultRelayRow copyWith(
-          {String? id,
-          String? vaultId,
-          String? url,
-          String? role,
-          int? addedAt}) =>
+  VaultRelayRow copyWith({String? id, String? vaultId, String? url, String? role, int? addedAt}) =>
       VaultRelayRow(
         id: id ?? this.id,
         vaultId: vaultId ?? this.vaultId,
@@ -1038,42 +951,36 @@ class VaultRelaysCompanion extends UpdateCompanion<VaultRelayRow> {
   }
 }
 
-class $OwnedVaultsTable extends OwnedVaults
-    with TableInfo<$OwnedVaultsTable, OwnedVaultRow> {
+class $OwnedVaultsTable extends OwnedVaults with TableInfo<$OwnedVaultsTable, OwnedVaultRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $OwnedVaultsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _vaultIdMeta =
-      const VerificationMeta('vaultId');
+  static const VerificationMeta _vaultIdMeta = const VerificationMeta('vaultId');
   @override
   late final GeneratedColumn<String> vaultId = GeneratedColumn<String>(
       'vault_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES vaults (id) ON DELETE CASCADE'));
-  static const VerificationMeta _contentMeta =
-      const VerificationMeta('content');
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES vaults (id) ON DELETE CASCADE'));
+  static const VerificationMeta _contentMeta = const VerificationMeta('content');
   @override
   late final GeneratedColumn<String> content = GeneratedColumn<String>(
       'content', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _contentHmacMeta =
-      const VerificationMeta('contentHmac');
+  static const VerificationMeta _contentHmacMeta = const VerificationMeta('contentHmac');
   @override
-  late final GeneratedColumn<Uint8List> contentHmac =
-      GeneratedColumn<Uint8List>('content_hmac', aliasedName, false,
-          type: DriftSqlType.blob, requiredDuringInsert: true);
-  static const VerificationMeta _createdBySelfAtMeta =
-      const VerificationMeta('createdBySelfAt');
+  late final GeneratedColumn<Uint8List> contentHmac = GeneratedColumn<Uint8List>(
+      'content_hmac', aliasedName, false,
+      type: DriftSqlType.blob, requiredDuringInsert: true);
+  static const VerificationMeta _createdBySelfAtMeta = const VerificationMeta('createdBySelfAt');
   @override
   late final GeneratedColumn<int> createdBySelfAt = GeneratedColumn<int>(
       'created_by_self_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [vaultId, content, contentHmac, createdBySelfAt];
+  List<GeneratedColumn> get $columns => [vaultId, content, contentHmac, createdBySelfAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1085,30 +992,24 @@ class $OwnedVaultsTable extends OwnedVaults
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('vault_id')) {
-      context.handle(_vaultIdMeta,
-          vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
+      context.handle(_vaultIdMeta, vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
     } else if (isInserting) {
       context.missing(_vaultIdMeta);
     }
     if (data.containsKey('content')) {
-      context.handle(_contentMeta,
-          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+      context.handle(_contentMeta, content.isAcceptableOrUnknown(data['content']!, _contentMeta));
     } else if (isInserting) {
       context.missing(_contentMeta);
     }
     if (data.containsKey('content_hmac')) {
-      context.handle(
-          _contentHmacMeta,
-          contentHmac.isAcceptableOrUnknown(
-              data['content_hmac']!, _contentHmacMeta));
+      context.handle(_contentHmacMeta,
+          contentHmac.isAcceptableOrUnknown(data['content_hmac']!, _contentHmacMeta));
     } else if (isInserting) {
       context.missing(_contentHmacMeta);
     }
     if (data.containsKey('created_by_self_at')) {
-      context.handle(
-          _createdBySelfAtMeta,
-          createdBySelfAt.isAcceptableOrUnknown(
-              data['created_by_self_at']!, _createdBySelfAtMeta));
+      context.handle(_createdBySelfAtMeta,
+          createdBySelfAt.isAcceptableOrUnknown(data['created_by_self_at']!, _createdBySelfAtMeta));
     } else if (isInserting) {
       context.missing(_createdBySelfAtMeta);
     }
@@ -1127,8 +1028,8 @@ class $OwnedVaultsTable extends OwnedVaults
           .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
       contentHmac: attachedDatabase.typeMapping
           .read(DriftSqlType.blob, data['${effectivePrefix}content_hmac'])!,
-      createdBySelfAt: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}created_by_self_at'])!,
+      createdBySelfAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_by_self_at'])!,
     );
   }
 
@@ -1167,8 +1068,7 @@ class OwnedVaultRow extends DataClass implements Insertable<OwnedVaultRow> {
     );
   }
 
-  factory OwnedVaultRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory OwnedVaultRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return OwnedVaultRow(
       vaultId: serializer.fromJson<String>(json['vaultId']),
@@ -1189,10 +1089,7 @@ class OwnedVaultRow extends DataClass implements Insertable<OwnedVaultRow> {
   }
 
   OwnedVaultRow copyWith(
-          {String? vaultId,
-          String? content,
-          Uint8List? contentHmac,
-          int? createdBySelfAt}) =>
+          {String? vaultId, String? content, Uint8List? contentHmac, int? createdBySelfAt}) =>
       OwnedVaultRow(
         vaultId: vaultId ?? this.vaultId,
         content: content ?? this.content,
@@ -1203,11 +1100,9 @@ class OwnedVaultRow extends DataClass implements Insertable<OwnedVaultRow> {
     return OwnedVaultRow(
       vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
       content: data.content.present ? data.content.value : this.content,
-      contentHmac:
-          data.contentHmac.present ? data.contentHmac.value : this.contentHmac,
-      createdBySelfAt: data.createdBySelfAt.present
-          ? data.createdBySelfAt.value
-          : this.createdBySelfAt,
+      contentHmac: data.contentHmac.present ? data.contentHmac.value : this.contentHmac,
+      createdBySelfAt:
+          data.createdBySelfAt.present ? data.createdBySelfAt.value : this.createdBySelfAt,
     );
   }
 
@@ -1223,8 +1118,8 @@ class OwnedVaultRow extends DataClass implements Insertable<OwnedVaultRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      vaultId, content, $driftBlobEquality.hash(contentHmac), createdBySelfAt);
+  int get hashCode =>
+      Object.hash(vaultId, content, $driftBlobEquality.hash(contentHmac), createdBySelfAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1323,71 +1218,57 @@ class OwnedVaultsCompanion extends UpdateCompanion<OwnedVaultRow> {
   }
 }
 
-class $StewardsTable extends Stewards
-    with TableInfo<$StewardsTable, StewardRow> {
+class $StewardsTable extends Stewards with TableInfo<$StewardsTable, StewardRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $StewardsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _vaultIdMeta =
-      const VerificationMeta('vaultId');
+  static const VerificationMeta _vaultIdMeta = const VerificationMeta('vaultId');
   @override
   late final GeneratedColumn<String> vaultId = GeneratedColumn<String>(
       'vault_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES vaults (id) ON DELETE CASCADE'));
-  static const VerificationMeta _shareIndexMeta =
-      const VerificationMeta('shareIndex');
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES vaults (id) ON DELETE CASCADE'));
+  static const VerificationMeta _shareIndexMeta = const VerificationMeta('shareIndex');
   @override
   late final GeneratedColumn<int> shareIndex = GeneratedColumn<int>(
       'share_index', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _pubkeyMeta = const VerificationMeta('pubkey');
   @override
-  late final GeneratedColumn<String> pubkey = GeneratedColumn<String>(
-      'pubkey', aliasedName, true,
+  late final GeneratedColumn<String> pubkey = GeneratedColumn<String>('pubkey', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-      'name', aliasedName, true,
+  late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _contactInfoMeta =
-      const VerificationMeta('contactInfo');
+  static const VerificationMeta _contactInfoMeta = const VerificationMeta('contactInfo');
   @override
   late final GeneratedColumn<String> contactInfo = GeneratedColumn<String>(
       'contact_info', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _isOwnerMeta =
-      const VerificationMeta('isOwner');
+  static const VerificationMeta _isOwnerMeta = const VerificationMeta('isOwner');
   @override
-  late final GeneratedColumn<bool> isOwner = GeneratedColumn<bool>(
-      'is_owner', aliasedName, false,
+  late final GeneratedColumn<bool> isOwner = GeneratedColumn<bool>('is_owner', aliasedName, false,
       type: DriftSqlType.bool,
       requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("is_owner" IN (0, 1))'),
+      defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_owner" IN (0, 1))'),
       defaultValue: const Constant(false));
-  static const VerificationMeta _joinedAtMeta =
-      const VerificationMeta('joinedAt');
+  static const VerificationMeta _joinedAtMeta = const VerificationMeta('joinedAt');
   @override
-  late final GeneratedColumn<int> joinedAt = GeneratedColumn<int>(
-      'joined_at', aliasedName, false,
+  late final GeneratedColumn<int> joinedAt = GeneratedColumn<int>('joined_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _leftAtMeta = const VerificationMeta('leftAt');
   @override
-  late final GeneratedColumn<int> leftAt = GeneratedColumn<int>(
-      'left_at', aliasedName, true,
+  late final GeneratedColumn<int> leftAt = GeneratedColumn<int>('left_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _removalReasonMeta =
-      const VerificationMeta('removalReason');
+  static const VerificationMeta _removalReasonMeta = const VerificationMeta('removalReason');
   @override
   late final GeneratedColumn<String> removalReason = GeneratedColumn<String>(
       'removal_reason', aliasedName, true,
@@ -1421,52 +1302,41 @@ class $StewardsTable extends Stewards
       context.missing(_idMeta);
     }
     if (data.containsKey('vault_id')) {
-      context.handle(_vaultIdMeta,
-          vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
+      context.handle(_vaultIdMeta, vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
     } else if (isInserting) {
       context.missing(_vaultIdMeta);
     }
     if (data.containsKey('share_index')) {
       context.handle(
-          _shareIndexMeta,
-          shareIndex.isAcceptableOrUnknown(
-              data['share_index']!, _shareIndexMeta));
+          _shareIndexMeta, shareIndex.isAcceptableOrUnknown(data['share_index']!, _shareIndexMeta));
     } else if (isInserting) {
       context.missing(_shareIndexMeta);
     }
     if (data.containsKey('pubkey')) {
-      context.handle(_pubkeyMeta,
-          pubkey.isAcceptableOrUnknown(data['pubkey']!, _pubkeyMeta));
+      context.handle(_pubkeyMeta, pubkey.isAcceptableOrUnknown(data['pubkey']!, _pubkeyMeta));
     }
     if (data.containsKey('name')) {
-      context.handle(
-          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     }
     if (data.containsKey('contact_info')) {
-      context.handle(
-          _contactInfoMeta,
-          contactInfo.isAcceptableOrUnknown(
-              data['contact_info']!, _contactInfoMeta));
+      context.handle(_contactInfoMeta,
+          contactInfo.isAcceptableOrUnknown(data['contact_info']!, _contactInfoMeta));
     }
     if (data.containsKey('is_owner')) {
-      context.handle(_isOwnerMeta,
-          isOwner.isAcceptableOrUnknown(data['is_owner']!, _isOwnerMeta));
+      context.handle(_isOwnerMeta, isOwner.isAcceptableOrUnknown(data['is_owner']!, _isOwnerMeta));
     }
     if (data.containsKey('joined_at')) {
-      context.handle(_joinedAtMeta,
-          joinedAt.isAcceptableOrUnknown(data['joined_at']!, _joinedAtMeta));
+      context.handle(
+          _joinedAtMeta, joinedAt.isAcceptableOrUnknown(data['joined_at']!, _joinedAtMeta));
     } else if (isInserting) {
       context.missing(_joinedAtMeta);
     }
     if (data.containsKey('left_at')) {
-      context.handle(_leftAtMeta,
-          leftAt.isAcceptableOrUnknown(data['left_at']!, _leftAtMeta));
+      context.handle(_leftAtMeta, leftAt.isAcceptableOrUnknown(data['left_at']!, _leftAtMeta));
     }
     if (data.containsKey('removal_reason')) {
-      context.handle(
-          _removalReasonMeta,
-          removalReason.isAcceptableOrUnknown(
-              data['removal_reason']!, _removalReasonMeta));
+      context.handle(_removalReasonMeta,
+          removalReason.isAcceptableOrUnknown(data['removal_reason']!, _removalReasonMeta));
     }
     return context;
   }
@@ -1477,24 +1347,22 @@ class $StewardsTable extends Stewards
   StewardRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return StewardRow(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       vaultId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}vault_id'])!,
       shareIndex: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}share_index'])!,
-      pubkey: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}pubkey']),
-      name: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}name']),
+      pubkey:
+          attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}pubkey']),
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name']),
       contactInfo: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}contact_info']),
-      isOwner: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}is_owner'])!,
-      joinedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}joined_at'])!,
-      leftAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}left_at']),
+      isOwner:
+          attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_owner'])!,
+      joinedAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}joined_at'])!,
+      leftAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}left_at']),
       removalReason: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}removal_reason']),
     );
@@ -1568,24 +1436,18 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       id: Value(id),
       vaultId: Value(vaultId),
       shareIndex: Value(shareIndex),
-      pubkey:
-          pubkey == null && nullToAbsent ? const Value.absent() : Value(pubkey),
+      pubkey: pubkey == null && nullToAbsent ? const Value.absent() : Value(pubkey),
       name: name == null && nullToAbsent ? const Value.absent() : Value(name),
-      contactInfo: contactInfo == null && nullToAbsent
-          ? const Value.absent()
-          : Value(contactInfo),
+      contactInfo: contactInfo == null && nullToAbsent ? const Value.absent() : Value(contactInfo),
       isOwner: Value(isOwner),
       joinedAt: Value(joinedAt),
-      leftAt:
-          leftAt == null && nullToAbsent ? const Value.absent() : Value(leftAt),
-      removalReason: removalReason == null && nullToAbsent
-          ? const Value.absent()
-          : Value(removalReason),
+      leftAt: leftAt == null && nullToAbsent ? const Value.absent() : Value(leftAt),
+      removalReason:
+          removalReason == null && nullToAbsent ? const Value.absent() : Value(removalReason),
     );
   }
 
-  factory StewardRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory StewardRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return StewardRow(
       id: serializer.fromJson<String>(json['id']),
@@ -1638,25 +1500,20 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
         isOwner: isOwner ?? this.isOwner,
         joinedAt: joinedAt ?? this.joinedAt,
         leftAt: leftAt.present ? leftAt.value : this.leftAt,
-        removalReason:
-            removalReason.present ? removalReason.value : this.removalReason,
+        removalReason: removalReason.present ? removalReason.value : this.removalReason,
       );
   StewardRow copyWithCompanion(StewardsCompanion data) {
     return StewardRow(
       id: data.id.present ? data.id.value : this.id,
       vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
-      shareIndex:
-          data.shareIndex.present ? data.shareIndex.value : this.shareIndex,
+      shareIndex: data.shareIndex.present ? data.shareIndex.value : this.shareIndex,
       pubkey: data.pubkey.present ? data.pubkey.value : this.pubkey,
       name: data.name.present ? data.name.value : this.name,
-      contactInfo:
-          data.contactInfo.present ? data.contactInfo.value : this.contactInfo,
+      contactInfo: data.contactInfo.present ? data.contactInfo.value : this.contactInfo,
       isOwner: data.isOwner.present ? data.isOwner.value : this.isOwner,
       joinedAt: data.joinedAt.present ? data.joinedAt.value : this.joinedAt,
       leftAt: data.leftAt.present ? data.leftAt.value : this.leftAt,
-      removalReason: data.removalReason.present
-          ? data.removalReason.value
-          : this.removalReason,
+      removalReason: data.removalReason.present ? data.removalReason.value : this.removalReason,
     );
   }
 
@@ -1678,8 +1535,8 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
   }
 
   @override
-  int get hashCode => Object.hash(id, vaultId, shareIndex, pubkey, name,
-      contactInfo, isOwner, joinedAt, leftAt, removalReason);
+  int get hashCode => Object.hash(
+      id, vaultId, shareIndex, pubkey, name, contactInfo, isOwner, joinedAt, leftAt, removalReason);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1858,45 +1715,36 @@ class $DistributionsTable extends Distributions
   $DistributionsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _vaultIdMeta =
-      const VerificationMeta('vaultId');
+  static const VerificationMeta _vaultIdMeta = const VerificationMeta('vaultId');
   @override
   late final GeneratedColumn<String> vaultId = GeneratedColumn<String>(
       'vault_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES vaults (id) ON DELETE CASCADE'));
-  static const VerificationMeta _versionMeta =
-      const VerificationMeta('version');
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES vaults (id) ON DELETE CASCADE'));
+  static const VerificationMeta _versionMeta = const VerificationMeta('version');
   @override
-  late final GeneratedColumn<int> version = GeneratedColumn<int>(
-      'version', aliasedName, false,
+  late final GeneratedColumn<int> version = GeneratedColumn<int>('version', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
-      'created_at', aliasedName, false,
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>('created_at', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _completedAtMeta =
-      const VerificationMeta('completedAt');
+  static const VerificationMeta _completedAtMeta = const VerificationMeta('completedAt');
   @override
   late final GeneratedColumn<int> completedAt = GeneratedColumn<int>(
       'completed_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _contentHmacMeta =
-      const VerificationMeta('contentHmac');
+  static const VerificationMeta _contentHmacMeta = const VerificationMeta('contentHmac');
   @override
-  late final GeneratedColumn<Uint8List> contentHmac =
-      GeneratedColumn<Uint8List>('content_hmac', aliasedName, false,
-          type: DriftSqlType.blob, requiredDuringInsert: true);
+  late final GeneratedColumn<Uint8List> contentHmac = GeneratedColumn<Uint8List>(
+      'content_hmac', aliasedName, false,
+      type: DriftSqlType.blob, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, vaultId, version, createdAt, completedAt, contentHmac];
+  List<GeneratedColumn> get $columns => [id, vaultId, version, createdAt, completedAt, contentHmac];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1913,34 +1761,28 @@ class $DistributionsTable extends Distributions
       context.missing(_idMeta);
     }
     if (data.containsKey('vault_id')) {
-      context.handle(_vaultIdMeta,
-          vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
+      context.handle(_vaultIdMeta, vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
     } else if (isInserting) {
       context.missing(_vaultIdMeta);
     }
     if (data.containsKey('version')) {
-      context.handle(_versionMeta,
-          version.isAcceptableOrUnknown(data['version']!, _versionMeta));
+      context.handle(_versionMeta, version.isAcceptableOrUnknown(data['version']!, _versionMeta));
     } else if (isInserting) {
       context.missing(_versionMeta);
     }
     if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+      context.handle(
+          _createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
     if (data.containsKey('completed_at')) {
-      context.handle(
-          _completedAtMeta,
-          completedAt.isAcceptableOrUnknown(
-              data['completed_at']!, _completedAtMeta));
+      context.handle(_completedAtMeta,
+          completedAt.isAcceptableOrUnknown(data['completed_at']!, _completedAtMeta));
     }
     if (data.containsKey('content_hmac')) {
-      context.handle(
-          _contentHmacMeta,
-          contentHmac.isAcceptableOrUnknown(
-              data['content_hmac']!, _contentHmacMeta));
+      context.handle(_contentHmacMeta,
+          contentHmac.isAcceptableOrUnknown(data['content_hmac']!, _contentHmacMeta));
     } else if (isInserting) {
       context.missing(_contentHmacMeta);
     }
@@ -1953,12 +1795,11 @@ class $DistributionsTable extends Distributions
   DistributionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DistributionRow(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       vaultId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}vault_id'])!,
-      version: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}version'])!,
+      version:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}version'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       completedAt: attachedDatabase.typeMapping
@@ -2008,15 +1849,12 @@ class DistributionRow extends DataClass implements Insertable<DistributionRow> {
       vaultId: Value(vaultId),
       version: Value(version),
       createdAt: Value(createdAt),
-      completedAt: completedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(completedAt),
+      completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),
       contentHmac: Value(contentHmac),
     );
   }
 
-  factory DistributionRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory DistributionRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DistributionRow(
       id: serializer.fromJson<String>(json['id']),
@@ -2061,10 +1899,8 @@ class DistributionRow extends DataClass implements Insertable<DistributionRow> {
       vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
       version: data.version.present ? data.version.value : this.version,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      completedAt:
-          data.completedAt.present ? data.completedAt.value : this.completedAt,
-      contentHmac:
-          data.contentHmac.present ? data.contentHmac.value : this.contentHmac,
+      completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,
+      contentHmac: data.contentHmac.present ? data.contentHmac.value : this.contentHmac,
     );
   }
 
@@ -2082,8 +1918,8 @@ class DistributionRow extends DataClass implements Insertable<DistributionRow> {
   }
 
   @override
-  int get hashCode => Object.hash(id, vaultId, version, createdAt, completedAt,
-      $driftBlobEquality.hash(contentHmac));
+  int get hashCode => Object.hash(
+      id, vaultId, version, createdAt, completedAt, $driftBlobEquality.hash(contentHmac));
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2215,40 +2051,34 @@ class $DistributionSharesTable extends DistributionShares
   $DistributionSharesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _distributionIdMeta =
-      const VerificationMeta('distributionId');
+  static const VerificationMeta _distributionIdMeta = const VerificationMeta('distributionId');
   @override
   late final GeneratedColumn<String> distributionId = GeneratedColumn<String>(
       'distribution_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES distributions (id) ON DELETE CASCADE'));
-  static const VerificationMeta _stewardIdMeta =
-      const VerificationMeta('stewardId');
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES distributions (id) ON DELETE CASCADE'));
+  static const VerificationMeta _stewardIdMeta = const VerificationMeta('stewardId');
   @override
   late final GeneratedColumn<String> stewardId = GeneratedColumn<String>(
       'steward_id', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: true,
-      defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES stewards (id) ON DELETE RESTRICT'));
-  static const VerificationMeta _giftWrapEventIdMeta =
-      const VerificationMeta('giftWrapEventId');
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES stewards (id) ON DELETE RESTRICT'));
+  static const VerificationMeta _giftWrapEventIdMeta = const VerificationMeta('giftWrapEventId');
   @override
   late final GeneratedColumn<String> giftWrapEventId = GeneratedColumn<String>(
       'gift_wrap_event_id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _sentAtMeta = const VerificationMeta('sentAt');
   @override
-  late final GeneratedColumn<int> sentAt = GeneratedColumn<int>(
-      'sent_at', aliasedName, true,
+  late final GeneratedColumn<int> sentAt = GeneratedColumn<int>('sent_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
-  static const VerificationMeta _acknowledgedAtMeta =
-      const VerificationMeta('acknowledgedAt');
+  static const VerificationMeta _acknowledgedAtMeta = const VerificationMeta('acknowledgedAt');
   @override
   late final GeneratedColumn<int> acknowledgedAt = GeneratedColumn<int>(
       'acknowledged_at', aliasedName, true,
@@ -2256,22 +2086,21 @@ class $DistributionSharesTable extends DistributionShares
   static const VerificationMeta _acknowledgmentEventIdMeta =
       const VerificationMeta('acknowledgmentEventId');
   @override
-  late final GeneratedColumn<String> acknowledgmentEventId =
-      GeneratedColumn<String>('acknowledgment_event_id', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
+  late final GeneratedColumn<String> acknowledgmentEventId = GeneratedColumn<String>(
+      'acknowledgment_event_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _acknowledgmentDistributionVersionMeta =
       const VerificationMeta('acknowledgmentDistributionVersion');
   @override
-  late final GeneratedColumn<int> acknowledgmentDistributionVersion =
-      GeneratedColumn<int>(
-          'acknowledgment_distribution_version', aliasedName, true,
-          type: DriftSqlType.int, requiredDuringInsert: false);
+  late final GeneratedColumn<int> acknowledgmentDistributionVersion = GeneratedColumn<int>(
+      'acknowledgment_distribution_version', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _acknowledgmentCreatedAtMeta =
       const VerificationMeta('acknowledgmentCreatedAt');
   @override
-  late final GeneratedColumn<int> acknowledgmentCreatedAt =
-      GeneratedColumn<int>('acknowledgment_created_at', aliasedName, true,
-          type: DriftSqlType.int, requiredDuringInsert: false);
+  late final GeneratedColumn<int> acknowledgmentCreatedAt = GeneratedColumn<int>(
+      'acknowledgment_created_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2290,8 +2119,7 @@ class $DistributionSharesTable extends DistributionShares
   String get actualTableName => $name;
   static const String $name = 'distribution_shares';
   @override
-  VerificationContext validateIntegrity(
-      Insertable<DistributionShareRow> instance,
+  VerificationContext validateIntegrity(Insertable<DistributionShareRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -2301,36 +2129,29 @@ class $DistributionSharesTable extends DistributionShares
       context.missing(_idMeta);
     }
     if (data.containsKey('distribution_id')) {
-      context.handle(
-          _distributionIdMeta,
-          distributionId.isAcceptableOrUnknown(
-              data['distribution_id']!, _distributionIdMeta));
+      context.handle(_distributionIdMeta,
+          distributionId.isAcceptableOrUnknown(data['distribution_id']!, _distributionIdMeta));
     } else if (isInserting) {
       context.missing(_distributionIdMeta);
     }
     if (data.containsKey('steward_id')) {
-      context.handle(_stewardIdMeta,
-          stewardId.isAcceptableOrUnknown(data['steward_id']!, _stewardIdMeta));
+      context.handle(
+          _stewardIdMeta, stewardId.isAcceptableOrUnknown(data['steward_id']!, _stewardIdMeta));
     } else if (isInserting) {
       context.missing(_stewardIdMeta);
     }
     if (data.containsKey('gift_wrap_event_id')) {
-      context.handle(
-          _giftWrapEventIdMeta,
-          giftWrapEventId.isAcceptableOrUnknown(
-              data['gift_wrap_event_id']!, _giftWrapEventIdMeta));
+      context.handle(_giftWrapEventIdMeta,
+          giftWrapEventId.isAcceptableOrUnknown(data['gift_wrap_event_id']!, _giftWrapEventIdMeta));
     } else if (isInserting) {
       context.missing(_giftWrapEventIdMeta);
     }
     if (data.containsKey('sent_at')) {
-      context.handle(_sentAtMeta,
-          sentAt.isAcceptableOrUnknown(data['sent_at']!, _sentAtMeta));
+      context.handle(_sentAtMeta, sentAt.isAcceptableOrUnknown(data['sent_at']!, _sentAtMeta));
     }
     if (data.containsKey('acknowledged_at')) {
-      context.handle(
-          _acknowledgedAtMeta,
-          acknowledgedAt.isAcceptableOrUnknown(
-              data['acknowledged_at']!, _acknowledgedAtMeta));
+      context.handle(_acknowledgedAtMeta,
+          acknowledgedAt.isAcceptableOrUnknown(data['acknowledged_at']!, _acknowledgedAtMeta));
     }
     if (data.containsKey('acknowledgment_event_id')) {
       context.handle(
@@ -2349,8 +2170,7 @@ class $DistributionSharesTable extends DistributionShares
       context.handle(
           _acknowledgmentCreatedAtMeta,
           acknowledgmentCreatedAt.isAcceptableOrUnknown(
-              data['acknowledgment_created_at']!,
-              _acknowledgmentCreatedAtMeta));
+              data['acknowledgment_created_at']!, _acknowledgmentCreatedAtMeta));
     }
     return context;
   }
@@ -2361,27 +2181,23 @@ class $DistributionSharesTable extends DistributionShares
   DistributionShareRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return DistributionShareRow(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      distributionId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}distribution_id'])!,
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      distributionId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}distribution_id'])!,
       stewardId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}steward_id'])!,
-      giftWrapEventId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}gift_wrap_event_id'])!,
-      sentAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}sent_at']),
+      giftWrapEventId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}gift_wrap_event_id'])!,
+      sentAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}sent_at']),
       acknowledgedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}acknowledged_at']),
-      acknowledgmentEventId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}acknowledgment_event_id']),
-      acknowledgmentDistributionVersion: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}acknowledgment_distribution_version']),
-      acknowledgmentCreatedAt: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}acknowledgment_created_at']),
+      acknowledgmentEventId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}acknowledgment_event_id']),
+      acknowledgmentDistributionVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}acknowledgment_distribution_version']),
+      acknowledgmentCreatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}acknowledgment_created_at']),
     );
   }
 
@@ -2391,8 +2207,7 @@ class $DistributionSharesTable extends DistributionShares
   }
 }
 
-class DistributionShareRow extends DataClass
-    implements Insertable<DistributionShareRow> {
+class DistributionShareRow extends DataClass implements Insertable<DistributionShareRow> {
   final String id;
   final String distributionId;
   final String stewardId;
@@ -2434,8 +2249,7 @@ class DistributionShareRow extends DataClass
       map['acknowledgment_event_id'] = Variable<String>(acknowledgmentEventId);
     }
     if (!nullToAbsent || acknowledgmentDistributionVersion != null) {
-      map['acknowledgment_distribution_version'] =
-          Variable<int>(acknowledgmentDistributionVersion);
+      map['acknowledgment_distribution_version'] = Variable<int>(acknowledgmentDistributionVersion);
     }
     if (!nullToAbsent || acknowledgmentCreatedAt != null) {
       map['acknowledgment_created_at'] = Variable<int>(acknowledgmentCreatedAt);
@@ -2449,26 +2263,22 @@ class DistributionShareRow extends DataClass
       distributionId: Value(distributionId),
       stewardId: Value(stewardId),
       giftWrapEventId: Value(giftWrapEventId),
-      sentAt:
-          sentAt == null && nullToAbsent ? const Value.absent() : Value(sentAt),
-      acknowledgedAt: acknowledgedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(acknowledgedAt),
+      sentAt: sentAt == null && nullToAbsent ? const Value.absent() : Value(sentAt),
+      acknowledgedAt:
+          acknowledgedAt == null && nullToAbsent ? const Value.absent() : Value(acknowledgedAt),
       acknowledgmentEventId: acknowledgmentEventId == null && nullToAbsent
           ? const Value.absent()
           : Value(acknowledgmentEventId),
-      acknowledgmentDistributionVersion:
-          acknowledgmentDistributionVersion == null && nullToAbsent
-              ? const Value.absent()
-              : Value(acknowledgmentDistributionVersion),
+      acknowledgmentDistributionVersion: acknowledgmentDistributionVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acknowledgmentDistributionVersion),
       acknowledgmentCreatedAt: acknowledgmentCreatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(acknowledgmentCreatedAt),
     );
   }
 
-  factory DistributionShareRow.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory DistributionShareRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DistributionShareRow(
       id: serializer.fromJson<String>(json['id']),
@@ -2477,12 +2287,10 @@ class DistributionShareRow extends DataClass
       giftWrapEventId: serializer.fromJson<String>(json['giftWrapEventId']),
       sentAt: serializer.fromJson<int?>(json['sentAt']),
       acknowledgedAt: serializer.fromJson<int?>(json['acknowledgedAt']),
-      acknowledgmentEventId:
-          serializer.fromJson<String?>(json['acknowledgmentEventId']),
+      acknowledgmentEventId: serializer.fromJson<String?>(json['acknowledgmentEventId']),
       acknowledgmentDistributionVersion:
           serializer.fromJson<int?>(json['acknowledgmentDistributionVersion']),
-      acknowledgmentCreatedAt:
-          serializer.fromJson<int?>(json['acknowledgmentCreatedAt']),
+      acknowledgmentCreatedAt: serializer.fromJson<int?>(json['acknowledgmentCreatedAt']),
     );
   }
   @override
@@ -2495,12 +2303,10 @@ class DistributionShareRow extends DataClass
       'giftWrapEventId': serializer.toJson<String>(giftWrapEventId),
       'sentAt': serializer.toJson<int?>(sentAt),
       'acknowledgedAt': serializer.toJson<int?>(acknowledgedAt),
-      'acknowledgmentEventId':
-          serializer.toJson<String?>(acknowledgmentEventId),
+      'acknowledgmentEventId': serializer.toJson<String?>(acknowledgmentEventId),
       'acknowledgmentDistributionVersion':
           serializer.toJson<int?>(acknowledgmentDistributionVersion),
-      'acknowledgmentCreatedAt':
-          serializer.toJson<int?>(acknowledgmentCreatedAt),
+      'acknowledgmentCreatedAt': serializer.toJson<int?>(acknowledgmentCreatedAt),
     };
   }
 
@@ -2520,15 +2326,13 @@ class DistributionShareRow extends DataClass
         stewardId: stewardId ?? this.stewardId,
         giftWrapEventId: giftWrapEventId ?? this.giftWrapEventId,
         sentAt: sentAt.present ? sentAt.value : this.sentAt,
-        acknowledgedAt:
-            acknowledgedAt.present ? acknowledgedAt.value : this.acknowledgedAt,
+        acknowledgedAt: acknowledgedAt.present ? acknowledgedAt.value : this.acknowledgedAt,
         acknowledgmentEventId: acknowledgmentEventId.present
             ? acknowledgmentEventId.value
             : this.acknowledgmentEventId,
-        acknowledgmentDistributionVersion:
-            acknowledgmentDistributionVersion.present
-                ? acknowledgmentDistributionVersion.value
-                : this.acknowledgmentDistributionVersion,
+        acknowledgmentDistributionVersion: acknowledgmentDistributionVersion.present
+            ? acknowledgmentDistributionVersion.value
+            : this.acknowledgmentDistributionVersion,
         acknowledgmentCreatedAt: acknowledgmentCreatedAt.present
             ? acknowledgmentCreatedAt.value
             : this.acknowledgmentCreatedAt,
@@ -2536,24 +2340,18 @@ class DistributionShareRow extends DataClass
   DistributionShareRow copyWithCompanion(DistributionSharesCompanion data) {
     return DistributionShareRow(
       id: data.id.present ? data.id.value : this.id,
-      distributionId: data.distributionId.present
-          ? data.distributionId.value
-          : this.distributionId,
+      distributionId: data.distributionId.present ? data.distributionId.value : this.distributionId,
       stewardId: data.stewardId.present ? data.stewardId.value : this.stewardId,
-      giftWrapEventId: data.giftWrapEventId.present
-          ? data.giftWrapEventId.value
-          : this.giftWrapEventId,
+      giftWrapEventId:
+          data.giftWrapEventId.present ? data.giftWrapEventId.value : this.giftWrapEventId,
       sentAt: data.sentAt.present ? data.sentAt.value : this.sentAt,
-      acknowledgedAt: data.acknowledgedAt.present
-          ? data.acknowledgedAt.value
-          : this.acknowledgedAt,
+      acknowledgedAt: data.acknowledgedAt.present ? data.acknowledgedAt.value : this.acknowledgedAt,
       acknowledgmentEventId: data.acknowledgmentEventId.present
           ? data.acknowledgmentEventId.value
           : this.acknowledgmentEventId,
-      acknowledgmentDistributionVersion:
-          data.acknowledgmentDistributionVersion.present
-              ? data.acknowledgmentDistributionVersion.value
-              : this.acknowledgmentDistributionVersion,
+      acknowledgmentDistributionVersion: data.acknowledgmentDistributionVersion.present
+          ? data.acknowledgmentDistributionVersion.value
+          : this.acknowledgmentDistributionVersion,
       acknowledgmentCreatedAt: data.acknowledgmentCreatedAt.present
           ? data.acknowledgmentCreatedAt.value
           : this.acknowledgmentCreatedAt,
@@ -2570,8 +2368,7 @@ class DistributionShareRow extends DataClass
           ..write('sentAt: $sentAt, ')
           ..write('acknowledgedAt: $acknowledgedAt, ')
           ..write('acknowledgmentEventId: $acknowledgmentEventId, ')
-          ..write(
-              'acknowledgmentDistributionVersion: $acknowledgmentDistributionVersion, ')
+          ..write('acknowledgmentDistributionVersion: $acknowledgmentDistributionVersion, ')
           ..write('acknowledgmentCreatedAt: $acknowledgmentCreatedAt')
           ..write(')'))
         .toString();
@@ -2599,13 +2396,11 @@ class DistributionShareRow extends DataClass
           other.sentAt == this.sentAt &&
           other.acknowledgedAt == this.acknowledgedAt &&
           other.acknowledgmentEventId == this.acknowledgmentEventId &&
-          other.acknowledgmentDistributionVersion ==
-              this.acknowledgmentDistributionVersion &&
+          other.acknowledgmentDistributionVersion == this.acknowledgmentDistributionVersion &&
           other.acknowledgmentCreatedAt == this.acknowledgmentCreatedAt);
 }
 
-class DistributionSharesCompanion
-    extends UpdateCompanion<DistributionShareRow> {
+class DistributionSharesCompanion extends UpdateCompanion<DistributionShareRow> {
   final Value<String> id;
   final Value<String> distributionId;
   final Value<String> stewardId;
@@ -2662,13 +2457,10 @@ class DistributionSharesCompanion
       if (giftWrapEventId != null) 'gift_wrap_event_id': giftWrapEventId,
       if (sentAt != null) 'sent_at': sentAt,
       if (acknowledgedAt != null) 'acknowledged_at': acknowledgedAt,
-      if (acknowledgmentEventId != null)
-        'acknowledgment_event_id': acknowledgmentEventId,
+      if (acknowledgmentEventId != null) 'acknowledgment_event_id': acknowledgmentEventId,
       if (acknowledgmentDistributionVersion != null)
-        'acknowledgment_distribution_version':
-            acknowledgmentDistributionVersion,
-      if (acknowledgmentCreatedAt != null)
-        'acknowledgment_created_at': acknowledgmentCreatedAt,
+        'acknowledgment_distribution_version': acknowledgmentDistributionVersion,
+      if (acknowledgmentCreatedAt != null) 'acknowledgment_created_at': acknowledgmentCreatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2691,12 +2483,10 @@ class DistributionSharesCompanion
       giftWrapEventId: giftWrapEventId ?? this.giftWrapEventId,
       sentAt: sentAt ?? this.sentAt,
       acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
-      acknowledgmentEventId:
-          acknowledgmentEventId ?? this.acknowledgmentEventId,
-      acknowledgmentDistributionVersion: acknowledgmentDistributionVersion ??
-          this.acknowledgmentDistributionVersion,
-      acknowledgmentCreatedAt:
-          acknowledgmentCreatedAt ?? this.acknowledgmentCreatedAt,
+      acknowledgmentEventId: acknowledgmentEventId ?? this.acknowledgmentEventId,
+      acknowledgmentDistributionVersion:
+          acknowledgmentDistributionVersion ?? this.acknowledgmentDistributionVersion,
+      acknowledgmentCreatedAt: acknowledgmentCreatedAt ?? this.acknowledgmentCreatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2723,16 +2513,14 @@ class DistributionSharesCompanion
       map['acknowledged_at'] = Variable<int>(acknowledgedAt.value);
     }
     if (acknowledgmentEventId.present) {
-      map['acknowledgment_event_id'] =
-          Variable<String>(acknowledgmentEventId.value);
+      map['acknowledgment_event_id'] = Variable<String>(acknowledgmentEventId.value);
     }
     if (acknowledgmentDistributionVersion.present) {
       map['acknowledgment_distribution_version'] =
           Variable<int>(acknowledgmentDistributionVersion.value);
     }
     if (acknowledgmentCreatedAt.present) {
-      map['acknowledgment_created_at'] =
-          Variable<int>(acknowledgmentCreatedAt.value);
+      map['acknowledgment_created_at'] = Variable<int>(acknowledgmentCreatedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -2750,8 +2538,7 @@ class DistributionSharesCompanion
           ..write('sentAt: $sentAt, ')
           ..write('acknowledgedAt: $acknowledgedAt, ')
           ..write('acknowledgmentEventId: $acknowledgmentEventId, ')
-          ..write(
-              'acknowledgmentDistributionVersion: $acknowledgmentDistributionVersion, ')
+          ..write('acknowledgmentDistributionVersion: $acknowledgmentDistributionVersion, ')
           ..write('acknowledgmentCreatedAt: $acknowledgmentCreatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2767,60 +2554,47 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $OwnedVaultsTable ownedVaults = $OwnedVaultsTable(this);
   late final $StewardsTable stewards = $StewardsTable(this);
   late final $DistributionsTable distributions = $DistributionsTable(this);
-  late final $DistributionSharesTable distributionShares =
-      $DistributionSharesTable(this);
+  late final $DistributionSharesTable distributionShares = $DistributionSharesTable(this);
   late final VaultDao vaultDao = VaultDao(this as AppDatabase);
   late final VaultRelayDao vaultRelayDao = VaultRelayDao(this as AppDatabase);
   late final OwnedVaultDao ownedVaultDao = OwnedVaultDao(this as AppDatabase);
   late final StewardDao stewardDao = StewardDao(this as AppDatabase);
-  late final DistributionDao distributionDao =
-      DistributionDao(this as AppDatabase);
+  late final DistributionDao distributionDao = DistributionDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [
-        vaults,
-        vaultRelays,
-        ownedVaults,
-        stewards,
-        distributions,
-        distributionShares
-      ];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [vaults, vaultRelays, ownedVaults, stewards, distributions, distributionShares];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
         [
           WritePropagation(
-            on: TableUpdateQuery.onTableName('vaults',
-                limitUpdateKind: UpdateKind.delete),
+            on: TableUpdateQuery.onTableName('vaults', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('vault_relays', kind: UpdateKind.delete),
             ],
           ),
           WritePropagation(
-            on: TableUpdateQuery.onTableName('vaults',
-                limitUpdateKind: UpdateKind.delete),
+            on: TableUpdateQuery.onTableName('vaults', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('owned_vaults', kind: UpdateKind.delete),
             ],
           ),
           WritePropagation(
-            on: TableUpdateQuery.onTableName('vaults',
-                limitUpdateKind: UpdateKind.delete),
+            on: TableUpdateQuery.onTableName('vaults', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('stewards', kind: UpdateKind.delete),
             ],
           ),
           WritePropagation(
-            on: TableUpdateQuery.onTableName('vaults',
-                limitUpdateKind: UpdateKind.delete),
+            on: TableUpdateQuery.onTableName('vaults', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('distributions', kind: UpdateKind.delete),
             ],
           ),
           WritePropagation(
-            on: TableUpdateQuery.onTableName('distributions',
-                limitUpdateKind: UpdateKind.delete),
+            on: TableUpdateQuery.onTableName('distributions', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('distribution_shares', kind: UpdateKind.delete),
             ],
@@ -2864,43 +2638,38 @@ typedef $$VaultsTableUpdateCompanionBuilder = VaultsCompanion Function({
   Value<int> rowid,
 });
 
-final class $$VaultsTableReferences
-    extends BaseReferences<_$AppDatabase, $VaultsTable, VaultRow> {
+final class $$VaultsTableReferences extends BaseReferences<_$AppDatabase, $VaultsTable, VaultRow> {
   $$VaultsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$VaultRelaysTable, List<VaultRelayRow>>
-      _vaultRelaysRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.vaultRelays,
-              aliasName:
-                  $_aliasNameGenerator(db.vaults.id, db.vaultRelays.vaultId));
+  static MultiTypedResultKey<$VaultRelaysTable, List<VaultRelayRow>> _vaultRelaysRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.vaultRelays,
+          aliasName: $_aliasNameGenerator(db.vaults.id, db.vaultRelays.vaultId));
 
   $$VaultRelaysTableProcessedTableManager get vaultRelaysRefs {
     final manager = $$VaultRelaysTableTableManager($_db, $_db.vaultRelays)
         .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_vaultRelaysRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$OwnedVaultsTable, List<OwnedVaultRow>>
-      _ownedVaultsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.ownedVaults,
-              aliasName:
-                  $_aliasNameGenerator(db.vaults.id, db.ownedVaults.vaultId));
+  static MultiTypedResultKey<$OwnedVaultsTable, List<OwnedVaultRow>> _ownedVaultsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.ownedVaults,
+          aliasName: $_aliasNameGenerator(db.vaults.id, db.ownedVaults.vaultId));
 
   $$OwnedVaultsTableProcessedTableManager get ownedVaultsRefs {
     final manager = $$OwnedVaultsTableTableManager($_db, $_db.ownedVaults)
         .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_ownedVaultsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$StewardsTable, List<StewardRow>>
-      _stewardsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-          db.stewards,
+  static MultiTypedResultKey<$StewardsTable, List<StewardRow>> _stewardsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.stewards,
           aliasName: $_aliasNameGenerator(db.vaults.id, db.stewards.vaultId));
 
   $$StewardsTableProcessedTableManager get stewardsRefs {
@@ -2908,28 +2677,24 @@ final class $$VaultsTableReferences
         .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_stewardsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$DistributionsTable, List<DistributionRow>>
-      _distributionsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.distributions,
-              aliasName:
-                  $_aliasNameGenerator(db.vaults.id, db.distributions.vaultId));
+  static MultiTypedResultKey<$DistributionsTable, List<DistributionRow>> _distributionsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.distributions,
+          aliasName: $_aliasNameGenerator(db.vaults.id, db.distributions.vaultId));
 
   $$DistributionsTableProcessedTableManager get distributionsRefs {
     final manager = $$DistributionsTableTableManager($_db, $_db.distributions)
         .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_distributionsRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
 
-class $$VaultsTableFilterComposer
-    extends Composer<_$AppDatabase, $VaultsTable> {
+class $$VaultsTableFilterComposer extends Composer<_$AppDatabase, $VaultsTable> {
   $$VaultsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -2937,49 +2702,47 @@ class $$VaultsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get ownerPubkey => $composableBuilder(
-      column: $table.ownerPubkey, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get ownerPubkey =>
+      $composableBuilder(column: $table.ownerPubkey, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get ownerName => $composableBuilder(
-      column: $table.ownerName, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get ownerName =>
+      $composableBuilder(column: $table.ownerName, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get threshold => $composableBuilder(
-      column: $table.threshold, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get threshold =>
+      $composableBuilder(column: $table.threshold, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get primeMod => $composableBuilder(
-      column: $table.primeMod, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get primeMod =>
+      $composableBuilder(column: $table.primeMod, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get totalShares => $composableBuilder(
-      column: $table.totalShares, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get totalShares =>
+      $composableBuilder(column: $table.totalShares, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get currentDistributionVersion => $composableBuilder(
-      column: $table.currentDistributionVersion,
-      builder: (column) => ColumnFilters(column));
+      column: $table.currentDistributionVersion, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get instructions => $composableBuilder(
-      column: $table.instructions, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get instructions =>
+      $composableBuilder(column: $table.instructions, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<bool> get pushEnabled => $composableBuilder(
-      column: $table.pushEnabled, builder: (column) => ColumnFilters(column));
+  ColumnFilters<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get archivedAt => $composableBuilder(
-      column: $table.archivedAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get archivedAt =>
+      $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get archivedReason => $composableBuilder(
-      column: $table.archivedReason,
-      builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get archivedReason =>
+      $composableBuilder(column: $table.archivedReason, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get lastSyncedAt => $composableBuilder(
-      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get lastSyncedAt =>
+      $composableBuilder(column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
   Expression<bool> vaultRelaysRefs(
       Expression<bool> Function($$VaultRelaysTableFilterComposer f) f) {
@@ -2989,15 +2752,13 @@ class $$VaultsTableFilterComposer
         referencedTable: $db.vaultRelays,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultRelaysTableFilterComposer(
               $db: $db,
               $table: $db.vaultRelays,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3010,36 +2771,31 @@ class $$VaultsTableFilterComposer
         referencedTable: $db.ownedVaults,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$OwnedVaultsTableFilterComposer(
               $db: $db,
               $table: $db.ownedVaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
 
-  Expression<bool> stewardsRefs(
-      Expression<bool> Function($$StewardsTableFilterComposer f) f) {
+  Expression<bool> stewardsRefs(Expression<bool> Function($$StewardsTableFilterComposer f) f) {
     final $$StewardsTableFilterComposer composer = $composerBuilder(
         composer: this,
         getCurrentColumn: (t) => t.id,
         referencedTable: $db.stewards,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$StewardsTableFilterComposer(
               $db: $db,
               $table: $db.stewards,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3052,22 +2808,19 @@ class $$VaultsTableFilterComposer
         referencedTable: $db.distributions,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionsTableFilterComposer(
               $db: $db,
               $table: $db.distributions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
 }
 
-class $$VaultsTableOrderingComposer
-    extends Composer<_$AppDatabase, $VaultsTable> {
+class $$VaultsTableOrderingComposer extends Composer<_$AppDatabase, $VaultsTable> {
   $$VaultsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -3075,55 +2828,50 @@ class $$VaultsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
-      column: $table.ownerPubkey, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get ownerPubkey =>
+      $composableBuilder(column: $table.ownerPubkey, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get ownerName => $composableBuilder(
-      column: $table.ownerName, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get ownerName =>
+      $composableBuilder(column: $table.ownerName, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get threshold => $composableBuilder(
-      column: $table.threshold, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get threshold =>
+      $composableBuilder(column: $table.threshold, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get primeMod => $composableBuilder(
-      column: $table.primeMod, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get primeMod =>
+      $composableBuilder(column: $table.primeMod, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get totalShares => $composableBuilder(
-      column: $table.totalShares, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get totalShares =>
+      $composableBuilder(column: $table.totalShares, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get currentDistributionVersion => $composableBuilder(
-      column: $table.currentDistributionVersion,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.currentDistributionVersion, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get instructions => $composableBuilder(
-      column: $table.instructions,
-      builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get instructions =>
+      $composableBuilder(column: $table.instructions, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<bool> get pushEnabled => $composableBuilder(
-      column: $table.pushEnabled, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get archivedAt => $composableBuilder(
-      column: $table.archivedAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get archivedAt =>
+      $composableBuilder(column: $table.archivedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get archivedReason => $composableBuilder(
-      column: $table.archivedReason,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.archivedReason, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
-      column: $table.lastSyncedAt,
-      builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get lastSyncedAt =>
+      $composableBuilder(column: $table.lastSyncedAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 }
 
-class $$VaultsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $VaultsTable> {
+class $$VaultsTableAnnotationComposer extends Composer<_$AppDatabase, $VaultsTable> {
   $$VaultsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -3137,8 +2885,8 @@ class $$VaultsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
-      column: $table.ownerPubkey, builder: (column) => column);
+  GeneratedColumn<String> get ownerPubkey =>
+      $composableBuilder(column: $table.ownerPubkey, builder: (column) => column);
 
   GeneratedColumn<String> get ownerName =>
       $composableBuilder(column: $table.ownerName, builder: (column) => column);
@@ -3149,26 +2897,26 @@ class $$VaultsTableAnnotationComposer
   GeneratedColumn<String> get primeMod =>
       $composableBuilder(column: $table.primeMod, builder: (column) => column);
 
-  GeneratedColumn<int> get totalShares => $composableBuilder(
-      column: $table.totalShares, builder: (column) => column);
+  GeneratedColumn<int> get totalShares =>
+      $composableBuilder(column: $table.totalShares, builder: (column) => column);
 
-  GeneratedColumn<int> get currentDistributionVersion => $composableBuilder(
-      column: $table.currentDistributionVersion, builder: (column) => column);
+  GeneratedColumn<int> get currentDistributionVersion =>
+      $composableBuilder(column: $table.currentDistributionVersion, builder: (column) => column);
 
-  GeneratedColumn<String> get instructions => $composableBuilder(
-      column: $table.instructions, builder: (column) => column);
+  GeneratedColumn<String> get instructions =>
+      $composableBuilder(column: $table.instructions, builder: (column) => column);
 
-  GeneratedColumn<bool> get pushEnabled => $composableBuilder(
-      column: $table.pushEnabled, builder: (column) => column);
+  GeneratedColumn<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => column);
 
-  GeneratedColumn<int> get archivedAt => $composableBuilder(
-      column: $table.archivedAt, builder: (column) => column);
+  GeneratedColumn<int> get archivedAt =>
+      $composableBuilder(column: $table.archivedAt, builder: (column) => column);
 
-  GeneratedColumn<String> get archivedReason => $composableBuilder(
-      column: $table.archivedReason, builder: (column) => column);
+  GeneratedColumn<String> get archivedReason =>
+      $composableBuilder(column: $table.archivedReason, builder: (column) => column);
 
-  GeneratedColumn<int> get lastSyncedAt => $composableBuilder(
-      column: $table.lastSyncedAt, builder: (column) => column);
+  GeneratedColumn<int> get lastSyncedAt =>
+      $composableBuilder(column: $table.lastSyncedAt, builder: (column) => column);
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3181,15 +2929,13 @@ class $$VaultsTableAnnotationComposer
         referencedTable: $db.vaultRelays,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultRelaysTableAnnotationComposer(
               $db: $db,
               $table: $db.vaultRelays,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3202,15 +2948,13 @@ class $$VaultsTableAnnotationComposer
         referencedTable: $db.ownedVaults,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$OwnedVaultsTableAnnotationComposer(
               $db: $db,
               $table: $db.ownedVaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3223,15 +2967,13 @@ class $$VaultsTableAnnotationComposer
         referencedTable: $db.stewards,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$StewardsTableAnnotationComposer(
               $db: $db,
               $table: $db.stewards,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3244,15 +2986,13 @@ class $$VaultsTableAnnotationComposer
         referencedTable: $db.distributions,
         getReferencedColumn: (t) => t.vaultId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionsTableAnnotationComposer(
               $db: $db,
               $table: $db.distributions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
@@ -3270,18 +3010,13 @@ class $$VaultsTableTableManager extends RootTableManager<
     (VaultRow, $$VaultsTableReferences),
     VaultRow,
     PrefetchHooks Function(
-        {bool vaultRelaysRefs,
-        bool ownedVaultsRefs,
-        bool stewardsRefs,
-        bool distributionsRefs})> {
+        {bool vaultRelaysRefs, bool ownedVaultsRefs, bool stewardsRefs, bool distributionsRefs})> {
   $$VaultsTableTableManager(_$AppDatabase db, $VaultsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$VaultsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$VaultsTableOrderingComposer($db: db, $table: table),
+          createFilteringComposer: () => $$VaultsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$VaultsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$VaultsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
@@ -3352,10 +3087,8 @@ class $$VaultsTableTableManager extends RootTableManager<
             createdAt: createdAt,
             rowid: rowid,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) =>
-                  (e.readTable(table), $$VaultsTableReferences(db, table, e)))
-              .toList(),
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable(table), $$VaultsTableReferences(db, table, e))).toList(),
           prefetchHooksCallback: (
               {vaultRelaysRefs = false,
               ownedVaultsRefs = false,
@@ -3373,54 +3106,39 @@ class $$VaultsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (vaultRelaysRefs)
-                    await $_getPrefetchedData<VaultRow, $VaultsTable,
-                            VaultRelayRow>(
+                    await $_getPrefetchedData<VaultRow, $VaultsTable, VaultRelayRow>(
                         currentTable: table,
-                        referencedTable:
-                            $$VaultsTableReferences._vaultRelaysRefsTable(db),
+                        referencedTable: $$VaultsTableReferences._vaultRelaysRefsTable(db),
                         managerFromTypedResult: (p0) =>
-                            $$VaultsTableReferences(db, table, p0)
-                                .vaultRelaysRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
+                            $$VaultsTableReferences(db, table, p0).vaultRelaysRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
                             referencedItems.where((e) => e.vaultId == item.id),
                         typedResults: items),
                   if (ownedVaultsRefs)
-                    await $_getPrefetchedData<VaultRow, $VaultsTable,
-                            OwnedVaultRow>(
+                    await $_getPrefetchedData<VaultRow, $VaultsTable, OwnedVaultRow>(
                         currentTable: table,
-                        referencedTable:
-                            $$VaultsTableReferences._ownedVaultsRefsTable(db),
+                        referencedTable: $$VaultsTableReferences._ownedVaultsRefsTable(db),
                         managerFromTypedResult: (p0) =>
-                            $$VaultsTableReferences(db, table, p0)
-                                .ownedVaultsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
+                            $$VaultsTableReferences(db, table, p0).ownedVaultsRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
                             referencedItems.where((e) => e.vaultId == item.id),
                         typedResults: items),
                   if (stewardsRefs)
-                    await $_getPrefetchedData<VaultRow, $VaultsTable,
-                            StewardRow>(
+                    await $_getPrefetchedData<VaultRow, $VaultsTable, StewardRow>(
                         currentTable: table,
-                        referencedTable:
-                            $$VaultsTableReferences._stewardsRefsTable(db),
+                        referencedTable: $$VaultsTableReferences._stewardsRefsTable(db),
                         managerFromTypedResult: (p0) =>
                             $$VaultsTableReferences(db, table, p0).stewardsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
                             referencedItems.where((e) => e.vaultId == item.id),
                         typedResults: items),
                   if (distributionsRefs)
-                    await $_getPrefetchedData<VaultRow, $VaultsTable,
-                            DistributionRow>(
+                    await $_getPrefetchedData<VaultRow, $VaultsTable, DistributionRow>(
                         currentTable: table,
-                        referencedTable:
-                            $$VaultsTableReferences._distributionsRefsTable(db),
+                        referencedTable: $$VaultsTableReferences._distributionsRefsTable(db),
                         managerFromTypedResult: (p0) =>
-                            $$VaultsTableReferences(db, table, p0)
-                                .distributionsRefs,
-                        referencedItemsForCurrentItem: (item,
-                                referencedItems) =>
+                            $$VaultsTableReferences(db, table, p0).distributionsRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
                             referencedItems.where((e) => e.vaultId == item.id),
                         typedResults: items)
                 ];
@@ -3442,12 +3160,8 @@ typedef $$VaultsTableProcessedTableManager = ProcessedTableManager<
     (VaultRow, $$VaultsTableReferences),
     VaultRow,
     PrefetchHooks Function(
-        {bool vaultRelaysRefs,
-        bool ownedVaultsRefs,
-        bool stewardsRefs,
-        bool distributionsRefs})>;
-typedef $$VaultRelaysTableCreateCompanionBuilder = VaultRelaysCompanion
-    Function({
+        {bool vaultRelaysRefs, bool ownedVaultsRefs, bool stewardsRefs, bool distributionsRefs})>;
+typedef $$VaultRelaysTableCreateCompanionBuilder = VaultRelaysCompanion Function({
   required String id,
   required String vaultId,
   required String url,
@@ -3455,8 +3169,7 @@ typedef $$VaultRelaysTableCreateCompanionBuilder = VaultRelaysCompanion
   required int addedAt,
   Value<int> rowid,
 });
-typedef $$VaultRelaysTableUpdateCompanionBuilder = VaultRelaysCompanion
-    Function({
+typedef $$VaultRelaysTableUpdateCompanionBuilder = VaultRelaysCompanion Function({
   Value<String> id,
   Value<String> vaultId,
   Value<String> url,
@@ -3469,23 +3182,21 @@ final class $$VaultRelaysTableReferences
     extends BaseReferences<_$AppDatabase, $VaultRelaysTable, VaultRelayRow> {
   $$VaultRelaysTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $VaultsTable _vaultIdTable(_$AppDatabase db) => db.vaults
-      .createAlias($_aliasNameGenerator(db.vaultRelays.vaultId, db.vaults.id));
+  static $VaultsTable _vaultIdTable(_$AppDatabase db) =>
+      db.vaults.createAlias($_aliasNameGenerator(db.vaultRelays.vaultId, db.vaults.id));
 
   $$VaultsTableProcessedTableManager get vaultId {
     final $_column = $_itemColumn<String>('vault_id')!;
 
-    final manager = $$VaultsTableTableManager($_db, $_db.vaults)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager =
+        $$VaultsTableTableManager($_db, $_db.vaults).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_vaultIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 }
 
-class $$VaultRelaysTableFilterComposer
-    extends Composer<_$AppDatabase, $VaultRelaysTable> {
+class $$VaultRelaysTableFilterComposer extends Composer<_$AppDatabase, $VaultRelaysTable> {
   $$VaultRelaysTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -3493,17 +3204,17 @@ class $$VaultRelaysTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get url => $composableBuilder(
-      column: $table.url, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get role => $composableBuilder(
-      column: $table.role, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get addedAt => $composableBuilder(
-      column: $table.addedAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => ColumnFilters(column));
 
   $$VaultsTableFilterComposer get vaultId {
     final $$VaultsTableFilterComposer composer = $composerBuilder(
@@ -3512,22 +3223,19 @@ class $$VaultRelaysTableFilterComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableFilterComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$VaultRelaysTableOrderingComposer
-    extends Composer<_$AppDatabase, $VaultRelaysTable> {
+class $$VaultRelaysTableOrderingComposer extends Composer<_$AppDatabase, $VaultRelaysTable> {
   $$VaultRelaysTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -3535,17 +3243,17 @@ class $$VaultRelaysTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get url => $composableBuilder(
-      column: $table.url, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get role => $composableBuilder(
-      column: $table.role, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get addedAt => $composableBuilder(
-      column: $table.addedAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => ColumnOrderings(column));
 
   $$VaultsTableOrderingComposer get vaultId {
     final $$VaultsTableOrderingComposer composer = $composerBuilder(
@@ -3554,22 +3262,19 @@ class $$VaultRelaysTableOrderingComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableOrderingComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$VaultRelaysTableAnnotationComposer
-    extends Composer<_$AppDatabase, $VaultRelaysTable> {
+class $$VaultRelaysTableAnnotationComposer extends Composer<_$AppDatabase, $VaultRelaysTable> {
   $$VaultRelaysTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -3596,15 +3301,13 @@ class $$VaultRelaysTableAnnotationComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableAnnotationComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -3626,10 +3329,8 @@ class $$VaultRelaysTableTableManager extends RootTableManager<
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$VaultRelaysTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$VaultRelaysTableOrderingComposer($db: db, $table: table),
+          createFilteringComposer: () => $$VaultRelaysTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$VaultRelaysTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$VaultRelaysTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
@@ -3665,36 +3366,21 @@ class $$VaultRelaysTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$VaultRelaysTableReferences(db, table, e)
-                  ))
+              .map((e) => (e.readTable(table), $$VaultRelaysTableReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: ({vaultId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
               addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
                 if (vaultId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.vaultId,
-                    referencedTable:
-                        $$VaultRelaysTableReferences._vaultIdTable(db),
-                    referencedColumn:
-                        $$VaultRelaysTableReferences._vaultIdTable(db).id,
+                    referencedTable: $$VaultRelaysTableReferences._vaultIdTable(db),
+                    referencedColumn: $$VaultRelaysTableReferences._vaultIdTable(db).id,
                   ) as T;
                 }
 
@@ -3720,16 +3406,14 @@ typedef $$VaultRelaysTableProcessedTableManager = ProcessedTableManager<
     (VaultRelayRow, $$VaultRelaysTableReferences),
     VaultRelayRow,
     PrefetchHooks Function({bool vaultId})>;
-typedef $$OwnedVaultsTableCreateCompanionBuilder = OwnedVaultsCompanion
-    Function({
+typedef $$OwnedVaultsTableCreateCompanionBuilder = OwnedVaultsCompanion Function({
   required String vaultId,
   required String content,
   required Uint8List contentHmac,
   required int createdBySelfAt,
   Value<int> rowid,
 });
-typedef $$OwnedVaultsTableUpdateCompanionBuilder = OwnedVaultsCompanion
-    Function({
+typedef $$OwnedVaultsTableUpdateCompanionBuilder = OwnedVaultsCompanion Function({
   Value<String> vaultId,
   Value<String> content,
   Value<Uint8List> contentHmac,
@@ -3741,23 +3425,21 @@ final class $$OwnedVaultsTableReferences
     extends BaseReferences<_$AppDatabase, $OwnedVaultsTable, OwnedVaultRow> {
   $$OwnedVaultsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $VaultsTable _vaultIdTable(_$AppDatabase db) => db.vaults
-      .createAlias($_aliasNameGenerator(db.ownedVaults.vaultId, db.vaults.id));
+  static $VaultsTable _vaultIdTable(_$AppDatabase db) =>
+      db.vaults.createAlias($_aliasNameGenerator(db.ownedVaults.vaultId, db.vaults.id));
 
   $$VaultsTableProcessedTableManager get vaultId {
     final $_column = $_itemColumn<String>('vault_id')!;
 
-    final manager = $$VaultsTableTableManager($_db, $_db.vaults)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager =
+        $$VaultsTableTableManager($_db, $_db.vaults).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_vaultIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 }
 
-class $$OwnedVaultsTableFilterComposer
-    extends Composer<_$AppDatabase, $OwnedVaultsTable> {
+class $$OwnedVaultsTableFilterComposer extends Composer<_$AppDatabase, $OwnedVaultsTable> {
   $$OwnedVaultsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -3765,15 +3447,14 @@ class $$OwnedVaultsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => ColumnFilters(column));
+  ColumnFilters<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get createdBySelfAt => $composableBuilder(
-      column: $table.createdBySelfAt,
-      builder: (column) => ColumnFilters(column));
+      column: $table.createdBySelfAt, builder: (column) => ColumnFilters(column));
 
   $$VaultsTableFilterComposer get vaultId {
     final $$VaultsTableFilterComposer composer = $composerBuilder(
@@ -3782,22 +3463,19 @@ class $$OwnedVaultsTableFilterComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableFilterComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$OwnedVaultsTableOrderingComposer
-    extends Composer<_$AppDatabase, $OwnedVaultsTable> {
+class $$OwnedVaultsTableOrderingComposer extends Composer<_$AppDatabase, $OwnedVaultsTable> {
   $$OwnedVaultsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -3805,15 +3483,14 @@ class $$OwnedVaultsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get createdBySelfAt => $composableBuilder(
-      column: $table.createdBySelfAt,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.createdBySelfAt, builder: (column) => ColumnOrderings(column));
 
   $$VaultsTableOrderingComposer get vaultId {
     final $$VaultsTableOrderingComposer composer = $composerBuilder(
@@ -3822,22 +3499,19 @@ class $$OwnedVaultsTableOrderingComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableOrderingComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$OwnedVaultsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $OwnedVaultsTable> {
+class $$OwnedVaultsTableAnnotationComposer extends Composer<_$AppDatabase, $OwnedVaultsTable> {
   $$OwnedVaultsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -3848,11 +3522,11 @@ class $$OwnedVaultsTableAnnotationComposer
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
 
-  GeneratedColumn<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => column);
+  GeneratedColumn<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => column);
 
-  GeneratedColumn<int> get createdBySelfAt => $composableBuilder(
-      column: $table.createdBySelfAt, builder: (column) => column);
+  GeneratedColumn<int> get createdBySelfAt =>
+      $composableBuilder(column: $table.createdBySelfAt, builder: (column) => column);
 
   $$VaultsTableAnnotationComposer get vaultId {
     final $$VaultsTableAnnotationComposer composer = $composerBuilder(
@@ -3861,15 +3535,13 @@ class $$OwnedVaultsTableAnnotationComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableAnnotationComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -3891,10 +3563,8 @@ class $$OwnedVaultsTableTableManager extends RootTableManager<
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$OwnedVaultsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$OwnedVaultsTableOrderingComposer($db: db, $table: table),
+          createFilteringComposer: () => $$OwnedVaultsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$OwnedVaultsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$OwnedVaultsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
@@ -3926,36 +3596,21 @@ class $$OwnedVaultsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$OwnedVaultsTableReferences(db, table, e)
-                  ))
+              .map((e) => (e.readTable(table), $$OwnedVaultsTableReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: ({vaultId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
               addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
                 if (vaultId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.vaultId,
-                    referencedTable:
-                        $$OwnedVaultsTableReferences._vaultIdTable(db),
-                    referencedColumn:
-                        $$OwnedVaultsTableReferences._vaultIdTable(db).id,
+                    referencedTable: $$OwnedVaultsTableReferences._vaultIdTable(db),
+                    referencedColumn: $$OwnedVaultsTableReferences._vaultIdTable(db).id,
                   ) as T;
                 }
 
@@ -4012,41 +3667,34 @@ final class $$StewardsTableReferences
     extends BaseReferences<_$AppDatabase, $StewardsTable, StewardRow> {
   $$StewardsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $VaultsTable _vaultIdTable(_$AppDatabase db) => db.vaults
-      .createAlias($_aliasNameGenerator(db.stewards.vaultId, db.vaults.id));
+  static $VaultsTable _vaultIdTable(_$AppDatabase db) =>
+      db.vaults.createAlias($_aliasNameGenerator(db.stewards.vaultId, db.vaults.id));
 
   $$VaultsTableProcessedTableManager get vaultId {
     final $_column = $_itemColumn<String>('vault_id')!;
 
-    final manager = $$VaultsTableTableManager($_db, $_db.vaults)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager =
+        $$VaultsTableTableManager($_db, $_db.vaults).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_vaultIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static MultiTypedResultKey<$DistributionSharesTable,
-      List<DistributionShareRow>> _distributionSharesRefsTable(
-          _$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(db.distributionShares,
-          aliasName: $_aliasNameGenerator(
-              db.stewards.id, db.distributionShares.stewardId));
+  static MultiTypedResultKey<$DistributionSharesTable, List<DistributionShareRow>>
+      _distributionSharesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.distributionShares,
+              aliasName: $_aliasNameGenerator(db.stewards.id, db.distributionShares.stewardId));
 
   $$DistributionSharesTableProcessedTableManager get distributionSharesRefs {
-    final manager = $$DistributionSharesTableTableManager(
-            $_db, $_db.distributionShares)
+    final manager = $$DistributionSharesTableTableManager($_db, $_db.distributionShares)
         .filter((f) => f.stewardId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache =
-        $_typedResult.readTableOrNull(_distributionSharesRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    final cache = $_typedResult.readTableOrNull(_distributionSharesRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
 
-class $$StewardsTableFilterComposer
-    extends Composer<_$AppDatabase, $StewardsTable> {
+class $$StewardsTableFilterComposer extends Composer<_$AppDatabase, $StewardsTable> {
   $$StewardsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -4054,32 +3702,32 @@ class $$StewardsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get shareIndex => $composableBuilder(
-      column: $table.shareIndex, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get pubkey => $composableBuilder(
-      column: $table.pubkey, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get pubkey =>
+      $composableBuilder(column: $table.pubkey, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get contactInfo => $composableBuilder(
-      column: $table.contactInfo, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get contactInfo =>
+      $composableBuilder(column: $table.contactInfo, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<bool> get isOwner => $composableBuilder(
-      column: $table.isOwner, builder: (column) => ColumnFilters(column));
+  ColumnFilters<bool> get isOwner =>
+      $composableBuilder(column: $table.isOwner, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get joinedAt => $composableBuilder(
-      column: $table.joinedAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get joinedAt =>
+      $composableBuilder(column: $table.joinedAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get leftAt => $composableBuilder(
-      column: $table.leftAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get leftAt =>
+      $composableBuilder(column: $table.leftAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get removalReason => $composableBuilder(
-      column: $table.removalReason, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get removalReason =>
+      $composableBuilder(column: $table.removalReason, builder: (column) => ColumnFilters(column));
 
   $$VaultsTableFilterComposer get vaultId {
     final $$VaultsTableFilterComposer composer = $composerBuilder(
@@ -4088,15 +3736,13 @@ class $$StewardsTableFilterComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableFilterComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -4109,22 +3755,19 @@ class $$StewardsTableFilterComposer
         referencedTable: $db.distributionShares,
         getReferencedColumn: (t) => t.stewardId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionSharesTableFilterComposer(
               $db: $db,
               $table: $db.distributionShares,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
 }
 
-class $$StewardsTableOrderingComposer
-    extends Composer<_$AppDatabase, $StewardsTable> {
+class $$StewardsTableOrderingComposer extends Composer<_$AppDatabase, $StewardsTable> {
   $$StewardsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -4132,33 +3775,32 @@ class $$StewardsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get shareIndex => $composableBuilder(
-      column: $table.shareIndex, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get pubkey => $composableBuilder(
-      column: $table.pubkey, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get pubkey =>
+      $composableBuilder(column: $table.pubkey, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get name => $composableBuilder(
-      column: $table.name, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get contactInfo => $composableBuilder(
-      column: $table.contactInfo, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get contactInfo =>
+      $composableBuilder(column: $table.contactInfo, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<bool> get isOwner => $composableBuilder(
-      column: $table.isOwner, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<bool> get isOwner =>
+      $composableBuilder(column: $table.isOwner, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get joinedAt => $composableBuilder(
-      column: $table.joinedAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get joinedAt =>
+      $composableBuilder(column: $table.joinedAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get leftAt => $composableBuilder(
-      column: $table.leftAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get leftAt =>
+      $composableBuilder(column: $table.leftAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get removalReason => $composableBuilder(
-      column: $table.removalReason,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.removalReason, builder: (column) => ColumnOrderings(column));
 
   $$VaultsTableOrderingComposer get vaultId {
     final $$VaultsTableOrderingComposer composer = $composerBuilder(
@@ -4167,22 +3809,19 @@ class $$StewardsTableOrderingComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableOrderingComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$StewardsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $StewardsTable> {
+class $$StewardsTableAnnotationComposer extends Composer<_$AppDatabase, $StewardsTable> {
   $$StewardsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -4193,8 +3832,8 @@ class $$StewardsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get shareIndex => $composableBuilder(
-      column: $table.shareIndex, builder: (column) => column);
+  GeneratedColumn<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => column);
 
   GeneratedColumn<String> get pubkey =>
       $composableBuilder(column: $table.pubkey, builder: (column) => column);
@@ -4202,8 +3841,8 @@ class $$StewardsTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<String> get contactInfo => $composableBuilder(
-      column: $table.contactInfo, builder: (column) => column);
+  GeneratedColumn<String> get contactInfo =>
+      $composableBuilder(column: $table.contactInfo, builder: (column) => column);
 
   GeneratedColumn<bool> get isOwner =>
       $composableBuilder(column: $table.isOwner, builder: (column) => column);
@@ -4214,8 +3853,8 @@ class $$StewardsTableAnnotationComposer
   GeneratedColumn<int> get leftAt =>
       $composableBuilder(column: $table.leftAt, builder: (column) => column);
 
-  GeneratedColumn<String> get removalReason => $composableBuilder(
-      column: $table.removalReason, builder: (column) => column);
+  GeneratedColumn<String> get removalReason =>
+      $composableBuilder(column: $table.removalReason, builder: (column) => column);
 
   $$VaultsTableAnnotationComposer get vaultId {
     final $$VaultsTableAnnotationComposer composer = $composerBuilder(
@@ -4224,38 +3863,33 @@ class $$StewardsTableAnnotationComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableAnnotationComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 
   Expression<T> distributionSharesRefs<T extends Object>(
       Expression<T> Function($$DistributionSharesTableAnnotationComposer a) f) {
-    final $$DistributionSharesTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.id,
-            referencedTable: $db.distributionShares,
-            getReferencedColumn: (t) => t.stewardId,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$DistributionSharesTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.distributionShares,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
+    final $$DistributionSharesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.distributionShares,
+        getReferencedColumn: (t) => t.stewardId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$DistributionSharesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.distributionShares,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
     return f(composer);
   }
 }
@@ -4276,10 +3910,8 @@ class $$StewardsTableTableManager extends RootTableManager<
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$StewardsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$StewardsTableOrderingComposer($db: db, $table: table),
+          createFilteringComposer: () => $$StewardsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$StewardsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$StewardsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
@@ -4334,38 +3966,21 @@ class $$StewardsTableTableManager extends RootTableManager<
             removalReason: removalReason,
             rowid: rowid,
           ),
-          withReferenceMapper: (p0) => p0
-              .map((e) =>
-                  (e.readTable(table), $$StewardsTableReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: (
-              {vaultId = false, distributionSharesRefs = false}) {
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable(table), $$StewardsTableReferences(db, table, e))).toList(),
+          prefetchHooksCallback: ({vaultId = false, distributionSharesRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [
-                if (distributionSharesRefs) db.distributionShares
-              ],
+              explicitlyWatchedTables: [if (distributionSharesRefs) db.distributionShares],
               addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
                 if (vaultId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.vaultId,
-                    referencedTable:
-                        $$StewardsTableReferences._vaultIdTable(db),
-                    referencedColumn:
-                        $$StewardsTableReferences._vaultIdTable(db).id,
+                    referencedTable: $$StewardsTableReferences._vaultIdTable(db),
+                    referencedColumn: $$StewardsTableReferences._vaultIdTable(db).id,
                   ) as T;
                 }
 
@@ -4374,17 +3989,13 @@ class $$StewardsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (distributionSharesRefs)
-                    await $_getPrefetchedData<StewardRow, $StewardsTable,
-                            DistributionShareRow>(
+                    await $_getPrefetchedData<StewardRow, $StewardsTable, DistributionShareRow>(
                         currentTable: table,
-                        referencedTable: $$StewardsTableReferences
-                            ._distributionSharesRefsTable(db),
+                        referencedTable: $$StewardsTableReferences._distributionSharesRefsTable(db),
                         managerFromTypedResult: (p0) =>
-                            $$StewardsTableReferences(db, table, p0)
-                                .distributionSharesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.stewardId == item.id),
+                            $$StewardsTableReferences(db, table, p0).distributionSharesRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
+                            referencedItems.where((e) => e.stewardId == item.id),
                         typedResults: items)
                 ];
               },
@@ -4405,8 +4016,7 @@ typedef $$StewardsTableProcessedTableManager = ProcessedTableManager<
     (StewardRow, $$StewardsTableReferences),
     StewardRow,
     PrefetchHooks Function({bool vaultId, bool distributionSharesRefs})>;
-typedef $$DistributionsTableCreateCompanionBuilder = DistributionsCompanion
-    Function({
+typedef $$DistributionsTableCreateCompanionBuilder = DistributionsCompanion Function({
   required String id,
   required String vaultId,
   required int version,
@@ -4415,8 +4025,7 @@ typedef $$DistributionsTableCreateCompanionBuilder = DistributionsCompanion
   required Uint8List contentHmac,
   Value<int> rowid,
 });
-typedef $$DistributionsTableUpdateCompanionBuilder = DistributionsCompanion
-    Function({
+typedef $$DistributionsTableUpdateCompanionBuilder = DistributionsCompanion Function({
   Value<String> id,
   Value<String> vaultId,
   Value<int> version,
@@ -4426,47 +4035,39 @@ typedef $$DistributionsTableUpdateCompanionBuilder = DistributionsCompanion
   Value<int> rowid,
 });
 
-final class $$DistributionsTableReferences extends BaseReferences<_$AppDatabase,
-    $DistributionsTable, DistributionRow> {
-  $$DistributionsTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
+final class $$DistributionsTableReferences
+    extends BaseReferences<_$AppDatabase, $DistributionsTable, DistributionRow> {
+  $$DistributionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $VaultsTable _vaultIdTable(_$AppDatabase db) => db.vaults.createAlias(
-      $_aliasNameGenerator(db.distributions.vaultId, db.vaults.id));
+  static $VaultsTable _vaultIdTable(_$AppDatabase db) =>
+      db.vaults.createAlias($_aliasNameGenerator(db.distributions.vaultId, db.vaults.id));
 
   $$VaultsTableProcessedTableManager get vaultId {
     final $_column = $_itemColumn<String>('vault_id')!;
 
-    final manager = $$VaultsTableTableManager($_db, $_db.vaults)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager =
+        $$VaultsTableTableManager($_db, $_db.vaults).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_vaultIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static MultiTypedResultKey<$DistributionSharesTable,
-      List<DistributionShareRow>> _distributionSharesRefsTable(
-          _$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(db.distributionShares,
-          aliasName: $_aliasNameGenerator(
-              db.distributions.id, db.distributionShares.distributionId));
+  static MultiTypedResultKey<$DistributionSharesTable, List<DistributionShareRow>>
+      _distributionSharesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.distributionShares,
+              aliasName:
+                  $_aliasNameGenerator(db.distributions.id, db.distributionShares.distributionId));
 
   $$DistributionSharesTableProcessedTableManager get distributionSharesRefs {
-    final manager = $$DistributionSharesTableTableManager(
-            $_db, $_db.distributionShares)
-        .filter(
-            (f) => f.distributionId.id.sqlEquals($_itemColumn<String>('id')!));
+    final manager = $$DistributionSharesTableTableManager($_db, $_db.distributionShares)
+        .filter((f) => f.distributionId.id.sqlEquals($_itemColumn<String>('id')!));
 
-    final cache =
-        $_typedResult.readTableOrNull(_distributionSharesRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+    final cache = $_typedResult.readTableOrNull(_distributionSharesRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
 
-class $$DistributionsTableFilterComposer
-    extends Composer<_$AppDatabase, $DistributionsTable> {
+class $$DistributionsTableFilterComposer extends Composer<_$AppDatabase, $DistributionsTable> {
   $$DistributionsTableFilterComposer({
     required super.$db,
     required super.$table,
@@ -4474,20 +4075,20 @@ class $$DistributionsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get version => $composableBuilder(
-      column: $table.version, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get completedAt =>
+      $composableBuilder(column: $table.completedAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => ColumnFilters(column));
+  ColumnFilters<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => ColumnFilters(column));
 
   $$VaultsTableFilterComposer get vaultId {
     final $$VaultsTableFilterComposer composer = $composerBuilder(
@@ -4496,15 +4097,13 @@ class $$DistributionsTableFilterComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableFilterComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -4517,22 +4116,19 @@ class $$DistributionsTableFilterComposer
         referencedTable: $db.distributionShares,
         getReferencedColumn: (t) => t.distributionId,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionSharesTableFilterComposer(
               $db: $db,
               $table: $db.distributionShares,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return f(composer);
   }
 }
 
-class $$DistributionsTableOrderingComposer
-    extends Composer<_$AppDatabase, $DistributionsTable> {
+class $$DistributionsTableOrderingComposer extends Composer<_$AppDatabase, $DistributionsTable> {
   $$DistributionsTableOrderingComposer({
     required super.$db,
     required super.$table,
@@ -4540,20 +4136,20 @@ class $$DistributionsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get version => $composableBuilder(
-      column: $table.version, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get completedAt =>
+      $composableBuilder(column: $table.completedAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => ColumnOrderings(column));
 
   $$VaultsTableOrderingComposer get vaultId {
     final $$VaultsTableOrderingComposer composer = $composerBuilder(
@@ -4562,22 +4158,19 @@ class $$DistributionsTableOrderingComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableOrderingComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 }
 
-class $$DistributionsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DistributionsTable> {
+class $$DistributionsTableAnnotationComposer extends Composer<_$AppDatabase, $DistributionsTable> {
   $$DistributionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
@@ -4594,11 +4187,11 @@ class $$DistributionsTableAnnotationComposer
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<int> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => column);
+  GeneratedColumn<int> get completedAt =>
+      $composableBuilder(column: $table.completedAt, builder: (column) => column);
 
-  GeneratedColumn<Uint8List> get contentHmac => $composableBuilder(
-      column: $table.contentHmac, builder: (column) => column);
+  GeneratedColumn<Uint8List> get contentHmac =>
+      $composableBuilder(column: $table.contentHmac, builder: (column) => column);
 
   $$VaultsTableAnnotationComposer get vaultId {
     final $$VaultsTableAnnotationComposer composer = $composerBuilder(
@@ -4607,38 +4200,33 @@ class $$DistributionsTableAnnotationComposer
         referencedTable: $db.vaults,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$VaultsTableAnnotationComposer(
               $db: $db,
               $table: $db.vaults,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
 
   Expression<T> distributionSharesRefs<T extends Object>(
       Expression<T> Function($$DistributionSharesTableAnnotationComposer a) f) {
-    final $$DistributionSharesTableAnnotationComposer composer =
-        $composerBuilder(
-            composer: this,
-            getCurrentColumn: (t) => t.id,
-            referencedTable: $db.distributionShares,
-            getReferencedColumn: (t) => t.distributionId,
-            builder: (joinBuilder,
-                    {$addJoinBuilderToRootComposer,
-                    $removeJoinBuilderFromRootComposer}) =>
-                $$DistributionSharesTableAnnotationComposer(
-                  $db: $db,
-                  $table: $db.distributionShares,
-                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                  joinBuilder: joinBuilder,
-                  $removeJoinBuilderFromRootComposer:
-                      $removeJoinBuilderFromRootComposer,
-                ));
+    final $$DistributionSharesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.distributionShares,
+        getReferencedColumn: (t) => t.distributionId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$DistributionSharesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.distributionShares,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
     return f(composer);
   }
 }
@@ -4659,8 +4247,7 @@ class $$DistributionsTableTableManager extends RootTableManager<
       : super(TableManagerState(
           db: db,
           table: table,
-          createFilteringComposer: () =>
-              $$DistributionsTableFilterComposer($db: db, $table: table),
+          createFilteringComposer: () => $$DistributionsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
               $$DistributionsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
@@ -4702,39 +4289,21 @@ class $$DistributionsTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$DistributionsTableReferences(db, table, e)
-                  ))
+              .map((e) => (e.readTable(table), $$DistributionsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: (
-              {vaultId = false, distributionSharesRefs = false}) {
+          prefetchHooksCallback: ({vaultId = false, distributionSharesRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [
-                if (distributionSharesRefs) db.distributionShares
-              ],
+              explicitlyWatchedTables: [if (distributionSharesRefs) db.distributionShares],
               addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
                 if (vaultId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.vaultId,
-                    referencedTable:
-                        $$DistributionsTableReferences._vaultIdTable(db),
-                    referencedColumn:
-                        $$DistributionsTableReferences._vaultIdTable(db).id,
+                    referencedTable: $$DistributionsTableReferences._vaultIdTable(db),
+                    referencedColumn: $$DistributionsTableReferences._vaultIdTable(db).id,
                   ) as T;
                 }
 
@@ -4743,17 +4312,15 @@ class $$DistributionsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (distributionSharesRefs)
-                    await $_getPrefetchedData<DistributionRow,
-                            $DistributionsTable, DistributionShareRow>(
+                    await $_getPrefetchedData<DistributionRow, $DistributionsTable,
+                            DistributionShareRow>(
                         currentTable: table,
-                        referencedTable: $$DistributionsTableReferences
-                            ._distributionSharesRefsTable(db),
+                        referencedTable:
+                            $$DistributionsTableReferences._distributionSharesRefsTable(db),
                         managerFromTypedResult: (p0) =>
-                            $$DistributionsTableReferences(db, table, p0)
-                                .distributionSharesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.distributionId == item.id),
+                            $$DistributionsTableReferences(db, table, p0).distributionSharesRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
+                            referencedItems.where((e) => e.distributionId == item.id),
                         typedResults: items)
                 ];
               },
@@ -4774,8 +4341,7 @@ typedef $$DistributionsTableProcessedTableManager = ProcessedTableManager<
     (DistributionRow, $$DistributionsTableReferences),
     DistributionRow,
     PrefetchHooks Function({bool vaultId, bool distributionSharesRefs})>;
-typedef $$DistributionSharesTableCreateCompanionBuilder
-    = DistributionSharesCompanion Function({
+typedef $$DistributionSharesTableCreateCompanionBuilder = DistributionSharesCompanion Function({
   required String id,
   required String distributionId,
   required String stewardId,
@@ -4787,8 +4353,7 @@ typedef $$DistributionSharesTableCreateCompanionBuilder
   Value<int?> acknowledgmentCreatedAt,
   Value<int> rowid,
 });
-typedef $$DistributionSharesTableUpdateCompanionBuilder
-    = DistributionSharesCompanion Function({
+typedef $$DistributionSharesTableUpdateCompanionBuilder = DistributionSharesCompanion Function({
   Value<String> id,
   Value<String> distributionId,
   Value<String> stewardId,
@@ -4801,14 +4366,12 @@ typedef $$DistributionSharesTableUpdateCompanionBuilder
   Value<int> rowid,
 });
 
-final class $$DistributionSharesTableReferences extends BaseReferences<
-    _$AppDatabase, $DistributionSharesTable, DistributionShareRow> {
-  $$DistributionSharesTableReferences(
-      super.$_db, super.$_table, super.$_typedResult);
+final class $$DistributionSharesTableReferences
+    extends BaseReferences<_$AppDatabase, $DistributionSharesTable, DistributionShareRow> {
+  $$DistributionSharesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $DistributionsTable _distributionIdTable(_$AppDatabase db) =>
-      db.distributions.createAlias($_aliasNameGenerator(
-          db.distributionShares.distributionId, db.distributions.id));
+  static $DistributionsTable _distributionIdTable(_$AppDatabase db) => db.distributions
+      .createAlias($_aliasNameGenerator(db.distributionShares.distributionId, db.distributions.id));
 
   $$DistributionsTableProcessedTableManager get distributionId {
     final $_column = $_itemColumn<String>('distribution_id')!;
@@ -4817,23 +4380,20 @@ final class $$DistributionSharesTableReferences extends BaseReferences<
         .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_distributionIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static $StewardsTable _stewardIdTable(_$AppDatabase db) =>
-      db.stewards.createAlias($_aliasNameGenerator(
-          db.distributionShares.stewardId, db.stewards.id));
+  static $StewardsTable _stewardIdTable(_$AppDatabase db) => db.stewards
+      .createAlias($_aliasNameGenerator(db.distributionShares.stewardId, db.stewards.id));
 
   $$StewardsTableProcessedTableManager get stewardId {
     final $_column = $_itemColumn<String>('steward_id')!;
 
-    final manager = $$StewardsTableTableManager($_db, $_db.stewards)
-        .filter((f) => f.id.sqlEquals($_column));
+    final manager =
+        $$StewardsTableTableManager($_db, $_db.stewards).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_stewardIdTable($_db));
     if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
   }
 }
 
@@ -4846,32 +4406,26 @@ class $$DistributionSharesTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get giftWrapEventId => $composableBuilder(
-      column: $table.giftWrapEventId,
-      builder: (column) => ColumnFilters(column));
+      column: $table.giftWrapEventId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get sentAt => $composableBuilder(
-      column: $table.sentAt, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get acknowledgedAt => $composableBuilder(
-      column: $table.acknowledgedAt,
-      builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get acknowledgedAt =>
+      $composableBuilder(column: $table.acknowledgedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get acknowledgmentEventId => $composableBuilder(
-      column: $table.acknowledgmentEventId,
-      builder: (column) => ColumnFilters(column));
+      column: $table.acknowledgmentEventId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get acknowledgmentDistributionVersion =>
-      $composableBuilder(
-          column: $table.acknowledgmentDistributionVersion,
-          builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get acknowledgmentDistributionVersion => $composableBuilder(
+      column: $table.acknowledgmentDistributionVersion, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get acknowledgmentCreatedAt => $composableBuilder(
-      column: $table.acknowledgmentCreatedAt,
-      builder: (column) => ColumnFilters(column));
+      column: $table.acknowledgmentCreatedAt, builder: (column) => ColumnFilters(column));
 
   $$DistributionsTableFilterComposer get distributionId {
     final $$DistributionsTableFilterComposer composer = $composerBuilder(
@@ -4880,15 +4434,13 @@ class $$DistributionSharesTableFilterComposer
         referencedTable: $db.distributions,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionsTableFilterComposer(
               $db: $db,
               $table: $db.distributions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -4900,15 +4452,13 @@ class $$DistributionSharesTableFilterComposer
         referencedTable: $db.stewards,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$StewardsTableFilterComposer(
               $db: $db,
               $table: $db.stewards,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -4923,32 +4473,27 @@ class $$DistributionSharesTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get giftWrapEventId => $composableBuilder(
-      column: $table.giftWrapEventId,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.giftWrapEventId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get sentAt => $composableBuilder(
-      column: $table.sentAt, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get acknowledgedAt => $composableBuilder(
-      column: $table.acknowledgedAt,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.acknowledgedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get acknowledgmentEventId => $composableBuilder(
-      column: $table.acknowledgmentEventId,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.acknowledgmentEventId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get acknowledgmentDistributionVersion =>
-      $composableBuilder(
-          column: $table.acknowledgmentDistributionVersion,
-          builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get acknowledgmentDistributionVersion => $composableBuilder(
+      column: $table.acknowledgmentDistributionVersion,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get acknowledgmentCreatedAt => $composableBuilder(
-      column: $table.acknowledgmentCreatedAt,
-      builder: (column) => ColumnOrderings(column));
+      column: $table.acknowledgmentCreatedAt, builder: (column) => ColumnOrderings(column));
 
   $$DistributionsTableOrderingComposer get distributionId {
     final $$DistributionsTableOrderingComposer composer = $composerBuilder(
@@ -4957,15 +4502,13 @@ class $$DistributionSharesTableOrderingComposer
         referencedTable: $db.distributions,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionsTableOrderingComposer(
               $db: $db,
               $table: $db.distributions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -4977,15 +4520,13 @@ class $$DistributionSharesTableOrderingComposer
         referencedTable: $db.stewards,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$StewardsTableOrderingComposer(
               $db: $db,
               $table: $db.stewards,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -5003,25 +4544,23 @@ class $$DistributionSharesTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get giftWrapEventId => $composableBuilder(
-      column: $table.giftWrapEventId, builder: (column) => column);
+  GeneratedColumn<String> get giftWrapEventId =>
+      $composableBuilder(column: $table.giftWrapEventId, builder: (column) => column);
 
   GeneratedColumn<int> get sentAt =>
       $composableBuilder(column: $table.sentAt, builder: (column) => column);
 
-  GeneratedColumn<int> get acknowledgedAt => $composableBuilder(
-      column: $table.acknowledgedAt, builder: (column) => column);
+  GeneratedColumn<int> get acknowledgedAt =>
+      $composableBuilder(column: $table.acknowledgedAt, builder: (column) => column);
 
-  GeneratedColumn<String> get acknowledgmentEventId => $composableBuilder(
-      column: $table.acknowledgmentEventId, builder: (column) => column);
+  GeneratedColumn<String> get acknowledgmentEventId =>
+      $composableBuilder(column: $table.acknowledgmentEventId, builder: (column) => column);
 
-  GeneratedColumn<int> get acknowledgmentDistributionVersion =>
-      $composableBuilder(
-          column: $table.acknowledgmentDistributionVersion,
-          builder: (column) => column);
+  GeneratedColumn<int> get acknowledgmentDistributionVersion => $composableBuilder(
+      column: $table.acknowledgmentDistributionVersion, builder: (column) => column);
 
-  GeneratedColumn<int> get acknowledgmentCreatedAt => $composableBuilder(
-      column: $table.acknowledgmentCreatedAt, builder: (column) => column);
+  GeneratedColumn<int> get acknowledgmentCreatedAt =>
+      $composableBuilder(column: $table.acknowledgmentCreatedAt, builder: (column) => column);
 
   $$DistributionsTableAnnotationComposer get distributionId {
     final $$DistributionsTableAnnotationComposer composer = $composerBuilder(
@@ -5030,15 +4569,13 @@ class $$DistributionSharesTableAnnotationComposer
         referencedTable: $db.distributions,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$DistributionsTableAnnotationComposer(
               $db: $db,
               $table: $db.distributions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -5050,15 +4587,13 @@ class $$DistributionSharesTableAnnotationComposer
         referencedTable: $db.stewards,
         getReferencedColumn: (t) => t.id,
         builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
             $$StewardsTableAnnotationComposer(
               $db: $db,
               $table: $db.stewards,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
             ));
     return composer;
   }
@@ -5076,8 +4611,7 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
     (DistributionShareRow, $$DistributionSharesTableReferences),
     DistributionShareRow,
     PrefetchHooks Function({bool distributionId, bool stewardId})> {
-  $$DistributionSharesTableTableManager(
-      _$AppDatabase db, $DistributionSharesTable table)
+  $$DistributionSharesTableTableManager(_$AppDatabase db, $DistributionSharesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
@@ -5086,8 +4620,7 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
           createOrderingComposer: () =>
               $$DistributionSharesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$DistributionSharesTableAnnotationComposer(
-                  $db: db, $table: table),
+              $$DistributionSharesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> distributionId = const Value.absent(),
@@ -5096,8 +4629,7 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
             Value<int?> sentAt = const Value.absent(),
             Value<int?> acknowledgedAt = const Value.absent(),
             Value<String?> acknowledgmentEventId = const Value.absent(),
-            Value<int?> acknowledgmentDistributionVersion =
-                const Value.absent(),
+            Value<int?> acknowledgmentDistributionVersion = const Value.absent(),
             Value<int?> acknowledgmentCreatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -5109,8 +4641,7 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
             sentAt: sentAt,
             acknowledgedAt: acknowledgedAt,
             acknowledgmentEventId: acknowledgmentEventId,
-            acknowledgmentDistributionVersion:
-                acknowledgmentDistributionVersion,
+            acknowledgmentDistributionVersion: acknowledgmentDistributionVersion,
             acknowledgmentCreatedAt: acknowledgmentCreatedAt,
             rowid: rowid,
           ),
@@ -5122,8 +4653,7 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
             Value<int?> sentAt = const Value.absent(),
             Value<int?> acknowledgedAt = const Value.absent(),
             Value<String?> acknowledgmentEventId = const Value.absent(),
-            Value<int?> acknowledgmentDistributionVersion =
-                const Value.absent(),
+            Value<int?> acknowledgmentDistributionVersion = const Value.absent(),
             Value<int?> acknowledgmentCreatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -5135,54 +4665,35 @@ class $$DistributionSharesTableTableManager extends RootTableManager<
             sentAt: sentAt,
             acknowledgedAt: acknowledgedAt,
             acknowledgmentEventId: acknowledgmentEventId,
-            acknowledgmentDistributionVersion:
-                acknowledgmentDistributionVersion,
+            acknowledgmentDistributionVersion: acknowledgmentDistributionVersion,
             acknowledgmentCreatedAt: acknowledgmentCreatedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$DistributionSharesTableReferences(db, table, e)
-                  ))
+              .map((e) => (e.readTable(table), $$DistributionSharesTableReferences(db, table, e)))
               .toList(),
           prefetchHooksCallback: ({distributionId = false, stewardId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
               addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
                 if (distributionId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.distributionId,
-                    referencedTable: $$DistributionSharesTableReferences
-                        ._distributionIdTable(db),
-                    referencedColumn: $$DistributionSharesTableReferences
-                        ._distributionIdTable(db)
-                        .id,
+                    referencedTable: $$DistributionSharesTableReferences._distributionIdTable(db),
+                    referencedColumn:
+                        $$DistributionSharesTableReferences._distributionIdTable(db).id,
                   ) as T;
                 }
                 if (stewardId) {
                   state = state.withJoin(
                     currentTable: table,
                     currentColumn: table.stewardId,
-                    referencedTable:
-                        $$DistributionSharesTableReferences._stewardIdTable(db),
-                    referencedColumn: $$DistributionSharesTableReferences
-                        ._stewardIdTable(db)
-                        .id,
+                    referencedTable: $$DistributionSharesTableReferences._stewardIdTable(db),
+                    referencedColumn: $$DistributionSharesTableReferences._stewardIdTable(db).id,
                   ) as T;
                 }
 
@@ -5212,14 +4723,12 @@ typedef $$DistributionSharesTableProcessedTableManager = ProcessedTableManager<
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$VaultsTableTableManager get vaults =>
-      $$VaultsTableTableManager(_db, _db.vaults);
+  $$VaultsTableTableManager get vaults => $$VaultsTableTableManager(_db, _db.vaults);
   $$VaultRelaysTableTableManager get vaultRelays =>
       $$VaultRelaysTableTableManager(_db, _db.vaultRelays);
   $$OwnedVaultsTableTableManager get ownedVaults =>
       $$OwnedVaultsTableTableManager(_db, _db.ownedVaults);
-  $$StewardsTableTableManager get stewards =>
-      $$StewardsTableTableManager(_db, _db.stewards);
+  $$StewardsTableTableManager get stewards => $$StewardsTableTableManager(_db, _db.stewards);
   $$DistributionsTableTableManager get distributions =>
       $$DistributionsTableTableManager(_db, _db.distributions);
   $$DistributionSharesTableTableManager get distributionShares =>

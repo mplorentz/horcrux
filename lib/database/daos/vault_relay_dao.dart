@@ -6,8 +6,7 @@ import '../tables/vault_relays.dart';
 part 'vault_relay_dao.g.dart';
 
 @DriftAccessor(tables: [VaultRelays])
-class VaultRelayDao extends DatabaseAccessor<AppDatabase>
-    with _$VaultRelayDaoMixin {
+class VaultRelayDao extends DatabaseAccessor<AppDatabase> with _$VaultRelayDaoMixin {
   VaultRelayDao(super.db);
 
   Future<List<VaultRelayRow>> forVault(String vaultId) =>
@@ -26,8 +25,7 @@ class VaultRelayDao extends DatabaseAccessor<AppDatabase>
     required List<VaultRelaysCompanion> rows,
   }) async {
     await transaction(() async {
-      await (delete(vaultRelays)
-            ..where((r) => r.vaultId.equals(vaultId) & r.role.equals(role)))
+      await (delete(vaultRelays)..where((r) => r.vaultId.equals(vaultId) & r.role.equals(role)))
           .go();
       if (rows.isNotEmpty) {
         await batch((b) => b.insertAll(vaultRelays, rows));

@@ -158,7 +158,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         final backupConfig = currentVault.backupConfig;
                         if (backupConfig != null &&
                             backupConfig.stewards.isNotEmpty &&
-                            backupConfig.lastRedistribution != null &&
+                            backupConfig.hasBeenDistributed &&
                             currentVault.content != null) {
                           buttons.add(
                             RowButtonConfig(

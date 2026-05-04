@@ -5,7 +5,6 @@ import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -29,20 +28,13 @@ void main() {
     required List<Steward> stewards,
     String? instructions,
   }) {
-    return (
+    return BackupConfig(
       vaultId: vaultId,
-      specVersion: '1.0.0',
       threshold: threshold,
-      totalKeys: totalKeys,
       stewards: stewards,
-      relays: ['wss://relay.example.com'],
+      relays: const ['wss://relay.example.com'],
       instructions: instructions,
       createdAt: DateTime.now().subtract(const Duration(days: 7)),
-      lastUpdated: DateTime.now().subtract(const Duration(hours: 2)),
-      lastContentChange: null,
-      lastRedistribution: null,
-      contentHash: null,
-      status: BackupStatus.active,
       distributionVersion: 1,
     );
   }

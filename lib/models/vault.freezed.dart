@@ -21,37 +21,17 @@ mixin _$Vault {
   String? get content =>
       throw _privateConstructorUsedError; // Nullable - null when content is not decrypted
   DateTime get createdAt => throw _privateConstructorUsedError;
-  String get ownerPubkey =>
-      throw _privateConstructorUsedError; // Hex format, 64 characters
-  String? get ownerName =>
-      throw _privateConstructorUsedError; // Name of the vault owner
+  String get ownerPubkey => throw _privateConstructorUsedError; // Hex format, 64 characters
+  String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner
   List<ShardData> get shards =>
       throw _privateConstructorUsedError; // List of shards (single as steward, multiple during recovery)
   List<RecoveryRequest> get recoveryRequests =>
       throw _privateConstructorUsedError; // Embedded recovery requests
-  ({
-    String? contentHash,
-    DateTime createdAt,
-    int distributionVersion,
-    String? instructions,
-    DateTime? lastContentChange,
-    DateTime? lastRedistribution,
-    DateTime lastUpdated,
-    List<String> relays,
-    String specVersion,
-    BackupStatus status,
-    List<Steward> stewards,
-    int threshold,
-    int totalKeys,
-    String vaultId
-  })? get backupConfig =>
+  BackupConfig? get backupConfig =>
       throw _privateConstructorUsedError; // Optional backup configuration
-  bool get isArchived =>
-      throw _privateConstructorUsedError; // Whether this vault is archived
-  DateTime? get archivedAt =>
-      throw _privateConstructorUsedError; // When the vault was archived
-  String? get archivedReason =>
-      throw _privateConstructorUsedError; // Reason for archiving
+  bool get isArchived => throw _privateConstructorUsedError; // Whether this vault is archived
+  DateTime? get archivedAt => throw _privateConstructorUsedError; // When the vault was archived
+  String? get archivedReason => throw _privateConstructorUsedError; // Reason for archiving
 // Whether the vault owner has opted this vault into push notifications.
 //
 // This is independent of the per-user global opt-in (see
@@ -72,8 +52,7 @@ mixin _$Vault {
 
 /// @nodoc
 abstract class $VaultCopyWith<$Res> {
-  factory $VaultCopyWith(Vault value, $Res Function(Vault) then) =
-      _$VaultCopyWithImpl<$Res, Vault>;
+  factory $VaultCopyWith(Vault value, $Res Function(Vault) then) = _$VaultCopyWithImpl<$Res, Vault>;
   @useResult
   $Res call(
       {String id,
@@ -84,22 +63,7 @@ abstract class $VaultCopyWith<$Res> {
       String? ownerName,
       List<ShardData> shards,
       List<RecoveryRequest> recoveryRequests,
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        BackupStatus status,
-        List<Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })? backupConfig,
+      BackupConfig? backupConfig,
       bool isArchived,
       DateTime? archivedAt,
       String? archivedReason,
@@ -107,8 +71,7 @@ abstract class $VaultCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$VaultCopyWithImpl<$Res, $Val extends Vault>
-    implements $VaultCopyWith<$Res> {
+class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$Res> {
   _$VaultCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -171,22 +134,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault>
       backupConfig: freezed == backupConfig
           ? _value.backupConfig
           : backupConfig // ignore: cast_nullable_to_non_nullable
-              as ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              BackupStatus status,
-              List<Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?,
+              as BackupConfig?,
       isArchived: null == isArchived
           ? _value.isArchived
           : isArchived // ignore: cast_nullable_to_non_nullable
@@ -209,8 +157,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault>
 
 /// @nodoc
 abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
-  factory _$$VaultImplCopyWith(
-          _$VaultImpl value, $Res Function(_$VaultImpl) then) =
+  factory _$$VaultImplCopyWith(_$VaultImpl value, $Res Function(_$VaultImpl) then) =
       __$$VaultImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -223,22 +170,7 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
       String? ownerName,
       List<ShardData> shards,
       List<RecoveryRequest> recoveryRequests,
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        BackupStatus status,
-        List<Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })? backupConfig,
+      BackupConfig? backupConfig,
       bool isArchived,
       DateTime? archivedAt,
       String? archivedReason,
@@ -246,11 +178,9 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$VaultImplCopyWithImpl<$Res>
-    extends _$VaultCopyWithImpl<$Res, _$VaultImpl>
+class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultImpl>
     implements _$$VaultImplCopyWith<$Res> {
-  __$$VaultImplCopyWithImpl(
-      _$VaultImpl _value, $Res Function(_$VaultImpl) _then)
+  __$$VaultImplCopyWithImpl(_$VaultImpl _value, $Res Function(_$VaultImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of Vault
@@ -308,22 +238,7 @@ class __$$VaultImplCopyWithImpl<$Res>
       backupConfig: freezed == backupConfig
           ? _value.backupConfig
           : backupConfig // ignore: cast_nullable_to_non_nullable
-              as ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              BackupStatus status,
-              List<Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?,
+              as BackupConfig?,
       isArchived: null == isArchived
           ? _value.isArchived
           : isArchived // ignore: cast_nullable_to_non_nullable
@@ -396,30 +311,14 @@ class _$VaultImpl extends _Vault {
   @override
   @JsonKey()
   List<RecoveryRequest> get recoveryRequests {
-    if (_recoveryRequests is EqualUnmodifiableListView)
-      return _recoveryRequests;
+    if (_recoveryRequests is EqualUnmodifiableListView) return _recoveryRequests;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_recoveryRequests);
   }
 
 // Embedded recovery requests
   @override
-  final ({
-    String? contentHash,
-    DateTime createdAt,
-    int distributionVersion,
-    String? instructions,
-    DateTime? lastContentChange,
-    DateTime? lastRedistribution,
-    DateTime lastUpdated,
-    List<String> relays,
-    String specVersion,
-    BackupStatus status,
-    List<Steward> stewards,
-    int threshold,
-    int totalKeys,
-    String vaultId
-  })? backupConfig;
+  final BackupConfig? backupConfig;
 // Optional backup configuration
   @override
   @JsonKey()
@@ -458,25 +357,17 @@ class _$VaultImpl extends _Vault {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.content, content) || other.content == content) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.ownerPubkey, ownerPubkey) ||
-                other.ownerPubkey == ownerPubkey) &&
-            (identical(other.ownerName, ownerName) ||
-                other.ownerName == ownerName) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.ownerPubkey, ownerPubkey) || other.ownerPubkey == ownerPubkey) &&
+            (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
             const DeepCollectionEquality().equals(other._shards, _shards) &&
-            const DeepCollectionEquality()
-                .equals(other._recoveryRequests, _recoveryRequests) &&
-            (identical(other.backupConfig, backupConfig) ||
-                other.backupConfig == backupConfig) &&
-            (identical(other.isArchived, isArchived) ||
-                other.isArchived == isArchived) &&
-            (identical(other.archivedAt, archivedAt) ||
-                other.archivedAt == archivedAt) &&
+            const DeepCollectionEquality().equals(other._recoveryRequests, _recoveryRequests) &&
+            (identical(other.backupConfig, backupConfig) || other.backupConfig == backupConfig) &&
+            (identical(other.isArchived, isArchived) || other.isArchived == isArchived) &&
+            (identical(other.archivedAt, archivedAt) || other.archivedAt == archivedAt) &&
             (identical(other.archivedReason, archivedReason) ||
                 other.archivedReason == archivedReason) &&
-            (identical(other.pushEnabled, pushEnabled) ||
-                other.pushEnabled == pushEnabled));
+            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -515,22 +406,7 @@ abstract class _Vault extends Vault {
       final String? ownerName,
       final List<ShardData> shards,
       final List<RecoveryRequest> recoveryRequests,
-      final ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        BackupStatus status,
-        List<Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })? backupConfig,
+      final BackupConfig? backupConfig,
       final bool isArchived,
       final DateTime? archivedAt,
       final String? archivedReason,
@@ -550,27 +426,11 @@ abstract class _Vault extends Vault {
   @override
   String? get ownerName; // Name of the vault owner
   @override
-  List<ShardData>
-      get shards; // List of shards (single as steward, multiple during recovery)
+  List<ShardData> get shards; // List of shards (single as steward, multiple during recovery)
   @override
   List<RecoveryRequest> get recoveryRequests; // Embedded recovery requests
   @override
-  ({
-    String? contentHash,
-    DateTime createdAt,
-    int distributionVersion,
-    String? instructions,
-    DateTime? lastContentChange,
-    DateTime? lastRedistribution,
-    DateTime lastUpdated,
-    List<String> relays,
-    String specVersion,
-    BackupStatus status,
-    List<Steward> stewards,
-    int threshold,
-    int totalKeys,
-    String vaultId
-  })? get backupConfig; // Optional backup configuration
+  BackupConfig? get backupConfig; // Optional backup configuration
   @override
   bool get isArchived; // Whether this vault is archived
   @override
@@ -594,6 +454,5 @@ abstract class _Vault extends Vault {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$VaultImplCopyWith<_$VaultImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$VaultImplCopyWith<_$VaultImpl> get copyWith => throw _privateConstructorUsedError;
 }

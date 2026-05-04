@@ -10,8 +10,7 @@ import 'vaults.dart';
 @DataClassName('StewardRow')
 class Stewards extends Table {
   TextColumn get id => text()();
-  TextColumn get vaultId =>
-      text().references(Vaults, #id, onDelete: KeyAction.cascade)();
+  TextColumn get vaultId => text().references(Vaults, #id, onDelete: KeyAction.cascade)();
 
   /// Shamir share position 1..N. Persists across replacement events.
   IntColumn get shareIndex => integer()();
