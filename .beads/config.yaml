@@ -9,14 +9,13 @@
 issue-prefix: "horcrux_app"
 issue_prefix: horcrux_app
 
-# Embedded mode ignores host/port — use server mode so bd connects to the remote sql-server.
-# https://github.com/steveyegge/beads/blob/main/docs/DOLT.md
-dolt:
-  mode: server
-  auto-start: false
-  host: dolt.lorentz.is
-  port: 3307
-  user: hudson
+# Server Dolt sql-server — use dotted keys (`dolt.host`, not only nested `dolt:`),
+# so external tools (e.g. gc) that read literals see host/port. Beads merges these too.
+dolt.mode: server
+dolt.auto-start: false
+dolt.host: dolt.lorentz.is
+dolt.port: 3307
+dolt.user: hudson
 
 gc.endpoint_origin: inherited_city
 gc.endpoint_status: verified
