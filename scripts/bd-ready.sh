@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # bd-ready — list beads issues blocked on you, then open Cursor in the right worktree.
+# If metadata.pr_url is set, opens that PR in the default browser first, then Cursor.
 #
 # Usage:
 #   ./scripts/bd-ready.sh              # interactive pick (numbered menu or fzf)
@@ -11,7 +12,8 @@
 set -euo pipefail
 
 LIST_ONLY=false
-LABEL_FILTER=(--label blocked-on:human --status open)
+# bd list excludes closed issues by default (--all would include them).
+LABEL_FILTER=(--label blocked-on:human)
 
 die() {
   printf '%s\n' "$*" >&2
@@ -66,7 +68,7 @@ fi
 
 COUNT="$(jq 'if type == "array" then length else 0 end' <<<"$LIST_JSON")"
 if [[ "$COUNT" -eq 0 ]]; then
-  printf 'No open issues with blocked-on:human in %s\n' "$REPO"
+  printf 'No active issues with blocked-on:human in %s\n' "$REPO"
   exit 0
 fi
 
@@ -96,14 +98,14 @@ if command -v fzf &>/dev/null; then
     line=$(
       printf '%s\n' "${FZF_LINES[@]}" |
         fzf --with-nth=2.. --delimiter=$'\t' \
-          --header='Pick an issue (blocked on you). Enter=open Cursor. Ctrl-C=cancel.' \
+          --header='Pick an issue (blocked-on:human). Enter=open Cursor. Ctrl-C=cancel.' \
           --preview='bd --readonly show {1} 2>&1 || true' \
           --preview-window=right:55%:wrap
     ) || exit 0
     IFS=$'\t' read -r pick_id _ <<<"$line"
   fi
 else
-  printf 'Open issues (blocked-on:human) in %s:\n\n' "$REPO"
+  printf 'Issues blocked on you (blocked-on:human) in %s:\n\n' "$REPO"
   i=1
   declare -a IDS
   while IFS=$'\t' read -r id title stage wt pr; do
@@ -140,19 +142,24 @@ maybe_open_browser() {
   fi
 }
 
+open_pr_if_any() {
+  [[ -z "$PR" ]] && return 0
+  printf 'Opening PR in browser: %s\n' "$PR"
+  maybe_open_browser "$PR"
+}
+
+command -v "$CURSOR_CLI" &>/dev/null || die "Cursor CLI not found (install shell command from Cursor app, or set CURSOR_CLI)."
+
+open_pr_if_any
+
 if [[ -n "$WT" && -d "$WT" ]]; then
   printf 'Opening Cursor: %s (issue %s)\n' "$WT" "$pick_id"
-  command -v "$CURSOR_CLI" &>/dev/null || die "Cursor CLI not found (install shell command from Cursor app, or set CURSOR_CLI)."
-  exec "$CURSOR_CLI" "$WT"
+  "$CURSOR_CLI" "$WT"
+  exit 0
 fi
 
 printf 'Issue %s has no usable worktree (path missing or unset).\n' "$pick_id" >&2
 [[ -n "$WT" ]] && printf 'Recorded path was: %s\n' "$WT" >&2
 [[ -n "$BR" ]] && printf 'branch: %s\n' "$BR" >&2
-if [[ -n "$PR" ]]; then
-  printf 'PR: %s\n' "$PR" >&2
-  printf 'Opening main repo %s + PR in browser...\n' "$REPO"
-  maybe_open_browser "$PR"
-fi
-command -v "$CURSOR_CLI" &>/dev/null || die "Cursor CLI not found; set CURSOR_CLI."
+printf 'Opening Cursor: %s (main repo; issue %s)\n' "$REPO" "$pick_id"
 "$CURSOR_CLI" "$REPO"

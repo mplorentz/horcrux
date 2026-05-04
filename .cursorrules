@@ -540,6 +540,8 @@ When testing changes, verify:
    - **If problems found**: Fix them, then re-run steps 1-6 above
    - **DO NOT open PR** until Marionette testing passes
 
+8. ✅ **Bead ID in PR description**: If the change is tracked in bd, the PR description MUST include that bead's issue ID (use `bd show <id>` for the exact string). If there is no bead, state that briefly (for example "No bead — chore only").
+
 **If you skip any step, the PR will fail CI and waste reviewer time.**
 
 ### Pre-PR Checklist
@@ -663,7 +665,8 @@ All commands must complete successfully AND Marionette testing must pass before 
    - Check for crashes, errors, or UI issues
    - **If problems found**: Fix them, then re-run steps 1-7 above (including Marionette testing again)
    - **DO NOT open/push PRs** until Marionette testing passes
-9. ✅ **Do NOT open/push PRs** until ALL above steps are complete
+9. ✅ **Bead ID in PR description**: If the change is tracked in bd, the PR description MUST include that bead's issue ID (`bd show <id>`). If there is no bead, state that briefly.
+10. ✅ **Do NOT open/push PRs** until ALL above steps are complete
 
 **FOR EVERY COMMIT ON AN OPEN PR**:
 - ✅ Run codegen: If you modified any `@freezed` classes or `@GenerateMocks` annotations
@@ -689,6 +692,7 @@ Before opening/pushing a PR, verify:
 - [ ] No new `*_golden_test.dart` files exist without their golden images committed
 - [ ] Marionette testing completed and all functionality verified
 - [ ] No crashes, errors, or UI issues found during Marionette testing
+- [ ] PR description includes the bd issue ID when work is bead-tracked (or explicitly says there is no bead)
 
 **Marionette Testing Workflow (MANDATORY for PRs)**:
 1. Launch app: `flutter run -d macos > /tmp/flutter_run.log 2>&1 &`
@@ -737,6 +741,7 @@ flutter test
 
 ### PR Description Guidelines
 When opening a PR, include:
+- **Bead**: Issue ID from bd when work is tracked there (for example `horcrux_app-tco`), or a one-line note that there is no bead
 - **What**: Brief description of changes
 - **Why**: Reason for the changes
 - **Testing**: How the changes were tested

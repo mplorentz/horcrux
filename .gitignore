@@ -82,3 +82,7 @@ fastlane/README.md
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# Gas City
+.beads/*
+!.beads/config.yaml
