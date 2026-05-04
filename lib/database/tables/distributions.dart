@@ -9,8 +9,7 @@ import 'vaults.dart';
 @DataClassName('DistributionRow')
 class Distributions extends Table {
   TextColumn get id => text()();
-  TextColumn get vaultId =>
-      text().references(Vaults, #id, onDelete: KeyAction.cascade)();
+  TextColumn get vaultId => text().references(Vaults, #id, onDelete: KeyAction.cascade)();
   IntColumn get version => integer()();
   IntColumn get createdAt => integer()();
   IntColumn get completedAt => integer().nullable()();

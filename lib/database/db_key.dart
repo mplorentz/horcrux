@@ -64,7 +64,8 @@ class DbKeyDerivation {
     }
 
     final salt = await _readOrCreateSalt();
-    return _hkdfSha256(ikm: ikm, salt: salt, info: ascii.encode(info), length: derivedKeyLengthBytes);
+    return _hkdfSha256(
+        ikm: ikm, salt: salt, info: ascii.encode(info), length: derivedKeyLengthBytes);
   }
 
   /// Returns the SQLCipher-compatible literal `x'<hex>'` for the derived key.
@@ -140,9 +141,7 @@ class DbKeyDerivation {
   }
 
   static String _formatRawKeyForPragma(Uint8List key) {
-    final hex = key
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
+    final hex = key.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return "x'$hex'";
   }
 }

@@ -289,8 +289,7 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<List<_i8.ShardData>> getShardsForVault(String? vaultId) =>
-      (super.noSuchMethod(
+  _i3.Future<List<_i8.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
@@ -364,20 +363,17 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<List<_i9.RecoveryRequest>> getRecoveryRequestsForVault(
-          String? vaultId) =>
+  _i3.Future<List<_i9.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i3.Future<List<_i9.RecoveryRequest>>.value(
-            <_i9.RecoveryRequest>[]),
+        returnValue: _i3.Future<List<_i9.RecoveryRequest>>.value(<_i9.RecoveryRequest>[]),
       ) as _i3.Future<List<_i9.RecoveryRequest>>);
 
   @override
-  _i3.Future<_i9.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
-      (super.noSuchMethod(
+  _i3.Future<_i9.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getActiveRecoveryRequest,
           [vaultId],
@@ -386,14 +382,12 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i3.Future<_i9.RecoveryRequest?>);
 
   @override
-  _i3.Future<List<_i9.RecoveryRequest>> getAllRecoveryRequests() =>
-      (super.noSuchMethod(
+  _i3.Future<List<_i9.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i3.Future<List<_i9.RecoveryRequest>>.value(
-            <_i9.RecoveryRequest>[]),
+        returnValue: _i3.Future<List<_i9.RecoveryRequest>>.value(<_i9.RecoveryRequest>[]),
       ) as _i3.Future<List<_i9.RecoveryRequest>>);
 
   @override

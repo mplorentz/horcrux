@@ -50,8 +50,7 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
   }
 
   @override
-  set onSecureStorageReadFailure(
-          _i4.Future<void> Function()? _onSecureStorageReadFailure) =>
+  set onSecureStorageReadFailure(_i4.Future<void> Function()? _onSecureStorageReadFailure) =>
       super.noSuchMethod(
         Invocation.setter(
           #onSecureStorageReadFailure,
@@ -91,8 +90,7 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
       ) as _i4.Future<_i2.KeyPair>);
 
   @override
-  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
-      (super.noSuchMethod(
+  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -519,8 +517,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) =>
-      (super.noSuchMethod(
+  _i4.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
@@ -594,15 +591,13 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(
-          String? vaultId) =>
+  _i4.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(
-            <_i12.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
       ) as _i4.Future<List<_i12.RecoveryRequest>>);
 
   @override
@@ -616,14 +611,12 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<_i12.RecoveryRequest?>);
 
   @override
-  _i4.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() =>
-      (super.noSuchMethod(
+  _i4.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(
-            <_i12.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
       ) as _i4.Future<List<_i12.RecoveryRequest>>);
 
   @override

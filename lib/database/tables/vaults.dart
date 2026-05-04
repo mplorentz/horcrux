@@ -16,8 +16,7 @@ class Vaults extends Table {
 
   /// Owner-side: highest distribution version this device has authored.
   /// Steward-side: version of the most recent ingested share for this vault.
-  IntColumn get currentDistributionVersion =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get currentDistributionVersion => integer().withDefault(const Constant(0))();
 
   TextColumn get instructions => text().nullable()();
 
