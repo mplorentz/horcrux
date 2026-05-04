@@ -8,10 +8,16 @@
 # Example: issue-prefix: "myproject" creates issues like "myproject-1", "myproject-2", etc.
 issue-prefix: "horcrux_app"
 issue_prefix: horcrux_app
-dolt.auto-start: false
-dolt.host: dolt.lorentz.is
-dolt.port: 3307
-dolt.user: hudson
+
+# Embedded mode ignores host/port — use server mode so bd connects to the remote sql-server.
+# https://github.com/steveyegge/beads/blob/main/docs/DOLT.md
+dolt:
+  mode: server
+  auto-start: false
+  host: dolt.lorentz.is
+  port: 3307
+  user: hudson
+
 gc.endpoint_origin: inherited_city
 gc.endpoint_status: verified
 
@@ -59,3 +65,5 @@ gc.endpoint_status: verified
 # - linear.api-key
 # - github.org
 # - github.repo
+
+dolt.mode: "server"
