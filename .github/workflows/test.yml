@@ -78,7 +78,8 @@ jobs:
         run: flutter test test/database/schema_parity_test.dart
 
       - name: Run unit tests
-        run: flutter test --exclude-tags=golden
+        # Exclude drift-schema: schema parity runs in "Verify drift schema dump" (shells drift_dev).
+        run: flutter test --exclude-tags=golden,drift-schema
       
       - name: Run golden tests
         run: flutter test --tags=golden
