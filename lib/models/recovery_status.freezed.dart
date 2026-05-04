@@ -30,12 +30,14 @@ mixin _$RecoveryStatus {
   /// Create a copy of RecoveryStatus
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $RecoveryStatusCopyWith<RecoveryStatus> get copyWith => throw _privateConstructorUsedError;
+  $RecoveryStatusCopyWith<RecoveryStatus> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $RecoveryStatusCopyWith<$Res> {
-  factory $RecoveryStatusCopyWith(RecoveryStatus value, $Res Function(RecoveryStatus) then) =
+  factory $RecoveryStatusCopyWith(
+          RecoveryStatus value, $Res Function(RecoveryStatus) then) =
       _$RecoveryStatusCopyWithImpl<$Res, RecoveryStatus>;
   @useResult
   $Res call(
@@ -117,9 +119,10 @@ class _$RecoveryStatusCopyWithImpl<$Res, $Val extends RecoveryStatus>
 }
 
 /// @nodoc
-abstract class _$$RecoveryStatusImplCopyWith<$Res> implements $RecoveryStatusCopyWith<$Res> {
-  factory _$$RecoveryStatusImplCopyWith(
-          _$RecoveryStatusImpl value, $Res Function(_$RecoveryStatusImpl) then) =
+abstract class _$$RecoveryStatusImplCopyWith<$Res>
+    implements $RecoveryStatusCopyWith<$Res> {
+  factory _$$RecoveryStatusImplCopyWith(_$RecoveryStatusImpl value,
+          $Res Function(_$RecoveryStatusImpl) then) =
       __$$RecoveryStatusImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -229,7 +232,8 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
   @override
   @JsonKey()
   List<String> get collectedShardIds {
-    if (_collectedShardIds is EqualUnmodifiableListView) return _collectedShardIds;
+    if (_collectedShardIds is EqualUnmodifiableListView)
+      return _collectedShardIds;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_collectedShardIds);
   }
@@ -260,11 +264,16 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
                 other.respondedCount == respondedCount) &&
             (identical(other.approvedCount, approvedCount) ||
                 other.approvedCount == approvedCount) &&
-            (identical(other.deniedCount, deniedCount) || other.deniedCount == deniedCount) &&
-            const DeepCollectionEquality().equals(other._collectedShardIds, _collectedShardIds) &&
-            (identical(other.threshold, threshold) || other.threshold == threshold) &&
-            (identical(other.canRecover, canRecover) || other.canRecover == canRecover) &&
-            (identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated));
+            (identical(other.deniedCount, deniedCount) ||
+                other.deniedCount == deniedCount) &&
+            const DeepCollectionEquality()
+                .equals(other._collectedShardIds, _collectedShardIds) &&
+            (identical(other.threshold, threshold) ||
+                other.threshold == threshold) &&
+            (identical(other.canRecover, canRecover) ||
+                other.canRecover == canRecover) &&
+            (identical(other.lastUpdated, lastUpdated) ||
+                other.lastUpdated == lastUpdated));
   }
 
   @override
@@ -286,7 +295,8 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryStatusImplCopyWith<_$RecoveryStatusImpl> get copyWith =>
-      __$$RecoveryStatusImplCopyWithImpl<_$RecoveryStatusImpl>(this, _$identity);
+      __$$RecoveryStatusImplCopyWithImpl<_$RecoveryStatusImpl>(
+          this, _$identity);
 }
 
 abstract class _RecoveryStatus extends RecoveryStatus {

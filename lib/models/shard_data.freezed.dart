@@ -22,13 +22,16 @@ mixin _$ShardData {
   int get totalShards => throw _privateConstructorUsedError;
   String get primeMod => throw _privateConstructorUsedError;
   String get creatorPubkey => throw _privateConstructorUsedError;
-  int get createdAt => throw _privateConstructorUsedError; // Recovery metadata (optional fields)
+  int get createdAt =>
+      throw _privateConstructorUsedError; // Recovery metadata (optional fields)
   String? get vaultId => throw _privateConstructorUsedError;
   String? get vaultName => throw _privateConstructorUsedError;
   List<Map<String, String>>? get stewards =>
       throw _privateConstructorUsedError; // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
-  String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner (creator)
-  String? get instructions => throw _privateConstructorUsedError; // Instructions for stewards
+  String? get ownerName =>
+      throw _privateConstructorUsedError; // Name of the vault owner (creator)
+  String? get instructions =>
+      throw _privateConstructorUsedError; // Instructions for stewards
   String? get recipientPubkey => throw _privateConstructorUsedError;
   bool? get isReceived => throw _privateConstructorUsedError;
   DateTime? get receivedAt => throw _privateConstructorUsedError;
@@ -50,7 +53,8 @@ mixin _$ShardData {
   /// Create a copy of ShardData
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $ShardDataCopyWith<ShardData> get copyWith => throw _privateConstructorUsedError;
+  $ShardDataCopyWith<ShardData> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -81,7 +85,8 @@ abstract class $ShardDataCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDataCopyWith<$Res> {
+class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData>
+    implements $ShardDataCopyWith<$Res> {
   _$ShardDataCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -196,8 +201,10 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
 }
 
 /// @nodoc
-abstract class _$$ShardDataImplCopyWith<$Res> implements $ShardDataCopyWith<$Res> {
-  factory _$$ShardDataImplCopyWith(_$ShardDataImpl value, $Res Function(_$ShardDataImpl) then) =
+abstract class _$$ShardDataImplCopyWith<$Res>
+    implements $ShardDataCopyWith<$Res> {
+  factory _$$ShardDataImplCopyWith(
+          _$ShardDataImpl value, $Res Function(_$ShardDataImpl) then) =
       __$$ShardDataImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -224,9 +231,11 @@ abstract class _$$ShardDataImplCopyWith<$Res> implements $ShardDataCopyWith<$Res
 }
 
 /// @nodoc
-class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, _$ShardDataImpl>
+class __$$ShardDataImplCopyWithImpl<$Res>
+    extends _$ShardDataCopyWithImpl<$Res, _$ShardDataImpl>
     implements _$$ShardDataImplCopyWith<$Res> {
-  __$$ShardDataImplCopyWithImpl(_$ShardDataImpl _value, $Res Function(_$ShardDataImpl) _then)
+  __$$ShardDataImplCopyWithImpl(
+      _$ShardDataImpl _value, $Res Function(_$ShardDataImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of ShardData
@@ -442,27 +451,40 @@ class _$ShardDataImpl extends _ShardData {
         (other.runtimeType == runtimeType &&
             other is _$ShardDataImpl &&
             (identical(other.shard, shard) || other.shard == shard) &&
-            (identical(other.threshold, threshold) || other.threshold == threshold) &&
-            (identical(other.shardIndex, shardIndex) || other.shardIndex == shardIndex) &&
-            (identical(other.totalShards, totalShards) || other.totalShards == totalShards) &&
-            (identical(other.primeMod, primeMod) || other.primeMod == primeMod) &&
+            (identical(other.threshold, threshold) ||
+                other.threshold == threshold) &&
+            (identical(other.shardIndex, shardIndex) ||
+                other.shardIndex == shardIndex) &&
+            (identical(other.totalShards, totalShards) ||
+                other.totalShards == totalShards) &&
+            (identical(other.primeMod, primeMod) ||
+                other.primeMod == primeMod) &&
             (identical(other.creatorPubkey, creatorPubkey) ||
                 other.creatorPubkey == creatorPubkey) &&
-            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
             (identical(other.vaultId, vaultId) || other.vaultId == vaultId) &&
-            (identical(other.vaultName, vaultName) || other.vaultName == vaultName) &&
+            (identical(other.vaultName, vaultName) ||
+                other.vaultName == vaultName) &&
             const DeepCollectionEquality().equals(other._stewards, _stewards) &&
-            (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
-            (identical(other.instructions, instructions) || other.instructions == instructions) &&
+            (identical(other.ownerName, ownerName) ||
+                other.ownerName == ownerName) &&
+            (identical(other.instructions, instructions) ||
+                other.instructions == instructions) &&
             (identical(other.recipientPubkey, recipientPubkey) ||
                 other.recipientPubkey == recipientPubkey) &&
-            (identical(other.isReceived, isReceived) || other.isReceived == isReceived) &&
-            (identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt) &&
-            (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
-            const DeepCollectionEquality().equals(other._relayUrls, _relayUrls) &&
+            (identical(other.isReceived, isReceived) ||
+                other.isReceived == isReceived) &&
+            (identical(other.receivedAt, receivedAt) ||
+                other.receivedAt == receivedAt) &&
+            (identical(other.nostrEventId, nostrEventId) ||
+                other.nostrEventId == nostrEventId) &&
+            const DeepCollectionEquality()
+                .equals(other._relayUrls, _relayUrls) &&
             (identical(other.distributionVersion, distributionVersion) ||
                 other.distributionVersion == distributionVersion) &&
-            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
+            (identical(other.pushEnabled, pushEnabled) ||
+                other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -555,7 +577,8 @@ abstract class _ShardData extends ShardData {
   @override
   String? get nostrEventId;
   @override
-  List<String>? get relayUrls; // Relay URLs from backup config for sending confirmations
+  List<String>?
+      get relayUrls; // Relay URLs from backup config for sending confirmations
   @override
   int?
       get distributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
@@ -574,5 +597,6 @@ abstract class _ShardData extends ShardData {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
