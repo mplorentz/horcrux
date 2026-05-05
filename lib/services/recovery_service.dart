@@ -208,7 +208,8 @@ class RecoveryService {
 
   /// Initiate recovery for a vault
   /// Returns the created recovery request
-  /// Throws an exception if the user already has an active recovery request for this vault
+  /// Throws [StateError] if this user already has a manageable recovery on this vault
+  /// (practice or real), matching [Vault.manageableRecoveryFor] and the vault detail UI.
   Future<RecoveryRequest> initiateRecovery(
     String vaultId, {
     required String initiatorPubkey,
@@ -234,17 +235,12 @@ class RecoveryService {
     final completer = Completer<void>();
     _initiateRecoveryLocks[lockKey] = completer.future;
     try {
-      // Each user may have at most one active recovery session per kind
-      // (practice or real) per vault. Use the same latest-wins semantics as
-      // `Vault.manageableRecoveryFor` so the UI's "Initiate Recovery" button
-      // and this precondition always agree -- otherwise orphan `inProgress`
-      // rows behind a newer cancelled/archived row let the UI offer Initiate
-      // while the service rejects it.
+      // At most one manageable session per user per vault across practice and real.
+      // Omit [Vault.manageableRecoveryFor]'s `isPractice` filter so the same
+      // "newer of the two kinds" rule covers both; that matches
+      // [VaultDetailButtonStack] (hide Initiate when either kind is in play).
       final vault = await repository.getVault(vaultId);
-      final blockingRecovery = vault?.manageableRecoveryFor(
-        initiatorPubkey,
-        isPractice: isPractice,
-      );
+      final blockingRecovery = vault?.manageableRecoveryFor(initiatorPubkey);
 
       if (blockingRecovery != null) {
         throw StateError(
