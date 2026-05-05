@@ -220,9 +220,8 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     RecoveryRequest request,
     Vault? vault,
   ) {
-    final currentResponseStatus = _currentPubkey == null
-        ? null
-        : widget.recoveryRequest.stewardResponses[_currentPubkey]?.status;
+    final currentResponseStatus =
+        _currentPubkey == null ? null : request.stewardResponses[_currentPubkey]?.status;
     final hasFinalResponse =
         currentResponseStatus != null && _isFinalStewardDecision(currentResponseStatus);
 
