@@ -87,195 +87,205 @@ class _AddStewardScreenState extends ConsumerState<AddStewardScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEditing = widget.steward != null;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-      ),
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Text(
-                  isEditing ? 'Edit Steward' : 'Add Steward',
-                  style: theme.textTheme.headlineSmall,
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                  tooltip: 'Close',
-                ),
-              ],
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Text(
+                    isEditing ? 'Edit Steward' : 'Add Steward',
+                    style: theme.textTheme.headlineSmall,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
             ),
-          ),
-          // Form content
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Name field
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Steward's name",
-                        hintText: 'Enter name for this steward',
-                        border: OutlineInputBorder(),
-                      ),
-                      autofocus: !isEditing,
-                      textCapitalization: TextCapitalization.words,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a steward name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Contact info field
-                    TextFormField(
-                      controller: _contactInfoController,
-                      decoration: const InputDecoration(
-                        labelText: 'Contact info (optional)',
-                        hintText: 'Email, phone, Signal, etc.',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLength: maxContactInfoLength,
-                      maxLines: 3,
-                      buildCounter: (
-                        context, {
-                        required currentLength,
-                        required isFocused,
-                        maxLength,
-                      }) {
-                        return Text(
-                          '$currentLength/$maxLength characters',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color:
-                                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                              ),
-                        );
-                      },
-                      onChanged: (value) {
-                        setState(() {}); // Update character counter
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    // Method selection (only show when adding, not editing)
-                    if (!isEditing) ...[
-                      // Primary: Invite by Link
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: widget.relays.isEmpty
-                              ? null
-                              : () => _handleSubmit(AddStewardMode.invite),
-                          icon: const Icon(Icons.link),
-                          label: const Text('Invite by Link'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
+            // Form content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name field
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: "Steward's name",
+                          hintText: 'Enter name for this steward',
+                          border: OutlineInputBorder(),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (widget.relays.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-                          child: Text(
-                            'Please add at least one relay before adding a steward',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      // Advanced options toggle
-                      TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showAdvancedOptions = !_showAdvancedOptions;
-                          });
+                        autofocus: !isEditing,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a steward name';
+                          }
+                          return null;
                         },
-                        icon: Icon(
-                          _showAdvancedOptions ? Icons.expand_more : Icons.chevron_right,
-                        ),
-                        label: Text(
-                          _showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options',
-                        ),
                       ),
-                      // Advanced: Invite by Nostr ID
-                      if (_showAdvancedOptions) ...[
-                        const SizedBox(height: 8),
+                      const SizedBox(height: 16),
+                      // Contact info field
+                      TextFormField(
+                        controller: _contactInfoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Contact info (optional)',
+                          hintText: 'Email, phone, Signal, etc.',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLength: maxContactInfoLength,
+                        maxLines: 3,
+                        buildCounter: (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) {
+                          return Text(
+                            '$currentLength/$maxLength characters',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
+                          );
+                        },
+                        onChanged: (value) {
+                          setState(() {}); // Update character counter
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      // Method selection (only show when adding, not editing)
+                      if (!isEditing) ...[
+                        // Primary: Invite by Link
                         SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showNpubInput(),
-                            icon: const Icon(Icons.person),
-                            label: const Text('Add via Nostr Public Key'),
-                            style: OutlinedButton.styleFrom(
+                          child: ElevatedButton.icon(
+                            onPressed: widget.relays.isEmpty
+                                ? null
+                                : () => _handleSubmit(AddStewardMode.invite),
+                            icon: const Icon(Icons.link),
+                            label: const Text('Invite by Link'),
+                            style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.all(16),
                             ),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16, right: 16),
-                          child: Text(
-                            'If they already have a Nostr account',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        if (widget.relays.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                            child: Text(
+                              'Please add at least one relay before adding a steward',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                        // Advanced options toggle
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedOptions = !_showAdvancedOptions;
+                            });
+                          },
+                          icon: Icon(
+                            _showAdvancedOptions ? Icons.expand_more : Icons.chevron_right,
+                          ),
+                          label: Text(
+                            _showAdvancedOptions
+                                ? 'Hide Advanced Options'
+                                : 'Show Advanced Options',
+                          ),
+                        ),
+                        // Advanced: Invite by Nostr ID
+                        if (_showAdvancedOptions) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showNpubInput(),
+                              icon: const Icon(Icons.person),
+                              label: const Text('Add via Nostr Public Key'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, right: 16),
+                            child: Text(
+                              'If they already have a Nostr account',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ] else ...[
+                        // When editing, show save button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isSubmitting ? null : _handleSaveEdit,
+                            icon: _isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.save),
+                            label: Text(_isSubmitting ? 'Saving...' : 'Save'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(16),
                             ),
                           ),
                         ),
                       ],
-                    ] else ...[
-                      // When editing, show save button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isSubmitting ? null : _handleSaveEdit,
-                          icon: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.save),
-                          label: Text(_isSubmitting ? 'Saving...' : 'Save'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
-                          ),
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
