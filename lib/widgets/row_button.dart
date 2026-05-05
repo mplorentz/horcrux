@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// A full-width button with an icon and text in a row layout
@@ -12,7 +10,8 @@ class RowButton extends StatelessWidget {
   final double? iconSize;
   final TextStyle? textStyle;
   final EdgeInsets? padding;
-  final bool addBottomSafeArea; // Whether to add bottom safe area padding on iOS
+  final bool
+      addBottomSafeArea; // Pads past the bottom system inset (iOS home indicator, Android nav/gesture bar)
 
   const RowButton({
     super.key,
@@ -55,11 +54,11 @@ class RowButton extends StatelessWidget {
     final shadowColor =
         isDark ? borderColor.withValues(alpha: 0.1) : borderColor.withValues(alpha: 0.1);
 
-    // Add bottom safe area padding on iOS devices with home indicator
-    // Note: Platform.isIOS is not available on web, so check kIsWeb first
-    final bottomSafeArea = addBottomSafeArea && !kIsWeb && Platform.isIOS ? 8.0 : 0.0;
+    // Pad past the system inset at the bottom of the screen (iOS home indicator
+    // or Android gesture/navigation bar) so the button isn't covered by it.
+    final systemBottomInset = MediaQuery.of(context).padding.bottom;
+    final bottomSafeArea = addBottomSafeArea ? systemBottomInset : 0.0;
 
-    // Calculate effective padding with safe area
     final effectivePadding = padding != null
         ? padding!.copyWith(bottom: padding!.bottom + bottomSafeArea)
         : EdgeInsets.only(
