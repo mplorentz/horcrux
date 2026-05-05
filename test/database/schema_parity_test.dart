@@ -19,6 +19,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// If the schema change is intentional, also bump `AppDatabase.schemaVersion`,
 /// add a `from{N}To{N+1}` migration step to `MigrationStrategy.onUpgrade`,
 /// and add a migration test alongside this one.
+///
+/// This check takes a long time and is **skipped by default** so a full
+/// local or IDE test run stays fast. Opt in when you need it:
+///
+/// ```bash
+/// flutter test test/database/schema_parity_test.dart --dart-define=VERIFY_DRIFT_SCHEMA=true
+/// ```
+const bool _verifyDriftSchemaDump =
+    bool.fromEnvironment('VERIFY_DRIFT_SCHEMA', defaultValue: false);
+
 void main() {
   test('drift_schemas/ contains the dump matching the current schema', () async {
     // Re-dump into a temp dir and diff against the committed file. We shell
@@ -66,5 +76,9 @@ void main() {
       // Default 30s is too tight on GitHub macOS runners: cold `dart run
       // drift_dev schema dump` can exceed that while analyzing the project.
       timeout: const Timeout(Duration(minutes: 5)),
+      skip: _verifyDriftSchemaDump
+          ? null
+          : 'Set --dart-define=VERIFY_DRIFT_SCHEMA=true to run this check '
+              '(see doc comment on this file).',
       tags: 'drift-schema');
 }

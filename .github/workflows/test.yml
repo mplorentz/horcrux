@@ -75,7 +75,7 @@ jobs:
         # committed `drift_schemas/`. If this fails, the developer changed a
         # drift table without updating the dump (and likely without bumping
         # AppDatabase.schemaVersion / adding a migration).
-        run: flutter test test/database/schema_parity_test.dart
+        run: flutter test test/database/schema_parity_test.dart --dart-define=VERIFY_DRIFT_SCHEMA=true
 
       - name: Run unit tests
         # Exclude drift-schema: schema parity runs in "Verify drift schema dump" (shells drift_dev).
