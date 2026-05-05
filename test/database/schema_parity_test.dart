@@ -62,5 +62,9 @@ void main() {
     } finally {
       await tempDir.delete(recursive: true);
     }
-  }, tags: 'drift-schema');
+  },
+      // Default 30s is too tight on GitHub macOS runners: cold `dart run
+      // drift_dev schema dump` can exceed that while analyzing the project.
+      timeout: const Timeout(Duration(minutes: 5)),
+      tags: 'drift-schema');
 }

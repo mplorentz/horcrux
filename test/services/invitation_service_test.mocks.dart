@@ -1185,7 +1185,6 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
     required List<_i19.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
-    String? contentHash,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1198,7 +1197,6 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
             #stewards: stewards,
             #relays: relays,
             #instructions: instructions,
-            #contentHash: contentHash,
           },
         ),
         returnValue: _i7.Future<_i6.BackupConfig>.value(_FakeBackupConfig_4(
@@ -1213,7 +1211,6 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
               #stewards: stewards,
               #relays: relays,
               #instructions: instructions,
-              #contentHash: contentHash,
             },
           ),
         )),
