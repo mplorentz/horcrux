@@ -234,17 +234,19 @@ class RecoveryService {
     final completer = Completer<void>();
     _initiateRecoveryLocks[lockKey] = completer.future;
     try {
-      // Each user may have at most one active recovery session per vault
-      // (practice or real). Other users may have their own concurrent
-      // sessions for the same vault.
-      final existingRequests = await repository.getRecoveryRequestsForVault(
-        vaultId,
-      );
-      final userHasActiveRecovery = existingRequests.any(
-        (r) => r.status.isActive && r.initiatorPubkey == initiatorPubkey,
+      // Each user may have at most one active recovery session per kind
+      // (practice or real) per vault. Use the same latest-wins semantics as
+      // `Vault.manageableRecoveryFor` so the UI's "Initiate Recovery" button
+      // and this precondition always agree -- otherwise orphan `inProgress`
+      // rows behind a newer cancelled/archived row let the UI offer Initiate
+      // while the service rejects it.
+      final vault = await repository.getVault(vaultId);
+      final blockingRecovery = vault?.manageableRecoveryFor(
+        initiatorPubkey,
+        isPractice: isPractice,
       );
 
-      if (userHasActiveRecovery) {
+      if (blockingRecovery != null) {
         throw StateError(
           'You already have an active recovery session for this vault. End it before starting a new one.',
         );
