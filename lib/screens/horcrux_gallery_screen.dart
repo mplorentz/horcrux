@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
@@ -144,62 +145,74 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
+              Text('Toasts', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
                   ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('Saved!')));
-                    },
-                    child: const Text('Show toast'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: cs.error,
-                      foregroundColor: cs.onError,
-                    ),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: cs.error,
-                          content: const Text('Something went wrong'),
-                        ),
+                      context.showHorcruxSnackBar(
+                        'Shards sync when stewards are online.',
+                        kind: HorcruxSnackKind.info,
                       );
                     },
-                    child: const Text('Show error'),
+                    child: const Text('Info'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.showHorcruxSnackBar(
+                        'Saved!',
+                        kind: HorcruxSnackKind.success,
+                      );
+                    },
+                    child: const Text('Success'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.showHorcruxSnackBar(
+                        'Review steward confirmations before continuing.',
+                        kind: HorcruxSnackKind.warning,
+                      );
+                    },
+                    child: const Text('Warning'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: cs.error),
+                    onPressed: () {
+                      context.showHorcruxSnackBar(
+                        'Something went wrong',
+                        kind: HorcruxSnackKind.error,
+                      );
+                    },
+                    child: const Text('Error'),
                   ),
                 ],
               ),
             ],
           ),
           bottomNavigationBar: SafeArea(
+            bottom: false, // RowButton wants to extend to bottom
             child: RowButtonStack(
               buttons: [
                 RowButtonConfig(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('First action')),
-                    );
+                    context.showHorcruxSnackBar('First action');
                   },
                   icon: Icons.download,
                   text: 'Import',
                 ),
                 RowButtonConfig(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Second action')),
-                    );
+                    context.showHorcruxSnackBar('Second action');
                   },
                   icon: Icons.settings,
                   text: 'Settings',
                 ),
                 RowButtonConfig(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Primary action')),
-                    );
+                    context.showHorcruxSnackBar('Primary action');
                   },
                   icon: Icons.add,
                   text: 'Create Vault',

@@ -6,12 +6,13 @@ import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
-import '../widgets/steward_list.dart';
-import '../widgets/vault_detail_button_stack.dart';
-import '../widgets/vault_status_banner.dart';
-import '../widgets/vault_owner_display.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/steward_list.dart';
+import '../widgets/vault_detail_button_stack.dart';
+import '../widgets/vault_owner_display.dart';
+import '../widgets/vault_status_banner.dart';
 
 /// Detail/view screen for displaying a vault
 class VaultDetailScreen extends ConsumerStatefulWidget {
@@ -264,32 +265,26 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
   void _showRedistributeDialog(BuildContext context, WidgetRef ref, Vault vault) {
     if (vault.backupConfig == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recovery plan not found'),
-          backgroundColor: Colors.orange,
-        ),
+      context.showHorcruxSnackBar(
+        'Recovery plan not found',
+        kind: HorcruxSnackKind.warning,
       );
       return;
     }
 
     final config = vault.backupConfig!;
     if (config.stewards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No stewards in recovery plan'),
-          backgroundColor: Colors.orange,
-        ),
+      context.showHorcruxSnackBar(
+        'No stewards in recovery plan',
+        kind: HorcruxSnackKind.warning,
       );
       return;
     }
 
     if (vault.content == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot redistribute: vault content is not available'),
-          backgroundColor: Colors.red,
-        ),
+      context.showHorcruxSnackBar(
+        'Cannot redistribute: vault content is not available',
+        kind: HorcruxSnackKind.error,
       );
       return;
     }
@@ -364,11 +359,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
       // Show success message if context is still mounted
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Keys distributed successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Keys distributed successfully!',
+          kind: HorcruxSnackKind.success,
         );
 
         // Refresh vault data
@@ -380,11 +373,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
       // Show error message if context is still mounted
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to distribute keys: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showHorcruxSnackBar(
+          'Failed to distribute keys: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
     }

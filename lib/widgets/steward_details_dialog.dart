@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 
+import '../utils/snackbar_helper.dart';
+
 /// Dialog widget for displaying detailed steward information
 class StewardDetailsDialog extends StatelessWidget {
   final String? pubkey;
@@ -177,15 +179,11 @@ class StewardDetailsDialog extends StatelessWidget {
 
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    // Use root context to ensure SnackBar shows even from dialog
-    final scaffoldMessenger =
-        rootContext != null ? ScaffoldMessenger.of(rootContext!) : ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    // Use root context so the snackbar attaches to the screen scaffold under the dialog.
+    final target = rootContext ?? context;
+    target.showHorcruxSnackBar(
+      '$label copied to clipboard',
+      duration: const Duration(seconds: 2),
     );
   }
 }
