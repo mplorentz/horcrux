@@ -64,3 +64,5 @@ gc.endpoint_status: verified
 # - linear.api-key
 # - github.org
 # - github.repo
+
+sync.remote: "dolt.lorentz.is:3307/horcrux_app"
