@@ -1,9 +1,12 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../services/recovery_service.dart';
+import '../services/vault_export_service.dart';
+import 'recovered_content_screen.dart';
 import '../widgets/recovery_stewards_widget.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button.dart';
@@ -376,32 +379,8 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
     final vaultAsync = ref.read(vaultProvider(request.vaultId));
     final vault = vaultAsync.valueOrNull;
-    final ownerName = vault?.ownerName ?? 'the owner';
 
     if (!mounted) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Recover Vault'),
-        content: Text(
-          'This will recover and unlock $ownerName\'s vault using the collected keys. '
-          'The vault contents will now be displayed. Continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Recover'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
 
     try {
       // Perform the recovery
@@ -409,24 +388,67 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
       final content = await service.performRecovery(widget.recoveryRequestId);
 
       if (mounted) {
-        // Show the recovered content in a dialog
-        await showDialog(
+        await showDialog<void>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Vault Recovered!'),
-            content: SingleChildScrollView(
-              child: SelectableText(
-                content,
-                style: const TextStyle(fontFamily: 'monospace'),
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Vault Recovered!'),
+              content: const Text(
+                'Your vault contents have been recovered. You can view them on this device '
+                'or export them as a text file.',
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    // Cupertino route gives a slide-from-right push that animates
+                    // on macOS desktop too; MaterialPageRoute is near-static there.
+                    Navigator.push<void>(
+                      context,
+                      CupertinoPageRoute<void>(
+                        builder: (_) => RecoveredContentScreen(content: content),
+                      ),
+                    );
+                  },
+                  child: const Text('View Contents'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final renderObject = dialogContext.findRenderObject();
+                    Rect? sharePositionOrigin;
+                    if (renderObject is RenderBox && renderObject.hasSize) {
+                      final offset = renderObject.localToGlobal(Offset.zero);
+                      sharePositionOrigin = offset & renderObject.size;
+                    }
+                    Navigator.pop(dialogContext);
+                    if (!mounted) return;
+                    final vaultName = vault?.name ?? 'Vault';
+                    try {
+                      await ref.read(vaultExportServiceProvider).shareVaultContent(
+                            vaultName: vaultName,
+                            content: content,
+                            sharePositionOrigin: sharePositionOrigin,
+                          );
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Could not export: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Export as File'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
         );
 
         if (mounted) {
