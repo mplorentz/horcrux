@@ -64,7 +64,12 @@ abstract final class HorcruxSnackBar {
     _activeTimer = null;
     final entry = _activeEntry;
     _activeEntry = null;
-    entry?.remove();
+    // [OverlayEntry.remove] asserts a non-null overlay link; if the overlay was
+    // torn down (hot restart, app exit) before the auto-dismiss timer fires,
+    // the entry can already be unmounted.
+    if (entry != null && entry.mounted) {
+      entry.remove();
+    }
   }
 
   static void _scheduleAutoDismiss(OverlayEntry entry, Duration duration) {
