@@ -54,6 +54,7 @@ void main() {
       final service = VaultExportService(
         sharePlus: SharePlus.custom(platform),
         temporaryDirectory: () async => tempDir,
+        synchronousExportCleanupForTesting: true,
       );
 
       const body = 'line1\nline2\nunicode: å';
@@ -75,6 +76,7 @@ void main() {
       final service = VaultExportService(
         sharePlus: SharePlus.custom(platform),
         temporaryDirectory: () async => tempDir,
+        synchronousExportCleanupForTesting: true,
       );
 
       await service.shareVaultContent(vaultName: ' ', content: 'x');

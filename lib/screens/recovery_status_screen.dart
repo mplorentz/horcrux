@@ -378,32 +378,8 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
     final vaultAsync = ref.read(vaultProvider(request.vaultId));
     final vault = vaultAsync.valueOrNull;
-    final ownerName = vault?.ownerName ?? 'the owner';
 
     if (!mounted) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Recover Vault'),
-        content: Text(
-          'This will recover and unlock $ownerName\'s vault using the collected keys. '
-          'The vault contents will now be displayed. Continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Recover'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
 
     try {
       // Perform the recovery

@@ -21,11 +21,16 @@ class VaultExportService {
   VaultExportService({
     SharePlus? sharePlus,
     Future<Directory> Function()? temporaryDirectory,
+    this.synchronousExportCleanupForTesting = false,
   })  : _sharePlus = sharePlus ?? SharePlus.instance,
         _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   final SharePlus _sharePlus;
   final Future<Directory> Function() _temporaryDirectory;
+
+  /// When true, deletes the export file in [shareVaultContent] before returning.
+  /// Tests use this; production uses deferred cleanup on Apple platforms.
+  final bool synchronousExportCleanupForTesting;
 
   /// Writes [content] as UTF-8 `<slug>.txt` under the temp directory and opens
   /// the platform share sheet for that file.
@@ -58,12 +63,30 @@ class VaultExportService {
         ),
       );
     } finally {
-      if (await file.exists()) {
-        try {
-          await file.delete();
-        } catch (_) {}
-      }
+      // macOS/iOS often complete [share] before the target app finishes reading the
+      // temp path; deleting immediately drops the attachment. Defer cleanup on Apple
+      // platforms (no extra sandbox entitlement required for sharing from temp).
+      await _scheduleExportFileCleanup(file);
     }
+  }
+
+  Future<void> _scheduleExportFileCleanup(File file) async {
+    Future<void> deleteIfPresent() async {
+      try {
+        if (await file.exists()) {
+          Log.info('Deleting export file: ${file.path}');
+          await file.delete();
+        }
+      } catch (_) {}
+    }
+
+    if (synchronousExportCleanupForTesting) {
+      await deleteIfPresent();
+      return;
+    }
+
+    final delay = (Platform.isMacOS || Platform.isIOS) ? const Duration(seconds: 1) : Duration.zero;
+    Future<void>.delayed(delay, deleteIfPresent);
   }
 }
 

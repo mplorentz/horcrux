@@ -30,7 +30,7 @@ void main() {
     messenger.setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
-  testWidgets('Copy All copies content to clipboard', (tester) async {
+  testWidgets('Copy toolbar icon copies content to clipboard', (tester) async {
     const secret = 'nsec1...';
     await tester.pumpWidget(
       const ProviderScope(
@@ -40,7 +40,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Copy All'));
+    await tester.tap(find.byTooltip('Copy'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

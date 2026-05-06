@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/row_button.dart';
 
 /// Full-screen view of recovered vault plaintext with copy support.
 ///
@@ -13,38 +12,41 @@ class RecoveredContentScreen extends StatelessWidget {
 
   final String content;
 
+  Future<void> _copyToClipboard(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: content));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Copied to clipboard')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       showNotificationBanner: false,
       appBar: AppBar(
+        centerTitle: false,
         title: const Text('Vault Contents'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: SelectableText(
-                content,
-                style: const TextStyle(fontFamily: 'RobotoMono'),
-              ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: IconButton(
+              icon: const Icon(Icons.copy),
+              tooltip: 'Copy',
+              onPressed: () => _copyToClipboard(context),
             ),
           ),
-          RowButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: content));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copied to clipboard')),
-                );
-              }
-            },
-            icon: Icons.copy_all_outlined,
-            text: 'Copy All',
-            addBottomSafeArea: true,
-          ),
         ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: SelectableText(
+            content,
+            style: const TextStyle(fontFamily: 'RobotoMono'),
+          ),
+        ),
       ),
     );
   }
