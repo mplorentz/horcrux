@@ -480,7 +480,9 @@ ThemeData horcrux3(Brightness brightness) {
       elevation: 0,
       surfaceTintColor: Colors.transparent, // Prevent bluish tint when scrolling
       toolbarHeight: 132.0,
-      titleSpacing: 32.0,
+      // Reduced from 32pt to 11pt (~ titleSpacing / 3) to tighten the gap
+      // between the back button and the wrapped title.
+      titleSpacing: 11.0,
       leadingWidth: 32.0,
       titleTextStyle: TextStyle(
         fontSize: 40,
