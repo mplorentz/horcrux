@@ -189,7 +189,13 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
+<<<<<<< HEAD
         title: 'Relay Management',
+=======
+        title: 'Relays',
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+>>>>>>> 92fd713 (feat(appbar): editorial rename of long screen titles (Option G subset))
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

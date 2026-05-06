@@ -18,7 +18,7 @@ class ImportSuccessScreen extends StatelessWidget {
 
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(
-        title: 'Account Imported Successfully',
+        title: 'Welcome',
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(

@@ -37,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: Icon(Icons.person, color: theme.colorScheme.onSurface),
             ),
-            title: const Text('Account Management'),
+            title: const Text('Account'),
             subtitle: const Text('View your Nostr ID and manage your account'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -59,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: Icon(Icons.wifi, color: theme.colorScheme.onSurface),
             ),
-            title: const Text('Relay Management'),
+            title: const Text('Relays'),
             subtitle: const Text('Configure and manage Nostr relays'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -84,7 +84,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            title: const Text('Push Notifications'),
+            title: const Text('Notifications'),
             subtitle: const Text(
               'Opt in and choose which vaults trigger alerts',
             ),

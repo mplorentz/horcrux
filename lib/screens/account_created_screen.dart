@@ -95,7 +95,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
 
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(
-        title: 'Account Created',
+        title: 'Welcome',
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
