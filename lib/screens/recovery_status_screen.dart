@@ -4,8 +4,9 @@ import '../models/recovery_request.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../services/recovery_service.dart';
-import '../widgets/recovery_stewards_widget.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/recovery_stewards_widget.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_owner_display.dart';
 
@@ -430,19 +431,15 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vault successfully recovered!'),
-              backgroundColor: Colors.green,
-            ),
+          context.showHorcruxSnackBar(
+            'Vault successfully recovered!',
+            kind: HorcruxSnackKind.success,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
       }
     }
   }
@@ -495,12 +492,8 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         await ref.read(recoveryServiceProvider).exitRecoveryMode(widget.recoveryRequestId);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isPractice ? 'Ended practice recovery' : 'Ended recovery',
-              ),
-            ),
+          context.showHorcruxSnackBar(
+            isPractice ? 'Ended practice recovery' : 'Ended recovery',
           );
           // Invalidate providers to refresh the UI
           ref.invalidate(recoveryRequestByIdProvider(widget.recoveryRequestId));
@@ -511,9 +504,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+          context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
         }
       }
     }
@@ -568,9 +559,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         await ref.read(recoveryServiceProvider).cancelRecoveryRequest(widget.recoveryRequestId);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Recovery request cancelled')),
-          );
+          context.showHorcruxSnackBar('Recovery request cancelled');
           // Invalidate providers to refresh the UI
           ref.invalidate(recoveryRequestByIdProvider(widget.recoveryRequestId));
           if (vaultId != null) {
@@ -581,9 +570,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+          context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
         }
       }
     }

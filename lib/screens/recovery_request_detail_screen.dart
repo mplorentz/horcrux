@@ -10,6 +10,7 @@ import '../providers/vault_provider.dart';
 import '../utils/nostr_display.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Screen for viewing and responding to a recovery request
 class RecoveryRequestDetailScreen extends ConsumerStatefulWidget {
@@ -81,8 +82,9 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
 
   Future<void> _respondToRequest(RecoveryResponseStatus status) async {
     if (_currentPubkey == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Could not load current user')),
+      context.showHorcruxSnackBar(
+        'Error: Could not load current user',
+        kind: HorcruxSnackKind.error,
       );
       return;
     }
@@ -105,23 +107,20 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         // Invalidate the recovery status provider to force a refresh when navigating back
         ref.invalidate(recoveryStatusProvider(widget.recoveryRequest.vaultId));
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              status == RecoveryResponseStatus.approved
-                  ? 'Recovery request approved and key sent'
-                  : 'Recovery request denied',
-            ),
-          ),
+        context.showHorcruxSnackBar(
+          status == RecoveryResponseStatus.approved
+              ? 'Recovery request approved and key sent'
+              : 'Recovery request denied',
+          kind: status == RecoveryResponseStatus.approved
+              ? HorcruxSnackKind.success
+              : HorcruxSnackKind.info,
         );
         Navigator.pop(context);
       }
     } catch (e) {
       Log.error('Error responding to recovery request', e);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
         setState(() {
           _isLoading = false;
         });

@@ -6,6 +6,7 @@ import '../providers/vault_provider.dart';
 import '../services/local_notification_service.dart';
 import '../services/logger.dart';
 import '../services/push_notification_receiver.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Best-effort owner-side push opt-in nudge.
 ///
@@ -63,16 +64,10 @@ Future<void> maybePromptOwnerForVaultPush({
 
     final optedIn = await pushReceiver.optIn();
     if (!optedIn && context.mounted) {
-      final cs = Theme.of(context).colorScheme;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Push permission was not granted. Stewards will not receive '
-            'device alerts until you enable push in Settings.',
-            style: TextStyle(color: cs.onError),
-          ),
-          backgroundColor: cs.error,
-        ),
+      context.showHorcruxSnackBar(
+        'Push permission was not granted. Stewards will not receive '
+        'device alerts until you enable push in Settings.',
+        kind: HorcruxSnackKind.error,
       );
     }
   } catch (e, st) {

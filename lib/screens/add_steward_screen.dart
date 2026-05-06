@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/steward.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Mode for adding a steward
 enum AddStewardMode {
@@ -396,11 +397,9 @@ class _AddStewardScreenState extends ConsumerState<AddStewardScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invalid npub: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showHorcruxSnackBar(
+          'Invalid npub: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
     }

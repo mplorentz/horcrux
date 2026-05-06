@@ -4,6 +4,7 @@ import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Edit existing vault screen
@@ -94,13 +95,9 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
 
     if (savedId != null && mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Vault "${_nameController.text.trim()}" updated successfully!',
-          ),
-          backgroundColor: Colors.green,
-        ),
+      context.showHorcruxSnackBar(
+        'Vault "${_nameController.text.trim()}" updated successfully!',
+        kind: HorcruxSnackKind.success,
       );
     }
   }

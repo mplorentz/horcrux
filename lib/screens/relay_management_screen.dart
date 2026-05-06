@@ -4,6 +4,7 @@ import '../models/relay_configuration.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../utils/invite_code_utils.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for managing Nostr relay configurations
@@ -71,16 +72,18 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
         await _loadData();
 
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Added relay: ${relay.name}')));
+          context.showHorcruxSnackBar(
+            'Added relay: ${relay.name}',
+            kind: HorcruxSnackKind.success,
+          );
         }
       } catch (e) {
         Log.error('Error adding relay', e);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error adding relay: $e')));
+          context.showHorcruxSnackBar(
+            'Error adding relay: $e',
+            kind: HorcruxSnackKind.error,
+          );
         }
       }
     }
@@ -121,16 +124,15 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
         await _loadData();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Deleted relay: ${relay.name}')),
-          );
+          context.showHorcruxSnackBar('Deleted relay: ${relay.name}');
         }
       } catch (e) {
         Log.error('Error deleting relay', e);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error deleting relay: $e')));
+          context.showHorcruxSnackBar(
+            'Error deleting relay: $e',
+            kind: HorcruxSnackKind.error,
+          );
         }
       }
     }
@@ -146,20 +148,14 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       await _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isScanning ? 'Scanning stopped' : 'Scanning started',
-            ),
-          ),
+        context.showHorcruxSnackBar(
+          _isScanning ? 'Scanning stopped' : 'Scanning started',
         );
       }
     } catch (e) {
       Log.error('Error toggling scanning', e);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
       }
     }
   }
@@ -170,16 +166,18 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       await _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Manual scan completed')));
+        context.showHorcruxSnackBar(
+          'Manual scan completed',
+          kind: HorcruxSnackKind.success,
+        );
       }
     } catch (e) {
       Log.error('Error scanning relays', e);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error scanning: $e')));
+        context.showHorcruxSnackBar(
+          'Error scanning: $e',
+          kind: HorcruxSnackKind.error,
+        );
       }
     }
   }
