@@ -58,19 +58,16 @@ abstract final class HorcruxSnackBar {
 
     final Color backgroundColor;
     final Color contentColor;
-    final Color? closeIconColor;
     switch (kind) {
       case HorcruxSnackKind.error:
         backgroundColor = cs.error;
         contentColor = const Color(0xFFf4f4f4);
-        closeIconColor = contentColor;
       case HorcruxSnackKind.info:
       case HorcruxSnackKind.success:
       case HorcruxSnackKind.warning:
         final bright = theme.brightness == Brightness.light;
         backgroundColor = bright ? const Color(0xFF2c2c2c) : const Color(0xFFf4f4f4);
         contentColor = bright ? const Color(0xFFf4f4f4) : const Color(0xFF0e0c0d);
-        closeIconColor = contentColor;
     }
 
     final outlineColor =
@@ -97,8 +94,7 @@ abstract final class HorcruxSnackBar {
           duration: effectiveDuration,
           action: action,
           dismissDirection: DismissDirection.up,
-          showCloseIcon: kind == HorcruxSnackKind.error,
-          closeIconColor: closeIconColor,
+          showCloseIcon: false,
           shape: shape,
           margin: const EdgeInsets.all(16),
         ),
@@ -126,7 +122,7 @@ abstract final class HorcruxSnackBar {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: Text(message, style: textStyle)),
                   if (action != null)
@@ -139,13 +135,6 @@ abstract final class HorcruxSnackBar {
                       },
                       style: TextButton.styleFrom(foregroundColor: actionForeground),
                       child: Text(action.label),
-                    ),
-                  if (kind == HorcruxSnackKind.error)
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      color: closeIconColor,
-                      onPressed: _finishCurrent,
-                      tooltip: MaterialLocalizations.of(ctx).closeButtonTooltip,
                     ),
                 ],
               ),
