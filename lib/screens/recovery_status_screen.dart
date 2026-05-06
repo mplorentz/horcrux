@@ -486,6 +486,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
 
     if (confirmed == true) {
+      // The user is intentionally ending the session, so suppress the
+      // "session already ended" alert that would otherwise be triggered when
+      // the request status flips to archived/cancelled.
+      _alreadyEndedAlertScheduled = true;
       try {
         // Get vaultId before exiting recovery mode
         final requestForVaultId =
@@ -559,6 +563,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
 
     if (confirmed == true) {
+      // The user is intentionally cancelling, so suppress the
+      // "session already ended" alert that would otherwise be triggered when
+      // the request status flips to cancelled.
+      _alreadyEndedAlertScheduled = true;
       try {
         // Get vaultId before canceling recovery request
         final request =
