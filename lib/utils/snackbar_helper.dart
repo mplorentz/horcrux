@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// Semantic category for [HorcruxSnackBar.show]. [HorcruxSnackKind.info],
-/// [HorcruxSnackKind.success], and [HorcruxSnackKind.warning] share the same
-/// high-contrast monochrome slab (horcrux3). Only [HorcruxSnackKind.error] uses
-/// the theme error color.
+/// Semantic category for [HorcruxSnackBar.show]. [HorcruxSnackKind.info] uses the
+/// inverted monochrome slab. [HorcruxSnackKind.warning] uses medium grays from the
+/// design palette (same family as RowButtonStack tones — no hue in DESIGN_GUIDE).
+/// [HorcruxSnackKind.success] uses deep green (`0xFF2E7D32`). [HorcruxSnackKind.error]
+/// uses the theme error color (`0xFFBA1A1A`).
 enum HorcruxSnackKind {
   info,
   success,
@@ -62,21 +63,23 @@ abstract final class HorcruxSnackBar {
       case HorcruxSnackKind.error:
         backgroundColor = cs.error;
         contentColor = const Color(0xFFf4f4f4);
-      case HorcruxSnackKind.info:
       case HorcruxSnackKind.success:
-      case HorcruxSnackKind.warning:
+        // Same deep green as vault status / recovery success accents.
+        backgroundColor = const Color(0xFF2E7D32);
+        contentColor = const Color(0xFFf4f4f4);
+      case HorcruxSnackKind.info:
         final bright = theme.brightness == Brightness.light;
         backgroundColor = bright ? const Color(0xFF2c2c2c) : const Color(0xFFf4f4f4);
         contentColor = bright ? const Color(0xFFf4f4f4) : const Color(0xFF0e0c0d);
+      case HorcruxSnackKind.warning:
+        // DESIGN_GUIDE does not define a warning hue; use documented grays (#606060 / stack mids).
+        backgroundColor = theme.brightness == Brightness.light
+            ? const Color(0xFF606060)
+            : const Color(0xFF505050);
+        contentColor = const Color(0xFFf4f4f4);
     }
 
-    final outlineColor =
-        theme.brightness == Brightness.light ? const Color(0xFFf4f4f4) : const Color(0xFF0e0c0d);
-
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(4),
-      side: BorderSide(color: outlineColor.withValues(alpha: 0.35)),
-    );
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(4));
 
     final textStyle = theme.textTheme.bodyMedium?.copyWith(color: contentColor) ??
         TextStyle(color: contentColor, fontSize: 14);

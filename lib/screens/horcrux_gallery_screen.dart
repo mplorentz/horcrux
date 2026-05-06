@@ -144,8 +144,21 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
+              Text('Toasts', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      context.showHorcruxSnackBar(
+                        'Shards sync when stewards are online.',
+                        kind: HorcruxSnackKind.info,
+                      );
+                    },
+                    child: const Text('Info'),
+                  ),
                   ElevatedButton(
                     onPressed: () {
                       context.showHorcruxSnackBar(
@@ -153,21 +166,26 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
                         kind: HorcruxSnackKind.success,
                       );
                     },
-                    child: const Text('Show toast'),
+                    child: const Text('Success'),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: cs.error,
-                      foregroundColor: cs.onError,
-                    ),
+                    onPressed: () {
+                      context.showHorcruxSnackBar(
+                        'Review steward confirmations before continuing.',
+                        kind: HorcruxSnackKind.warning,
+                      );
+                    },
+                    child: const Text('Warning'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: cs.error),
                     onPressed: () {
                       context.showHorcruxSnackBar(
                         'Something went wrong',
                         kind: HorcruxSnackKind.error,
                       );
                     },
-                    child: const Text('Show error'),
+                    child: const Text('Error'),
                   ),
                 ],
               ),
