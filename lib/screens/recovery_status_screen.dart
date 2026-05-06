@@ -514,6 +514,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           Navigator.pop(context);
         }
       } catch (e) {
+        // The user is still on the screen, so re-arm the alert so that a
+        // later external termination of the session is announced.
+        _alreadyEndedAlertScheduled = false;
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -588,6 +591,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           Navigator.pop(context);
         }
       } catch (e) {
+        // The user is still on the screen, so re-arm the alert so that a
+        // later external termination of the session is announced.
+        _alreadyEndedAlertScheduled = false;
         if (mounted) {
           ScaffoldMessenger.of(
             context,
