@@ -44,7 +44,14 @@ class HorcruxAppBar extends StatelessWidget implements PreferredSizeWidget {
     // (chevron on iOS/macOS, arrow on Android/Linux/Windows). We force the
     // chevron everywhere so the look is consistent across phones and
     // matches DESIGN_GUIDE.md's brutalist, sparse aesthetic.
-    final effectiveLeading = leading ?? _buildChevronBackButton(context);
+    final resolvedLeading = leading ?? _buildChevronBackButton(context);
+    // Without a leading control, Material only applies [titleSpacing] from the
+    // edge, so titles sit much further left than when a back button occupies
+    // [leadingWidth]. Reserve that width so no-back screens align with the
+    // home header (icon + title) and with pushed routes that show a back
+    // chevron — without changing the back-button layout.
+    final leadingWidth = Theme.of(context).appBarTheme.leadingWidth ?? kToolbarHeight;
+    final effectiveLeading = resolvedLeading ?? SizedBox(width: leadingWidth);
     return AppBar(
       title: HorcruxAppBarTitle(title),
       leading: effectiveLeading,

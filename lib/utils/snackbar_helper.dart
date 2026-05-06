@@ -141,7 +141,7 @@ abstract final class HorcruxSnackBar {
           dismissDirection: DismissDirection.up,
           showCloseIcon: false,
           shape: shape,
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         ),
       );
       return;
@@ -153,8 +153,8 @@ abstract final class HorcruxSnackBar {
     entry = OverlayEntry(
       builder: (ctx) => Positioned(
         top: _toastTopPx(mq),
-        left: 16,
-        right: 16,
+        left: 32,
+        right: 32,
         child: Semantics(
           container: true,
           liveRegion: true,
