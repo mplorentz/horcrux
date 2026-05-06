@@ -174,6 +174,8 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
             ],
           ),
           bottomNavigationBar: SafeArea(
+            top: false,
+            bottom: false, // RowButtonStack applies bottom inset via addBottomSafeArea
             child: RowButtonStack(
               buttons: [
                 RowButtonConfig(

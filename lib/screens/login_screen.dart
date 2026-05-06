@@ -122,6 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         centerTitle: false,
       ),
       body: SafeArea(
+        bottom: false, // RowButton applies bottom inset via addBottomSafeArea
         child: Column(
           children: [
             Expanded(

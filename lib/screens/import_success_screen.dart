@@ -26,6 +26,7 @@ class ImportSuccessScreen extends StatelessWidget {
         centerTitle: false,
       ),
       body: SafeArea(
+        bottom: false, // RowButtonStack applies bottom inset via addBottomSafeArea
         child: Column(
           children: [
             Expanded(

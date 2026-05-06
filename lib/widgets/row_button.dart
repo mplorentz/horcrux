@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
 
 /// A full-width button with an icon and text in a row layout
 class RowButton extends StatelessWidget {
@@ -57,12 +56,8 @@ class RowButton extends StatelessWidget {
 
     // Pad past the system inset at the bottom of the screen (iOS home indicator
     // or Android gesture/navigation bar) so the button isn't covered by it.
-    final systemBottomInset = MediaQuery.of(context).padding.bottom;
-    final bottomSafeArea = switch ((Platform.operatingSystem, addBottomSafeArea)) {
-      ('ios', true) => 8.0,
-      ('android', true) => systemBottomInset,
-      _ => 0.0,
-    };
+    final systemBottomInset = MediaQuery.paddingOf(context).bottom;
+    final bottomSafeArea = addBottomSafeArea ? systemBottomInset : 0.0;
 
     final effectivePadding = padding != null
         ? padding!.copyWith(bottom: padding!.bottom + bottomSafeArea)
