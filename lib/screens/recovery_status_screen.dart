@@ -8,6 +8,7 @@ import '../services/recovery_service.dart';
 import '../services/vault_export_service.dart';
 import 'recovered_content_screen.dart';
 import '../widgets/recovery_stewards_widget.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_owner_display.dart';
@@ -83,11 +84,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
 
     return HorcruxScaffold(
       appBar: AppBar(
-        title: const Text(
-          'Recovering Vault',
-          maxLines: 2,
-          overflow: TextOverflow.visible,
-        ),
+        title: const HorcruxAppBarTitle('Recovering Vault'),
         centerTitle: false,
       ),
       body: requestAsync.when(

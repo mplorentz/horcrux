@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'backup_config_screen.dart';
 import 'vault_list_screen.dart';
@@ -53,7 +54,10 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('New Vault'), centerTitle: false),
+      appBar: AppBar(
+        title: const HorcruxAppBarTitle('New Vault'),
+        centerTitle: false,
+      ),
       body: Column(
         children: [
           Expanded(

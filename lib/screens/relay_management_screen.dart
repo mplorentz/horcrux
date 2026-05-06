@@ -4,6 +4,7 @@ import '../models/relay_configuration.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../utils/invite_code_utils.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for managing Nostr relay configurations
@@ -188,7 +189,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       appBar: AppBar(
-        title: const Text('Relay Management'),
+        title: const HorcruxAppBarTitle('Relay Management'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [

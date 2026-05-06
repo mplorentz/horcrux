@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/logger.dart';
 import '../services/push_notification_receiver.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/push_privacy_learn_more_text.dart';
 
@@ -90,7 +91,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
     final theme = Theme.of(context);
     return HorcruxScaffold(
       appBar: AppBar(
-        title: const Text('Push Notifications'),
+        title: const HorcruxAppBarTitle('Push Notifications'),
         centerTitle: false,
       ),
       body: _loading

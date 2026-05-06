@@ -470,7 +470,9 @@ ThemeData horcrux3(Brightness brightness) {
       ),
     ),
 
-    // AppBar: stark, minimal
+    // AppBar: stark, minimal. Single-line at theme size (40pt); titles
+    // shrink to fit via HorcruxAppBarTitle's FittedBox (Option C for bead
+    // horcrux_app-dyc), so toolbarHeight stays at the original 100pt.
     appBarTheme: AppBarTheme(
       backgroundColor: scaffoldBg,
       foregroundColor: primaryText,
