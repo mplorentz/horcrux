@@ -190,8 +190,6 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
         title: 'Relay Management',
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
