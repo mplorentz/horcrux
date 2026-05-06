@@ -199,6 +199,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
         centerTitle: false,
       ),
       body: SafeArea(
+        bottom: false, // RowButton handles bottom inset via addBottomSafeArea
         child: Column(
           children: [
             Expanded(

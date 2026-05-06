@@ -174,6 +174,7 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
             ],
           ),
           bottomNavigationBar: SafeArea(
+            bottom: false, // RowButton wants to extend to bottom
             child: RowButtonStack(
               buttons: [
                 RowButtonConfig(

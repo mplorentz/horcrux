@@ -99,6 +99,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
         centerTitle: false,
       ),
       body: SafeArea(
+        bottom: false, // RowButtonStack handles bottom inset via addBottomSafeArea
         child: Column(
           children: [
             Expanded(
