@@ -34,7 +34,9 @@ mixin _$Steward {
       throw _privateConstructorUsedError; // True when this steward is the vault owner
   String? get contactInfo => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of Steward
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $StewardCopyWith<Steward> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -68,6 +70,8 @@ class _$StewardCopyWithImpl<$Res, $Val extends Steward> implements $StewardCopyW
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of Steward
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -170,6 +174,8 @@ class __$$StewardImplCopyWithImpl<$Res> extends _$StewardCopyWithImpl<$Res, _$St
   __$$StewardImplCopyWithImpl(_$StewardImpl _value, $Res Function(_$StewardImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of Steward
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -342,7 +348,9 @@ class _$StewardImpl extends _Steward {
       isOwner,
       contactInfo);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of Steward
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$StewardImplCopyWith<_$StewardImpl> get copyWith =>
@@ -367,14 +375,14 @@ abstract class _Steward extends Steward {
   const _Steward._() : super._();
 
   @override
-  String get id;
-  @override // Unique identifier for this steward
-  String? get pubkey;
-  @override // Hex format - nullable for invited stewards
+  String get id; // Unique identifier for this steward
+  @override
+  String? get pubkey; // Hex format - nullable for invited stewards
+  @override
   String? get name;
   @override
-  String? get inviteCode;
-  @override // Invitation code for invited stewards (before they accept)
+  String? get inviteCode; // Invitation code for invited stewards (before they accept)
+  @override
   StewardStatus get status;
   @override
   DateTime? get lastSeen;
@@ -387,12 +395,16 @@ abstract class _Steward extends Steward {
   @override
   String? get acknowledgmentEventId;
   @override
-  int? get acknowledgedDistributionVersion;
-  @override // Version tracking for redistribution detection (nullable for backward compatibility)
-  bool get isOwner;
-  @override // True when this steward is the vault owner
-  String? get contactInfo;
+  int?
+      get acknowledgedDistributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
   @override
-  @JsonKey(ignore: true)
+  bool get isOwner; // True when this steward is the vault owner
+  @override
+  String? get contactInfo;
+
+  /// Create a copy of Steward
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$StewardImplCopyWith<_$StewardImpl> get copyWith => throw _privateConstructorUsedError;
 }

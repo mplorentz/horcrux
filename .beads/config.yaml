@@ -9,16 +9,15 @@
 issue-prefix: "horcrux_app"
 issue_prefix: horcrux_app
 
-# Embedded mode ignores host/port — use server mode so bd connects to the remote sql-server.
-# https://github.com/steveyegge/beads/blob/main/docs/DOLT.md
-dolt:
-  mode: server
-  auto-start: false
-  host: dolt.lorentz.is
-  port: 3307
-  user: hudson
+# Gas City only reads top-level `dolt.host` / `dolt.port` (nested `dolt:` is ignored).
+# `explicit` = this rig pins shared dolt.lorentz.is; `inherited_city` expects a city_canonical mirror.
+dolt.auto-start: false
+dolt.host: dolt.lorentz.is
+dolt.port: "3307"
+dolt.mode: server
+dolt.user: hudson
 
-gc.endpoint_origin: inherited_city
+gc.endpoint_origin: explicit
 gc.endpoint_status: verified
 
 # Use no-db mode: JSONL-only, no Dolt database
@@ -65,3 +64,5 @@ gc.endpoint_status: verified
 # - linear.api-key
 # - github.org
 # - github.repo
+
+sync.remote: "dolt.lorentz.is:3307/horcrux_app"

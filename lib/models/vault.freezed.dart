@@ -58,7 +58,9 @@ mixin _$Vault {
 // legacy vaults stay off until the owner explicitly turns push on.
   bool get pushEnabled => throw _privateConstructorUsedError;
 
-  @JsonKey(ignore: true)
+  /// Create a copy of Vault
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $VaultCopyWith<Vault> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -106,6 +108,8 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of Vault
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -238,6 +242,8 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
   __$$VaultImplCopyWithImpl(_$VaultImpl _value, $Res Function(_$VaultImpl) _then)
       : super(_value, _then);
 
+  /// Create a copy of Vault
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -470,7 +476,9 @@ class _$VaultImpl extends _Vault {
       archivedReason,
       pushEnabled);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of Vault
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$VaultImplCopyWith<_$VaultImpl> get copyWith =>
@@ -514,18 +522,18 @@ abstract class _Vault extends Vault {
   @override
   String get name;
   @override
-  String? get content;
-  @override // Nullable - null when content is not decrypted
+  String? get content; // Nullable - null when content is not decrypted
+  @override
   DateTime get createdAt;
   @override
-  String get ownerPubkey;
-  @override // Hex format, 64 characters
-  String? get ownerName;
-  @override // Name of the vault owner
-  List<ShardData> get shards;
-  @override // List of shards (single as steward, multiple during recovery)
-  List<RecoveryRequest> get recoveryRequests;
-  @override // Embedded recovery requests
+  String get ownerPubkey; // Hex format, 64 characters
+  @override
+  String? get ownerName; // Name of the vault owner
+  @override
+  List<ShardData> get shards; // List of shards (single as steward, multiple during recovery)
+  @override
+  List<RecoveryRequest> get recoveryRequests; // Embedded recovery requests
+  @override
   ({
     String? contentHash,
     DateTime createdAt,
@@ -541,14 +549,13 @@ abstract class _Vault extends Vault {
     int threshold,
     int totalKeys,
     String vaultId
-  })? get backupConfig;
-  @override // Optional backup configuration
-  bool get isArchived;
-  @override // Whether this vault is archived
-  DateTime? get archivedAt;
-  @override // When the vault was archived
-  String? get archivedReason;
-  @override // Reason for archiving
+  })? get backupConfig; // Optional backup configuration
+  @override
+  bool get isArchived; // Whether this vault is archived
+  @override
+  DateTime? get archivedAt; // When the vault was archived
+  @override
+  String? get archivedReason; // Reason for archiving
 // Whether the vault owner has opted this vault into push notifications.
 //
 // This is independent of the per-user global opt-in (see
@@ -559,8 +566,12 @@ abstract class _Vault extends Vault {
 // Defaults to `true` for newly-created vaults (set on the recovery plan
 // screen) and `false` for vaults persisted before this field existed --
 // legacy vaults stay off until the owner explicitly turns push on.
-  bool get pushEnabled;
   @override
-  @JsonKey(ignore: true)
+  bool get pushEnabled;
+
+  /// Create a copy of Vault
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$VaultImplCopyWith<_$VaultImpl> get copyWith => throw _privateConstructorUsedError;
 }
