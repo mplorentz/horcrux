@@ -9,6 +9,7 @@ import '../utils/snackbar_helper.dart';
 import '../services/vault_export_service.dart';
 import 'recovered_content_screen.dart';
 import '../widgets/recovery_stewards_widget.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_owner_display.dart';
@@ -83,14 +84,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     requestAsync.whenData(_scheduleAlreadyEndedAlertIfNeeded);
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Recovering Vault',
-          maxLines: 2,
-          overflow: TextOverflow.visible,
-        ),
-        centerTitle: false,
-      ),
+      appBar: const HorcruxAppBar(title: 'Recovering Vault'),
       body: requestAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),

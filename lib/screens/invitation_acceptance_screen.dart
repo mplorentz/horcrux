@@ -7,6 +7,7 @@ import '../services/invitation_service.dart';
 import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/name_label.dart';
 import '../widgets/row_button.dart';
@@ -37,7 +38,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Invitation'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'Invitation'),
       body: invitationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Padding(

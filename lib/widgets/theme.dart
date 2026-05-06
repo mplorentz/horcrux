@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'horcrux_app_bar.dart';
+
 /// Horcrux app theme using bundled Archivo and OpenSans fonts
 /// Fonts are bundled in fonts/ directory and declared in pubspec.yaml
 final horcruxTheme = ThemeData(
@@ -470,20 +472,27 @@ ThemeData horcrux3(Brightness brightness) {
       ),
     ),
 
-    // AppBar: stark, minimal
+    // AppBar: stark, minimal.
+    // toolbarHeight is sized to fit up to two lines of the 40pt title used
+    // by HorcruxAppBarTitle (Option B for bead horcrux_app-dyc). The
+    // constant lives next to HorcruxAppBar so its preferredSize stays in
+    // sync with what Scaffold actually renders.
     appBarTheme: AppBarTheme(
       backgroundColor: scaffoldBg,
       foregroundColor: primaryText,
       elevation: 0,
       surfaceTintColor: Colors.transparent, // Prevent bluish tint when scrolling
-      toolbarHeight: 100.0,
-      titleSpacing: 32.0,
+      toolbarHeight: kHorcruxAppBarToolbarHeight,
+      // Reduced from 32pt to 11pt (~ titleSpacing / 3) to tighten the gap
+      // between the back button and the wrapped title.
+      titleSpacing: 11.0,
       leadingWidth: 32.0,
       titleTextStyle: TextStyle(
         fontSize: 40,
         fontWeight: FontWeight.w500,
         fontFamily: 'Archivo',
         color: primaryText,
+        height: 1.05,
       ),
     ),
 

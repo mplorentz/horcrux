@@ -7,6 +7,7 @@ import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
@@ -51,12 +52,12 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
 
     return vaultAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Loading...'), centerTitle: false),
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => const Scaffold(
+        appBar: HorcruxAppBar(title: 'Loading...'),
+        body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Error'), centerTitle: false),
+        appBar: const HorcruxAppBar(title: 'Error'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -75,12 +76,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       ),
       data: (vault) {
         if (vault == null) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Vault Not Found'),
-              centerTitle: false,
-            ),
-            body: const Center(child: Text('This vault no longer exists.')),
+          return const Scaffold(
+            appBar: HorcruxAppBar(title: 'Vault Not Found'),
+            body: Center(child: Text('This vault no longer exists.')),
           );
         }
 
@@ -117,9 +115,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
   ) {
     return HorcruxScaffold(
       showNotificationBanner: true,
-      appBar: AppBar(
-        title: Text(vault.name),
-        centerTitle: false,
+      appBar: HorcruxAppBar(
+        title: vault.name,
         actions: [
           currentPubkeyAsync.when(
             loading: () => const SizedBox.shrink(),
