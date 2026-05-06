@@ -40,15 +40,31 @@ class HorcruxAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Flutter's default BackButton uses a platform-dependent icon
+    // (chevron on iOS/macOS, arrow on Android/Linux/Windows). We force the
+    // chevron everywhere so the look is consistent across phones and
+    // matches DESIGN_GUIDE.md's brutalist, sparse aesthetic.
+    final effectiveLeading = leading ?? _buildChevronBackButton(context);
     return AppBar(
       title: HorcruxAppBarTitle(title),
-      leading: leading,
+      leading: effectiveLeading,
+      automaticallyImplyLeading: false,
       actions: actions,
-      automaticallyImplyLeading: automaticallyImplyLeading,
       centerTitle: centerTitle,
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
       bottom: bottom,
+    );
+  }
+
+  Widget? _buildChevronBackButton(BuildContext context) {
+    if (!automaticallyImplyLeading) return null;
+    final route = ModalRoute.of(context);
+    if (route == null || !route.canPop) return null;
+    return IconButton(
+      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+      onPressed: () => Navigator.maybePop(context),
     );
   }
 

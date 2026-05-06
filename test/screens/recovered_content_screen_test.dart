@@ -61,7 +61,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
