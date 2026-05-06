@@ -221,17 +221,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           );
                         }
                       }
-                    }
 
-                    // Owner-steward state: owner has deleted content but kept shards
-                    // Show special buttons for recovery
-                    final isOwnerSteward = isVaultOwner &&
-                        currentVault != null &&
-                        currentVault.content == null &&
-                        currentVault.shards.isNotEmpty;
-
-                    if (isOwnerSteward) {
-                      // Real recovery only: practice is managed via "Manage Practice Recovery" above.
+                      // Surface "Manage Recovery" for the owner whenever they have an
+                      // active real recovery, regardless of content state. Owners can
+                      // recreate vault content (or restore it) while a recovery is still
+                      // in flight; gating on owner-steward state alone made the button
+                      // vanish in that scenario (bug horcrux_app-e0h).
                       if (showManageRealRecovery) {
                         final myRecoveryId = myActiveRealRecovery.id;
                         buttons.add(
@@ -249,15 +244,27 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             text: 'Manage Recovery',
                           ),
                         );
-                      } else if (showInitiateRealRecovery) {
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () => _initiateRecovery(context, ref, vaultId),
-                            icon: Icons.restore,
-                            text: 'Initiate Recovery',
-                          ),
-                        );
                       }
+                    }
+
+                    // Owner-steward state: owner has deleted content but kept shards.
+                    // Only "Initiate Recovery" is gated on this state -- you can only
+                    // start a real recovery when you have shards but no content. Managing
+                    // an existing recovery is handled in the owner block above so it
+                    // survives the owner adding content back mid-recovery.
+                    final isOwnerSteward = isVaultOwner &&
+                        currentVault != null &&
+                        currentVault.content == null &&
+                        currentVault.shards.isNotEmpty;
+
+                    if (isOwnerSteward && showInitiateRealRecovery) {
+                      buttons.add(
+                        RowButtonConfig(
+                          onPressed: () => _initiateRecovery(context, ref, vaultId),
+                          icon: Icons.restore,
+                          text: 'Initiate Recovery',
+                        ),
+                      );
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
