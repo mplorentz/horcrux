@@ -13,6 +13,7 @@ import 'providers/key_provider.dart';
 import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
 import 'services/push_notification_receiver.dart';
+import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/app_initialization.dart';
@@ -108,6 +109,12 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
         unawaited(_flushStoresToDisk());
         break;
     }
+    // Only sweep vault plaintext on real terminate. iOS fires
+    // paused/inactive/hidden when the share sheet pops and the user picks a
+    // recipient — wiping the file then drops the share mid-flight.
+    if (state == AppLifecycleState.detached) {
+      unawaited(_sweepVaultExports());
+    }
   }
 
   Future<void> _flushStoresToDisk() async {
@@ -115,6 +122,14 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       await ref.read(processedNostrEventStoreProvider).writeStores();
     } catch (e, st) {
       Log.error('ProcessedNostrEventStore background merge failed', e, st);
+    }
+  }
+
+  Future<void> _sweepVaultExports() async {
+    try {
+      await ref.read(vaultExportServiceProvider).clearExportDirectory();
+    } catch (e, st) {
+      Log.error('Vault export sweep on terminate failed', e, st);
     }
   }
 

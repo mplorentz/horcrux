@@ -6,6 +6,7 @@ import '../services/local_notification_service.dart';
 import '../services/push_notification_receiver.dart';
 import '../services/recovery_service.dart';
 import '../services/relay_scan_service.dart';
+import '../services/vault_export_service.dart';
 
 /// Initializes app services (deep linking and relay scanning).
 /// Optionally initializes a key if one doesn't exist.
@@ -48,6 +49,10 @@ Future<void> initializeAppServices(
   // This will auto-start scanning if there are enabled relays
   final relayScanService = ref.read(relayScanServiceProvider);
   await relayScanService.initialize();
+
+  // Sweep any vault plaintext that survived a previous run (e.g. crash, force-
+  // quit, or share recipient that read-and-released after our cleanup window).
+  await ref.read(vaultExportServiceProvider).clearExportDirectory();
 
   // Invalidate key-related providers to trigger rebuild (e.g., after onboarding)
   if (initializeKeyIfNeeded) {

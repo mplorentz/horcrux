@@ -8,6 +8,7 @@ import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/local_notification_service.dart';
+import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/recovery_service.dart';
 
 import 'local_notification_service_navigation_test.mocks.dart';
@@ -19,6 +20,14 @@ class _FakeRecoveryService extends Fake implements RecoveryService {
 
   @override
   Future<RecoveryRequest?> getRecoveryRequest(String id) async => requests[id];
+}
+
+/// Stand-in for [LoginService] that returns no current key. The navigation
+/// tests don't exercise the self-origin filter, so a "no key" stub is
+/// sufficient and avoids touching `flutter_secure_storage`.
+class _FakeLoginService extends Fake implements LoginService {
+  @override
+  Future<String?> getCurrentPublicKey() async => null;
 }
 
 /// Records `didPush` / `didRemove` events as `'<verb>:<routeName>'` strings.
@@ -76,6 +85,7 @@ void main() {
     recoveryService = _FakeRecoveryService();
     service = LocalNotificationService(
       vaultRepository: vaultRepository,
+      loginService: _FakeLoginService(),
       getRecoveryService: () => recoveryService,
     );
   });
