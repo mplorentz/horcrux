@@ -339,6 +339,8 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 ### Key gotchas
 
 - **gcc-12 is required**: `linux/CMakeLists.txt` pins `gcc-12`/`g++-12`. The system also has gcc-13 but the Flutter Linux build will fail without gcc-12/g++-12 specifically installed.
+- **libssl-dev is required**: The `sqlcipher_flutter_libs` package needs OpenSSL development headers (`libssl-dev`) to compile. Without it, the CMake build fails with "Could NOT find OpenSSL".
+- **libsqlite3-dev is required for tests**: The drift database unit tests (`test/database/app_database_test.dart`) need `libsqlite3.so` to run in-memory SQLite. Install `libsqlite3-dev`.
 - **Golden tests skip on Linux**: Golden screenshot tests are macOS-only (rendering differs). Always use `--exclude-tags=golden` when running tests on Linux: `flutter test --exclude-tags=golden`
 - **gnome-keyring must be unlocked** before the app starts, otherwise `flutter_secure_storage` will crash. The empty-password unlock shown above is sufficient for dev/test.
 - **Hot reload**: Send `SIGUSR1` to the Flutter process, or type `r` in the `flutter run` terminal.
