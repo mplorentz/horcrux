@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
 
 /// A full-width button with an icon and text in a row layout
 class RowButton extends StatelessWidget {
@@ -11,8 +10,11 @@ class RowButton extends StatelessWidget {
   final double? iconSize;
   final TextStyle? textStyle;
   final EdgeInsets? padding;
-  final bool
-      addBottomSafeArea; // Pads past the bottom system inset (iOS home indicator, Android nav/gesture bar)
+  final bool addBottomSafeArea; // Pushes the button up past the system bottom
+  // inset (iOS home indicator, Android nav/gesture bar) so the button rectangle
+  // clears it. When the screen wraps the button in a SafeArea that consumes
+  // the bottom inset, MediaQuery.padding.bottom is 0 here and no extra space
+  // is added.
 
   const RowButton({
     super.key,
@@ -55,25 +57,9 @@ class RowButton extends StatelessWidget {
     final shadowColor =
         isDark ? borderColor.withValues(alpha: 0.1) : borderColor.withValues(alpha: 0.1);
 
-    // Pad past the system inset at the bottom of the screen (iOS home indicator
-    // or Android gesture/navigation bar) so the button isn't covered by it.
-    final systemBottomInset = MediaQuery.of(context).padding.bottom;
-    final bottomSafeArea = switch ((Platform.operatingSystem, addBottomSafeArea)) {
-      ('ios', true) => 8.0,
-      ('android', true) => systemBottomInset,
-      _ => 0.0,
-    };
+    final effectivePadding = padding ?? const EdgeInsets.symmetric(vertical: 20, horizontal: 20);
 
-    final effectivePadding = padding != null
-        ? padding!.copyWith(bottom: padding!.bottom + bottomSafeArea)
-        : EdgeInsets.only(
-            top: 20,
-            bottom: 20 + bottomSafeArea,
-            left: 20,
-            right: 20,
-          );
-
-    return InkWell(
+    final button = InkWell(
       onTap: onPressed,
       child: Opacity(
         opacity: isDisabled ? 0.6 : 1.0,
@@ -110,6 +96,17 @@ class RowButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    // Push the whole button up past the system bottom inset so the button
+    // rectangle (not just its content) clears the home indicator / nav bar.
+    final bottomMargin = addBottomSafeArea ? MediaQuery.of(context).padding.bottom : 0.0;
+    if (bottomMargin == 0) {
+      return button;
+    }
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomMargin),
+      child: button,
     );
   }
 }
