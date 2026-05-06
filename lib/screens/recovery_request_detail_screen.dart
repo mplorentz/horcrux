@@ -9,6 +9,7 @@ import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../utils/nostr_display.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for viewing and responding to a recovery request
@@ -198,11 +199,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
 
     return HorcruxScaffold(
       appBar: AppBar(
-        title: const Text(
-          'Recovery Request',
-          overflow: TextOverflow.visible,
-          maxLines: 2,
-        ),
+        title: const HorcruxAppBarTitle('Recovery Request'),
         centerTitle: false,
       ),
       body: _isLoading

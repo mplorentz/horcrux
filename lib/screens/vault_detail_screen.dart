@@ -10,6 +10,7 @@ import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
 import '../widgets/vault_status_banner.dart';
 import '../widgets/vault_owner_display.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Detail/view screen for displaying a vault
@@ -51,11 +52,17 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
     return vaultAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Loading...'), centerTitle: false),
+        appBar: AppBar(
+          title: const HorcruxAppBarTitle('Loading...'),
+          centerTitle: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Error'), centerTitle: false),
+        appBar: AppBar(
+          title: const HorcruxAppBarTitle('Error'),
+          centerTitle: false,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -76,7 +83,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
         if (vault == null) {
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Vault Not Found'),
+              title: const HorcruxAppBarTitle('Vault Not Found'),
               centerTitle: false,
             ),
             body: const Center(child: Text('This vault no longer exists.')),
@@ -117,7 +124,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     return HorcruxScaffold(
       showNotificationBanner: true,
       appBar: AppBar(
-        title: Text(vault.name),
+        title: HorcruxAppBarTitle(vault.name),
         centerTitle: false,
         actions: [
           currentPubkeyAsync.when(

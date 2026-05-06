@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'vault_create_screen.dart';
 
@@ -22,7 +23,10 @@ class VaultExplainerScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Create Vault'), centerTitle: false),
+      appBar: AppBar(
+        title: const HorcruxAppBarTitle('Create Vault'),
+        centerTitle: false,
+      ),
       body: Column(
         children: [
           Expanded(
