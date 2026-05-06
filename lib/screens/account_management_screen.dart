@@ -8,6 +8,7 @@ import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../widgets/row_button.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
@@ -70,12 +71,9 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
     Clipboard.setData(ClipboardData(text: _nsec!));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Private key copied to clipboard'),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
+      context.showHorcruxSnackBar(
+        'Private key copied to clipboard',
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -118,34 +116,27 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Logged out! Returning to onboarding...'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.green,
-        ),
+      context.showHorcruxSnackBar(
+        'Logged out! Returning to onboarding...',
+        kind: HorcruxSnackKind.success,
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
       Log.error('Error logging out', e);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error logging out: $e'),
-          backgroundColor: Colors.red,
-        ),
+      context.showHorcruxSnackBar(
+        'Error logging out: $e',
+        kind: HorcruxSnackKind.error,
       );
     }
   }
 
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    context.showHorcruxSnackBar(
+      '$label copied to clipboard',
+      duration: const Duration(seconds: 2),
     );
   }
 

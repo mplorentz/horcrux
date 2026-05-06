@@ -595,12 +595,12 @@ ThemeData horcrux3(Brightness brightness) {
       surfaceTintColor: Colors.transparent,
     ),
 
-    // Snackbar
+    // Snackbar defaults align with [HorcruxSnackBar] (inverted slab); call sites should use the helper.
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : const Color(0xFF2C2C2C),
-      contentTextStyle: const TextStyle(
-        color: Color(0xFFf4f4f4), // Light text for dark snackbar backgrounds
+      backgroundColor: isDark ? const Color(0xFFf4f4f4) : const Color(0xFF2c2c2c),
+      contentTextStyle: TextStyle(
+        color: isDark ? const Color(0xFF0e0c0d) : const Color(0xFFf4f4f4),
         fontFamily: 'FiraSans',
       ),
     ),

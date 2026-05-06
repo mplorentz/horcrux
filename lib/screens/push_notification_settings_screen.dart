@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/logger.dart';
 import '../services/push_notification_receiver.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/push_privacy_learn_more_text.dart';
 
@@ -46,13 +47,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
   }
 
   void _showErrorSnackBar(String message) {
-    final cs = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: TextStyle(color: cs.onError)),
-        backgroundColor: cs.error,
-      ),
-    );
+    context.showHorcruxSnackBar(message, kind: HorcruxSnackKind.error);
   }
 
   Future<void> _toggleOptIn(bool value) async {

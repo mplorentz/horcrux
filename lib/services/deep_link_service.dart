@@ -7,6 +7,7 @@ import '../services/logger.dart';
 import '../utils/validators.dart';
 import '../models/invitation_exceptions.dart';
 import '../screens/invitation_acceptance_screen.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Provider for DeepLinkService
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
@@ -170,12 +171,10 @@ class DeepLinkService {
   void _showErrorToUser(String message) {
     if (_navigatorKey?.currentContext != null) {
       final context = _navigatorKey!.currentContext!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
+      context.showHorcruxSnackBar(
+        message,
+        kind: HorcruxSnackKind.error,
+        duration: const Duration(seconds: 5),
       );
     }
   }

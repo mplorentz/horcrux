@@ -13,6 +13,7 @@ import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
 import '../screens/recovery_status_screen.dart';
 import '../screens/practice_recovery_info_screen.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Button stack widget for vault detail screen
 class VaultDetailButtonStack extends ConsumerWidget {
@@ -445,11 +446,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
         await repository.deleteVaultContent(vault.id);
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Local copy deleted. You can recover it later using your stewards.'),
-              backgroundColor: Colors.green,
-            ),
+          context.showHorcruxSnackBar(
+            'Local copy deleted. You can recover it later using your stewards.',
+            kind: HorcruxSnackKind.success,
           );
 
           // Refresh vault data to show new state
@@ -457,8 +456,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete local copy: $e'), backgroundColor: Colors.red),
+          context.showHorcruxSnackBar(
+            'Failed to delete local copy: $e',
+            kind: HorcruxSnackKind.error,
           );
         }
       }
@@ -586,9 +586,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
       if (context.mounted) {
         Navigator.pop(context);
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recovery request initiated and sent')));
+        context.showHorcruxSnackBar(
+          'Recovery request initiated and sent',
+          kind: HorcruxSnackKind.success,
+        );
 
         ref.invalidate(recoveryStatusProvider(vaultId));
 
@@ -605,7 +606,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
       }
     }
   }

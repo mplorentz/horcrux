@@ -6,6 +6,7 @@ import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Screen shown after account creation, allowing user to back up their key
 class AccountCreatedScreen extends ConsumerStatefulWidget {
@@ -32,9 +33,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.nsec));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nostr key copied to clipboard')),
-      );
+      context.showHorcruxSnackBar('Nostr key copied to clipboard');
     }
   }
 
@@ -62,11 +61,9 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     } catch (e) {
       Log.error('Error navigating to vault backup', e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error starting vault backup: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showHorcruxSnackBar(
+          'Error starting vault backup: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
     } finally {

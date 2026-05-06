@@ -15,6 +15,7 @@ import '../services/logger.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
+import '../utils/snackbar_helper.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -91,11 +92,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final currentPubkey = await ref.read(currentPublicKeyProvider.future);
       if (currentPubkey == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unable to get your public key'),
-              backgroundColor: Colors.red,
-            ),
+          context.showHorcruxSnackBar(
+            'Unable to get your public key',
+            kind: HorcruxSnackKind.error,
           );
         }
         return;
@@ -681,8 +680,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         });
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid relay URL: $e'), backgroundColor: Colors.red),
+          context.showHorcruxSnackBar(
+            'Invalid relay URL: $e',
+            kind: HorcruxSnackKind.error,
           );
         }
       }
@@ -705,11 +705,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
     // Check if steward with this name already exists
     if (_stewards.any((steward) => steward.name == stewardName)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('A steward with the name "$stewardName" already exists'),
-          backgroundColor: Colors.orange,
-        ),
+      context.showHorcruxSnackBar(
+        'A steward with the name "$stewardName" already exists',
+        kind: HorcruxSnackKind.warning,
       );
       return;
     }
@@ -762,13 +760,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         final url = result.invitation.toUrl();
         Clipboard.setData(ClipboardData(text: url));
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invitation link copied to clipboard'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
+        context.showHorcruxSnackBar(
+          'Invitation link copied to clipboard',
+          kind: HorcruxSnackKind.success,
+          duration: const Duration(seconds: 2),
         );
       }
     } catch (e) {
@@ -779,9 +774,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         } else {
           errorMessage = '$errorMessage: $e';
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: Colors.red));
+        context.showHorcruxSnackBar(errorMessage, kind: HorcruxSnackKind.error);
       }
     }
   }
@@ -817,18 +810,17 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Steward added successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Steward added successfully!',
+          kind: HorcruxSnackKind.success,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Invalid steward: $e'), backgroundColor: Colors.red));
+        context.showHorcruxSnackBar(
+          'Invalid steward: $e',
+          kind: HorcruxSnackKind.error,
+        );
       }
     }
   }
@@ -1001,11 +993,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Steward updated successfully!'),
-          backgroundColor: Colors.green,
-        ),
+      context.showHorcruxSnackBar(
+        'Steward updated successfully!',
+        kind: HorcruxSnackKind.success,
       );
     }
   }
@@ -1018,12 +1008,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   void _copyInvitationLinkForSteward(InvitationLink invitation) {
     final url = invitation.toUrl();
     Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invitation link copied to clipboard'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    context.showHorcruxSnackBar(
+      'Invitation link copied to clipboard',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -1242,20 +1229,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _hasUnsavedChanges = true;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invitation link regenerated successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Invitation link regenerated successfully!',
+          kind: HorcruxSnackKind.success,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to regenerate invitation link: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showHorcruxSnackBar(
+          'Failed to regenerate invitation link: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
     }
@@ -1403,11 +1386,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update push notification preference: $e'),
-            backgroundColor: Colors.red,
-          ),
+        context.showHorcruxSnackBar(
+          'Failed to update push notification preference: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
       return;
@@ -1520,20 +1501,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             await backupService.redistributeForPushPreferenceChange(vaultId: widget.vaultId);
           }
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Keys distributed successfully!'),
-                backgroundColor: Colors.green,
-              ),
+            context.showHorcruxSnackBar(
+              'Keys distributed successfully!',
+              kind: HorcruxSnackKind.success,
             );
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to distribute keys: $e'),
-                backgroundColor: Colors.orange,
-              ),
+            context.showHorcruxSnackBar(
+              'Failed to distribute keys: $e',
+              kind: HorcruxSnackKind.warning,
             );
           }
         }
@@ -1545,11 +1522,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _initialPushEnabled = _alertStewardsWithPush;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Backup configuration saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Backup configuration saved successfully!',
+          kind: HorcruxSnackKind.success,
         );
 
         if (mounted) {
@@ -1562,8 +1537,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save recovery plan: $e'), backgroundColor: Colors.red),
+        context.showHorcruxSnackBar(
+          'Failed to save recovery plan: $e',
+          kind: HorcruxSnackKind.error,
         );
       }
     } finally {
