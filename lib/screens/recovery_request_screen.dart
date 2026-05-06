@@ -20,8 +20,8 @@ class _RecoveryRequestScreenState extends State<RecoveryRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
+      screenTitle: 'Initiate Recovery',
       appBar: AppBar(
-        title: const Text('Initiate Recovery'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),

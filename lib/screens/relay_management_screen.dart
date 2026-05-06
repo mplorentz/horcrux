@@ -187,8 +187,8 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
+      screenTitle: 'Relay Management',
       appBar: AppBar(
-        title: const Text('Relay Management'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [

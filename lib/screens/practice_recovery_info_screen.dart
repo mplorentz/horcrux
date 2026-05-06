@@ -24,8 +24,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
+      screenTitle: 'Practice Recovery',
       appBar: AppBar(
-        title: const Text('Practice Recovery'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),

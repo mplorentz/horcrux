@@ -93,11 +93,8 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false, // No back button
-        title: const Text('Account Created'),
-        centerTitle: false,
-      ),
+      screenTitle: 'Account Created',
+      appBar: AppBar(automaticallyImplyLeading: false),
       body: SafeArea(
         child: Column(
           children: [

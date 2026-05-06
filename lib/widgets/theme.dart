@@ -470,17 +470,19 @@ ThemeData horcrux3(Brightness brightness) {
       ),
     ),
 
-    // AppBar: stark, minimal
+    // AppBar: stark, minimal nav strip. The page title now lives in the
+    // body (rendered via HorcruxScreenTitle), so the bar only carries the
+    // back arrow and any actions. Option E for bead horcrux_app-dyc.
     appBarTheme: AppBarTheme(
       backgroundColor: scaffoldBg,
       foregroundColor: primaryText,
       elevation: 0,
       surfaceTintColor: Colors.transparent, // Prevent bluish tint when scrolling
-      toolbarHeight: 100.0,
-      titleSpacing: 32.0,
+      toolbarHeight: 52.0,
+      titleSpacing: 16.0,
       leadingWidth: 32.0,
       titleTextStyle: TextStyle(
-        fontSize: 40,
+        fontSize: 18,
         fontWeight: FontWeight.w500,
         fontFamily: 'Archivo',
         color: primaryText,

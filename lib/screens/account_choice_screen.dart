@@ -19,7 +19,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Setup'), centerTitle: false),
+      screenTitle: 'Setup',
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

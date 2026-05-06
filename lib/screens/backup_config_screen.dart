@@ -262,9 +262,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return HorcruxScaffold(
-        appBar: AppBar(title: const Text('Recovery Plan'), centerTitle: false),
-        body: const Center(child: CircularProgressIndicator()),
+      return const HorcruxScaffold(
+        screenTitle: 'Recovery Plan',
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -309,7 +309,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         }
       },
       child: HorcruxScaffold(
-        appBar: AppBar(title: const Text('Recovery Plan'), centerTitle: false),
+        screenTitle: 'Recovery Plan',
         body: Column(
           children: [
             Expanded(

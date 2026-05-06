@@ -24,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: false),
+      screenTitle: 'Settings',
       body: ListView(
         children: [
           ListTile(

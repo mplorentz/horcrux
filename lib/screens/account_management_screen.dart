@@ -194,10 +194,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     });
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Account Management'),
-        centerTitle: false,
-      ),
+      screenTitle: 'Account Management',
       body: SafeArea(
         child: Column(
           children: [

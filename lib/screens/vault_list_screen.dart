@@ -19,19 +19,16 @@ class VaultListScreen extends ConsumerWidget {
 
     return HorcruxScaffold(
       showNotificationBanner: true,
+      screenTitle: 'Horcrux',
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/icon/app_icon.png',
-              height: 40,
-              width: 40,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 8),
-            const Text('Horcrux'),
-          ],
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Image.asset(
+            'assets/icon/app_icon.png',
+            height: 24,
+            width: 24,
+            fit: BoxFit.contain,
+          ),
         ),
         centerTitle: false,
         actions: [

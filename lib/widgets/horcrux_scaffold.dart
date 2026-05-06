@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'horcrux_screen_title.dart';
 import 'recovery_request_banner.dart';
 
 /// Scaffold wrapper that automatically includes the recovery request banner
-/// below the AppBar when there are pending recovery requests
+/// below the AppBar when there are pending recovery requests.
+///
+/// For bead horcrux_app-dyc Option E, also supports a [screenTitle] field:
+/// when set, HorcruxScaffold renders a `HorcruxScreenTitle` at the top of
+/// the body (so the page title can wrap freely) and the AppBar becomes a
+/// slim nav strip carrying only the back button and any actions. If no
+/// [appBar] is provided alongside [screenTitle], a default `AppBar()` is
+/// used.
 class HorcruxScaffold extends ConsumerWidget {
   final PreferredSizeWidget? appBar;
+  final String? screenTitle;
   final Widget? body;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
@@ -30,6 +39,7 @@ class HorcruxScaffold extends ConsumerWidget {
   const HorcruxScaffold({
     super.key,
     this.appBar,
+    this.screenTitle,
     this.body,
     this.floatingActionButton,
     this.floatingActionButtonLocation,
@@ -54,9 +64,10 @@ class HorcruxScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final effectiveAppBar = appBar ?? (screenTitle != null ? AppBar() : null);
     return Scaffold(
-      appBar: appBar,
-      body: _buildBody(context, ref),
+      appBar: effectiveAppBar,
+      body: _buildBody(context, ref, effectiveAppBar),
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
       floatingActionButtonAnimator: floatingActionButtonAnimator,
@@ -78,16 +89,32 @@ class HorcruxScaffold extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref) {
-    if (!showNotificationBanner || appBar == null) {
-      return body ?? const SizedBox.shrink();
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    PreferredSizeWidget? effectiveAppBar,
+  ) {
+    Widget content = body ?? const SizedBox.shrink();
+
+    if (screenTitle != null) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          HorcruxScreenTitle(screenTitle!),
+          Expanded(child: content),
+        ],
+      );
     }
 
-    return Column(
-      children: [
-        const RecoveryRequestBanner(),
-        Expanded(child: body ?? const SizedBox.shrink()),
-      ],
-    );
+    if (showNotificationBanner && effectiveAppBar != null) {
+      content = Column(
+        children: [
+          const RecoveryRequestBanner(),
+          Expanded(child: content),
+        ],
+      );
+    }
+
+    return content;
   }
 }

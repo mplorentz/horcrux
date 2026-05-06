@@ -53,7 +53,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('New Vault'), centerTitle: false),
+      screenTitle: 'New Vault',
       body: Column(
         children: [
           Expanded(

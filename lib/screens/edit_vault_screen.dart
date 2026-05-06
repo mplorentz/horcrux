@@ -53,15 +53,15 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
   @override
   Widget build(BuildContext context) {
     if (_vault == null) {
-      return HorcruxScaffold(
-        appBar: AppBar(title: const Text('Vault Not Found')),
-        body: const Center(child: Text('This vault no longer exists.')),
+      return const HorcruxScaffold(
+        screenTitle: 'Vault Not Found',
+        body: Center(child: Text('This vault no longer exists.')),
       );
     }
 
     return HorcruxScaffold(
+      screenTitle: 'Edit Vault',
       appBar: AppBar(
-        title: const Text('Edit Vault'),
         centerTitle: false,
         actions: [
           TextButton(

@@ -25,9 +25,9 @@ class RecoveredContentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       showNotificationBanner: false,
+      screenTitle: 'Vault Contents',
       appBar: AppBar(
         centerTitle: false,
-        title: const Text('Vault Contents'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 6),

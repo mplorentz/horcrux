@@ -89,10 +89,7 @@ class _PushNotificationSettingsScreenState extends ConsumerState<PushNotificatio
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Push Notifications'),
-        centerTitle: false,
-      ),
+      screenTitle: 'Push Notifications',
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

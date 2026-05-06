@@ -16,15 +16,8 @@ class ImportSuccessScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false, // No back button
-        title: const Text(
-          'Account Imported Successfully',
-          maxLines: 2,
-          overflow: TextOverflow.visible,
-        ),
-        centerTitle: false,
-      ),
+      screenTitle: 'Account Imported Successfully',
+      appBar: AppBar(automaticallyImplyLeading: false),
       body: SafeArea(
         child: Column(
           children: [

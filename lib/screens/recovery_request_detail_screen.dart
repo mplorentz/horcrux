@@ -197,14 +197,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultAsync = ref.watch(vaultProvider(request.vaultId));
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Recovery Request',
-          overflow: TextOverflow.visible,
-          maxLines: 2,
-        ),
-        centerTitle: false,
-      ),
+      screenTitle: 'Recovery Request',
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : vaultAsync.when(

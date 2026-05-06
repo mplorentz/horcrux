@@ -50,12 +50,12 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
 
     return vaultAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Loading...'), centerTitle: false),
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => const HorcruxScaffold(
+        screenTitle: 'Loading...',
+        body: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Error'), centerTitle: false),
+      error: (error, stack) => HorcruxScaffold(
+        screenTitle: 'Error',
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -74,12 +74,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       ),
       data: (vault) {
         if (vault == null) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Vault Not Found'),
-              centerTitle: false,
-            ),
-            body: const Center(child: Text('This vault no longer exists.')),
+          return const HorcruxScaffold(
+            screenTitle: 'Vault Not Found',
+            body: Center(child: Text('This vault no longer exists.')),
           );
         }
 
@@ -116,8 +113,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
   ) {
     return HorcruxScaffold(
       showNotificationBanner: true,
+      screenTitle: vault.name,
       appBar: AppBar(
-        title: Text(vault.name),
         centerTitle: false,
         actions: [
           currentPubkeyAsync.when(

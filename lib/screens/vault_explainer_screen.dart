@@ -22,7 +22,7 @@ class VaultExplainerScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Create Vault'), centerTitle: false),
+      screenTitle: 'Create Vault',
       body: Column(
         children: [
           Expanded(

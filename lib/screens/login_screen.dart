@@ -117,10 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Login with Nostr Key'),
-        centerTitle: false,
-      ),
+      screenTitle: 'Login with Nostr Key',
       body: SafeArea(
         child: Column(
           children: [

@@ -19,8 +19,8 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
       builder: (context) {
         final cs = Theme.of(context).colorScheme;
         return HorcruxScaffold(
+          screenTitle: 'UI Component Gallery',
           appBar: AppBar(
-            title: const Text('UI Component Gallery'),
             actions: [
               PopupMenuButton(
                 itemBuilder: (_) => const [

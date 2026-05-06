@@ -82,14 +82,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     requestAsync.whenData(_scheduleAlreadyEndedAlertIfNeeded);
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Recovering Vault',
-          maxLines: 2,
-          overflow: TextOverflow.visible,
-        ),
-        centerTitle: false,
-      ),
+      screenTitle: 'Recovering Vault',
       body: requestAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
