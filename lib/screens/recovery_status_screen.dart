@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
@@ -400,9 +401,11 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(dialogContext);
+                    // Cupertino route gives a slide-from-right push that animates
+                    // on macOS desktop too; MaterialPageRoute is near-static there.
                     Navigator.push<void>(
                       context,
-                      MaterialPageRoute<void>(
+                      CupertinoPageRoute<void>(
                         builder: (_) => RecoveredContentScreen(content: content),
                       ),
                     );
