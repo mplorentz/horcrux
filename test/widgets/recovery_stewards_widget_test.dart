@@ -15,7 +15,7 @@ void main() {
   final testPubkey2 = 'b' * 64;
   final testPubkey3 = 'c' * 64;
 
-  testWidgets('shows Pending Response when stewards have not responded', (tester) async {
+  testWidgets('shows Awaiting Response when stewards have not responded', (tester) async {
     final request = RecoveryRequest(
       id: 'test-request',
       vaultId: 'test-vault',
@@ -67,7 +67,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Pending Response'), findsNWidgets(2));
+    expect(find.text('Awaiting Response'), findsNWidgets(2));
 
     container.dispose();
   });

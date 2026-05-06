@@ -64,7 +64,7 @@ extension RecoveryResponseStatusExtension on RecoveryResponseStatus {
   String get displayName {
     switch (this) {
       case RecoveryResponseStatus.pending:
-        return 'Pending Response';
+        return 'Awaiting Response';
       case RecoveryResponseStatus.approved:
         return 'Approved';
       case RecoveryResponseStatus.denied:
