@@ -39,6 +39,7 @@ dependencies:
   drift: ^2.20.0
   sqlite3_flutter_libs: ^0.5.24
   sqlcipher_flutter_libs: ^0.6.4
+  share_plus: ^12.0.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
