@@ -108,47 +108,6 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  /// Vault detail body: scrollable main column with a pinned action stack.
-  ///
-  /// Uses [Flexible] with [FlexFit.loose] so short content does not force the scroll
-  /// viewport to fill all space above the footer (which looked like a huge gap on tall
-  /// iPhones). Extra height stays below the button stack.
-  Widget _vaultDetailScrollBody(BuildContext context, Vault vault) {
-    final theme = Theme.of(context);
-    final backgroundColor = vault.state == VaultState.awaitingShard
-        ? theme.scaffoldBackgroundColor
-        : theme.colorScheme.surfaceContainer;
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-
-    return Container(
-      color: backgroundColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Flexible(
-            fit: FlexFit.loose,
-            child: ListView(
-              shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                VaultOwnerDisplay(vault: vault),
-                VaultStatusBanner(vault: vault),
-                Container(
-                  color: theme.colorScheme.surfaceContainer,
-                  child: StewardList(vaultId: vault.id),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            color: scaffoldBg,
-            child: VaultDetailButtonStack(vaultId: vault.id),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildScaffold(
     BuildContext context,
     WidgetRef ref,
@@ -216,7 +175,63 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           ),
         ],
       ),
-      body: _vaultDetailScrollBody(context, vault),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Determine background color based on vault state
+          // We are doing some stupidly complex background color logic here to make the screen
+          // look nice in all the various states.
+          final backgroundColor = vault.state == VaultState.awaitingShard
+              ? Theme.of(context).scaffoldBackgroundColor
+              : Theme.of(context).colorScheme.surfaceContainer;
+
+          return Container(
+            color: backgroundColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Scrollable content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: LayoutBuilder(
+                      builder: (context, _) {
+                        // For awaitingShard state, fill remaining space with darker background
+                        final isAwaitingShard = vault.state == VaultState.awaitingShard;
+                        final viewportHeight = constraints.maxHeight;
+
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: isAwaitingShard ? viewportHeight : 0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Owner display above status banner
+                              VaultOwnerDisplay(vault: vault),
+                              // Status banner showing recovery readiness
+                              VaultStatusBanner(vault: vault),
+                              // Steward List (extends to edges)
+                              Container(
+                                color: Theme.of(context).colorScheme.surfaceContainer,
+                                child: StewardList(vaultId: vault.id),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                // Fixed buttons at bottom
+                // Always use scaffoldBackgroundColor behind buttons for consistent appearance
+                Container(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: VaultDetailButtonStack(vaultId: vault.id),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
