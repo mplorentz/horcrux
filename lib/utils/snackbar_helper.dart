@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 
@@ -15,12 +16,48 @@ enum HorcruxSnackKind {
 }
 
 /// Shows horcrux-styled toasts in an [Overlay] below the status bar / notch.
-/// They stay at the **top** of the screen and may overlap [Scaffold.appBar].
+/// Top inset uses [MediaQuery.viewPadding] plus [MediaQueryData.displayFeatures]
+/// ([DisplayFeatureType.cutout]) so desktop windows without a cutout get extra
+/// spacing; phones with notches rely on OS-reported padding.
+/// They may overlap [Scaffold.appBar].
 /// ([SnackBarBehavior.floating] is bottom-anchored in the scaffold and does not
 /// reliably honor vertical margins with Material 3.)
 abstract final class HorcruxSnackBar {
   static OverlayEntry? _activeEntry;
   static Timer? _activeTimer;
+
+  /// True when the platform reports a display cutout overlapping the top band
+  /// (notch / camera hole / Dynamic Island region).
+  static bool _hasTopCutout(MediaQueryData mq) {
+    for (final feature in mq.displayFeatures) {
+      if (feature.type != DisplayFeatureType.cutout) {
+        continue;
+      }
+      final b = feature.bounds;
+      if (b.width <= 0 || b.height <= 0) {
+        continue;
+      }
+      if (b.top < 48 && b.bottom > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Distance from the top of the view to place the toast (logical px).
+  static double _toastTopPx(MediaQueryData mq) {
+    const gapBelowSafeArea = 8.0;
+    const extraWhenNoTopObstruction = 14.0;
+    final vpTop = mq.viewPadding.top;
+    final cutout = _hasTopCutout(mq);
+    // Handheld notches and status bars usually set viewPadding.top (often ≥24).
+    // Cutouts are also listed on many Android devices even when padding tracks them.
+    if (vpTop >= 12 || cutout) {
+      return vpTop + gapBelowSafeArea;
+    }
+    // macOS / Windows / Linux windows: no inset — breathe away from the title bar.
+    return vpTop + gapBelowSafeArea + extraWhenNoTopObstruction;
+  }
 
   static void _finishCurrent() {
     _activeTimer?.cancel();
@@ -110,7 +147,7 @@ abstract final class HorcruxSnackBar {
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) => Positioned(
-        top: mq.viewPadding.top + 8,
+        top: _toastTopPx(mq),
         left: 16,
         right: 16,
         child: Semantics(
