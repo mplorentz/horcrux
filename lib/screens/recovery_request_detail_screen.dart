@@ -25,6 +25,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
   bool _isLoading = false;
   String? _currentPubkey;
 
+  /// Only explicit steward decisions should block re-entry/duplicate actions.
+  bool _isFinalStewardDecision(RecoveryResponseStatus status) {
+    return status == RecoveryResponseStatus.approved || status == RecoveryResponseStatus.denied;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,10 +44,39 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         setState(() {
           _currentPubkey = pubkey;
         });
+        final existingResponse = widget.recoveryRequest.stewardResponses[pubkey];
+        if (existingResponse != null && _isFinalStewardDecision(existingResponse.status)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showAlreadyRespondedDialog(existingResponse.status);
+          });
+        }
       }
     } catch (e) {
       Log.error('Error loading current pubkey', e);
     }
+  }
+
+  Future<void> _showAlreadyRespondedDialog(RecoveryResponseStatus responseStatus) async {
+    final action = switch (responseStatus) {
+      RecoveryResponseStatus.approved => 'approved',
+      RecoveryResponseStatus.denied => 'denied',
+      _ => 'responded to',
+    };
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Already Responded'),
+        content: Text('You already $action this recovery request.'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _respondToRequest(RecoveryResponseStatus status) async {
@@ -186,6 +220,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     RecoveryRequest request,
     Vault? vault,
   ) {
+    final currentResponseStatus =
+        _currentPubkey == null ? null : request.stewardResponses[_currentPubkey]?.status;
+    final hasFinalResponse =
+        currentResponseStatus != null && _isFinalStewardDecision(currentResponseStatus);
+
     final initiatorName = displayNameFromPubkeyOrNull(vault, request.initiatorPubkey);
 
     // Get instructions from vault
@@ -419,7 +458,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         ),
 
         // Action buttons (RowButtonStack at bottom)
-        if (request.status.isActive)
+        if (request.status.isActive && !hasFinalResponse)
           RowButtonStack(
             buttons: [
               RowButtonConfig(
