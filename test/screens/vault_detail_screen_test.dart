@@ -457,4 +457,195 @@ void main() {
       },
     );
   });
+
+  // horcrux_app-3u7: while ANY recovery (practice or real, any initiator) is
+  // active on a vault, the owner must not be able to "Change Vault Contents"
+  // or "Change Recovery Plan" -- both trigger key redistribution, which races
+  // with the in-flight recovery (stewards getting new shards while old shards
+  // are being requested of them).
+  group('Owner edit actions blocked while recovery is in progress', () {
+    Future<ProviderContainer> pumpVaultWithActiveRecovery(
+      WidgetTester tester, {
+      required RecoveryRequest request,
+      required Vault vault,
+    }) async {
+      final container = ProviderContainer(
+        overrides: [
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+          recoveryStatusProvider.overrideWith((ref, vaultId) {
+            return AsyncValue.data(
+              RecoveryStatus(
+                hasActiveRecovery: true,
+                canRecover: false,
+                activeRecoveryRequest: request,
+                isInitiator: request.initiatorPubkey == testPubkey,
+              ),
+            );
+          }),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    Vault buildOwnerVaultWithRequest(RecoveryRequest request) {
+      return Vault(
+        id: 'test-vault',
+        name: 'Test Vault',
+        content: 'Secret content',
+        createdAt: DateTime(2024, 1, 1),
+        ownerPubkey: testPubkey,
+        shards: const [],
+        recoveryRequests: [request],
+      );
+    }
+
+    testWidgets(
+      'tapping Change Vault Contents during a real recovery shows the in-progress dialog',
+      (tester) async {
+        final request = RecoveryRequest(
+          id: 'real-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: otherPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.inProgress,
+          threshold: 1,
+        );
+        final container = await pumpVaultWithActiveRecovery(
+          tester,
+          request: request,
+          vault: buildOwnerVaultWithRequest(request),
+        );
+
+        await tester.tap(find.text('Change Vault Contents'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Recovery in progress'), findsOneWidget);
+        expect(find.text('Edit Vault'), findsNothing);
+
+        container.dispose();
+      },
+    );
+
+    testWidgets(
+      'tapping Change Recovery Plan during a practice recovery shows the in-progress dialog',
+      (tester) async {
+        final request = RecoveryRequest(
+          id: 'practice-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: otherPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.inProgress,
+          threshold: 1,
+          isPractice: true,
+        );
+        final container = await pumpVaultWithActiveRecovery(
+          tester,
+          request: request,
+          vault: buildOwnerVaultWithRequest(request),
+        );
+
+        await tester.tap(find.text('Change Recovery Plan'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Recovery in progress'), findsOneWidget);
+
+        container.dispose();
+      },
+    );
+
+    testWidgets(
+      'edits stay blocked even when the active recovery belongs to another initiator',
+      (tester) async {
+        final request = RecoveryRequest(
+          id: 'other-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: otherPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.inProgress,
+          threshold: 1,
+        );
+        final container = await pumpVaultWithActiveRecovery(
+          tester,
+          request: request,
+          vault: buildOwnerVaultWithRequest(request),
+        );
+
+        await tester.tap(find.text('Change Recovery Plan'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Recovery in progress'), findsOneWidget);
+
+        container.dispose();
+      },
+    );
+
+    testWidgets(
+      'edits are allowed once the recovery has reached a terminal status',
+      (tester) async {
+        final cancelledRequest = RecoveryRequest(
+          id: 'cancelled-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: otherPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.cancelled,
+          threshold: 1,
+        );
+        final vault = Vault(
+          id: 'test-vault',
+          name: 'Test Vault',
+          content: 'Secret content',
+          createdAt: DateTime(2024, 1, 1),
+          ownerPubkey: testPubkey,
+          shards: const [],
+          recoveryRequests: [cancelledRequest],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+            recoveryStatusProvider.overrideWith((ref, vaultId) {
+              return const AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: false,
+                  canRecover: false,
+                  activeRecoveryRequest: null,
+                  isInitiator: false,
+                ),
+              );
+            }),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Change Recovery Plan'));
+        // Use pump() rather than pumpAndSettle(): the destination screen
+        // (BackupConfigScreen) has its own ongoing async work (relay
+        // subscriptions etc.) that never quiesces in widget tests. We only
+        // care that the recovery-in-progress dialog does NOT appear.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Recovery in progress'), findsNothing);
+
+        container.dispose();
+      },
+    );
+  });
 }
