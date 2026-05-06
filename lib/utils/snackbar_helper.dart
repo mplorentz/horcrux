@@ -82,6 +82,49 @@ abstract final class HorcruxSnackBar {
     });
   }
 
+  /// Whether the message (+ optional action) fits on one row within
+  /// [maxInnerWidth] so the toast can shrink-wrap and stay centered.
+  static bool _toastFitsCompactSingleLine({
+    required String message,
+    required TextStyle textStyle,
+    required double maxInnerWidth,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    SnackBarAction? action,
+    required Color actionForeground,
+    required ThemeData theme,
+  }) {
+    if (maxInnerWidth <= 0 || message.contains('\n')) {
+      return false;
+    }
+
+    final msgPainter = TextPainter(
+      text: TextSpan(text: message, style: textStyle),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout(maxWidth: double.infinity);
+
+    var total = msgPainter.width;
+    if (action != null) {
+      final labelStyle =
+          theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+      final actionPainter = TextPainter(
+        text: TextSpan(
+          text: action.label,
+          style: labelStyle.copyWith(color: actionForeground),
+        ),
+        textDirection: textDirection,
+        textScaler: textScaler,
+        maxLines: 1,
+      )..layout(maxWidth: double.infinity);
+      // Row gap + TextButton horizontal padding slack vs bare label width.
+      total += 8 + actionPainter.width + 28;
+    }
+
+    return total <= maxInnerWidth + 0.5;
+  }
+
   /// Shows a toast via [Overlay]. Prefer [BuildContext.showHorcruxSnackBar].
   static void show(
     BuildContext context, {
@@ -151,42 +194,82 @@ abstract final class HorcruxSnackBar {
 
     late OverlayEntry entry;
     entry = OverlayEntry(
-      builder: (ctx) => Positioned(
-        top: _toastTopPx(mq),
-        left: 32,
-        right: 32,
-        child: Semantics(
-          container: true,
-          liveRegion: true,
-          child: Material(
-            elevation: snackBarTheme.elevation ?? 2,
-            surfaceTintColor: Colors.transparent,
-            color: backgroundColor,
-            shape: shape,
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(child: Text(message, style: textStyle)),
-                  if (action != null)
-                    TextButton(
-                      onPressed: () {
-                        action.onPressed();
-                        if (_activeEntry == entry) {
-                          _finishCurrent();
-                        }
-                      },
+      builder: (ctx) {
+        const horizontalToastMargin = 32.0;
+        const horizontalContentPadding = 16.0;
+
+        return Positioned(
+          top: _toastTopPx(mq),
+          left: horizontalToastMargin,
+          right: horizontalToastMargin,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxInnerWidth = constraints.maxWidth - 2 * horizontalContentPadding;
+              final compact = _toastFitsCompactSingleLine(
+                message: message,
+                textStyle: textStyle,
+                maxInnerWidth: maxInnerWidth,
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+                action: action,
+                actionForeground: actionForeground,
+                theme: theme,
+              );
+
+              void onActionPressed() {
+                action?.onPressed();
+                if (_activeEntry == entry) {
+                  _finishCurrent();
+                }
+              }
+
+              final actionButton = action == null
+                  ? null
+                  : TextButton(
+                      onPressed: onActionPressed,
                       style: TextButton.styleFrom(foregroundColor: actionForeground),
                       child: Text(action.label),
-                    ),
-                ],
-              ),
-            ),
+                    );
+
+              final paddedRow = Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalContentPadding,
+                  vertical: 14,
+                ),
+                child: Row(
+                  mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (compact)
+                      Text(message, style: textStyle)
+                    else
+                      Expanded(child: Text(message, style: textStyle)),
+                    if (actionButton != null) ...[
+                      if (compact) const SizedBox(width: 8),
+                      actionButton,
+                    ],
+                  ],
+                ),
+              );
+
+              final material = Material(
+                elevation: snackBarTheme.elevation ?? 2,
+                surfaceTintColor: Colors.transparent,
+                color: backgroundColor,
+                shape: shape,
+                clipBehavior: Clip.antiAlias,
+                child: paddedRow,
+              );
+
+              return Semantics(
+                container: true,
+                liveRegion: true,
+                child: compact ? Align(alignment: Alignment.center, child: material) : material,
+              );
+            },
           ),
-        ),
-      ),
+        );
+      },
     );
 
     _activeEntry = entry;
