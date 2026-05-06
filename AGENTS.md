@@ -339,9 +339,20 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 ### Key gotchas
 
 - **gcc-12 is required**: `linux/CMakeLists.txt` pins `gcc-12`/`g++-12`. The system also has gcc-13 but the Flutter Linux build will fail without gcc-12/g++-12 specifically installed.
+- **libssl-dev is required**: The `sqlcipher_flutter_libs` package needs OpenSSL development headers (`libssl-dev`) to compile. Without it, the CMake build fails with "Could NOT find OpenSSL".
+- **libsqlite3-dev is required for tests**: The drift database unit tests (`test/database/app_database_test.dart`) need `libsqlite3.so` to run in-memory SQLite. Install `libsqlite3-dev`.
 - **Golden tests skip on Linux**: Golden screenshot tests are macOS-only (rendering differs). Always use `--exclude-tags=golden` when running tests on Linux: `flutter test --exclude-tags=golden`
 - **gnome-keyring must be unlocked** before the app starts, otherwise `flutter_secure_storage` will crash. The empty-password unlock shown above is sufficient for dev/test.
 - **Hot reload**: Send `SIGUSR1` to the Flutter process, or type `r` in the `flutter run` terminal.
+
+### Beads (bd) issue tracker
+
+`bd` (beads) v1.0.3 is installed at `/usr/local/bin/bd`. The project's issue database lives on a remote Dolt SQL server (`dolt.lorentz.is:3307`, database `horcrux_app`). To connect:
+
+- The `BEADS_DOLT_PASSWORD` secret must be set (Cursor secret for user `cursor_cloud`)
+- After `bd init` in server mode, `bd` connects to the remote Dolt server directly
+- Run `bd prime` at session start to load workflow context
+- Init command (run once per fresh VM): `BEADS_DOLT_PASSWORD="$BEADS_DOLT_PASSWORD" bd init --non-interactive --server --server-host=dolt.lorentz.is --server-port=3307 --server-user=cursor_cloud --external --database=horcrux_app --prefix=horcrux_app --skip-agents --skip-hooks`
 
 ### MCP servers
 
