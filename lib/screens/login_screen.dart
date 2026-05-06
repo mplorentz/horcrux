@@ -5,6 +5,7 @@ import '../providers/key_provider.dart';
 import '../utils/validators.dart';
 import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_app_bar_title.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../screens/import_success_screen.dart';
 
@@ -118,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return HorcruxScaffold(
       appBar: AppBar(
-        title: const Text('Login with Nostr Key'),
+        title: const HorcruxAppBarTitle('Login with Nostr Key'),
         centerTitle: false,
       ),
       body: SafeArea(
