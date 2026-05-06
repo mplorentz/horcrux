@@ -345,6 +345,15 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 - **gnome-keyring must be unlocked** before the app starts, otherwise `flutter_secure_storage` will crash. The empty-password unlock shown above is sufficient for dev/test.
 - **Hot reload**: Send `SIGUSR1` to the Flutter process, or type `r` in the `flutter run` terminal.
 
+### Beads (bd) issue tracker
+
+`bd` (beads) v1.0.3 is installed at `/usr/local/bin/bd`. The project's issue database lives on a remote Dolt SQL server (`dolt.lorentz.is:3307`, database `horcrux_app`). To connect:
+
+- Set the `BEADS_DOLT_PASSWORD` environment variable (configured as a Cursor secret)
+- The config in `.beads/config.yaml` specifies user `hudson` and the server coordinates
+- Run `bd prime` at session start to load workflow context
+- If the server is unreachable, `bd` falls back to the local embedded database (which may be empty)
+
 ### MCP servers
 
 - **Marionette MCP**: `marionette_mcp` (Dart global activation, on PATH via `~/.pub-cache/bin`). Configured in `.cursor/mcp.json`.
