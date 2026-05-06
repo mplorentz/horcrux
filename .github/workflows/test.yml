@@ -70,8 +70,16 @@ jobs:
       - name: Analyze code
         run: flutter analyze
       
+      - name: Verify drift schema dump is up to date
+        # Re-runs `dart run drift_dev schema dump` and diffs against the
+        # committed `drift_schemas/`. If this fails, the developer changed a
+        # drift table without updating the dump (and likely without bumping
+        # AppDatabase.schemaVersion / adding a migration).
+        run: flutter test test/database/schema_parity_test.dart
+
       - name: Run unit tests
-        run: flutter test --exclude-tags=golden
+        # Exclude drift-schema: schema parity runs in "Verify drift schema dump" (shells drift_dev).
+        run: flutter test --exclude-tags=golden,drift-schema
       
       - name: Run golden tests
         run: flutter test --tags=golden
