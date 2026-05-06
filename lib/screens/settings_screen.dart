@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/debug_info_sheet.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'account_management_screen.dart';
 import 'push_notification_settings_screen.dart';
@@ -24,7 +25,7 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Settings'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'Settings'),
       body: ListView(
         children: [
           ListTile(
@@ -36,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: Icon(Icons.person, color: theme.colorScheme.onSurface),
             ),
-            title: const Text('Account Management'),
+            title: const Text('Account'),
             subtitle: const Text('View your Nostr ID and manage your account'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -58,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               child: Icon(Icons.wifi, color: theme.colorScheme.onSurface),
             ),
-            title: const Text('Relay Management'),
+            title: const Text('Relays'),
             subtitle: const Text('Configure and manage Nostr relays'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
@@ -83,7 +84,7 @@ class SettingsScreen extends ConsumerWidget {
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            title: const Text('Push Notifications'),
+            title: const Text('Notifications'),
             subtitle: const Text(
               'Opt in and choose which vaults trigger alerts',
             ),

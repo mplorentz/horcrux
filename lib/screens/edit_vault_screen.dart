@@ -5,6 +5,7 @@ import '../providers/vault_provider.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Edit existing vault screen
@@ -54,16 +55,15 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
   @override
   Widget build(BuildContext context) {
     if (_vault == null) {
-      return HorcruxScaffold(
-        appBar: AppBar(title: const Text('Vault Not Found')),
-        body: const Center(child: Text('This vault no longer exists.')),
+      return const HorcruxScaffold(
+        appBar: HorcruxAppBar(title: 'Vault Not Found'),
+        body: Center(child: Text('This vault no longer exists.')),
       );
     }
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Edit Vault'),
-        centerTitle: false,
+      appBar: HorcruxAppBar(
+        title: 'Edit Vault',
         actions: [
           TextButton(
             onPressed: () => _saveVault(),
@@ -96,7 +96,7 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
     if (savedId != null && mounted) {
       Navigator.pop(context);
       context.showHorcruxSnackBar(
-        'Vault "${_nameController.text.trim()}" updated successfully!',
+        'Vault saved.',
         kind: HorcruxSnackKind.success,
       );
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Full-screen view of recovered vault plaintext with copy support.
@@ -25,9 +26,8 @@ class RecoveredContentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       showNotificationBanner: false,
-      appBar: AppBar(
-        centerTitle: false,
-        title: const Text('Vault Contents'),
+      appBar: HorcruxAppBar(
+        title: 'Vault Contents',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 6),

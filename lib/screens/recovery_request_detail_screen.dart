@@ -9,6 +9,7 @@ import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../utils/nostr_display.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../utils/snackbar_helper.dart';
 
@@ -196,14 +197,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultAsync = ref.watch(vaultProvider(request.vaultId));
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Recovery Request',
-          overflow: TextOverflow.visible,
-          maxLines: 2,
-        ),
-        centerTitle: false,
-      ),
+      appBar: const HorcruxAppBar(title: 'Recovery Request'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : vaultAsync.when(

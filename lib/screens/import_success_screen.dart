@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
@@ -16,14 +17,9 @@ class ImportSuccessScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false, // No back button
-        title: const Text(
-          'Account Imported Successfully',
-          maxLines: 2,
-          overflow: TextOverflow.visible,
-        ),
-        centerTitle: false,
+      appBar: const HorcruxAppBar(
+        title: 'Welcome',
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: Column(

@@ -5,6 +5,7 @@ import '../utils/app_initialization.dart';
 import '../screens/account_created_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/vault_list_screen.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen allowing users to choose how to set up their account
@@ -19,7 +20,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Setup'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'Setup'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

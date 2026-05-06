@@ -9,6 +9,7 @@ import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../widgets/row_button.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
@@ -185,10 +186,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
     });
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Account Management'),
-        centerTitle: false,
-      ),
+      appBar: const HorcruxAppBar(title: 'Account'),
       body: SafeArea(
         bottom: false, // RowButton handles bottom inset via addBottomSafeArea
         child: Column(
