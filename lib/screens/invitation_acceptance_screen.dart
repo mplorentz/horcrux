@@ -38,7 +38,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
-      appBar: const HorcruxAppBar(title: 'Invitation'),
+      appBar: const HorcruxAppBar(title: 'Vault Invitation'),
       body: invitationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Padding(
@@ -110,6 +110,10 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   ) {
     final canAct = invitation.status.canRedeem && !_isProcessing;
     final isTerminal = invitation.status.isTerminal;
+    final trimmedOwnerName = invitation.ownerName?.trim();
+    final ownerHeadlineLabel = (trimmedOwnerName != null && trimmedOwnerName.isNotEmpty)
+        ? trimmedOwnerName
+        : 'The vault owner';
 
     return Column(
       children: [
@@ -156,14 +160,18 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
                 // Title
                 Text(
-                  'You\'ve been invited',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  '$ownerHeadlineLabel is asking you to steward their vault.',
+                  style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 8),
 
                 // Explainer text
                 Text(
-                  'Accepting this invitation will grant you a single key to this vault. You\'ll then be able to recover the vault in coordination with the other vault stewards.',
+                  'Stewardship means you will store one key to their vault on '
+                  'this device. The vault requires multiple keys to open. If the '
+                  'vault ever needs to be opened you\'ll be asked to provide your '
+                  'key. If you accept, it\'s important that you keep Horcrux '
+                  'installed and up to date - especially when you get a new phone.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,
@@ -194,7 +202,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 // Invitee name (if provided)
                 if (invitation.inviteeName != null) ...[
                   Text(
-                    'Invited as',
+                    'To',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(
                             context,
@@ -214,7 +222,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 // Vault name (if available)
                 if (invitation.vaultName != defaultVaultName) ...[
                   Text(
-                    'Vault',
+                    'Vault Name',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(
                             context,
