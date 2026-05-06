@@ -26,6 +26,9 @@ abstract final class HorcruxSnackBar {
   static OverlayEntry? _activeEntry;
   static Timer? _activeTimer;
 
+  /// Runs slide-out + fade, then removes the overlay entry. Cleared on immediate teardown.
+  static VoidCallback? _animatedDismiss;
+
   /// True when the platform reports a display cutout overlapping the top band
   /// (notch / camera hole / Dynamic Island region).
   static bool _hasTopCutout(MediaQueryData mq) {
@@ -59,9 +62,11 @@ abstract final class HorcruxSnackBar {
     return vpTop + gapBelowSafeArea + extraWhenNoTopObstruction;
   }
 
-  static void _finishCurrent() {
+  /// Removes the active toast immediately (e.g. replaced by a new one).
+  static void _finishImmediate() {
     _activeTimer?.cancel();
     _activeTimer = null;
+    _animatedDismiss = null;
     final entry = _activeEntry;
     _activeEntry = null;
     // [OverlayEntry.remove] asserts a non-null overlay link; if the overlay was
@@ -72,13 +77,26 @@ abstract final class HorcruxSnackBar {
     }
   }
 
+  /// Plays exit animation then removes the overlay entry.
+  static void _requestAnimatedDismiss() {
+    _activeTimer?.cancel();
+    _activeTimer = null;
+    final dismiss = _animatedDismiss;
+    _animatedDismiss = null;
+    if (dismiss != null) {
+      dismiss();
+    } else if (_activeEntry != null) {
+      _finishImmediate();
+    }
+  }
+
   static void _scheduleAutoDismiss(OverlayEntry entry, Duration duration) {
     _activeTimer?.cancel();
     _activeTimer = Timer(duration, () {
       if (_activeEntry != entry) {
         return;
       }
-      _finishCurrent();
+      _requestAnimatedDismiss();
     });
   }
 
@@ -138,8 +156,9 @@ abstract final class HorcruxSnackBar {
     final cs = theme.colorScheme;
     final mq = MediaQuery.of(context);
 
-    final defaultDuration =
-        kind == HorcruxSnackKind.error ? const Duration(seconds: 5) : const Duration(seconds: 4);
+    final defaultDuration = kind == HorcruxSnackKind.error
+        ? const Duration(milliseconds: 2500)
+        : const Duration(seconds: 2);
     final effectiveDuration = duration ?? defaultDuration;
 
     final Color backgroundColor;
@@ -190,45 +209,185 @@ abstract final class HorcruxSnackBar {
       return;
     }
 
-    _finishCurrent();
+    _finishImmediate();
 
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) {
         const horizontalToastMargin = 32.0;
-        const horizontalContentPadding = 16.0;
 
         return Positioned(
           top: _toastTopPx(mq),
           left: horizontalToastMargin,
           right: horizontalToastMargin,
+          child: _HorcruxOverlayToast(
+            entry: entry,
+            message: message,
+            textStyle: textStyle,
+            theme: theme,
+            shape: shape,
+            snackBarTheme: snackBarTheme,
+            backgroundColor: backgroundColor,
+            actionForeground: actionForeground,
+            action: action,
+          ),
+        );
+      },
+    );
+
+    _activeEntry = entry;
+    overlay.insert(entry);
+    _scheduleAutoDismiss(entry, effectiveDuration);
+  }
+}
+
+/// Slide + fade from above; registers [HorcruxSnackBar._animatedDismiss] for timed/action dismiss.
+class _HorcruxOverlayToast extends StatefulWidget {
+  const _HorcruxOverlayToast({
+    required this.entry,
+    required this.message,
+    required this.textStyle,
+    required this.theme,
+    required this.shape,
+    required this.snackBarTheme,
+    required this.backgroundColor,
+    required this.actionForeground,
+    required this.action,
+  });
+
+  final OverlayEntry entry;
+  final String message;
+  final TextStyle textStyle;
+  final ThemeData theme;
+  final ShapeBorder shape;
+  final SnackBarThemeData snackBarTheme;
+  final Color backgroundColor;
+  final Color actionForeground;
+  final SnackBarAction? action;
+
+  @override
+  State<_HorcruxOverlayToast> createState() => _HorcruxOverlayToastState();
+}
+
+class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
+    with SingleTickerProviderStateMixin {
+  static const horizontalContentPadding = 16.0;
+
+  final UniqueKey _dismissKey = UniqueKey();
+
+  late AnimationController _controller;
+  late Animation<Offset> _slide;
+  late Animation<double> _fade;
+  late VoidCallback _boundDismiss;
+  bool _isExiting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _boundDismiss = _startDismiss;
+    HorcruxSnackBar._animatedDismiss = _boundDismiss;
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
+      HorcruxSnackBar._animatedDismiss = null;
+    }
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _cancelAutoDismissTimer() {
+    HorcruxSnackBar._activeTimer?.cancel();
+    HorcruxSnackBar._activeTimer = null;
+  }
+
+  void _startDismiss() {
+    if (_isExiting || !mounted) {
+      return;
+    }
+    _isExiting = true;
+    _cancelAutoDismissTimer();
+    if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
+      HorcruxSnackBar._animatedDismiss = null;
+    }
+    _controller.reverse().then((_) {
+      if (!mounted) {
+        return;
+      }
+      HorcruxSnackBar._activeEntry = null;
+      widget.entry.remove();
+    });
+  }
+
+  /// Swipe-away: [Dismissible] already animated the child off-screen.
+  void _finishDismissFromSwipe() {
+    if (_isExiting) {
+      return;
+    }
+    _isExiting = true;
+    _cancelAutoDismissTimer();
+    if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
+      HorcruxSnackBar._animatedDismiss = null;
+    }
+    _controller.stop();
+    HorcruxSnackBar._activeEntry = null;
+    widget.entry.remove();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slide,
+      child: FadeTransition(
+        opacity: _fade,
+        child: Dismissible(
+          key: _dismissKey,
+          direction: DismissDirection.up,
+          movementDuration: const Duration(milliseconds: 220),
+          dismissThresholds: const {DismissDirection.up: 0.12},
+          confirmDismiss: (_) async {
+            _cancelAutoDismissTimer();
+            return true;
+          },
+          onDismissed: (_) => _finishDismissFromSwipe(),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxInnerWidth = constraints.maxWidth - 2 * horizontalContentPadding;
-              final compact = _toastFitsCompactSingleLine(
-                message: message,
-                textStyle: textStyle,
+              final compact = HorcruxSnackBar._toastFitsCompactSingleLine(
+                message: widget.message,
+                textStyle: widget.textStyle,
                 maxInnerWidth: maxInnerWidth,
                 textDirection: Directionality.of(context),
                 textScaler: MediaQuery.textScalerOf(context),
-                action: action,
-                actionForeground: actionForeground,
-                theme: theme,
+                action: widget.action,
+                actionForeground: widget.actionForeground,
+                theme: widget.theme,
               );
 
               void onActionPressed() {
-                action?.onPressed();
-                if (_activeEntry == entry) {
-                  _finishCurrent();
+                widget.action?.onPressed();
+                if (HorcruxSnackBar._activeEntry == widget.entry) {
+                  HorcruxSnackBar._requestAnimatedDismiss();
                 }
               }
 
-              final actionButton = action == null
+              final actionButton = widget.action == null
                   ? null
                   : TextButton(
                       onPressed: onActionPressed,
-                      style: TextButton.styleFrom(foregroundColor: actionForeground),
-                      child: Text(action.label),
+                      style: TextButton.styleFrom(foregroundColor: widget.actionForeground),
+                      child: Text(widget.action!.label),
                     );
 
               final paddedRow = Padding(
@@ -241,9 +400,9 @@ abstract final class HorcruxSnackBar {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (compact)
-                      Text(message, style: textStyle)
+                      Text(widget.message, style: widget.textStyle)
                     else
-                      Expanded(child: Text(message, style: textStyle)),
+                      Expanded(child: Text(widget.message, style: widget.textStyle)),
                     if (actionButton != null) ...[
                       if (compact) const SizedBox(width: 8),
                       actionButton,
@@ -253,10 +412,10 @@ abstract final class HorcruxSnackBar {
               );
 
               final material = Material(
-                elevation: snackBarTheme.elevation ?? 2,
+                elevation: widget.snackBarTheme.elevation ?? 2,
                 surfaceTintColor: Colors.transparent,
-                color: backgroundColor,
-                shape: shape,
+                color: widget.backgroundColor,
+                shape: widget.shape,
                 clipBehavior: Clip.antiAlias,
                 child: paddedRow,
               );
@@ -268,13 +427,9 @@ abstract final class HorcruxSnackBar {
               );
             },
           ),
-        );
-      },
+        ),
+      ),
     );
-
-    _activeEntry = entry;
-    overlay.insert(entry);
-    _scheduleAutoDismiss(entry, effectiveDuration);
   }
 }
 
