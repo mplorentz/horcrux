@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/horcrux_app_bar_title.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for initiating recovery of a vault
@@ -21,8 +21,8 @@ class _RecoveryRequestScreenState extends State<RecoveryRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const HorcruxAppBarTitle('Initiate Recovery'),
+      appBar: HorcruxAppBar(
+        title: 'Initiate Recovery',
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),

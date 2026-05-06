@@ -10,7 +10,7 @@ import '../widgets/steward_list.dart';
 import '../widgets/vault_detail_button_stack.dart';
 import '../widgets/vault_status_banner.dart';
 import '../widgets/vault_owner_display.dart';
-import '../widgets/horcrux_app_bar_title.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Detail/view screen for displaying a vault
@@ -51,18 +51,12 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     final vaultAsync = ref.watch(vaultProvider(vaultId));
 
     return vaultAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(
-          title: const HorcruxAppBarTitle('Loading...'),
-          centerTitle: false,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      loading: () => const Scaffold(
+        appBar: HorcruxAppBar(title: 'Loading...'),
+        body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(
-          title: const HorcruxAppBarTitle('Error'),
-          centerTitle: false,
-        ),
+        appBar: const HorcruxAppBar(title: 'Error'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -81,12 +75,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       ),
       data: (vault) {
         if (vault == null) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const HorcruxAppBarTitle('Vault Not Found'),
-              centerTitle: false,
-            ),
-            body: const Center(child: Text('This vault no longer exists.')),
+          return const Scaffold(
+            appBar: HorcruxAppBar(title: 'Vault Not Found'),
+            body: Center(child: Text('This vault no longer exists.')),
           );
         }
 
@@ -123,9 +114,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
   ) {
     return HorcruxScaffold(
       showNotificationBanner: true,
-      appBar: AppBar(
-        title: HorcruxAppBarTitle(vault.name),
-        centerTitle: false,
+      appBar: HorcruxAppBar(
+        title: vault.name,
         actions: [
           currentPubkeyAsync.when(
             loading: () => const SizedBox.shrink(),

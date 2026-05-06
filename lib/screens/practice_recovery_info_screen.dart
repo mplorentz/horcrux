@@ -9,7 +9,7 @@ import '../services/recovery_service.dart';
 import '../services/logger.dart';
 import '../screens/recovery_status_screen.dart';
 import '../widgets/row_button.dart';
-import '../widgets/horcrux_app_bar_title.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen to explain the processs for practicing recovery.
@@ -25,8 +25,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const HorcruxAppBarTitle('Practice Recovery'),
+      appBar: HorcruxAppBar(
+        title: 'Practice Recovery',
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),

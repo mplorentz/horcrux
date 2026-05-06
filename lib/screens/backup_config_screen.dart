@@ -17,7 +17,7 @@ import '../providers/key_provider.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
-import '../widgets/horcrux_app_bar_title.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'vault_list_screen.dart';
 import 'add_steward_screen.dart';
@@ -263,12 +263,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return HorcruxScaffold(
-        appBar: AppBar(
-          title: const HorcruxAppBarTitle('Recovery Plan'),
-          centerTitle: false,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
+      return const HorcruxScaffold(
+        appBar: HorcruxAppBar(title: 'Recovery Plan'),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -313,10 +310,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         }
       },
       child: HorcruxScaffold(
-        appBar: AppBar(
-          title: const HorcruxAppBarTitle('Recovery Plan'),
-          centerTitle: false,
-        ),
+        appBar: const HorcruxAppBar(title: 'Recovery Plan'),
         body: Column(
           children: [
             Expanded(

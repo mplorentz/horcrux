@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button_stack.dart';
-import '../widgets/horcrux_app_bar_title.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 class HorcruxGallery extends StatefulWidget {
@@ -20,8 +20,8 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
       builder: (context) {
         final cs = Theme.of(context).colorScheme;
         return HorcruxScaffold(
-          appBar: AppBar(
-            title: const HorcruxAppBarTitle('UI Component Gallery'),
+          appBar: HorcruxAppBar(
+            title: 'UI Component Gallery',
             actions: [
               PopupMenuButton(
                 itemBuilder: (_) => const [
