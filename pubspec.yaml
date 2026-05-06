@@ -2,7 +2,7 @@ name: horcrux
 description: "The best way to backup sensitive data."
 
 # Prevent accidental publishing to pub.dev.
-publish_to: 'none'
+publish_to: "none"
 
 version: 0.8.0+13
 
@@ -92,4 +92,3 @@ flutter:
     - family: RobotoMono
       fonts:
         - asset: fonts/RobotoMono-Regular.ttf
-
