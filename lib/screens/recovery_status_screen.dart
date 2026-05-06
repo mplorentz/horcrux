@@ -24,7 +24,7 @@ class RecoveryStatusScreen extends ConsumerStatefulWidget {
 
 class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
   /// Avoid duplicate dialogs when [recoveryRequestByIdProvider] rebuilds.
-  bool _alreadyEndedAlertScheduled = false;
+  bool _shouldSuppressEndedAlert = false;
 
   /// Recovery is no longer manageable (cancelled, failed, or archived).
   bool _isRecoverySessionAlreadyEnded(RecoveryRequest request) {
@@ -42,9 +42,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
   }
 
   void _scheduleAlreadyEndedAlertIfNeeded(RecoveryRequest? request) {
-    if (_alreadyEndedAlertScheduled || request == null) return;
+    if (_shouldSuppressEndedAlert || request == null) return;
     if (!_isRecoverySessionAlreadyEnded(request)) return;
-    _alreadyEndedAlertScheduled = true;
+    _shouldSuppressEndedAlert = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _showAlreadyEndedSessionAlertAndPop();
@@ -508,6 +508,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
 
     if (confirmed == true) {
+      // The user is intentionally ending the session, so suppress the
+      // "session already ended" alert that would otherwise be triggered when
+      // the request status flips to archived/cancelled.
+      _shouldSuppressEndedAlert = true;
       try {
         // Get vaultId before exiting recovery mode
         final requestForVaultId =
@@ -532,6 +536,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           Navigator.pop(context);
         }
       } catch (e) {
+        // The user is still on the screen, so re-arm the alert so that a
+        // later external termination of the session is announced.
+        _shouldSuppressEndedAlert = false;
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -581,6 +588,10 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
     );
 
     if (confirmed == true) {
+      // The user is intentionally cancelling, so suppress the
+      // "session already ended" alert that would otherwise be triggered when
+      // the request status flips to cancelled.
+      _shouldSuppressEndedAlert = true;
       try {
         // Get vaultId before canceling recovery request
         final request =
@@ -602,6 +613,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           Navigator.pop(context);
         }
       } catch (e) {
+        // The user is still on the screen, so re-arm the alert so that a
+        // later external termination of the session is announced.
+        _shouldSuppressEndedAlert = false;
         if (mounted) {
           ScaffoldMessenger.of(
             context,
