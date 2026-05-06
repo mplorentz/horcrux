@@ -10,7 +10,6 @@ import '../services/vault_export_service.dart';
 import 'recovered_content_screen.dart';
 import '../widgets/recovery_stewards_widget.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/recovery_stewards_widget.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_owner_display.dart';
 
