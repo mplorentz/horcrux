@@ -39,14 +39,14 @@ class VaultExplainerScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   // Setup steps section
-                  Text('Setting one up involves:', style: textTheme.bodyLarge),
+                  Text('To set up a vault, you need to:', style: textTheme.bodyLarge),
                   const SizedBox(height: 16),
                   // Step 1
                   _buildStep(
                     context,
                     number: '1',
-                    title: 'Adding contents',
-                    description: 'Add the data that you want to back up.',
+                    title: 'Add content',
+                    description: 'Copy the data that you want to back up in Horcux.',
                   ),
                   const SizedBox(height: 16),
                   // Step 2
