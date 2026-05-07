@@ -46,7 +46,7 @@ class VaultExplainerScreen extends StatelessWidget {
                     context,
                     number: '1',
                     title: 'Add content',
-                    description: 'Copy the data that you want to back up in Horcux.',
+                    description: 'Copy the data that you want to back up in Horcrux.',
                   ),
                   const SizedBox(height: 16),
                   // Step 2
