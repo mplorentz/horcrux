@@ -77,6 +77,22 @@ lane :set_version do |options|
   UI.success("✅ set_version complete — iOS + pubspec (Android) aligned")
 end
 
+desc "Bump build once (iOS CFBundleVersion + pubspec; Android uses pubspec), then ship everywhere"
+desc "Chains: ios_beta → android_beta → android_github_prerelease. From repo root: bundle exec fastlane ship_beta_all"
+desc "Needs: App Store API key (.env), GOOGLE_PLAY_JSON_KEY_PATH, GITHUB_REPOSITORY + GITHUB_TOKEN (or GH_TOKEN)"
+lane :ship_beta_all do
+  ios_increment_build_sync_pubspec
+
+  project_root = File.expand_path("..", __dir__)
+  Dir.chdir(project_root) do
+    sh("bundle exec fastlane ios ios_beta")
+    sh("bundle exec fastlane android android_beta")
+    sh("bundle exec fastlane android android_github_prerelease")
+  end
+
+  UI.success("✅ ship_beta_all complete — TestFlight, Play internal, GitHub APK pre-release")
+end
+
 platform :ios do
   desc "Sync code signing certificates using API key"
   lane :sync_certs do
