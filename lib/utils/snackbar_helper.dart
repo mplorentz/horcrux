@@ -154,7 +154,6 @@ abstract final class HorcruxSnackBar {
     final overlay = Overlay.maybeOf(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final mq = MediaQuery.of(context);
 
     final defaultDuration = kind == HorcruxSnackKind.error
         ? const Duration(milliseconds: 2500)
@@ -217,7 +216,7 @@ abstract final class HorcruxSnackBar {
         const horizontalToastMargin = 32.0;
 
         return Positioned(
-          top: _toastTopPx(mq),
+          top: _toastTopPx(MediaQuery.of(ctx)),
           left: horizontalToastMargin,
           right: horizontalToastMargin,
           child: _HorcruxOverlayToast(

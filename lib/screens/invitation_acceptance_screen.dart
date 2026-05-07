@@ -119,7 +119,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

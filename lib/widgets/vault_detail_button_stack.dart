@@ -153,8 +153,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         ),
                       );
 
-                      // Delete Local Copy Button - shown after distribution
-                      // Owner can delete vault content while keeping recovery capability
+                      // Travel Mode Button - shown after distribution
+                      // Erases the local copy of the vault contents while keeping the
+                      // recovery plan intact, so the owner can restore the contents later
+                      // via their stewards. Useful before crossing a border, lending the
+                      // device, or any other situation where the contents shouldn't be
+                      // accessible from this device.
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
                         if (backupConfig != null &&
@@ -163,9 +167,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             currentVault.content != null) {
                           buttons.add(
                             RowButtonConfig(
-                              onPressed: () => _showDeleteContentDialog(context, ref, currentVault),
-                              icon: Icons.delete_sweep,
-                              text: 'Delete Local Copy',
+                              onPressed: () => _showTravelModeDialog(context, ref, currentVault),
+                              icon: Icons.luggage,
+                              text: 'Travel Mode',
                             ),
                           );
                         }
@@ -385,23 +389,25 @@ class VaultDetailButtonStack extends ConsumerWidget {
     }
   }
 
-  /// Show confirmation dialog for deleting vault content (T011 stub, T013 implements)
-  Future<void> _showDeleteContentDialog(BuildContext context, WidgetRef ref, Vault vault) async {
+  /// Confirm enabling Travel Mode: erase the local copy of the vault contents
+  /// while keeping the recovery plan intact, so the owner can restore them
+  /// later via their stewards.
+  Future<void> _showTravelModeDialog(BuildContext context, WidgetRef ref, Vault vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Local Copy?'),
+        title: const Text('Enable Travel Mode?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'This will delete the vault content "${vault.name}" from this device.',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            const Text(
+              'Travel Mode wipes the vault contents from this device, so even if this device is compromised your vault will be safe.',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
-              'Your backup configuration will be preserved, allowing you to initiate recovery later to restore the content.',
+              'Your recovery plan stays intact, so you can restore the contents later with help from your stewards.',
             ),
             const SizedBox(height: 12),
             Container(
@@ -417,7 +423,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'You will need to initiate recovery to view this vault content again.',
+                      "You'll need to initiate recovery and wait for stewards to approve before you can view this vault's contents again.",
                       style: TextStyle(color: Colors.orange),
                     ),
                   ),
@@ -434,7 +440,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete Local Copy'),
+            child: const Text('Enable Travel Mode'),
           ),
         ],
       ),
@@ -447,17 +453,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Local copy deleted. You can recover it later using your stewards.',
+            'Travel Mode enabled.',
             kind: HorcruxSnackKind.success,
           );
 
-          // Refresh vault data to show new state
           ref.invalidate(vaultProvider(vault.id));
         }
       } catch (e) {
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Failed to delete local copy: $e',
+            'Failed to enable Travel Mode: $e',
             kind: HorcruxSnackKind.error,
           );
         }

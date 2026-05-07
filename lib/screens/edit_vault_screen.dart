@@ -4,7 +4,6 @@ import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
-import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
@@ -95,10 +94,6 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
 
     if (savedId != null && mounted) {
       Navigator.pop(context);
-      context.showHorcruxSnackBar(
-        'Vault saved.',
-        kind: HorcruxSnackKind.success,
-      );
     }
   }
 }

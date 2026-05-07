@@ -91,7 +91,7 @@ void main() {
     });
 
     testWidgets(
-      'shows Delete Local Copy button when owner has content and owner steward configured',
+      'shows Travel Mode button when owner has content and owner steward configured',
       (tester) async {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
@@ -147,14 +147,14 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Verify Delete Local Copy button is shown
-        expect(find.text('Delete Local Copy'), findsOneWidget);
+        // Verify Travel Mode button is shown
+        expect(find.text('Travel Mode'), findsOneWidget);
 
         container.dispose();
       },
     );
 
-    testWidgets('shows Delete Local Copy after distribution even without owner steward', (
+    testWidgets('shows Travel Mode after distribution even without owner steward', (
       tester,
     ) async {
       // Only regular stewards, no owner steward
@@ -211,8 +211,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify Delete Local Copy button IS shown after distribution (owner steward not required)
-      expect(find.text('Delete Local Copy'), findsOneWidget);
+      // Verify Travel Mode button IS shown after distribution (owner steward not required)
+      expect(find.text('Travel Mode'), findsOneWidget);
 
       container.dispose();
     });
