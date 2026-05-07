@@ -95,10 +95,6 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
 
     if (savedId != null && mounted) {
       Navigator.pop(context);
-      context.showHorcruxSnackBar(
-        'Vault saved.',
-        kind: HorcruxSnackKind.success,
-      );
     }
   }
 }
