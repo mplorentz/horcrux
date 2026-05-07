@@ -10,9 +10,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
+import 'services/app_log_file_setup.dart';
 import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
 import 'services/push_notification_receiver.dart';
+import 'services/log_export_service.dart';
 import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -25,6 +27,16 @@ Future<void> main() async {
     MarionetteBinding.ensureInitialized();
   } else {
     WidgetsFlutterBinding.ensureInitialized();
+  }
+
+  try {
+    await initializeAppLogFile();
+  } catch (e, st) {
+    Log.warning(
+      'Persistent log file initialization failed; using console only',
+      e,
+      st,
+    );
   }
 
   await _initializeFirebaseIfNecessary();
@@ -128,8 +140,9 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
   Future<void> _sweepVaultExports() async {
     try {
       await ref.read(vaultExportServiceProvider).clearExportDirectory();
+      await ref.read(logExportServiceProvider).clearLogExportDirectory();
     } catch (e, st) {
-      Log.error('Vault export sweep on terminate failed', e, st);
+      Log.error('Export sweep on terminate failed', e, st);
     }
   }
 

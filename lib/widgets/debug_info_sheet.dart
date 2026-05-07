@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/key_provider.dart';
 import '../screens/horcrux_gallery_screen.dart';
+import '../services/log_export_service.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Provider for PackageInfo
@@ -124,6 +125,50 @@ class DebugInfoSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+          Builder(
+            builder: (exportButtonContext) {
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final renderObject = exportButtonContext.findRenderObject();
+                    Rect? sharePositionOrigin;
+                    if (renderObject is RenderBox && renderObject.hasSize) {
+                      final offset = renderObject.localToGlobal(Offset.zero);
+                      sharePositionOrigin = offset & renderObject.size;
+                    }
+                    final outcome = await ref
+                        .read(logExportServiceProvider)
+                        .shareLogs(sharePositionOrigin: sharePositionOrigin);
+                    if (!exportButtonContext.mounted) return;
+                    switch (outcome) {
+                      case LogExportOutcome.shared:
+                        exportButtonContext.showHorcruxSnackBar(
+                          'Logs opened in the share sheet',
+                          duration: const Duration(seconds: 2),
+                        );
+                      case LogExportOutcome.noLogs:
+                        exportButtonContext.showHorcruxSnackBar(
+                          'No logs to export yet',
+                          duration: const Duration(seconds: 2),
+                        );
+                      case LogExportOutcome.failed:
+                        exportButtonContext.showHorcruxSnackBar(
+                          'Could not export logs',
+                          duration: const Duration(seconds: 2),
+                        );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Export logs'),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           // View Gallery button
           SizedBox(
             width: double.infinity,

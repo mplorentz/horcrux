@@ -98,9 +98,19 @@ class InlineTimePrinter extends LogPrinter {
 /// This service provides a consistent logging interface throughout the app
 /// with configurable log levels and formatting.
 class Log {
-  static final Logger _logger = Logger(
+  static Logger _logger = Logger(
     printer: InlineTimePrinter(colors: true, printEmojis: true),
   );
+
+  /// Replaces the backing [Logger]'s output (e.g. console plus file).
+  ///
+  /// Used during startup file-log wiring; keeps `dart:io` out of this library.
+  static void configureOutput(LogOutput output) {
+    _logger = Logger(
+      printer: InlineTimePrinter(colors: true, printEmojis: true),
+      output: output,
+    );
+  }
 
   /// Log trace messages (most detailed level)
   static void trace(String message, [dynamic error, StackTrace? stackTrace]) {
