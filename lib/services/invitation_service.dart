@@ -656,8 +656,7 @@ class InvitationService {
             updatedStewards[stewardIndex] = steward.copyWith(
               status: newStatus,
             );
-            final updatedConfig = copyBackupConfig(
-              backupConfig,
+            final updatedConfig = backupConfig.copyWith(
               stewards: updatedStewards,
             );
             await repository.updateBackupConfig(
@@ -967,8 +966,7 @@ class InvitationService {
       return steward;
     }).toList();
 
-    return copyBackupConfig(
-      backupConfig,
+    return backupConfig.copyWith(
       stewards: updatedStewards,
       distributionVersion: newDistributionVersion,
     );
@@ -1043,8 +1041,7 @@ class InvitationService {
 
       // Add the invited steward
       final updatedStewards = [...backupConfig.stewards, invitedSteward];
-      final updatedConfig = copyBackupConfig(
-        backupConfig,
+      final updatedConfig = backupConfig.copyWith(
         stewards: updatedStewards,
         relays: relayUrls.isNotEmpty ? relayUrls : backupConfig.relays,
       );

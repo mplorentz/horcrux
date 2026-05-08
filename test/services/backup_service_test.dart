@@ -449,10 +449,7 @@ void main() {
         ],
         relays: const ['wss://relay.example.com'],
       );
-      final cfgAt5 = copyBackupConfig(
-        baseCfg,
-        distributionVersion: 5,
-      );
+      final cfgAt5 = baseCfg.copyWith(distributionVersion: 5);
 
       late BackupConfig current;
       current = cfgAt5;

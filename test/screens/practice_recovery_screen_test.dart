@@ -51,10 +51,7 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       // Create a vault with a ready recovery plan
       final vault = Vault(
@@ -263,10 +260,7 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       final vault = Vault(
         id: testVaultId,

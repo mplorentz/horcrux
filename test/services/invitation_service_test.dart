@@ -98,10 +98,7 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         // Mock repository to return the initial backup config
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
@@ -217,10 +214,7 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         // Mock repository to return the initial backup config
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
@@ -342,10 +336,7 @@ void main() {
           relays: ['wss://relay.example.com'],
         );
 
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
         when(mockLoginService.encryptText(any))

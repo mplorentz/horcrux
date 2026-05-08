@@ -100,34 +100,6 @@ BackupConfig createBackupConfig({
   );
 }
 
-/// Merge-style copy matching the pre-freezed [BackupConfig.copyWith] semantics:
-/// only named arguments that callers intend to change should be passed; omitted
-/// arguments keep the corresponding field on [config].
-///
-/// For [instructions], `null` means "keep existing" (not "clear"). To clear
-/// instructions use [BackupConfig.copyWith] from freezed with an explicit null
-/// sentinel if needed.
-BackupConfig copyBackupConfig(
-  BackupConfig config, {
-  String? vaultId,
-  int? threshold,
-  List<Steward>? stewards,
-  List<String>? relays,
-  String? instructions,
-  DateTime? createdAt,
-  int? distributionVersion,
-}) {
-  return config.copyWith(
-    vaultId: vaultId ?? config.vaultId,
-    threshold: threshold ?? config.threshold,
-    stewards: stewards ?? config.stewards,
-    relays: relays ?? config.relays,
-    instructions: instructions ?? config.instructions,
-    createdAt: createdAt ?? config.createdAt,
-    distributionVersion: distributionVersion ?? config.distributionVersion,
-  );
-}
-
 bool hasOwnerSteward(BackupConfig config) {
   return config.stewards.any((s) => s.isOwner);
 }
