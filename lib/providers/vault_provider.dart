@@ -489,6 +489,10 @@ class VaultRepository {
                   contactInfo: Value(s.contactInfo),
                   isOwner: Value(s.isOwner),
                   joinedAt: createdAtMs,
+                ).copyWith(
+                  // Clear leftAt so a re-added steward (same ID, previously
+                  // soft-retired) becomes visible to activeForVault queries again.
+                  leftAt: const Value(null),
                 ),
               );
         }
