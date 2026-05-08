@@ -351,6 +351,7 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 
 - The `BEADS_DOLT_PASSWORD` secret must be set (Cursor secret for user `cursor_cloud`)
 - After `bd init` in server mode, `bd` connects to the remote Dolt server directly
+- **Agents:** Routine commands (`bd create`, `bd update`, `bd close`, notes, etc.) write to that server. Do **not** treat `bd dolt push` as a required end-of-session step here unless a maintainer asks for it (for example local or offline Dolt workflows).
 - Run `bd prime` at session start to load workflow context
 - Init command (run once per fresh VM): `BEADS_DOLT_PASSWORD="$BEADS_DOLT_PASSWORD" bd init --non-interactive --server --server-host=dolt.lorentz.is --server-port=3307 --server-user=cursor_cloud --external --database=horcrux_app --prefix=horcrux_app --skip-agents --skip-hooks`
 
@@ -403,10 +404,11 @@ bd close <id>         # Complete work
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
+
+   Beads: With the configured remote Dolt server, updating issues via normal `bd` commands is sufficient; agents do not need to run `bd dolt push`.
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session

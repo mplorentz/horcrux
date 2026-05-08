@@ -28,8 +28,7 @@ bd show <issue-id> --json
 bd update <issue-id> --claim
 bd update <issue-id> --status done
 
-# Sync with Dolt remote
-bd dolt push
+# This project uses server-mode bd against a remote Dolt database — routine bd commands persist there; agents do not need bd dolt push
 ```
 
 ### Working with Issues
