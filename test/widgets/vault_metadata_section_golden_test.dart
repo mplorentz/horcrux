@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
-import 'package:horcrux/models/share.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/vault_metadata_section.dart';
@@ -13,36 +12,6 @@ void main() {
   // Sample test data
   final testPubkey = 'a' * 64; // 64-char hex pubkey
   final otherPubkey = 'b' * 64;
-  final thirdPubkey = 'c' * 64;
-
-  // Helper to create shard data
-  Share createTestShard({
-    required int shardIndex,
-    required String recipientPubkey,
-    required String vaultId,
-    String vaultName = 'Test Vault',
-    int threshold = 2,
-    List<Map<String, String>>? peers,
-  }) {
-    return createShare(
-      payload: 'test_shard_$shardIndex',
-      threshold: threshold,
-      shareIndex: shardIndex,
-      totalShares: 3,
-      primeMod: 'test_prime_mod',
-      creatorPubkey: testPubkey,
-      vaultId: vaultId,
-      vaultName: vaultName,
-      stewards: peers ??
-          [
-            {'name': 'Peer 1', 'pubkey': otherPubkey},
-            {'name': 'Peer 2', 'pubkey': thirdPubkey},
-          ],
-      recipientPubkey: recipientPubkey,
-      isReceived: true,
-      receivedAt: DateTime.now().subtract(const Duration(hours: 1)),
-    );
-  }
 
   // Helper to create vault
   Vault createTestVault({
