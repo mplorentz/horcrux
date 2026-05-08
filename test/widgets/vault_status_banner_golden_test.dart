@@ -51,21 +51,29 @@ void main() {
     required int totalKeys,
     required List<Steward> stewards,
     List<String>? relays,
-    // Retained for source compatibility with the legacy fixture signature.
-    // The persisted `status` field is gone in Phase 1; callers passing
-    // `BackupStatus.active` should also pass `distributionVersion >= 1`.
+
+    /// Retained for fixture readability only; there is no persisted field.
+    ///
+    /// [BackupStatus.active] implies `distributionVersion >= 1` when the caller
+    /// leaves [distributionVersion] at 0 (matches Phase 1 `hasBeenDistributed`).
     BackupStatus status = BackupStatus.pending,
     DateTime? lastRedistribution,
     int distributionVersion = 0,
   }) {
+    var dv = distributionVersion;
+    if (lastRedistribution != null && dv == 0) {
+      dv = 1;
+    }
+    if (status == BackupStatus.active && dv == 0) {
+      dv = 1;
+    }
     return BackupConfig(
       vaultId: vaultId,
       threshold: threshold,
       stewards: stewards,
       relays: relays ?? const ['wss://relay.example.com'],
       createdAt: DateTime.now().subtract(const Duration(days: 7)),
-      distributionVersion:
-          lastRedistribution != null && distributionVersion == 0 ? 1 : distributionVersion,
+      distributionVersion: dv,
     );
   }
 
@@ -181,16 +189,19 @@ void main() {
       });
 
       testGoldens('plan needs attention - inactive', (tester) async {
+        // Legacy `BackupStatus.inactive` is gone from [BackupConfig]. The banner used
+        // to treat inactive like an invalid plan (same red "needs attention" tile).
+        // Model that here with a relay list that fails validation.
         final inactiveConfig = createTestBackupConfig(
           vaultId: 'test-vault',
           threshold: 2,
           totalKeys: 3,
-          status: BackupStatus.inactive,
           stewards: [
             createTestSteward(pubkey: stewardPubkey, name: 'Bob'),
             createTestSteward(pubkey: steward2Pubkey, name: 'Charlie'),
             createTestSteward(pubkey: steward3Pubkey, name: 'Diana'),
           ],
+          relays: const ['https://wrong-scheme.example'],
         );
 
         final vault = createTestVault(
@@ -366,7 +377,9 @@ void main() {
               pubkey: steward3Pubkey,
               name: 'Diana',
               status: StewardStatus.awaitingKey,
-            ), // Not yet acknowledged
+            ).copyWith(
+              giftWrapEventId: 'fixture-gw-event',
+            ), // Shard sent; awaiting acknowledgment
           ],
         );
 
