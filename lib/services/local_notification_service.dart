@@ -7,7 +7,7 @@ import 'package:ndk/ndk.dart';
 import '../app_navigator.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../providers/key_provider.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
@@ -146,14 +146,14 @@ class LocalNotificationService {
   ///
   /// Recency-gated via [isEventRecent] so relay backfill of historical events
   /// does not spam notifications on first launch.
-  Future<void> notifyShardDataProcessed({
+  Future<void> notifyShareDataProcessed({
     required Nip01Event event,
-    required ShardData shardData,
+    required Share share,
   }) async {
     await _showShardNotification(
-      kind: NostrKind.shardData,
+      kind: NostrKind.shareData,
       event: event,
-      vaultId: shardData.vaultId,
+      vaultId: share.vaultId,
     );
   }
 
@@ -164,12 +164,12 @@ class LocalNotificationService {
   /// unwrapped rumor.
   ///
   /// Recency-gated via [isEventRecent] to suppress relay backfill.
-  Future<void> notifyShardConfirmationProcessed({
+  Future<void> notifyShareConfirmationProcessed({
     required Nip01Event event,
     required String vaultId,
   }) async {
     await _showShardNotification(
-      kind: NostrKind.shardConfirmation,
+      kind: NostrKind.shareConfirmation,
       event: event,
       vaultId: vaultId,
     );
@@ -465,7 +465,7 @@ class LocalNotificationService {
   ///   the "Manage Recovery" screen for the request whose status just
   ///   changed). Falls back to [VaultDetailScreen] alone when the recovery
   ///   request can't be found locally.
-  /// - [NostrKind.shardData] / [NostrKind.shardConfirmation]: stack becomes
+  /// - [NostrKind.shareData] / [NostrKind.shareConfirmation]: stack becomes
   ///   `[VaultList, VaultDetail]` for [vaultId].
   ///
   /// [vaultId] is required for shard kinds and used as a fallback for recovery
@@ -477,8 +477,8 @@ class LocalNotificationService {
         return _navigateToRecoveryRequest(id);
       case NostrKind.recoveryResponse:
         return _navigateToRecoveryStatus(id, fallbackVaultId: vaultId);
-      case NostrKind.shardData:
-      case NostrKind.shardConfirmation:
+      case NostrKind.shareData:
+      case NostrKind.shareConfirmation:
         if (vaultId == null || vaultId.isEmpty) {
           Log.debug('No vaultId for $kind notification tap, skipping navigation');
           return false;

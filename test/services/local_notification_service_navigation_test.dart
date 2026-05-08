@@ -221,7 +221,7 @@ void main() {
         await pumpHostApp(tester, observer);
 
         await service.navigateForKind(
-          NostrKind.shardData,
+          NostrKind.shareData,
           'shard-event-id',
           vaultId: vaultId,
         );
@@ -247,7 +247,7 @@ void main() {
         await pumpHostApp(tester, observer);
 
         final navigated = await service.navigateForKind(
-          NostrKind.shardData,
+          NostrKind.shareData,
           'shard-event-id',
         );
         await tester.pump();

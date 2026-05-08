@@ -50,7 +50,7 @@ String? displayNameFromPubkeyOrNull(Vault? vault, String hexPubkey) {
     }
   }
 
-  final shard = vault.mostRecentShard;
+  final shard = vault.mostRecentShare;
   if (shard != null) {
     if (shard.creatorPubkey == hexPubkey) {
       final fromShard = shard.ownerName;

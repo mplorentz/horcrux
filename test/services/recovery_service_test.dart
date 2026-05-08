@@ -6,13 +6,13 @@ import 'package:ndk/ndk.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/backup_service.dart';
-import 'package:horcrux/services/shard_distribution_service.dart';
+import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/vault_share_service.dart';
 import 'package:horcrux/services/local_notification_service.dart';
@@ -25,7 +25,7 @@ import '../helpers/secure_storage_mock.dart';
 @GenerateMocks([
   BackupService,
   LocalNotificationService,
-  ShardDistributionService,
+  ShareDistributionService,
   NdkService,
   VaultShareService,
   HorcruxNotificationService,
@@ -347,11 +347,11 @@ void main() {
           threshold: 1,
         );
 
-        final shardData = createShardData(
-          shard: 'test_shard_data_base64',
+        final shardData = createShare(
+          payload: 'test_shard_data_base64',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'test_prime_mod',
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
@@ -366,7 +366,7 @@ void main() {
           'responder_pubkey': testKeyHolder1,
           'approved': true,
           'responded_at': DateTime.now().toIso8601String(),
-          'shard_data': shardDataToJson(shardData),
+          'shard_data': shareToJson(shardData),
         };
 
         final responseJson = json.encode(responseData);
@@ -483,11 +483,11 @@ void main() {
 
       // Simulate receiving a recovery response with shard data
       // In real flow, this would come via NDK from _handleRecoveryResponseData
-      final shardData = createShardData(
-        shard: 'recovered_shard_AAA=',
+      final shardData = createShare(
+        payload: 'recovered_shard_AAA=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'test_prime_CCC=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
@@ -502,7 +502,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
-        shardData: shardData,
+        share: shardData,
       );
 
       // Verify the response was recorded
@@ -515,11 +515,11 @@ void main() {
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.stewardResponses[testKeyHolder1]?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData?.shard,
+        updatedRequest.stewardResponses[testKeyHolder1]?.share?.payload,
         'recovered_shard_AAA=',
       );
     });
@@ -550,7 +550,7 @@ void main() {
         RecoveryResponseStatus.denied,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.stewardResponses[testKeyHolder1]?.share,
         isNull,
       );
     });
@@ -565,22 +565,22 @@ void main() {
       );
 
       // Create shard data for first steward
-      final shardData1 = createShardData(
-        shard: 'shard_data_1_AAA=',
+      final shardData1 = createShare(
+        payload: 'shard_data_1_AAA=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 2,
+        shareIndex: 0,
+        totalShares: 2,
         primeMod: 'test_prime_DDD=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
 
       // Create shard data for second steward
-      final shardData2 = createShardData(
-        shard: 'shard_data_2_BBB=',
+      final shardData2 = createShare(
+        payload: 'shard_data_2_BBB=',
         threshold: 2,
-        shardIndex: 1,
-        totalShards: 2,
+        shareIndex: 1,
+        totalShares: 2,
         primeMod: 'test_prime_DDD=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
@@ -591,7 +591,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
-        shardData: shardData1,
+        share: shardData1,
       );
 
       // Second steward approves
@@ -599,7 +599,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder2,
         true, // approved
-        shardData: shardData2,
+        share: shardData2,
       );
 
       // Verify both responses were recorded
@@ -617,19 +617,19 @@ void main() {
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.stewardResponses[testKeyHolder1]?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.shardData,
+        updatedRequest.stewardResponses[testKeyHolder2]?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData?.shard,
+        updatedRequest.stewardResponses[testKeyHolder1]?.share?.payload,
         'shard_data_1_AAA=',
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.shardData?.shard,
+        updatedRequest.stewardResponses[testKeyHolder2]?.share?.payload,
         'shard_data_2_BBB=',
       );
 
@@ -650,18 +650,18 @@ void main() {
         );
 
         // Add a shard to the vault (steward has this shard)
-        final shardData = createShardData(
-          shard: 'practice_shard_secret_AAA=',
+        final shardData = createShare(
+          payload: 'practice_shard_secret_AAA=',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 1,
+          shareIndex: 0,
+          totalShares: 1,
           primeMod: 'test_prime_EEE=',
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: 'Test Vault',
           relayUrls: ['wss://relay.example.com'],
         );
-        await repository.addShardToVault(testVaultId, shardData);
+        await repository.addShareToVault(testVaultId, shardData);
 
         // Mock the NDK service to capture what's being sent
         final mockNdk = ndkService as MockNdkService;
@@ -688,7 +688,7 @@ void main() {
         });
 
         // Act: Respond to the practice recovery request with approval
-        await recoveryService.respondToRecoveryRequestWithShard(
+        await recoveryService.respondToRecoveryRequestWithShare(
           recoveryRequest.id,
           testKeyHolder1,
           true, // approved
@@ -742,18 +742,18 @@ void main() {
       );
 
       // Add a shard to the vault (steward has this shard)
-      final shardData = createShardData(
-        shard: 'real_shard_secret_BBB=',
+      final shardData = createShare(
+        payload: 'real_shard_secret_BBB=',
         threshold: 1,
-        shardIndex: 0,
-        totalShards: 1,
+        shareIndex: 0,
+        totalShares: 1,
         primeMod: 'test_prime_FFF=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: 'Test Vault',
         relayUrls: ['wss://relay.example.com'],
       );
-      await repository.addShardToVault(testVaultId, shardData);
+      await repository.addShareToVault(testVaultId, shardData);
 
       // Mock the NDK service to capture what's being sent
       final mockNdk = ndkService as MockNdkService;
@@ -780,7 +780,7 @@ void main() {
       });
 
       // Act: Respond to the REAL recovery request with approval
-      await recoveryService.respondToRecoveryRequestWithShard(
+      await recoveryService.respondToRecoveryRequestWithShare(
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
@@ -817,11 +817,11 @@ void main() {
       expect(decodedContent['shard_data'], isNotNull);
 
       // Verify shard data structure
-      final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
-      expect(sentShardData['shard'], 'real_shard_secret_BBB=');
-      expect(sentShardData['threshold'], 1);
-      expect(sentShardData['shard_index'], 0);
-      expect(sentShardData['total_shards'], 1);
+      final sentShare = decodedContent['shard_data'] as Map<String, dynamic>;
+      expect(sentShare['shard'], 'real_shard_secret_BBB=');
+      expect(sentShare['threshold'], 1);
+      expect(sentShare['shard_index'], 0);
+      expect(sentShare['total_shards'], 1);
 
       // Log the captured content for verification
       // ignore: avoid_print

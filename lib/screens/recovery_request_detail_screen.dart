@@ -98,7 +98,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
       final approved = status == RecoveryResponseStatus.approved;
 
       // Use the convenience method that handles shard retrieval and Nostr sending
-      await ref.read(recoveryServiceProvider).respondToRecoveryRequestWithShard(
+      await ref.read(recoveryServiceProvider).respondToRecoveryRequestWithShare(
             widget.recoveryRequest.id,
             _currentPubkey!,
             approved,
@@ -227,9 +227,9 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
       if (vault.backupConfig?.instructions != null &&
           vault.backupConfig!.instructions!.isNotEmpty) {
         instructions = vault.backupConfig!.instructions;
-      } else if (vault.shards.isNotEmpty) {
+      } else if (vault.shares.isNotEmpty) {
         // Fallback to shard data
-        instructions = vault.mostRecentShard?.instructions;
+        instructions = vault.mostRecentShare?.instructions;
       }
     }
 
@@ -254,7 +254,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
 
       // Fallback to shard data
       if (initiatorContactInfo == null) {
-        final shard = vault.mostRecentShard;
+        final shard = vault.mostRecentShare;
         if (shard?.stewards != null) {
           for (final steward in shard!.stewards!) {
             if (steward['pubkey'] == request.initiatorPubkey) {

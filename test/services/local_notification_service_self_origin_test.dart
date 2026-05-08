@@ -3,7 +3,7 @@ import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/local_notification_service.dart';
@@ -65,7 +65,7 @@ void main() {
     )..id = id;
   }
 
-  Nip01Event buildShardData({
+  Nip01Event buildShare({
     required String senderPubkey,
     int createdAt = 1700000000,
     String id = 'evt-shard-data-1',
@@ -79,14 +79,14 @@ void main() {
     )..id = id;
   }
 
-  ShardData makeShardData({String vaultId = 'vault-1'}) {
-    return ShardData(
-      shard: 'shard-payload',
+  Share makeShare({String vaultId = 'vault-1'}) {
+    return Share(
+      payload: 'shard-payload',
       threshold: 2,
-      shardIndex: 0,
-      totalShards: 3,
-      primeMod: TestShardData.testPrimeMod,
-      creatorPubkey: TestShardData.testCreatorPubkey,
+      shareIndex: 0,
+      totalShares: 3,
+      primeMod: TestShare.testPrimeMod,
+      creatorPubkey: TestShare.testCreatorPubkey,
       createdAt: 1700000000,
       vaultId: vaultId,
     );
@@ -125,7 +125,7 @@ void main() {
         // have the latest data..." -- the bug from horcrux_app-3b0.
         final service = buildService(currentPubkey: TestHexPubkeys.alice);
 
-        await service.notifyShardConfirmationProcessed(
+        await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(senderPubkey: TestHexPubkeys.alice),
           vaultId: 'vault-1',
         );
@@ -148,9 +148,9 @@ void main() {
         // "Open Horcrux to save the latest data for {self}'s vault X".
         final service = buildService(currentPubkey: TestHexPubkeys.alice);
 
-        await service.notifyShardDataProcessed(
-          event: buildShardData(senderPubkey: TestHexPubkeys.alice),
-          shardData: makeShardData(vaultId: 'vault-1'),
+        await service.notifyShareDataProcessed(
+          event: buildShare(senderPubkey: TestHexPubkeys.alice),
+          share: makeShare(vaultId: 'vault-1'),
         );
 
         expect(vaultRepository.getVaultCalls, isEmpty);
@@ -170,7 +170,7 @@ void main() {
         // the early-return did not fire.
         final service = buildService(currentPubkey: TestHexPubkeys.alice);
 
-        await service.notifyShardConfirmationProcessed(
+        await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(
             senderPubkey: TestHexPubkeys.bob,
             // Use "now" so the recency gate doesn't filter the event out
@@ -199,7 +199,7 @@ void main() {
           currentPubkey: TestHexPubkeys.alice.toLowerCase(),
         );
 
-        await service.notifyShardConfirmationProcessed(
+        await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(
             senderPubkey: TestHexPubkeys.alice.toUpperCase(),
           ),
@@ -219,7 +219,7 @@ void main() {
         // in `LoginService` does not look like a notification regression.
         final service = buildService(currentPubkey: null);
 
-        await service.notifyShardConfirmationProcessed(
+        await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(
             senderPubkey: TestHexPubkeys.alice,
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

@@ -88,7 +88,7 @@ class VaultMetadataSection extends ConsumerWidget {
     String? currentPubkey,
   ) {
     final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-    final threshold = vault.mostRecentShard?.threshold;
+    final threshold = vault.mostRecentShare?.threshold;
     final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
       name: vault.ownerName,
       pubkey: vault.ownerPubkey,

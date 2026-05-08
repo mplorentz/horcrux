@@ -8,7 +8,7 @@ import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/widgets/vault_status_banner.dart';
@@ -28,7 +28,7 @@ void main() {
     required String id,
     required String ownerPubkey,
     String? content,
-    List<ShardData>? shards,
+    List<Share>? shares,
     BackupConfig? backupConfig,
     List<RecoveryRequest>? recoveryRequests,
   }) {
@@ -38,7 +38,7 @@ void main() {
       content: content,
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shards: shards ?? [],
+      shares: shares ?? [],
       backupConfig: backupConfig,
       recoveryRequests: recoveryRequests ?? [],
     );
@@ -539,7 +539,7 @@ void main() {
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
           content: null, // No decrypted content
-          shards: [], // No shards - this triggers awaitingKey state
+          shares: [], // No shards - this triggers awaitingKey state
         );
 
         final container = ProviderContainer(
@@ -575,11 +575,11 @@ void main() {
       });
 
       testGoldens('steward ready to help', (tester) async {
-        final shard = createShardData(
-          shard: 'test-shard-data',
+        final shard = createShare(
+          payload: 'test-shard-data',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'test-prime-mod',
           creatorPubkey: ownerPubkey,
           vaultId: 'test-vault',
@@ -597,7 +597,7 @@ void main() {
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
           content: null, // No decrypted content
-          shards: [shard], // Has shard - steward ready
+          shares: [shard], // Has shard - steward ready
         );
 
         final container = ProviderContainer(
@@ -639,7 +639,7 @@ void main() {
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
           content: null,
-          shards: [],
+          shares: [],
         );
 
         final container = ProviderContainer(

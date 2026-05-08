@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
@@ -353,13 +353,13 @@ class RecoveryService {
       }
     } else {
       // Real recovery: use shard data
-      if (vault.shards.isEmpty) {
+      if (vault.shares.isEmpty) {
         throw StateError(
           'Cannot recover: you don\'t have a key to this vault.',
         );
       }
 
-      final selectedShard = vault.mostRecentShard;
+      final selectedShard = vault.mostRecentShare;
       if (selectedShard == null) {
         throw StateError(
           'Cannot recover: you don\'t have a key to this vault.',
@@ -425,7 +425,7 @@ class RecoveryService {
     if (stewardPubkeys.contains(initiatorPubkey)) {
       try {
         Log.info('Initiator is a steward (or owner with shard), auto-approving recovery request');
-        await respondToRecoveryRequestWithShard(
+        await respondToRecoveryRequestWithShare(
           recoveryRequest.id,
           initiatorPubkey,
           true,
@@ -532,8 +532,8 @@ class RecoveryService {
     if (request == null) return null;
 
     // Count responses that have shard data (approved responses)
-    final collectedShardIds = request.stewardResponses.values
-        .where((r) => r.shardData != null)
+    final collectedShareIds = request.stewardResponses.values
+        .where((r) => r.share != null)
         .map((r) => r.pubkey) // Use pubkey as identifier
         .toList();
 
@@ -546,7 +546,7 @@ class RecoveryService {
       respondedCount: request.respondedCount,
       approvedCount: request.approvedCount,
       deniedCount: request.deniedCount,
-      collectedShardIds: collectedShardIds,
+      collectedShareIds: collectedShareIds,
       threshold: threshold,
       canRecover: request.approvedCount >= threshold,
       lastUpdated: DateTime.now(),
@@ -566,7 +566,7 @@ class RecoveryService {
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
-    ShardData? shardData,
+    Share? share,
     String? nostrEventId,
     RecoveryResponseEvent? recoveryResponseSourceEvent,
     bool allowLocalNotification = true,
@@ -606,7 +606,7 @@ class RecoveryService {
       pubkey: responderPubkey,
       approved: approved,
       respondedAt: DateTime.now(),
-      shardData: shardData,
+      share: share,
       nostrEventId: nostrEventId,
     );
 
@@ -674,7 +674,7 @@ class RecoveryService {
   /// 1. Retrieves shard data if approving
   /// 2. Records the response locally
   /// 3. Sends the response via Nostr using relay URLs from shard data
-  Future<void> respondToRecoveryRequestWithShard(
+  Future<void> respondToRecoveryRequestWithShare(
     String recoveryRequestId,
     String responderPubkey,
     bool approved,
@@ -687,24 +687,24 @@ class RecoveryService {
       throw ArgumentError('Recovery request not found: $recoveryRequestId');
     }
 
-    ShardData? shardData;
+    Share? stewardShare;
 
-    // If approving and NOT a practice request, get the shard data for this vault
-    // Practice requests should not include shard data
+    // If approving and NOT a practice request, get the share material for this vault
+    // Practice requests should not include share payloads
     if (approved && !request.isPractice) {
       final vault = await repository.getVault(request.vaultId);
       if (vault == null) {
         throw ArgumentError('Vault not found: ${request.vaultId}');
       }
-      shardData = vault.mostRecentShard;
-      if (shardData == null) {
-        throw ArgumentError('No shard data found for vault ${request.vaultId}');
+      stewardShare = vault.mostRecentShare;
+      if (stewardShare == null) {
+        throw ArgumentError('No share data found for vault ${request.vaultId}');
       }
       Log.info(
-        'Selected shard with distributionVersion ${shardData.distributionVersion} for recovery request $recoveryRequestId',
+        'Selected share with distributionVersion ${stewardShare.distributionVersion} for recovery request $recoveryRequestId',
       );
     } else if (approved && request.isPractice) {
-      Log.info('Practice request - skipping shard data retrieval');
+      Log.info('Practice request - skipping share data retrieval');
     }
 
     // Submit response locally
@@ -712,7 +712,7 @@ class RecoveryService {
       recoveryRequestId,
       responderPubkey,
       approved,
-      shardData: shardData,
+      share: stewardShare,
     );
 
     // Send response via Nostr (both approvals and denials)
@@ -722,13 +722,15 @@ class RecoveryService {
       try {
         List<String> relayUrls = [];
 
-        // Try to get relay URLs from shard data first (for approvals)
-        if (shardData != null && shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
-          relayUrls = shardData.relayUrls!;
-          Log.info('Using relay URLs from shard data for recovery response');
+        // Try to get relay URLs from share material first (for approvals)
+        if (stewardShare != null &&
+            stewardShare.relayUrls != null &&
+            stewardShare.relayUrls!.isNotEmpty) {
+          relayUrls = stewardShare.relayUrls!;
+          Log.info('Using relay URLs from share data for recovery response');
         } else {
-          // For denials or when shard data doesn't have relay URLs,
-          // get relay URLs from vault backup config or steward's shard data
+          // For denials or when share data doesn't have relay URLs,
+          // get relay URLs from vault backup config or steward's held share
           final vault = await repository.getVault(request.vaultId);
           if (vault != null) {
             // Try backup config first
@@ -736,13 +738,13 @@ class RecoveryService {
               relayUrls = vault.backupConfig!.relays;
               Log.info('Using relay URLs from backup config for recovery response');
             } else {
-              // Fall back to relay URLs from steward's shards
-              final latestShard = vault.mostRecentShard;
-              if (latestShard != null &&
-                  latestShard.relayUrls != null &&
-                  latestShard.relayUrls!.isNotEmpty) {
-                relayUrls = latestShard.relayUrls!;
-                Log.info('Using relay URLs from steward shard data for recovery response');
+              // Fall back to relay URLs from steward-held share
+              final latestShare = vault.mostRecentShare;
+              if (latestShare != null &&
+                  latestShare.relayUrls != null &&
+                  latestShare.relayUrls!.isNotEmpty) {
+                relayUrls = latestShare.relayUrls!;
+                Log.info('Using relay URLs from steward share data for recovery response');
               }
             }
           }
@@ -755,7 +757,7 @@ class RecoveryService {
         if (relayUrls.isNotEmpty) {
           await sendRecoveryResponseViaNostr(
             request,
-            shardData,
+            stewardShare,
             approved,
             relays: relayUrls,
           );
@@ -807,7 +809,7 @@ class RecoveryService {
     );
 
     // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShardData (keyed by vaultId)
+    // Note: User's own shard is stored separately in _cachedShare (keyed by vaultId)
     // and won't be affected by removeRecoveryShards() which only deletes recovery shards
     // (keyed by recoveryRequestId)
     await _vaultShareService.removeRecoveryShards(recoveryRequestId);
@@ -842,7 +844,7 @@ class RecoveryService {
     }
 
     // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShardData (keyed by vaultId)
+    // Note: User's own shard is stored separately in _cachedShare (keyed by vaultId)
     // and won't be affected by removeRecoveryShards() which only deletes recovery shards
     // (keyed by recoveryRequestId)
     await _vaultShareService.removeRecoveryShards(recoveryRequestId);
@@ -889,23 +891,23 @@ class RecoveryService {
     }
 
     // Collect shards from approved responses
-    final shards = request.stewardResponses.values
-        .where((r) => r.approved && r.shardData != null)
-        .map((r) => r.shardData!)
+    final shares = request.stewardResponses.values
+        .where((r) => r.approved && r.share != null)
+        .map((r) => r.share!)
         .toList();
 
-    if (shards.isEmpty) {
-      throw Exception('No recovery shards found');
+    if (shares.isEmpty) {
+      throw Exception('No recovery shares found');
     }
 
-    if (shards.length < request.threshold) {
+    if (shares.length < request.threshold) {
       throw Exception(
-        'Insufficient shards: need ${request.threshold}, have ${shards.length}',
+        'Insufficient shares: need ${request.threshold}, have ${shares.length}',
       );
     }
 
-    // Reconstruct the vault content from the shards
-    final content = await backupService.reconstructFromShares(shares: shards);
+    // Reconstruct the vault content from the shares
+    final content = await backupService.reconstructFromShares(shares: shares);
 
     // Update the vault with recovered content
     final vault = await repository.getVault(request.vaultId);
@@ -1073,7 +1075,7 @@ class RecoveryService {
   /// Note: shardData is nullable for practice requests (which don't include shard data)
   Future<String> sendRecoveryResponseViaNostr(
     RecoveryRequest request,
-    ShardData? shardData,
+    Share? share,
     bool approved, {
     required List<String> relays,
   }) async {
@@ -1096,8 +1098,8 @@ class RecoveryService {
 
       // Include shard data if approved and NOT a practice request
       // Practice requests should never include shard data
-      if (approved && !request.isPractice && shardData != null) {
-        responseData['shard_data'] = shardDataToJson(shardData);
+      if (approved && !request.isPractice && share != null) {
+        responseData['shard_data'] = shareToJson(share);
       }
 
       final responseJson = json.encode(responseData);

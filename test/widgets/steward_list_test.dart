@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
@@ -14,11 +14,11 @@ void main() {
     final stewardPubkeyB = 'b' * 64;
     final stewardPubkeyC = 'c' * 64;
 
-    final shard = createShardData(
-      shard: 'shard-1',
+    final shard = createShare(
+      payload: 'shard-1',
       threshold: 2,
-      shardIndex: 0,
-      totalShards: 3,
+      shareIndex: 0,
+      totalShares: 3,
       primeMod: 'prime-mod',
       creatorPubkey: ownerPubkey,
       vaultId: vaultId,
@@ -40,7 +40,7 @@ void main() {
       createdAt: DateTime.now(),
       ownerPubkey: ownerPubkey,
       ownerName: 'Device A',
-      shards: [shard],
+      shares: [shard],
       recoveryRequests: const [],
     );
 

@@ -10,7 +10,7 @@ import 'package:horcrux/models/backup_status.dart' as _i20;
 import 'package:horcrux/models/nostr_kinds.dart' as _i8;
 import 'package:horcrux/models/recovery_request.dart' as _i15;
 import 'package:horcrux/models/relay_configuration.dart' as _i17;
-import 'package:horcrux/models/shard_data.dart' as _i14;
+import 'package:horcrux/models/share.dart' as _i14;
 import 'package:horcrux/models/steward.dart' as _i19;
 import 'package:horcrux/models/steward_status.dart' as _i13;
 import 'package:horcrux/models/vault.dart' as _i12;
@@ -724,16 +724,16 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> addShardToVault(
+  _i7.Future<void> addShareToVault(
     String? vaultId,
-    _i14.ShardData? shard,
+    _i14.Share? share,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
-          #addShardToVault,
+          #addShareToVault,
           [
             vaultId,
-            shard,
+            share,
           ],
         ),
         returnValue: _i7.Future<void>.value(),
@@ -741,18 +741,18 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i14.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<List<_i14.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #getShardsForVault,
+          #getSharesForVault,
           [vaultId],
         ),
-        returnValue: _i7.Future<List<_i14.ShardData>>.value(<_i14.ShardData>[]),
-      ) as _i7.Future<List<_i14.ShardData>>);
+        returnValue: _i7.Future<List<_i14.Share>>.value(<_i14.Share>[]),
+      ) as _i7.Future<List<_i14.Share>>);
 
   @override
-  _i7.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #clearShardsForVault,
+          #clearSharesForVault,
           [vaultId],
         ),
         returnValue: _i7.Future<void>.value(),
@@ -911,20 +911,20 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
       ) as _i7.Future<String?>);
 
   @override
-  _i7.Future<String?> sendShardConfirmationEvent({
+  _i7.Future<String?> sendShareConfirmationEvent({
     required String? vaultId,
-    required int? shardIndex,
+    required int? shareIndex,
     required String? ownerPubkey,
     required List<String>? relayUrls,
     int? distributionVersion,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #sendShardConfirmationEvent,
+          #sendShareConfirmationEvent,
           [],
           {
             #vaultId: vaultId,
-            #shardIndex: shardIndex,
+            #shareIndex: shareIndex,
             #ownerPubkey: ownerPubkey,
             #relayUrls: relayUrls,
             #distributionVersion: distributionVersion,
@@ -934,20 +934,20 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
       ) as _i7.Future<String?>);
 
   @override
-  _i7.Future<String?> sendShardErrorEvent({
+  _i7.Future<String?> sendShareErrorEvent({
     required String? vaultId,
-    required int? shardIndex,
+    required int? shareIndex,
     required String? ownerPubkey,
     required List<String>? relayUrls,
     required String? error,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #sendShardErrorEvent,
+          #sendShareErrorEvent,
           [],
           {
             #vaultId: vaultId,
-            #shardIndex: shardIndex,
+            #shareIndex: shareIndex,
             #ownerPubkey: ownerPubkey,
             #relayUrls: relayUrls,
             #error: error,
@@ -1257,7 +1257,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i14.ShardData>> generateShamirShares({
+  _i7.Future<List<_i14.Share>> generateShamirShares({
     required String? content,
     required int? threshold,
     required int? totalShards,
@@ -1286,11 +1286,11 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
             #pushEnabled: pushEnabled,
           },
         ),
-        returnValue: _i7.Future<List<_i14.ShardData>>.value(<_i14.ShardData>[]),
-      ) as _i7.Future<List<_i14.ShardData>>);
+        returnValue: _i7.Future<List<_i14.Share>>.value(<_i14.Share>[]),
+      ) as _i7.Future<List<_i14.Share>>);
 
   @override
-  _i7.Future<String> reconstructFromShares({required List<_i14.ShardData>? shares}) =>
+  _i7.Future<String> reconstructFromShares({required List<_i14.Share>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,

@@ -11,7 +11,9 @@ class RecoveryStatus with _$RecoveryStatus {
     required int respondedCount,
     required int approvedCount,
     required int deniedCount,
-    @Default([]) List<String> collectedShardIds, // List of shard data IDs
+
+    /// Pubkeys (or ids) of stewards who contributed a share; JSON key stays `collectedShardIds`.
+    @Default([]) List<String> collectedShareIds,
     required int threshold,
     required bool canRecover,
     required DateTime lastUpdated,
@@ -36,8 +38,8 @@ class RecoveryStatus with _$RecoveryStatus {
     // CanRecover must be true when approvedCount >= threshold
     if (approvedCount >= threshold && !canRecover) return false;
 
-    // CollectedShardIds count should match approvedCount
-    if (collectedShardIds.length != approvedCount) return false;
+    // CollectedShareIds count should match approvedCount
+    if (collectedShareIds.length != approvedCount) return false;
 
     return true;
   }
@@ -79,7 +81,7 @@ class RecoveryStatus with _$RecoveryStatus {
       'respondedCount': respondedCount,
       'approvedCount': approvedCount,
       'deniedCount': deniedCount,
-      'collectedShardIds': collectedShardIds,
+      'collectedShardIds': collectedShareIds,
       'threshold': threshold,
       'canRecover': canRecover,
       'lastUpdated': lastUpdated.toIso8601String(),
@@ -94,7 +96,7 @@ class RecoveryStatus with _$RecoveryStatus {
       respondedCount: json['respondedCount'] as int,
       approvedCount: json['approvedCount'] as int,
       deniedCount: json['deniedCount'] as int,
-      collectedShardIds:
+      collectedShareIds:
           (json['collectedShardIds'] as List<dynamic>).map((e) => e as String).toList(),
       threshold: json['threshold'] as int,
       canRecover: json['canRecover'] as bool,

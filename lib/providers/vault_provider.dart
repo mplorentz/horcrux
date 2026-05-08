@@ -10,7 +10,7 @@ import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../models/backup_config.dart';
 import '../models/recovery_request.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/steward.dart';
 import '../models/steward_status.dart';
 import '../models/vault.dart';
@@ -45,9 +45,9 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
 ///
 /// **Phase 1 behavior** — see `docs/data_layer_refactor_plan.md`:
 ///
-/// - `Vault.shards` always hydrates to `[]`. The `held_shares` table lands in
-///   Phase 2; until then [addShardToVault], [getShardsForVault], and
-///   [clearShardsForVault] throw [UnimplementedError]. Mocks should match.
+/// - `Vault.shares` always hydrates to `[]`. The `held_shares` table lands in
+///   Phase 2; until then [addShareToVault], [getSharesForVault], and
+///   [clearSharesForVault] throw [UnimplementedError]. Mocks should match.
 /// - `Vault.recoveryRequests` always hydrates to `[]`. The
 ///   `recovery_requests` / `recovery_responses` tables land in Phase 3; until
 ///   then [addRecoveryRequestToVault] and [updateRecoveryRequestInVault]
@@ -247,26 +247,26 @@ class VaultRepository {
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
   }
 
-  // ========== Shard Management (Phase 2 — `held_shares` table) ==========
+  // ========== Share management (Phase 2 — `held_shares` table) ==========
 
-  Future<void> addShardToVault(String vaultId, ShardData shard) {
+  Future<void> addShareToVault(String vaultId, Share share) {
     throw UnimplementedError(
-      'addShardToVault: held_shares is restored in Phase 2 of the data layer '
+      'addShareToVault: held_shares is restored in Phase 2 of the data layer '
       'refactor. See docs/data_layer_refactor_plan.md.',
     );
   }
 
-  Future<List<ShardData>> getShardsForVault(String vaultId) async {
+  Future<List<Share>> getSharesForVault(String vaultId) async {
     final vault = await getVault(vaultId);
     if (vault == null) {
       throw ArgumentError('Vault not found: $vaultId');
     }
-    return List.unmodifiable(vault.shards);
+    return List.unmodifiable(vault.shares);
   }
 
-  Future<void> clearShardsForVault(String vaultId) {
+  Future<void> clearSharesForVault(String vaultId) {
     throw UnimplementedError(
-      'clearShardsForVault: held_shares is restored in Phase 2.',
+      'clearSharesForVault: held_shares is restored in Phase 2.',
     );
   }
 
@@ -382,7 +382,7 @@ class VaultRepository {
       createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       ownerPubkey: row.ownerPubkey,
       ownerName: row.ownerName,
-      shards: const [],
+      shares: const [],
       recoveryRequests: const [],
       backupConfig: backupConfig,
       archivedAt:

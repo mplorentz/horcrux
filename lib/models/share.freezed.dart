@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'shard_data.dart';
+part of 'share.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -15,11 +15,12 @@ final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
-mixin _$ShardData {
-  String get shard => throw _privateConstructorUsedError;
+mixin _$Share {
+  /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+  String get payload => throw _privateConstructorUsedError;
   int get threshold => throw _privateConstructorUsedError;
-  int get shardIndex => throw _privateConstructorUsedError;
-  int get totalShards => throw _privateConstructorUsedError;
+  int get shareIndex => throw _privateConstructorUsedError;
+  int get totalShares => throw _privateConstructorUsedError;
   String get primeMod => throw _privateConstructorUsedError;
   String get creatorPubkey => throw _privateConstructorUsedError;
   int get createdAt => throw _privateConstructorUsedError; // Recovery metadata (optional fields)
@@ -39,7 +40,7 @@ mixin _$ShardData {
       throw _privateConstructorUsedError; // Version tracking for redistribution detection (nullable for backward compatibility)
 // Whether the vault owner has push notifications enabled for this vault.
 //
-// Nullable for backward compatibility: pre-push shards arrive without this
+// Nullable for backward compatibility: pre-push shares arrive without this
 // field, in which case receivers should preserve whatever push setting
 // their local Vault already has (don't silently flip anything). When the
 // owner re-distributes after changing the flag, the new value overrides.
@@ -47,22 +48,21 @@ mixin _$ShardData {
 // the one whose pubkey/IP/contact-graph leaks to the notifier.
   bool? get pushEnabled => throw _privateConstructorUsedError;
 
-  /// Create a copy of ShardData
+  /// Create a copy of Share
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $ShardDataCopyWith<ShardData> get copyWith => throw _privateConstructorUsedError;
+  $ShareCopyWith<Share> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $ShardDataCopyWith<$Res> {
-  factory $ShardDataCopyWith(ShardData value, $Res Function(ShardData) then) =
-      _$ShardDataCopyWithImpl<$Res, ShardData>;
+abstract class $ShareCopyWith<$Res> {
+  factory $ShareCopyWith(Share value, $Res Function(Share) then) = _$ShareCopyWithImpl<$Res, Share>;
   @useResult
   $Res call(
-      {String shard,
+      {String payload,
       int threshold,
-      int shardIndex,
-      int totalShards,
+      int shareIndex,
+      int totalShares,
       String primeMod,
       String creatorPubkey,
       int createdAt,
@@ -81,23 +81,23 @@ abstract class $ShardDataCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDataCopyWith<$Res> {
-  _$ShardDataCopyWithImpl(this._value, this._then);
+class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$Res> {
+  _$ShareCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ShardData
+  /// Create a copy of Share
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? shard = null,
+    Object? payload = null,
     Object? threshold = null,
-    Object? shardIndex = null,
-    Object? totalShards = null,
+    Object? shareIndex = null,
+    Object? totalShares = null,
     Object? primeMod = null,
     Object? creatorPubkey = null,
     Object? createdAt = null,
@@ -115,21 +115,21 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
     Object? pushEnabled = freezed,
   }) {
     return _then(_value.copyWith(
-      shard: null == shard
-          ? _value.shard
-          : shard // ignore: cast_nullable_to_non_nullable
+      payload: null == payload
+          ? _value.payload
+          : payload // ignore: cast_nullable_to_non_nullable
               as String,
       threshold: null == threshold
           ? _value.threshold
           : threshold // ignore: cast_nullable_to_non_nullable
               as int,
-      shardIndex: null == shardIndex
-          ? _value.shardIndex
-          : shardIndex // ignore: cast_nullable_to_non_nullable
+      shareIndex: null == shareIndex
+          ? _value.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
               as int,
-      totalShards: null == totalShards
-          ? _value.totalShards
-          : totalShards // ignore: cast_nullable_to_non_nullable
+      totalShares: null == totalShares
+          ? _value.totalShares
+          : totalShares // ignore: cast_nullable_to_non_nullable
               as int,
       primeMod: null == primeMod
           ? _value.primeMod
@@ -196,16 +196,16 @@ class _$ShardDataCopyWithImpl<$Res, $Val extends ShardData> implements $ShardDat
 }
 
 /// @nodoc
-abstract class _$$ShardDataImplCopyWith<$Res> implements $ShardDataCopyWith<$Res> {
-  factory _$$ShardDataImplCopyWith(_$ShardDataImpl value, $Res Function(_$ShardDataImpl) then) =
-      __$$ShardDataImplCopyWithImpl<$Res>;
+abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
+  factory _$$ShareImplCopyWith(_$ShareImpl value, $Res Function(_$ShareImpl) then) =
+      __$$ShareImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call(
-      {String shard,
+      {String payload,
       int threshold,
-      int shardIndex,
-      int totalShards,
+      int shareIndex,
+      int totalShares,
       String primeMod,
       String creatorPubkey,
       int createdAt,
@@ -224,20 +224,20 @@ abstract class _$$ShardDataImplCopyWith<$Res> implements $ShardDataCopyWith<$Res
 }
 
 /// @nodoc
-class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, _$ShardDataImpl>
-    implements _$$ShardDataImplCopyWith<$Res> {
-  __$$ShardDataImplCopyWithImpl(_$ShardDataImpl _value, $Res Function(_$ShardDataImpl) _then)
+class __$$ShareImplCopyWithImpl<$Res> extends _$ShareCopyWithImpl<$Res, _$ShareImpl>
+    implements _$$ShareImplCopyWith<$Res> {
+  __$$ShareImplCopyWithImpl(_$ShareImpl _value, $Res Function(_$ShareImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ShardData
+  /// Create a copy of Share
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? shard = null,
+    Object? payload = null,
     Object? threshold = null,
-    Object? shardIndex = null,
-    Object? totalShards = null,
+    Object? shareIndex = null,
+    Object? totalShares = null,
     Object? primeMod = null,
     Object? creatorPubkey = null,
     Object? createdAt = null,
@@ -254,22 +254,22 @@ class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, 
     Object? distributionVersion = freezed,
     Object? pushEnabled = freezed,
   }) {
-    return _then(_$ShardDataImpl(
-      shard: null == shard
-          ? _value.shard
-          : shard // ignore: cast_nullable_to_non_nullable
+    return _then(_$ShareImpl(
+      payload: null == payload
+          ? _value.payload
+          : payload // ignore: cast_nullable_to_non_nullable
               as String,
       threshold: null == threshold
           ? _value.threshold
           : threshold // ignore: cast_nullable_to_non_nullable
               as int,
-      shardIndex: null == shardIndex
-          ? _value.shardIndex
-          : shardIndex // ignore: cast_nullable_to_non_nullable
+      shareIndex: null == shareIndex
+          ? _value.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
               as int,
-      totalShards: null == totalShards
-          ? _value.totalShards
-          : totalShards // ignore: cast_nullable_to_non_nullable
+      totalShares: null == totalShares
+          ? _value.totalShares
+          : totalShares // ignore: cast_nullable_to_non_nullable
               as int,
       primeMod: null == primeMod
           ? _value.primeMod
@@ -337,12 +337,12 @@ class __$$ShardDataImplCopyWithImpl<$Res> extends _$ShardDataCopyWithImpl<$Res, 
 
 /// @nodoc
 
-class _$ShardDataImpl extends _ShardData {
-  const _$ShardDataImpl(
-      {required this.shard,
+class _$ShareImpl extends _Share {
+  const _$ShareImpl(
+      {required this.payload,
       required this.threshold,
-      required this.shardIndex,
-      required this.totalShards,
+      required this.shareIndex,
+      required this.totalShares,
       required this.primeMod,
       required this.creatorPubkey,
       required this.createdAt,
@@ -362,14 +362,15 @@ class _$ShardDataImpl extends _ShardData {
         _relayUrls = relayUrls,
         super._();
 
+  /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
   @override
-  final String shard;
+  final String payload;
   @override
   final int threshold;
   @override
-  final int shardIndex;
+  final int shareIndex;
   @override
-  final int totalShards;
+  final int totalShares;
   @override
   final String primeMod;
   @override
@@ -422,7 +423,7 @@ class _$ShardDataImpl extends _ShardData {
 // Version tracking for redistribution detection (nullable for backward compatibility)
 // Whether the vault owner has push notifications enabled for this vault.
 //
-// Nullable for backward compatibility: pre-push shards arrive without this
+// Nullable for backward compatibility: pre-push shares arrive without this
 // field, in which case receivers should preserve whatever push setting
 // their local Vault already has (don't silently flip anything). When the
 // owner re-distributes after changing the flag, the new value overrides.
@@ -433,18 +434,18 @@ class _$ShardDataImpl extends _ShardData {
 
   @override
   String toString() {
-    return 'ShardData(shard: $shard, threshold: $threshold, shardIndex: $shardIndex, totalShards: $totalShards, primeMod: $primeMod, creatorPubkey: $creatorPubkey, createdAt: $createdAt, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion, pushEnabled: $pushEnabled)';
+    return 'Share(payload: $payload, threshold: $threshold, shareIndex: $shareIndex, totalShares: $totalShares, primeMod: $primeMod, creatorPubkey: $creatorPubkey, createdAt: $createdAt, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion, pushEnabled: $pushEnabled)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$ShardDataImpl &&
-            (identical(other.shard, shard) || other.shard == shard) &&
+            other is _$ShareImpl &&
+            (identical(other.payload, payload) || other.payload == payload) &&
             (identical(other.threshold, threshold) || other.threshold == threshold) &&
-            (identical(other.shardIndex, shardIndex) || other.shardIndex == shardIndex) &&
-            (identical(other.totalShards, totalShards) || other.totalShards == totalShards) &&
+            (identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex) &&
+            (identical(other.totalShares, totalShares) || other.totalShares == totalShares) &&
             (identical(other.primeMod, primeMod) || other.primeMod == primeMod) &&
             (identical(other.creatorPubkey, creatorPubkey) ||
                 other.creatorPubkey == creatorPubkey) &&
@@ -468,10 +469,10 @@ class _$ShardDataImpl extends _ShardData {
   @override
   int get hashCode => Object.hashAll([
         runtimeType,
-        shard,
+        payload,
         threshold,
-        shardIndex,
-        totalShards,
+        shareIndex,
+        totalShares,
         primeMod,
         creatorPubkey,
         createdAt,
@@ -489,21 +490,21 @@ class _$ShardDataImpl extends _ShardData {
         pushEnabled
       ]);
 
-  /// Create a copy of ShardData
+  /// Create a copy of Share
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith =>
-      __$$ShardDataImplCopyWithImpl<_$ShardDataImpl>(this, _$identity);
+  _$$ShareImplCopyWith<_$ShareImpl> get copyWith =>
+      __$$ShareImplCopyWithImpl<_$ShareImpl>(this, _$identity);
 }
 
-abstract class _ShardData extends ShardData {
-  const factory _ShardData(
-      {required final String shard,
+abstract class _Share extends Share {
+  const factory _Share(
+      {required final String payload,
       required final int threshold,
-      required final int shardIndex,
-      required final int totalShards,
+      required final int shareIndex,
+      required final int totalShares,
       required final String primeMod,
       required final String creatorPubkey,
       required final int createdAt,
@@ -518,17 +519,18 @@ abstract class _ShardData extends ShardData {
       final String? nostrEventId,
       final List<String>? relayUrls,
       final int? distributionVersion,
-      final bool? pushEnabled}) = _$ShardDataImpl;
-  const _ShardData._() : super._();
+      final bool? pushEnabled}) = _$ShareImpl;
+  const _Share._() : super._();
 
+  /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
   @override
-  String get shard;
+  String get payload;
   @override
   int get threshold;
   @override
-  int get shardIndex;
+  int get shareIndex;
   @override
-  int get totalShards;
+  int get totalShares;
   @override
   String get primeMod;
   @override
@@ -561,7 +563,7 @@ abstract class _ShardData extends ShardData {
       get distributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
 // Whether the vault owner has push notifications enabled for this vault.
 //
-// Nullable for backward compatibility: pre-push shards arrive without this
+// Nullable for backward compatibility: pre-push shares arrive without this
 // field, in which case receivers should preserve whatever push setting
 // their local Vault already has (don't silently flip anything). When the
 // owner re-distributes after changing the flag, the new value overrides.
@@ -570,9 +572,9 @@ abstract class _ShardData extends ShardData {
   @override
   bool? get pushEnabled;
 
-  /// Create a copy of ShardData
+  /// Create a copy of Share
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ShardDataImplCopyWith<_$ShardDataImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$ShareImplCopyWith<_$ShareImpl> get copyWith => throw _privateConstructorUsedError;
 }

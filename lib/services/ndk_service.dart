@@ -12,12 +12,12 @@ import 'login_service.dart';
 import 'recovery_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
-import 'shard_distribution_service.dart';
+import 'share_distribution_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
 import 'publish_service.dart';
 import '../models/nostr_kinds.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/recovery_request.dart';
 
 /// Nostr `since` for relay subscription filters ([NdkService] gift-wrap subscriptions).
@@ -49,7 +49,7 @@ class RecoveryResponseEvent {
   final String vaultId;
   final String senderPubkey;
   final bool approved;
-  final ShardData? shardData;
+  final Share? share;
   final String? nostrEventId;
   final DateTime? createdAt;
 
@@ -58,7 +58,7 @@ class RecoveryResponseEvent {
     required this.vaultId,
     required this.senderPubkey,
     required this.approved,
-    this.shardData,
+    this.share,
     this.nostrEventId,
     this.createdAt,
   });
@@ -355,7 +355,7 @@ class NdkService {
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
-        case 1337: // [NostrKind.shardData]
+        case 1337: // [NostrKind.shareData]
           final m = json.decode(inner.content) as Map<String, dynamic>;
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
@@ -367,7 +367,7 @@ class NdkService {
           final m = json.decode(inner.content) as Map<String, dynamic>;
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1342: // [NostrKind.shardConfirmation]
+        case 1342: // [NostrKind.shareConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
         default:
           return null;
@@ -446,8 +446,8 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
-      if (unwrappedEvent.kind == NostrKind.shardData.value) {
-        await _handleShardData(
+      if (unwrappedEvent.kind == NostrKind.shareData.value) {
+        await _handleShare(
           unwrappedEvent,
           allowLocalNotification: allowLocalNotification,
         );
@@ -465,8 +465,8 @@ class NdkService {
         await _handleInvitationAcceptance(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
-      } else if (unwrappedEvent.kind == NostrKind.shardConfirmation.value) {
-        await _handleShardConfirmation(
+      } else if (unwrappedEvent.kind == NostrKind.shareConfirmation.value) {
+        await _handleShareConfirmation(
           unwrappedEvent,
           allowLocalNotification: allowLocalNotification,
         );
@@ -485,7 +485,7 @@ class NdkService {
   }
 
   /// Handle incoming shard data (kind 1337)
-  Future<void> _handleShardData(
+  Future<void> _handleShare(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
@@ -493,7 +493,7 @@ class NdkService {
       Log.info('Processing shard data event: ${event.id}');
 
       final shardJson = json.decode(event.content) as Map<String, dynamic>;
-      var shardData = shardDataFromJson(shardJson);
+      var shardData = shareFromJson(shardJson);
 
       shardData = shardData.copyWith(nostrEventId: event.id);
 
@@ -511,9 +511,9 @@ class NdkService {
       await vaultShareService.processVaultShare(vaultId, shardData);
 
       if (allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+        await _ref.read(localNotificationServiceProvider).notifyShareDataProcessed(
               event: event,
-              shardData: shardData,
+              share: shardData,
             );
       }
     } catch (e) {
@@ -591,12 +591,12 @@ class NdkService {
       'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
     );
 
-    ShardData? shardData;
+    Share? shardData;
 
     final shardPayload = responseData['shard_data'];
     if (approved && shardPayload != null) {
       final shardDataJson = shardPayload as Map<String, dynamic>;
-      shardData = shardDataFromJson(shardDataJson);
+      shardData = shareFromJson(shardDataJson);
 
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
@@ -611,7 +611,7 @@ class NdkService {
       vaultId: vaultId,
       senderPubkey: senderPubkey,
       approved: approved,
-      shardData: shardData,
+      share: shardData,
       nostrEventId: event.id,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         event.createdAt * 1000,
@@ -623,7 +623,7 @@ class NdkService {
           recoveryRequestId,
           senderPubkey,
           approved,
-          shardData: shardData,
+          share: shardData,
           nostrEventId: event.id,
           recoveryResponseSourceEvent: responseEvent,
           allowLocalNotification: allowLocalNotification,
@@ -662,7 +662,7 @@ class NdkService {
   }
 
   /// Handle incoming shard confirmation event (kind 1342)
-  Future<void> _handleShardConfirmation(
+  Future<void> _handleShareConfirmation(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
@@ -670,16 +670,16 @@ class NdkService {
       Log.info('Processing shard confirmation event: ${event.id}');
       Log.debug('Shard confirmation event tags: ${event.tags}');
       final shardDistributionService = _ref.read(
-        shardDistributionServiceProvider,
+        shareDistributionServiceProvider,
       );
-      await shardDistributionService.processShardConfirmationEvent(
+      await shardDistributionService.processShareConfirmationEvent(
         event: event,
       );
       Log.info('Successfully processed shard confirmation event: ${event.id}');
 
       final vaultId = _firstTagValue(event.tags, 'vault_id');
       if (vaultId != null && allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
+        await _ref.read(localNotificationServiceProvider).notifyShareConfirmationProcessed(
               event: event,
               vaultId: vaultId,
             );

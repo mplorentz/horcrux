@@ -4,7 +4,7 @@ import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
@@ -37,7 +37,7 @@ void main() {
 
   group('VaultShareService.addVaultShare pushEnabled propagation',
       skip: 'Phase 2 (held_shares table) of the data layer refactor — '
-          'addShardToVault is stubbed UnimplementedError until then.', () {
+          'addShareToVault is stubbed UnimplementedError until then.', () {
     const ownerPubkey = TestHexPubkeys.alice;
     const vaultId = 'test-vault';
 
@@ -74,16 +74,16 @@ void main() {
       );
     });
 
-    ShardData buildShard({
+    Share buildShard({
       required int index,
       bool? pushEnabled,
       int? distributionVersion,
     }) {
-      return createShardData(
-        shard: 'abc123',
+      return createShare(
+        payload: 'abc123',
         threshold: 2,
-        shardIndex: index,
-        totalShards: 3,
+        shareIndex: index,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: ownerPubkey,
         vaultId: vaultId,
@@ -130,7 +130,7 @@ void main() {
           content: null,
           createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
           ownerPubkey: ownerPubkey,
-          shards: const [],
+          shares: const [],
           backupConfig: null,
           pushEnabled: false,
         );
@@ -220,7 +220,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => Nip01Event(
-            kind: NostrKind.shardConfirmation.value,
+            kind: NostrKind.shareConfirmation.value,
             pubKey: TestHexPubkeys.bob,
             content: '',
             tags: const [],

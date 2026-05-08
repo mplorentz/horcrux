@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
@@ -21,7 +21,7 @@ void main() {
   final fourthPubkey = 'd' * 64;
 
   // Helper to create shard data
-  ShardData createTestShard({
+  Share createTestShard({
     required int shardIndex,
     required String recipientPubkey,
     required String vaultId,
@@ -29,11 +29,11 @@ void main() {
     int threshold = 2,
     List<Map<String, String>>? stewards,
   }) {
-    return createShardData(
-      shard: 'test_shard_$shardIndex',
+    return createShare(
+      payload: 'test_shard_$shardIndex',
       threshold: threshold,
-      shardIndex: shardIndex,
-      totalShards: stewards?.length ?? 3,
+      shareIndex: shardIndex,
+      totalShares: stewards?.length ?? 3,
       primeMod: 'test_prime_mod',
       creatorPubkey: testPubkey,
       vaultId: vaultId,
@@ -53,7 +53,7 @@ void main() {
   Vault createTestVault({
     required String id,
     required String ownerPubkey,
-    List<ShardData>? shards,
+    List<Share>? shares,
   }) {
     return Vault(
       id: id,
@@ -61,7 +61,7 @@ void main() {
       content: null, // No decrypted content for steward state
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shards: shards ?? [],
+      shares: shares ?? [],
     );
   }
 
@@ -122,7 +122,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shards: [], // No shards
+        shares: [], // No shards
       );
 
       final container = ProviderContainer(
@@ -151,7 +151,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -190,7 +190,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -230,7 +230,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: otherPubkey, // Different owner
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: testPubkey, // Current user is recipient
@@ -269,7 +269,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: fourthPubkey, // Owner not in peers
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: testPubkey, // Current user is recipient
@@ -308,7 +308,7 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -495,7 +495,7 @@ void main() {
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
-        shards: [shard],
+        shares: [shard],
       );
 
       final container = ProviderContainer(
