@@ -18,22 +18,6 @@ import '../services/login_service.dart';
 import '../services/logger.dart';
 import 'key_provider.dart';
 
-/// Archive columns stored on [Vaults] rows. Hydration sets [Vault.isArchived]
-/// from `archivedAt != null` only, so [Vault.isArchived] must be reflected
-/// here on write.
-({int? archivedAtMillis, String? archivedReason}) _archiveFieldsPersistedForVault(
-  Vault vault,
-) {
-  if (!vault.isArchived) {
-    return (archivedAtMillis: null, archivedReason: null);
-  }
-  final at = vault.archivedAt ?? DateTime.now();
-  return (
-    archivedAtMillis: at.millisecondsSinceEpoch,
-    archivedReason: vault.archivedReason,
-  );
-}
-
 /// Stream provider that automatically subscribes to vault changes
 final vaultListProvider = StreamProvider.autoDispose<List<Vault>>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
@@ -386,7 +370,6 @@ class VaultRepository {
       shards: const [],
       recoveryRequests: const [],
       backupConfig: backupConfig,
-      isArchived: row.archivedAt != null,
       archivedAt:
           row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
       archivedReason: row.archivedReason,
@@ -417,7 +400,9 @@ class VaultRepository {
     } else {
       _backupConfigOverlay.remove(vault.id);
     }
-    final archived = _archiveFieldsPersistedForVault(vault);
+    final archivedAtMs = vault.archivedAt?.millisecondsSinceEpoch;
+    final archivedReason =
+        vault.archivedAt == null ? null : vault.archivedReason;
     await _db.transaction(() async {
       await _db.into(_db.vaults).insertOnConflictUpdate(
             VaultsCompanion.insert(
@@ -432,8 +417,8 @@ class VaultRepository {
               ),
               instructions: Value(config?.instructions),
               pushEnabled: Value(vault.pushEnabled),
-              archivedAt: Value(archived.archivedAtMillis),
-              archivedReason: Value(archived.archivedReason),
+              archivedAt: Value(archivedAtMs),
+              archivedReason: Value(archivedReason),
               createdAt: createdAtMs,
             ),
           );

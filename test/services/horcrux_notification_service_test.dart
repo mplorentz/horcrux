@@ -620,7 +620,7 @@ void main() {
         id: 'archived-owned',
         owner: TestHexPubkeys.charlie,
         stewards: [createSteward(pubkey: TestHexPubkeys.diana, name: 'Diana')],
-      ).copyWith(isArchived: true);
+      ).copyWith(archivedAt: DateTime.utc(2020, 1, 1));
       final archivedSteward = stewardedVault(
         id: 'archived-steward',
         owner: archivedOwner,
@@ -628,7 +628,7 @@ void main() {
           owner: archivedOwner,
           coStewardPubkeys: [archivedCoSteward],
         ),
-      ).copyWith(isArchived: true);
+      ).copyWith(archivedAt: DateTime.utc(2020, 1, 1));
 
       final result = svc.computeConsentList(
         currentUserPubkey: TestHexPubkeys.alice,

@@ -34,12 +34,9 @@ enum VaultState {
 
 /// Data model for a secure vault containing encrypted text content
 ///
-/// **Archival:** [isArchived] and [archivedAt] are independent in this model,
-/// but [VaultRepository] persists archival only via `vaults.archived_at`.
-/// On read, [isArchived] is derived as `archivedAt != null`. Persistence
-/// normalizes: if [isArchived] is true and [archivedAt] is null, a timestamp
-/// is written; if [isArchived] is false, archive columns are cleared even when
-/// [archivedAt] was set in memory.
+/// **Archival:** archived state is defined only by [archivedAt] (and optional
+/// [archivedReason]). Use [isArchived] as a convenience read for
+/// `archivedAt != null`.
 @freezed
 class Vault with _$Vault {
   const factory Vault({
@@ -53,7 +50,6 @@ class Vault with _$Vault {
     List<ShardData> shards, // List of shards (single as steward, multiple during recovery)
     @Default([]) List<RecoveryRequest> recoveryRequests, // Embedded recovery requests
     BackupConfig? backupConfig, // Optional backup configuration
-    @Default(false) bool isArchived, // Whether this vault is archived
     DateTime? archivedAt, // When the vault was archived
     String? archivedReason, // Reason for archiving
     // Whether the vault owner has opted this vault into push notifications.
@@ -70,6 +66,9 @@ class Vault with _$Vault {
   }) = _Vault;
 
   const Vault._();
+
+  /// True when this vault is archived (see [archivedAt]).
+  bool get isArchived => archivedAt != null;
 
   /// Derives [VaultState] from locally stored content and shards (see [VaultState]).
   ///

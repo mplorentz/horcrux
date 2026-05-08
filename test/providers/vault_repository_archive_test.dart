@@ -19,7 +19,7 @@ void main() {
 
     tearDown(() => repository.dispose());
 
-    test('isArchived true with null archivedAt persists and reloads archived', () async {
+    test('archivedAt persists and reloads as archived', () async {
       const ownerPubkey = 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final vault = Vault(
         id: 'vault-archive-1',
@@ -27,8 +27,7 @@ void main() {
         content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: ownerPubkey,
-        isArchived: true,
-        archivedAt: null,
+        archivedAt: DateTime.utc(2024, 2, 1),
         archivedReason: 'user hid',
         pushEnabled: false,
       );
@@ -38,11 +37,11 @@ void main() {
 
       expect(loaded, isNotNull);
       expect(loaded!.isArchived, isTrue);
-      expect(loaded.archivedAt, isNotNull);
+      expect(loaded.archivedAt, DateTime.utc(2024, 2, 1));
       expect(loaded.archivedReason, 'user hid');
     });
 
-    test('isArchived false clears archive columns even if archivedAt was set', () async {
+    test('clearing archivedAt clears archive columns on persist', () async {
       const ownerPubkey = 'b0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
       final vault = Vault(
         id: 'vault-unarchive-1',
@@ -50,13 +49,19 @@ void main() {
         content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: ownerPubkey,
-        isArchived: false,
         archivedAt: DateTime.utc(2024, 6, 15),
         archivedReason: 'should not survive',
         pushEnabled: false,
       );
 
       await repository.addVault(vault);
+      final stored = await repository.getVault(vault.id);
+      await repository.saveVault(
+        stored!.copyWith(
+          archivedAt: null,
+          archivedReason: null,
+        ),
+      );
       final loaded = await repository.getVault(vault.id);
 
       expect(loaded, isNotNull);
