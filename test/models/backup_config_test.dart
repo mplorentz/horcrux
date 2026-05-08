@@ -1,16 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
 
 void main() {
   group('BackupConfig', () {
     // T027: Tests for owner steward helpers
     group('owner steward helpers', () {
       test('hasOwnerSteward returns true when config has owner steward', () {
-        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexPubkey =
+            'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
         final ownerSteward = createOwnerSteward(pubkey: hexPubkey);
         final regularSteward = createSteward(
-          pubkey: 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          pubkey:
+              'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
           name: 'Alice',
         );
 
@@ -27,11 +30,13 @@ void main() {
 
       test('hasOwnerSteward returns false when config has no owner steward', () {
         final steward1 = createSteward(
-          pubkey: 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          pubkey:
+              'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
           name: 'Alice',
         );
         final steward2 = createSteward(
-          pubkey: 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          pubkey:
+              'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
           name: 'Bob',
         );
 
@@ -47,10 +52,12 @@ void main() {
       });
 
       test('getOwnerSteward returns owner steward when present', () {
-        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexPubkey =
+            'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
         final ownerSteward = createOwnerSteward(pubkey: hexPubkey, name: 'Me');
         final regularSteward = createSteward(
-          pubkey: 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          pubkey:
+              'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
           name: 'Alice',
         );
 
@@ -70,7 +77,8 @@ void main() {
 
       test('getOwnerSteward returns null when no owner steward', () {
         final steward = createSteward(
-          pubkey: 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
+          pubkey:
+              'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e',
           name: 'Alice',
         );
 
@@ -87,7 +95,8 @@ void main() {
       });
 
       test('owner steward is preserved through JSON serialization', () {
-        const hexPubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexPubkey =
+            'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
         final ownerSteward = createOwnerSteward(pubkey: hexPubkey);
 
         final config = createBackupConfig(
@@ -102,6 +111,67 @@ void main() {
 
         expect(hasOwnerSteward(cloned), isTrue);
         expect(getOwnerSteward(cloned)?.isOwner, isTrue);
+      });
+    });
+
+    group('needsRedistribution', () {
+      BackupConfig distributedConfig(
+        List<Steward> stewards, {
+        int version = 1,
+      }) {
+        return BackupConfig(
+          vaultId: 'vault-1',
+          threshold: 2,
+          stewards: stewards,
+          relays: const ['wss://relay.example.com'],
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+          distributionVersion: version,
+        );
+      }
+
+      test('is false after publish when stewards await acknowledgment only', () {
+        const hex =
+            'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexB =
+            'b0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final s1 = createSteward(
+          pubkey: hex,
+        ).copyWith(status: StewardStatus.awaitingKey, giftWrapEventId: 'evt1');
+        final s2 = createSteward(
+          pubkey: hexB,
+        ).copyWith(status: StewardStatus.awaitingKey, giftWrapEventId: 'evt2');
+        final config = distributedConfig([s1, s2]);
+        expect(config.needsRedistribution, isFalse);
+      });
+
+      test('is true when publish has not been recorded for a keyed steward', () {
+        const hex =
+            'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexB =
+            'b0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final s1 = createSteward(
+          pubkey: hex,
+        ).copyWith(status: StewardStatus.awaitingKey);
+        final s2 = createSteward(
+          pubkey: hexB,
+        ).copyWith(status: StewardStatus.awaitingKey);
+        final config = distributedConfig([s1, s2]);
+        expect(config.needsRedistribution, isTrue);
+      });
+
+      test('is true for awaitingNewKey without publish marker', () {
+        const hex =
+            'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        const hexB =
+            'b0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+        final s1 = createSteward(
+          pubkey: hex,
+        ).copyWith(status: StewardStatus.awaitingNewKey);
+        final s2 = createSteward(
+          pubkey: hexB,
+        ).copyWith(status: StewardStatus.awaitingKey);
+        final config = distributedConfig([s1, s2]);
+        expect(config.needsRedistribution, isTrue);
       });
     });
   });

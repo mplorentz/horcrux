@@ -86,12 +86,14 @@ class BackupService {
     String? instructions,
   }) async {
     // Validate inputs
-    if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+    if (threshold < VaultBackupConstraints.minThreshold ||
+        threshold > totalKeys) {
       throw ArgumentError(
         'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
       );
     }
-    if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
+    if (totalKeys < threshold ||
+        totalKeys > VaultBackupConstraints.maxTotalKeys) {
       throw ArgumentError(
         'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
       );
@@ -303,6 +305,7 @@ class BackupService {
     required StewardStatus status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
+    String? giftWrapEventId,
   }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
@@ -316,16 +319,14 @@ class BackupService {
           status: status,
           acknowledgedAt: acknowledgedAt,
           acknowledgmentEventId: acknowledgmentEventId,
+          giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
           // Preserve contactInfo when updating steward status
         );
       }
       return steward;
     }).toList();
 
-    final updatedConfig = copyBackupConfig(
-      config,
-      stewards: updatedStewards,
-    );
+    final updatedConfig = copyBackupConfig(config, stewards: updatedStewards);
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
 
@@ -400,8 +401,9 @@ class BackupService {
         // Check if steward properties changed (name or pubkey/contact info)
         // This requires redistribution because the shard metadata includes steward info
         for (final mergedSteward in mergedStewards) {
-          final existingSteward =
-              existingConfig.stewards.where((s) => s.id == mergedSteward.id).firstOrNull;
+          final existingSteward = existingConfig.stewards
+              .where((s) => s.id == mergedSteward.id)
+              .firstOrNull;
           if (existingSteward != null) {
             // Check if name, pubkey, or contactInfo changed
             // This requires redistribution because the shard metadata includes steward info
@@ -424,7 +426,8 @@ class BackupService {
         : existingConfig.distributionVersion;
 
     // If distribution version incremented, reset stewards for redistribution
-    final finalStewards = newDistributionVersion > existingConfig.distributionVersion
+    final finalStewards =
+        newDistributionVersion > existingConfig.distributionVersion
         ? _stewardsResetForRedistribution(mergedStewards)
         : mergedStewards;
 
@@ -486,7 +489,9 @@ class BackupService {
   /// [createAndDistributeBackup] so new shards carry the current preference.
   ///
   /// No-ops when there is no config or [BackupConfig.canDistribute] is false.
-  Future<void> redistributeForPushPreferenceChange({required String vaultId}) async {
+  Future<void> redistributeForPushPreferenceChange({
+    required String vaultId,
+  }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
       Log.info('BackupService: skip push redistribution (no backup config)');
@@ -530,8 +535,11 @@ class BackupService {
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)
           // awaitingNewKey means they have an old shard but need an updated one (e.g., after a new steward joins)
-          final stewardsWithPubkeys = backupConfig.stewards.where((s) => s.pubkey != null).toList();
-          final allReadyForDistribution = stewardsWithPubkeys.isNotEmpty &&
+          final stewardsWithPubkeys = backupConfig.stewards
+              .where((s) => s.pubkey != null)
+              .toList();
+          final allReadyForDistribution =
+              stewardsWithPubkeys.isNotEmpty &&
               stewardsWithPubkeys.every(
                 (s) =>
                     s.status == StewardStatus.awaitingKey ||
@@ -546,7 +554,10 @@ class BackupService {
               await createAndDistributeBackup(vaultId: vaultId);
               Log.info('Auto-distributed keys after steward acceptance');
             } catch (e) {
-              Log.error('Failed to auto-distribute keys after steward acceptance', e);
+              Log.error(
+                'Failed to auto-distribute keys after steward acceptance',
+                e,
+              );
               // Don't fail if auto-distribution fails
             }
           }
@@ -565,7 +576,9 @@ class BackupService {
     // Add all updated stewards, preserving acknowledgments from existing
     for (final updatedSteward in updated) {
       // Find matching steward in existing list by id
-      final existingSteward = existing.where((h) => h.id == updatedSteward.id).firstOrNull;
+      final existingSteward = existing
+          .where((h) => h.id == updatedSteward.id)
+          .firstOrNull;
 
       if (existingSteward != null) {
         // Preserve important fields from existing (status, acknowledgments, pubkey, etc)
@@ -577,8 +590,10 @@ class BackupService {
             pubkey: existingSteward.pubkey ?? updatedSteward.pubkey,
             acknowledgedAt: existingSteward.acknowledgedAt,
             acknowledgmentEventId: existingSteward.acknowledgmentEventId,
-            acknowledgedDistributionVersion: existingSteward.acknowledgedDistributionVersion,
-            contactInfo: updatedSteward.contactInfo ?? existingSteward.contactInfo,
+            acknowledgedDistributionVersion:
+                existingSteward.acknowledgedDistributionVersion,
+            contactInfo:
+                updatedSteward.contactInfo ?? existingSteward.contactInfo,
           ),
         );
       } else {
@@ -701,7 +716,9 @@ class BackupService {
       // Step 5: Generate Shamir shares
       // Build stewards list with name, pubkey, and contactInfo maps
       // Include all stewards with pubkeys (including owner if they have a shard)
-      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((kh) {
+      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((
+        kh,
+      ) {
         final stewardMap = <String, String>{
           'name': kh.name ?? 'Unknown',
           'pubkey': kh.pubkey!,

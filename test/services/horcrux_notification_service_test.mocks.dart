@@ -49,7 +49,8 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
   }
 
   @override
-  set onSecureStorageReadFailure(_i4.Future<void> Function()? _onSecureStorageReadFailure) =>
+  set onSecureStorageReadFailure(
+          _i4.Future<void> Function()? _onSecureStorageReadFailure) =>
       super.noSuchMethod(
         Invocation.setter(
           #onSecureStorageReadFailure,
@@ -89,7 +90,8 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
       ) as _i4.Future<_i2.KeyPair>);
 
   @override
-  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
+  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
+      (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],
@@ -410,7 +412,8 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<_i8.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<_i8.BackupConfig?> getBackupConfig(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
@@ -426,6 +429,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
+    String? giftWrapEventId,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -438,6 +442,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             #acknowledgedAt: acknowledgedAt,
             #acknowledgmentEventId: acknowledgmentEventId,
             #acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+            #giftWrapEventId: giftWrapEventId,
           },
         ),
         returnValue: _i4.Future<void>.value(),
@@ -462,7 +467,8 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i10.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<List<_i10.ShardData>> getShardsForVault(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
@@ -536,13 +542,15 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i11.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+  _i4.Future<List<_i11.RecoveryRequest>> getRecoveryRequestsForVault(
+          String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(<_i11.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(
+            <_i11.RecoveryRequest>[]),
       ) as _i4.Future<List<_i11.RecoveryRequest>>);
 
   @override
@@ -556,12 +564,14 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<_i11.RecoveryRequest?>);
 
   @override
-  _i4.Future<List<_i11.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+  _i4.Future<List<_i11.RecoveryRequest>> getAllRecoveryRequests() =>
+      (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(<_i11.RecoveryRequest>[]),
+        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(
+            <_i11.RecoveryRequest>[]),
       ) as _i4.Future<List<_i11.RecoveryRequest>>);
 
   @override

@@ -63,7 +63,8 @@ class VaultRepository {
   // ignore: unused_field
   final LoginService _loginService;
 
-  final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
+  final StreamController<List<Vault>> _vaultsController =
+      StreamController<List<Vault>>.broadcast();
   List<Vault> _latest = const [];
   StreamSubscription<List<Vault>>? _vaultRowsSubscription;
 
@@ -86,21 +87,22 @@ class VaultRepository {
   /// previously instantiated `VaultRepository(loginService)` against the
   /// SharedPreferences-backed implementation. Production should always
   /// pass `db: ref.read(appDatabaseProvider)`.
-  VaultRepository(
-    LoginService loginService, {
-    AppDatabase? db,
-  })  : _db = db ?? AppDatabase(NativeDatabase.memory()),
-        _loginService = loginService {
-    _vaultRowsSubscription = _db.vaultDao.watchAll().asyncMap(_hydrateAll).listen(
-      (vaults) {
-        _latest = vaults;
-        _vaultsController.add(vaults);
-      },
-      onError: (Object e, StackTrace s) {
-        Log.error('vaultsStream hydration failed', e);
-        _vaultsController.addError(e, s);
-      },
-    );
+  VaultRepository(LoginService loginService, {AppDatabase? db})
+    : _db = db ?? AppDatabase(NativeDatabase.memory()),
+      _loginService = loginService {
+    _vaultRowsSubscription = _db.vaultDao
+        .watchAll()
+        .asyncMap(_hydrateAll)
+        .listen(
+          (vaults) {
+            _latest = vaults;
+            _vaultsController.add(vaults);
+          },
+          onError: (Object e, StackTrace s) {
+            Log.error('vaultsStream hydration failed', e);
+            _vaultsController.addError(e, s);
+          },
+        );
   }
 
   /// Stream that replays the most recent hydrated vault list to new
@@ -206,6 +208,7 @@ class VaultRepository {
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
+    String? giftWrapEventId,
   }) async {
     final vault = await getVault(vaultId);
     if (vault == null) {
@@ -220,11 +223,13 @@ class VaultRepository {
       throw ArgumentError('Steward $pubkey not found in vault $vaultId');
     }
     final updatedStewards = List<Steward>.from(config.stewards);
-    updatedStewards[stewardIndex] = updatedStewards[stewardIndex].copyWith(
+    final prior = updatedStewards[stewardIndex];
+    updatedStewards[stewardIndex] = prior.copyWith(
       status: status,
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: acknowledgmentEventId,
       acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+      giftWrapEventId: giftWrapEventId ?? prior.giftWrapEventId,
     );
     final updated = config.copyWith(stewards: updatedStewards);
     await updateBackupConfig(vaultId, updated);
@@ -312,9 +317,7 @@ class VaultRepository {
 
   Future<List<RecoveryRequest>> getAllRecoveryRequests() async {
     final vaults = await getAllVaults();
-    return [
-      for (final v in vaults) ...v.recoveryRequests,
-    ];
+    return [for (final v in vaults) ...v.recoveryRequests];
   }
 
   void dispose() {
@@ -372,8 +375,9 @@ class VaultRepository {
       recoveryRequests: const [],
       backupConfig: backupConfig,
       isArchived: row.archivedAt != null,
-      archivedAt:
-          row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
+      archivedAt: row.archivedAt == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
       archivedReason: row.archivedReason,
       pushEnabled: row.pushEnabled,
     );
@@ -390,7 +394,9 @@ class VaultRepository {
       // alongside `distribution_shares` ack timestamps). Default to a safe
       // value; the in-memory copy held by callers between writes already
       // carries the precise status.
-      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+      status: row.pubkey == null
+          ? StewardStatus.invited
+          : StewardStatus.awaitingKey,
     );
   }
 
@@ -401,7 +407,9 @@ class VaultRepository {
       _backupConfigOverlay[vault.id] = config;
     }
     await _db.transaction(() async {
-      await _db.into(_db.vaults).insertOnConflictUpdate(
+      await _db
+          .into(_db.vaults)
+          .insertOnConflictUpdate(
             VaultsCompanion.insert(
               id: vault.id,
               name: vault.name,
@@ -409,7 +417,9 @@ class VaultRepository {
               ownerName: Value(vault.ownerName),
               threshold: config?.threshold ?? 0,
               totalShares: config?.totalKeys ?? 0,
-              currentDistributionVersion: Value(config?.distributionVersion ?? 0),
+              currentDistributionVersion: Value(
+                config?.distributionVersion ?? 0,
+              ),
               instructions: Value(config?.instructions),
               pushEnabled: Value(vault.pushEnabled),
               archivedAt: Value(vault.archivedAt?.millisecondsSinceEpoch),
@@ -419,7 +429,9 @@ class VaultRepository {
           );
 
       if (vault.content != null) {
-        await _db.into(_db.ownedVaults).insertOnConflictUpdate(
+        await _db
+            .into(_db.ownedVaults)
+            .insertOnConflictUpdate(
               OwnedVaultsCompanion.insert(
                 vaultId: vault.id,
                 content: vault.content!,
@@ -428,7 +440,9 @@ class VaultRepository {
               ),
             );
       } else {
-        await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vault.id))).go();
+        await (_db.delete(
+          _db.ownedVaults,
+        )..where((v) => v.vaultId.equals(vault.id))).go();
       }
 
       // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
@@ -438,21 +452,26 @@ class VaultRepository {
       // missing from the config.
       if (config != null) {
         final keptIds = config.stewards.map((s) => s.id).toSet();
-        final existing = await (_db.select(_db.stewards)
-              ..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
-            .get();
+        final existing = await (_db.select(
+          _db.stewards,
+        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull())).get();
         for (final existingRow in existing) {
           if (!keptIds.contains(existingRow.id)) {
-            await (_db.update(_db.stewards)..where((s) => s.id.equals(existingRow.id)))
-                .write(StewardsCompanion(
-              leftAt: Value(DateTime.now().millisecondsSinceEpoch),
-            ));
+            await (_db.update(
+              _db.stewards,
+            )..where((s) => s.id.equals(existingRow.id))).write(
+              StewardsCompanion(
+                leftAt: Value(DateTime.now().millisecondsSinceEpoch),
+              ),
+            );
           }
         }
 
         for (var i = 0; i < config.stewards.length; i++) {
           final s = config.stewards[i];
-          await _db.into(_db.stewards).insertOnConflictUpdate(
+          await _db
+              .into(_db.stewards)
+              .insertOnConflictUpdate(
                 StewardsCompanion.insert(
                   id: s.id,
                   vaultId: vault.id,
