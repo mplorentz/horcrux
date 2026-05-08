@@ -414,6 +414,8 @@ class VaultRepository {
     final config = vault.backupConfig;
     if (config != null) {
       _backupConfigOverlay[vault.id] = config;
+    } else {
+      _backupConfigOverlay.remove(vault.id);
     }
     final archived = _archiveFieldsPersistedForVault(vault);
     await _db.transaction(() async {
@@ -505,6 +507,30 @@ class VaultRepository {
                 addedAt: DateTime.now().millisecondsSinceEpoch,
               ),
           ],
+        );
+      } else {
+        // Removing backup config must clear steward and relay rows; otherwise
+        // _hydrate would rebuild BackupConfig from stale DB state
+        // (dbStewards.isNotEmpty || row.threshold > 0).
+        final existing = await (_db.select(
+          _db.stewards,
+        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
+            .get();
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        for (final existingRow in existing) {
+          await (_db.update(
+            _db.stewards,
+          )..where((s) => s.id.equals(existingRow.id)))
+              .write(
+            StewardsCompanion(
+              leftAt: Value(nowMs),
+            ),
+          );
+        }
+        await _db.vaultRelayDao.replaceForVault(
+          vaultId: vault.id,
+          role: 'owner',
+          rows: [],
         );
       }
     });
