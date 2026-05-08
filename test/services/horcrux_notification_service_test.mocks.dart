@@ -5,11 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:horcrux/models/backup_status.dart' as _i8;
-import 'package:horcrux/models/recovery_request.dart' as _i12;
-import 'package:horcrux/models/shard_data.dart' as _i11;
-import 'package:horcrux/models/steward.dart' as _i9;
-import 'package:horcrux/models/steward_status.dart' as _i10;
+import 'package:horcrux/models/backup_config.dart' as _i8;
+import 'package:horcrux/models/recovery_request.dart' as _i11;
+import 'package:horcrux/models/shard_data.dart' as _i10;
+import 'package:horcrux/models/steward_status.dart' as _i9;
 import 'package:horcrux/models/vault.dart' as _i7;
 import 'package:horcrux/providers/vault_provider.dart' as _i6;
 import 'package:horcrux/services/login_service.dart' as _i3;
@@ -281,6 +280,15 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Stream<_i7.Vault?> watchVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #watchVault,
+          [id],
+        ),
+        returnValue: _i4.Stream<_i7.Vault?>.empty(),
+      ) as _i4.Stream<_i7.Vault?>);
+
+  @override
   _i4.Future<List<_i7.Vault>> getAllVaults() => (super.noSuchMethod(
         Invocation.method(
           #getAllVaults,
@@ -387,22 +395,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   @override
   _i4.Future<void> updateBackupConfig(
     String? vaultId,
-    ({
-      String? contentHash,
-      DateTime createdAt,
-      int distributionVersion,
-      String? instructions,
-      DateTime? lastContentChange,
-      DateTime? lastRedistribution,
-      DateTime lastUpdated,
-      List<String> relays,
-      String specVersion,
-      _i8.BackupStatus status,
-      List<_i9.Steward> stewards,
-      int threshold,
-      int totalKeys,
-      String vaultId
-    })? config,
+    _i8.BackupConfig? config,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -417,70 +410,23 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<
-      ({
-        String? contentHash,
-        DateTime createdAt,
-        int distributionVersion,
-        String? instructions,
-        DateTime? lastContentChange,
-        DateTime? lastRedistribution,
-        DateTime lastUpdated,
-        List<String> relays,
-        String specVersion,
-        _i8.BackupStatus status,
-        List<_i9.Steward> stewards,
-        int threshold,
-        int totalKeys,
-        String vaultId
-      })?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<_i8.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
         ),
-        returnValue: _i4.Future<
-            ({
-              String? contentHash,
-              DateTime createdAt,
-              int distributionVersion,
-              String? instructions,
-              DateTime? lastContentChange,
-              DateTime? lastRedistribution,
-              DateTime lastUpdated,
-              List<String> relays,
-              String specVersion,
-              _i8.BackupStatus status,
-              List<_i9.Steward> stewards,
-              int threshold,
-              int totalKeys,
-              String vaultId
-            })?>.value(),
-      ) as _i4.Future<
-          ({
-            String? contentHash,
-            DateTime createdAt,
-            int distributionVersion,
-            String? instructions,
-            DateTime? lastContentChange,
-            DateTime? lastRedistribution,
-            DateTime lastUpdated,
-            List<String> relays,
-            String specVersion,
-            _i8.BackupStatus status,
-            List<_i9.Steward> stewards,
-            int threshold,
-            int totalKeys,
-            String vaultId
-          })?>);
+        returnValue: _i4.Future<_i8.BackupConfig?>.value(),
+      ) as _i4.Future<_i8.BackupConfig?>);
 
   @override
   _i4.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i10.StewardStatus? status,
+    required _i9.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
+    String? giftWrapEventId,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -493,6 +439,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             #acknowledgedAt: acknowledgedAt,
             #acknowledgmentEventId: acknowledgmentEventId,
             #acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+            #giftWrapEventId: giftWrapEventId,
           },
         ),
         returnValue: _i4.Future<void>.value(),
@@ -502,7 +449,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   @override
   _i4.Future<void> addShardToVault(
     String? vaultId,
-    _i11.ShardData? shard,
+    _i10.ShardData? shard,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -517,13 +464,13 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i11.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i4.Future<List<_i10.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getShardsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i11.ShardData>>.value(<_i11.ShardData>[]),
-      ) as _i4.Future<List<_i11.ShardData>>);
+        returnValue: _i4.Future<List<_i10.ShardData>>.value(<_i10.ShardData>[]),
+      ) as _i4.Future<List<_i10.ShardData>>);
 
   @override
   _i4.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
@@ -557,7 +504,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   @override
   _i4.Future<void> addRecoveryRequestToVault(
     String? vaultId,
-    _i12.RecoveryRequest? request,
+    _i11.RecoveryRequest? request,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -575,7 +522,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   _i4.Future<void> updateRecoveryRequestInVault(
     String? vaultId,
     String? requestId,
-    _i12.RecoveryRequest? updatedRequest,
+    _i11.RecoveryRequest? updatedRequest,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -591,33 +538,33 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+  _i4.Future<List<_i11.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
-      ) as _i4.Future<List<_i12.RecoveryRequest>>);
+        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(<_i11.RecoveryRequest>[]),
+      ) as _i4.Future<List<_i11.RecoveryRequest>>);
 
   @override
-  _i4.Future<_i12.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
+  _i4.Future<_i11.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getActiveRecoveryRequest,
           [vaultId],
         ),
-        returnValue: _i4.Future<_i12.RecoveryRequest?>.value(),
-      ) as _i4.Future<_i12.RecoveryRequest?>);
+        returnValue: _i4.Future<_i11.RecoveryRequest?>.value(),
+      ) as _i4.Future<_i11.RecoveryRequest?>);
 
   @override
-  _i4.Future<List<_i12.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+  _i4.Future<List<_i11.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i4.Future<List<_i12.RecoveryRequest>>.value(<_i12.RecoveryRequest>[]),
-      ) as _i4.Future<List<_i12.RecoveryRequest>>);
+        returnValue: _i4.Future<List<_i11.RecoveryRequest>>.value(<_i11.RecoveryRequest>[]),
+      ) as _i4.Future<List<_i11.RecoveryRequest>>);
 
   @override
   void dispose() => super.noSuchMethod(

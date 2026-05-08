@@ -289,7 +289,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       return;
     }
 
-    final isRedistribution = config.lastRedistribution != null;
+    final isRedistribution = config.hasBeenDistributed;
     final title = isRedistribution ? 'Redistribute Keys?' : 'Distribute Keys?';
     final action = isRedistribution ? 'Redistribute' : 'Distribute';
 

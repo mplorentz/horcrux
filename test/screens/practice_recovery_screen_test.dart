@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
@@ -52,12 +51,7 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       // Create a vault with a ready recovery plan
       final vault = Vault(
@@ -266,12 +260,7 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       final vault = Vault(
         id: testVaultId,

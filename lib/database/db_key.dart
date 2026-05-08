@@ -68,8 +68,9 @@ class DbKeyDerivation {
         ikm: ikm, salt: salt, info: ascii.encode(info), length: derivedKeyLengthBytes);
   }
 
-  /// Returns the SQLCipher-compatible literal `x'<hex>'` for the derived key.
-  /// Returns `null` when [deriveKey] returns `null`.
+  /// Returns the SQLCipher-compatible literal `"x'<hex>'"` for the derived key
+  /// (double-quoted string, raw-key format). Returns `null` when [deriveKey]
+  /// returns `null`.
   Future<String?> deriveSqlCipherPragmaKey() async {
     final key = await deriveKey();
     if (key == null) return null;
@@ -140,8 +141,12 @@ class DbKeyDerivation {
     return Uint8List.fromList(t.sublist(0, length));
   }
 
+  /// SQLCipher raw-key format: a double-quoted string wrapping `x'hexhex'`.
+  /// Outer double quotes are required — bare blob literals (`x'...'`) are not
+  /// valid pragma-values in SQLite's grammar and cause a syntax error.
+  /// See https://www.zetetic.net/sqlcipher/sqlcipher-api/
   static String _formatRawKeyForPragma(Uint8List key) {
     final hex = key.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return "x'$hex'";
+    return '"x\'$hex\'"';
   }
 }

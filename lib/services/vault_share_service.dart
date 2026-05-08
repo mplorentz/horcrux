@@ -710,7 +710,7 @@ class VaultShareService {
   /// Process a steward removal event
   ///
   /// When a steward receives a removal event, they should:
-  /// 1. Archive the vault (set isArchived=true, archivedAt=now, archivedReason="Removed by owner")
+  /// 1. Archive the vault (set archivedAt=now, archivedReason="Removed by owner")
   /// 2. Delete their shard for that vault
   /// 3. Save the updated vault
   Future<void> processKeyHolderRemoval({required Nip01Event event}) async {
@@ -758,7 +758,6 @@ class VaultShareService {
 
       // Archive the vault
       final archivedVault = vault.copyWith(
-        isArchived: true,
         archivedAt: DateTime.now(),
         archivedReason: 'Removed by owner',
       );

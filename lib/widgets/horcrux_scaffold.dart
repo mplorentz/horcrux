@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'recovery_request_banner.dart';
 
-/// Scaffold wrapper that automatically includes the recovery request banner
-/// below the AppBar when there are pending recovery requests
+/// Scaffold wrapper that optionally shows the recovery request banner below
+/// the [AppBar].
+///
+/// Storage and plugins stay in Riverpod providers (for example
+/// `pendingRecoveryRequestsProvider` → recovery services → `vaultRepositoryProvider`
+/// → [AppDatabase]). This widget does not open a database. Under `flutter test`,
+/// [AppDatabase] defaults to in-memory drift via `appDatabaseProvider`; widget
+/// tests often still override `pendingRecoveryRequestsProvider` so recovery
+/// code does not touch other platform channels (see `goldenOverrides` in tests).
 class HorcruxScaffold extends ConsumerWidget {
   final PreferredSizeWidget? appBar;
   final Widget? body;

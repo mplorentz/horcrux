@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
 import '../models/backup_config.dart';
-import '../models/backup_status.dart';
 import '../providers/key_provider.dart';
 import '../screens/recovery_status_screen.dart';
 
@@ -135,8 +134,8 @@ class VaultStatusBanner extends ConsumerWidget {
 
     // Plan exists but not ready
     if (!backupConfig.isReady) {
-      // Plan is invalid or inactive
-      if (!backupConfig.isValid || backupConfig.status == BackupStatus.inactive) {
+      // Plan is invalid
+      if (!backupConfig.isValid) {
         return _buildBanner(
           context,
           const _StatusData(
@@ -154,7 +153,7 @@ class VaultStatusBanner extends ConsumerWidget {
       // Waiting for stewards to join
       final pendingCount = backupConfig.pendingInvitationsCount;
       final canDistribute = backupConfig.canDistribute;
-      if ((pendingCount > 0 || !canDistribute) && backupConfig.lastRedistribution == null) {
+      if ((pendingCount > 0 || !canDistribute) && !backupConfig.hasBeenDistributed) {
         return _buildBanner(
           context,
           _StatusData(
@@ -172,9 +171,7 @@ class VaultStatusBanner extends ConsumerWidget {
 
       // Keys not distributed
       if (backupConfig.canDistribute &&
-          (backupConfig.needsRedistribution ||
-              backupConfig.hasVersionMismatch ||
-              backupConfig.status == BackupStatus.pending)) {
+          (backupConfig.needsRedistribution || backupConfig.hasVersionMismatch)) {
         return _buildBanner(
           context,
           const _StatusData(
@@ -190,7 +187,7 @@ class VaultStatusBanner extends ConsumerWidget {
       }
 
       // Almost ready - waiting for confirmations
-      if (backupConfig.status == BackupStatus.active &&
+      if (backupConfig.hasBeenDistributed &&
           backupConfig.acknowledgedStewardsCount < backupConfig.threshold) {
         final needed = backupConfig.threshold - backupConfig.acknowledgedStewardsCount;
         return _buildBanner(

@@ -3,11 +3,29 @@ import 'package:drift/native.dart';
 
 import 'package:horcrux/database/app_database.dart';
 
-/// Builds an in-memory [AppDatabase] for unit tests. SQLCipher is intentionally
-/// NOT applied — the encryption layer is exercised by integration tests, not
-/// unit tests. Each call returns a fresh DB; close it via `await db.close()`.
+/// Builds an in-memory [AppDatabase] for plain Dart unit tests. SQLCipher is
+/// intentionally NOT applied — the encryption layer is exercised by integration
+/// tests only. Each call returns a fresh DB; close it via `await db.close()`.
 AppDatabase newTestDatabase() {
   return AppDatabase(NativeDatabase.memory());
+}
+
+/// Builds an in-memory [AppDatabase] suitable for Flutter widget / golden
+/// tests. Uses [DatabaseConnection] with `closeStreamsSynchronously: true` so
+/// Drift query-stream teardown completes synchronously — this is the pattern
+/// the Drift docs recommend to avoid "timer still pending" failures after a
+/// widget test disposes its tree.
+///
+/// Each call returns a fresh DB. Pass the result to
+/// `appDatabaseProvider.overrideWithValue(...)` in the test's
+/// [ProviderContainer].
+AppDatabase newWidgetTestDatabase() {
+  return AppDatabase(
+    DatabaseConnection(
+      NativeDatabase.memory(),
+      closeStreamsSynchronously: true,
+    ),
+  );
 }
 
 /// Convenience: a deterministic clock so fixtures can reason about ordering

@@ -124,7 +124,10 @@ class ShardDistributionService {
               );
 
               // Store shard locally
-              await _repository.addShardToVault(config.vaultId, shardWithEventId);
+              await _repository.addShardToVault(
+                config.vaultId,
+                shardWithEventId,
+              );
 
               // Immediately acknowledge with current distribution version
               await _repository.updateStewardStatus(
@@ -134,13 +137,28 @@ class ShardDistributionService {
                 acknowledgedAt: DateTime.now(),
                 acknowledgmentEventId: eventId, // Use shard event ID as acknowledgment
                 acknowledgedDistributionVersion: config.distributionVersion,
+                giftWrapEventId: eventId,
               );
 
-              Log.info('Owner shard stored locally and acknowledged immediately');
+              Log.info(
+                'Owner shard stored locally and acknowledged immediately',
+              );
             } catch (e) {
-              Log.error('Failed to store and acknowledge owner shard locally', e);
+              Log.error(
+                'Failed to store and acknowledge owner shard locally',
+                e,
+              );
               // Continue - shard was still published to Nostr
             }
+          } else {
+            // Record publish so [BackupConfig.needsRedistribution] can tell "awaiting
+            // steward acknowledgment" apart from "owner still needs to send".
+            await _repository.updateStewardStatus(
+              vaultId: config.vaultId,
+              pubkey: keyHolder.pubkey!,
+              status: keyHolder.status,
+              giftWrapEventId: eventId,
+            );
           }
 
           // Create ShardEvent record
@@ -160,7 +178,9 @@ class ShardDistributionService {
           );
 
           shardEvents.add(publishedShardEvent);
-          Log.info('Distributed shard $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}');
+          Log.info(
+            'Distributed shard $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}',
+          );
         } catch (e) {
           Log.error(
             'Failed to distribute shard $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}',
@@ -239,7 +259,10 @@ class ShardDistributionService {
             );
           }
         } catch (e) {
-          Log.error('Failed to check acknowledgment for shard ${shardEvent.shardIndex}', e);
+          Log.error(
+            'Failed to check acknowledgment for shard ${shardEvent.shardIndex}',
+            e,
+          );
           // Continue with other shards even if one fails
         }
       }
@@ -255,7 +278,9 @@ class ShardDistributionService {
   /// Validates vault ID and shard index.
   /// Updates steward status to "holding key".
   /// Updates last acknowledgment timestamp.
-  Future<void> processShardConfirmationEvent({required Nip01Event event}) async {
+  Future<void> processShardConfirmationEvent({
+    required Nip01Event event,
+  }) async {
     // Validate event kind
     if (event.kind != NostrKind.shardConfirmation.value) {
       throw ArgumentError(
@@ -266,26 +291,35 @@ class ShardDistributionService {
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process shard confirmation event.');
+      throw Exception(
+        'No key pair available. Cannot process shard confirmation event.',
+      );
     }
 
     // Extract vault ID, shard index, and distribution version from tags
     // All confirmation data is stored in tags (no content)
     final vaultId = _extractTagValue(event.tags, 'vault_id');
     final shardIndexStr = _extractTagValue(event.tags, 'shard_index');
-    final distributionVersionStr = _extractTagValue(event.tags, 'distribution_version');
+    final distributionVersionStr = _extractTagValue(
+      event.tags,
+      'distribution_version',
+    );
 
     if (vaultId == null) {
       throw ArgumentError('Missing vault_id tag in shard confirmation event');
     }
 
     if (shardIndexStr == null) {
-      throw ArgumentError('Missing shard_index tag in shard confirmation event');
+      throw ArgumentError(
+        'Missing shard_index tag in shard confirmation event',
+      );
     }
 
     final shardIndex = int.tryParse(shardIndexStr);
     if (shardIndex == null) {
-      throw ArgumentError('Invalid shard index in shard confirmation event: $shardIndexStr');
+      throw ArgumentError(
+        'Invalid shard index in shard confirmation event: $shardIndexStr',
+      );
     }
 
     final distributionVersion =
@@ -324,7 +358,9 @@ class ShardDistributionService {
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process shard error event.');
+      throw Exception(
+        'No key pair available. Cannot process shard error event.',
+      );
     }
 
     // Extract vault ID and shard index from tags
@@ -341,7 +377,9 @@ class ShardDistributionService {
 
     final shardIndex = int.tryParse(shardIndexStr);
     if (shardIndex == null) {
-      throw ArgumentError('Invalid shard index in shard error event: $shardIndexStr');
+      throw ArgumentError(
+        'Invalid shard index in shard error event: $shardIndexStr',
+      );
     }
 
     // Verify we're the recipient (p tag should be owner)

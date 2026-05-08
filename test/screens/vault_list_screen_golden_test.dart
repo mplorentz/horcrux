@@ -92,12 +92,12 @@ void main() {
 
     testGoldens('empty state - no vaults', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           // Mock the vault stream provider to return empty list
           vaultListProvider.overrideWith((ref) => Stream.value([])),
           // Mock the current user's pubkey
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -109,7 +109,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_empty');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     // Note: Loading state test is skipped as it's difficult to capture
@@ -118,13 +118,13 @@ void main() {
 
     testGoldens('error state', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           // Mock provider to throw an error
           vaultListProvider.overrideWith(
             (ref) => Stream.error('Failed to load vaults'),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -135,15 +135,15 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_error');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('single owned vault', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith((ref) => Stream.value([ownedVault])),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -154,17 +154,17 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_single_owned');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('single steward vault', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith(
             (ref) => Stream.value([keyHolderVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -175,17 +175,17 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_single_key_holder');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('single awaiting key vault', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith(
             (ref) => Stream.value([awaitingKeyVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -199,15 +199,15 @@ void main() {
         'vault_list_screen_single_awaiting_key',
       );
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('multiple vaults', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -218,15 +218,15 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_multiple');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('multiple device sizes', (tester) async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       final builder = DeviceBuilder()
@@ -245,7 +245,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_multiple_devices');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('owner vault with no local content (holding shard)', (tester) async {
@@ -272,12 +272,12 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith(
             (ref) => Stream.value([ownerHoldingShardVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -291,7 +291,7 @@ void main() {
         'vault_list_screen_owner_holding_shard',
       );
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
 
     testGoldens('recovery notification', (tester) async {
@@ -307,14 +307,14 @@ void main() {
       );
 
       final container = ProviderContainer(
-        overrides: [
+        overrides: goldenOverrides([
           vaultListProvider.overrideWith((ref) => Stream.value([ownedVault])),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock pending recovery requests provider to return the request
           pendingRecoveryRequestsProvider.overrideWith(
             (ref) => Stream.value([recoveryRequest]),
           ),
-        ],
+        ]),
       );
 
       await pumpGoldenWidget(
@@ -325,7 +325,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_list_screen_with_banner');
 
-      container.dispose();
+      await disposeGoldenContainer(tester, container);
     });
   });
 }

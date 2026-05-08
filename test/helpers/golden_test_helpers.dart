@@ -2,7 +2,61 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
+import 'package:horcrux/database/app_database_provider.dart';
+import 'package:horcrux/models/recovery_request.dart';
+import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/widgets/theme.dart';
+
+import 'test_database.dart';
+
+/// In-memory database override for widget / golden tests. Uses
+/// `closeStreamsSynchronously: true` (the pattern recommended by the Drift
+/// docs) so stream teardown is synchronous and does not leave pending timers
+/// after a test disposes its widget tree.
+Override goldenAppDatabaseOverride() =>
+    appDatabaseProvider.overrideWithValue(newWidgetTestDatabase());
+
+/// Replaces the recovery banner stream with an empty one so
+/// [RecoveryService.initialize] is never called.
+///
+/// This override exists because [RecoveryService.initialize] has three
+/// hardcoded platform-channel calls with no injection points:
+///   1. [ProcessedNostrEventStore.ensureLoaded] → `path_provider`
+///   2. `_loadViewedNotificationIds` → [SharedPreferences.getInstance]
+///   3. [getFirstAppOpenUtc] → [SharedPreferences.getInstance]
+///
+/// The right long-term fix is to inject those dependencies so tests can
+/// swap them for in-memory doubles (bead 8lk). Until then, overriding at the
+/// [pendingRecoveryRequestsProvider] boundary is the narrowest cut that
+/// prevents the entire chain from initialising.
+final Override goldenPendingRecoveryEmptyOverride = pendingRecoveryRequestsProvider.overrideWith(
+  (ref) => Stream<List<RecoveryRequest>>.value(const []),
+);
+
+/// Prepends shared golden overrides before [overrides]. Later entries win when
+/// the same provider is overridden twice.
+///
+/// Includes an in-memory database override (via [goldenAppDatabaseOverride])
+/// and an empty recovery-request stream (via [goldenPendingRecoveryEmptyOverride])
+/// so widget / golden tests never touch platform channels for storage or
+/// secure-key access.
+List<Override> goldenOverrides(List<Override> overrides) => [
+      goldenAppDatabaseOverride(),
+      goldenPendingRecoveryEmptyOverride,
+      ...overrides,
+    ];
+
+/// Disposes the container and closes the test database. Because
+/// [newWidgetTestDatabase] uses `closeStreamsSynchronously: true`, stream
+/// teardown is synchronous and no extra pump is needed.
+Future<void> disposeGoldenContainer(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
+  final db = container.read(appDatabaseProvider);
+  container.dispose();
+  await db.close();
+}
 
 /// Matches a golden file without calling `pumpAndSettle()`.
 ///

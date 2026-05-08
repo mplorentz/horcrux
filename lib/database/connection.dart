@@ -56,8 +56,21 @@ LazyDatabase openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
 
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
 /// Extracted so tests using a non-encrypted in-memory DB can skip it.
+///
+/// The key PRAGMA is executed first; any failure is re-thrown as a
+/// [StateError] with a sanitised message so key material cannot propagate
+/// through exception messages into crash reporters or logs.
 void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
-  rawDb.execute("PRAGMA key = $pragmaKey;");
+  try {
+    rawDb.execute("PRAGMA key = $pragmaKey;");
+  } on Object catch (e) {
+    // Do NOT include e.toString() — it contains the full SQL statement with
+    // the raw key embedded, which would leak key material into crash reports.
+    throw StateError(
+      'SQLCipher PRAGMA key failed (${e.runtimeType}). '
+      'This is a fatal configuration error.',
+    );
+  }
   rawDb.execute('PRAGMA cipher_page_size = 4096;');
   rawDb.execute("PRAGMA cipher_kdf_algorithm = 'PBKDF2_HMAC_SHA512';");
   rawDb.execute('PRAGMA cipher_use_hmac = ON;');

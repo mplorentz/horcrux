@@ -149,7 +149,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         final repository = ref.read(vaultRepositoryProvider);
         final existingConfig = await repository.getBackupConfig(widget.vaultId);
         if (!mounted) return;
-        if (existingConfig != null && existingConfig.lastRedistribution != null) {
+        if (existingConfig != null && existingConfig.hasBeenDistributed) {
           final shouldContinue = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
@@ -219,7 +219,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final pushEnabled = vault?.pushEnabled ?? true;
 
       if (existingConfig != null && mounted) {
-        _initialBackupConfig = backupConfigFromJson(backupConfigToJson(existingConfig));
+        _initialBackupConfig = existingConfig.copyWith();
         setState(() {
           _threshold = existingConfig.threshold;
           _stewards.clear();

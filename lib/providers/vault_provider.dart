@@ -1,678 +1,551 @@
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/vault.dart';
-import '../models/shard_data.dart';
-import '../models/recovery_request.dart';
+
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/backup_config.dart';
+import '../models/recovery_request.dart';
+import '../models/shard_data.dart';
 import '../models/steward.dart';
 import '../models/steward_status.dart';
+import '../models/vault.dart';
 import '../services/login_service.dart';
 import '../services/logger.dart';
 import 'key_provider.dart';
 
 /// Stream provider that automatically subscribes to vault changes
-/// This will emit a new list whenever vaults are added, updated, or deleted
 final vaultListProvider = StreamProvider.autoDispose<List<Vault>>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
-
-  // Return the stream directly and let Riverpod handle the subscription
-  return Stream.multi((controller) async {
-    // First, load and emit initial data
-    try {
-      final initialVaults = await repository.getAllVaults();
-      controller.add(initialVaults);
-    } catch (e) {
-      Log.error('Error loading initial vaults', e);
-      controller.addError(e);
-    }
-
-    // Then listen to the repository stream for updates
-    final subscription = repository.vaultsStream.listen(
-      (vaults) {
-        controller.add(vaults);
-      },
-      onError: (error) {
-        Log.error('Error in vaultsStream', error);
-        controller.addError(error);
-      },
-      onDone: () {
-        controller.close();
-      },
-    );
-
-    // Clean up when the provider is disposed
-    controller.onCancel = () {
-      subscription.cancel();
-    };
-  });
+  return repository.vaultsStream;
 });
 
 /// Provider for a specific vault by ID
-/// This will automatically update when the vault changes
 final vaultProvider = StreamProvider.family<Vault?, String>((ref, vaultId) {
   final repository = ref.watch(vaultRepositoryProvider);
-
-  // Return a stream that:
-  // 1. Loads initial data
-  // 2. Subscribes to updates from the repository stream
-  return Stream.multi((controller) async {
-    // First, load and emit initial vault
-    try {
-      final initialVault = await repository.getVault(vaultId);
-      controller.add(initialVault);
-    } catch (e) {
-      Log.error('Error loading initial vault', e);
-      controller.addError(e);
-    }
-
-    // Then listen to the repository stream for updates
-    final subscription = repository.vaultsStream.listen(
-      (vaults) {
-        try {
-          final vault = vaults.firstWhere((box) => box.id == vaultId);
-          controller.add(vault);
-        } catch (e) {
-          // Vault not found in the list (might have been deleted)
-          controller.add(null);
-        }
-      },
-      onError: (error) {
-        Log.error('Error in vaultsStream for $vaultId', error);
-        controller.addError(error);
-      },
-      onDone: () {
-        controller.close();
-      },
-    );
-
-    // Clean up when the provider is disposed
-    controller.onCancel = () {
-      subscription.cancel();
-    };
-  });
+  return repository.watchVault(vaultId);
 });
 
-/// Provider for vault repository operations
-/// Riverpod automatically ensures this is a singleton - only one instance exists
-/// per ProviderScope. The instance is kept alive for the lifetime of the app.
+/// Provider for vault repository operations.
 final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
-  final repository = VaultRepository(ref.read(loginServiceProvider));
-
-  // Properly clean up when the app is disposed
-  ref.onDispose(() {
-    repository.dispose();
-  });
-
+  final repository = VaultRepository(
+    ref.read(loginServiceProvider),
+    db: ref.read(appDatabaseProvider),
+  );
+  ref.onDispose(repository.dispose);
   return repository;
 });
 
-/// Repository class to handle vault operations
-/// This provides a clean API layer between the UI and the service
+/// Repository for vaults backed by drift DAOs (`vaults`, `owned_vaults`,
+/// `stewards`).
+///
+/// **Phase 1 behavior** — see `docs/data_layer_refactor_plan.md`:
+///
+/// - `Vault.shards` always hydrates to `[]`. The `held_shares` table lands in
+///   Phase 2; until then [addShardToVault], [getShardsForVault], and
+///   [clearShardsForVault] throw [UnimplementedError]. Mocks should match.
+/// - `Vault.recoveryRequests` always hydrates to `[]`. The
+///   `recovery_requests` / `recovery_responses` tables land in Phase 3; until
+///   then [addRecoveryRequestToVault] and [updateRecoveryRequestInVault]
+///   throw [UnimplementedError].
+/// - `BackupConfig` is hydrated from `vaults` + `owned_vaults` + active
+///   `stewards` (`StewardDao.activeForVault`). [updateBackupConfig] writes
+///   the same triple back atomically.
 class VaultRepository {
+  final AppDatabase _db;
+  // Held for parity with the legacy API; encryption is handled by SQLCipher
+  // at the DB layer rather than by per-row NIP-44 (except for
+  // `owned_vaults.content`, which `BackupService` already encrypts).
+  // ignore: unused_field
   final LoginService _loginService;
-  static const String _legacyVaultsKey = 'encrypted_vaults';
-  static const String _vaultFilePrefix = 'vault_';
-  List<Vault>? _cachedVaults;
-  bool _isInitialized = false;
 
-  // Stream controller for notifying listeners when vaults change
   final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
+  List<Vault>? _latest;
+  final Completer<List<Vault>> _initialVaultsCompleter = Completer<List<Vault>>();
+  StreamSubscription<List<Vault>>? _vaultRowsSubscription;
 
-  // Regular constructor - Riverpod manages the singleton behavior
-  VaultRepository(this._loginService);
+  /// **Phase 1 carryover cache.** The drift schema does not yet track
+  /// `Steward.status`, `acknowledgedAt`, `acknowledgmentEventId`, or
+  /// `acknowledgedDistributionVersion` (those land alongside
+  /// `distribution_shares` in Phase 2/3). To keep existing service behavior
+  /// intact without re-encoding that state into JSON, we cache the
+  /// last-written `BackupConfig` in memory keyed by vault id and merge its
+  /// stewards onto rows hydrated from the DB. The cache is intentionally a
+  /// soft layer: a fresh process restart drops it, which is acceptable until
+  /// the missing columns land in later phases.
+  final Map<String, BackupConfig> _backupConfigOverlay = {};
 
-  /// Stream that emits the updated list of vaults whenever they change
-  Stream<List<Vault>> get vaultsStream => _vaultsController.stream;
-
-  /// Initialize the storage and load existing vaults
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-
-    try {
-      await _cleanupOldStorageFormat();
-      await _loadVaults();
-      _isInitialized = true;
-    } catch (e) {
-      Log.error('Error initializing VaultRepository', e);
-      _cachedVaults = [];
-      _isInitialized = true;
-    }
-  }
-
-  void _notifyVaultsChanged() {
-    final vaultsList = List<Vault>.unmodifiable(_cachedVaults ?? const []);
-    _vaultsController.add(vaultsList);
-  }
-
-  Future<void> _cleanupOldStorageFormat() async {
-    final prefs = await SharedPreferences.getInstance();
-    final oldEncryptedData = prefs.getString(_legacyVaultsKey);
-    if (oldEncryptedData == null) {
-      return;
-    }
-
-    Log.info('Detected legacy vault storage format - clearing old data');
-    await prefs.remove(_legacyVaultsKey);
-    Log.info('Cleared legacy SharedPreferences vault storage');
-  }
-
-  /// Load vaults from storage and decrypt them
-  Future<void> _loadVaults() async {
-    final vaults = <Vault>[];
-
-    try {
-      final vaultIds = await _getAllVaultIds();
-
-      if (vaultIds.isEmpty) {
-        _cachedVaults = [];
-        Log.info('No vaults found in storage');
-        return;
-      }
-
-      Log.info('Loading ${vaultIds.length} encrypted vaults from storage');
-
-      for (final vaultId in vaultIds) {
-        try {
-          final encryptedData = await _readVault(vaultId);
-          if (encryptedData == null || encryptedData.isEmpty) {
-            Log.error('Vault data is empty, skipping: $vaultId');
-            continue;
-          }
-
-          final decryptedJson = await _loginService.decryptText(encryptedData);
-          final vaultJson = json.decode(decryptedJson) as Map<String, dynamic>;
-          final vault = Vault.fromJson(vaultJson);
-
-          // Defensive: ignore vaults that don't match their ID.
-          if (vault.id != vaultId) {
-            Log.error(
-              'Vault ID mismatch: expected $vaultId, got ${vault.id}. Skipping.',
-            );
-            continue;
-          }
-
-          vaults.add(vault);
-        } catch (e) {
-          Log.error('Error loading vault $vaultId', e);
-          // Isolated failure: skip corrupted/unreadable vault
-        }
-      }
-
-      _cachedVaults = vaults;
-    } catch (e) {
-      Log.error('Error loading vaults from storage', e);
-      _cachedVaults = [];
-    }
-  }
-
-  /// Save a single vault to storage
-  Future<void> _saveVault(Vault vault) async {
-    try {
-      final jsonString = json.encode(vault.toJson());
-      final encryptedData = await _loginService.encryptText(jsonString);
-      await _writeVault(vault.id, encryptedData);
-      _notifyVaultsChanged();
-    } catch (e) {
-      Log.error('Error encrypting and saving vault ${vault.id}', e);
-      throw Exception('Failed to save vault ${vault.id}: $e');
-    }
-  }
-
-  Future<void> _deleteVaultFile(String vaultId) async {
-    try {
-      await _deleteVault(vaultId);
-      _notifyVaultsChanged();
-    } catch (e) {
-      Log.error('Error deleting vault $vaultId', e);
-      throw Exception('Failed to delete vault $vaultId: $e');
-    }
-  }
-
-  /// Get all vaults
-  Future<List<Vault>> getAllVaults() async {
-    await initialize();
-    return List.unmodifiable(_cachedVaults ?? []);
-  }
-
-  /// Get a specific vault by ID
-  Future<Vault?> getVault(String id) async {
-    await initialize();
-    try {
-      return _cachedVaults!.firstWhere((lb) => lb.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Save a vault (add new or update existing)
-  Future<void> saveVault(Vault vault) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vault.id);
-    if (index == -1) {
-      // Add new vault
-      _cachedVaults!.add(vault);
-    } else {
-      // Update existing vault
-      _cachedVaults![index] = vault;
-    }
-
-    await _saveVault(vault);
-  }
-
-  /// Add a new vault
-  Future<void> addVault(Vault vault) async {
-    await initialize();
-    _cachedVaults!.add(vault);
-    await _saveVault(vault);
-  }
-
-  /// Update an existing vault
-  Future<void> updateVault(String id, String name, String content) async {
-    await initialize();
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == id);
-    if (index != -1) {
-      final existingVault = _cachedVaults![index];
-      final updatedVault = existingVault.copyWith(
-        name: name,
-        content: content,
-      );
-      _cachedVaults![index] = updatedVault;
-      await _saveVault(updatedVault);
-    }
-  }
-
-  /// Toggle the per-vault push notification preference.
+  /// Construct a repository.
   ///
-  /// Flips [Vault.pushEnabled] and persists the change. Gates whether this
-  /// device triggers pushes from the owner's gift-wrap publishes for this
-  /// vault (see `HorcruxNotificationService.tryPushForEvent`). Existing
-  /// stewards keep the value they learned from the last shard distribution
-  /// until the owner redistributes.
-  Future<void> setPushEnabled(String vaultId, bool enabled) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final vault = _cachedVaults![index];
-    if (vault.pushEnabled == enabled) return;
-
-    final updatedVault = vault.copyWith(pushEnabled: enabled);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info(
-      'Updated pushEnabled=$enabled for vault $vaultId',
+  /// Production code should pass an explicit [db] (the app injects one via
+  /// [vaultRepositoryProvider]). When [db] is omitted we open an in-memory
+  /// `NativeDatabase` — primarily a convenience for unit tests that
+  /// previously instantiated `VaultRepository(loginService)` against the
+  /// SharedPreferences-backed implementation. Production should always
+  /// pass `db: ref.read(appDatabaseProvider)`.
+  VaultRepository(LoginService loginService, {AppDatabase? db})
+      : _db = db ?? AppDatabase(NativeDatabase.memory()),
+        _loginService = loginService {
+    _vaultRowsSubscription = _db.vaultDao.watchAll().asyncMap(_hydrateAll).listen(
+      (vaults) {
+        _latest = vaults;
+        if (!_initialVaultsCompleter.isCompleted) {
+          _initialVaultsCompleter.complete(vaults);
+        }
+        _vaultsController.add(vaults);
+      },
+      onError: (Object e, StackTrace s) {
+        Log.error('vaultsStream hydration failed', e);
+        if (!_initialVaultsCompleter.isCompleted) {
+          _initialVaultsCompleter.completeError(e, s);
+        }
+        _vaultsController.addError(e, s);
+      },
     );
   }
 
-  /// Delete a vault
-  Future<void> deleteVault(String id) async {
-    await initialize();
-    _cachedVaults!.removeWhere((lb) => lb.id == id);
-    await _deleteVaultFile(id);
-  }
-
-  /// Clear all vaults (for testing/debugging)
-  Future<void> clearAll() async {
-    _cachedVaults = [];
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_legacyVaultsKey);
-    try {
-      final vaultIds = await _getAllVaultIds();
-      for (final vaultId in vaultIds) {
-        await _deleteVault(vaultId);
-      }
-    } catch (e) {
-      Log.error('Error clearing vaults', e);
+  /// Stream that replays the most recent hydrated vault list to new
+  /// subscribers, then emits subsequent updates.
+  Stream<List<Vault>> get vaultsStream async* {
+    final latest = _latest;
+    if (latest == null) {
+      yield await _initialVaultsCompleter.future;
+    } else {
+      yield latest;
     }
-    _isInitialized = false;
+    yield* _vaultsController.stream;
   }
 
-  /// Refresh vaults from storage
+  Future<void> initialize() async {
+    // The drift connection opens lazily; nothing else to do.
+  }
+
+  /// Watch a specific vault by id. Emits `null` when the vault is missing
+  /// (e.g. deleted).
+  Stream<Vault?> watchVault(String id) {
+    return _db.vaultDao.watchById(id).asyncMap((row) async {
+      if (row == null) return null;
+      return _hydrate(row);
+    });
+  }
+
+  Future<List<Vault>> getAllVaults() async {
+    final rows = await _db.vaultDao.getAll();
+    return _hydrateAll(rows);
+  }
+
+  Future<Vault?> getVault(String id) async {
+    final row = await _db.vaultDao.getById(id);
+    if (row == null) return null;
+    return _hydrate(row);
+  }
+
+  Future<void> saveVault(Vault vault) => _persistVault(vault);
+
+  Future<void> addVault(Vault vault) => _persistVault(vault);
+
+  /// Update the textual fields of an existing vault.
+  Future<void> updateVault(String id, String name, String content) async {
+    final existing = await getVault(id);
+    if (existing == null) {
+      throw ArgumentError('Vault not found: $id');
+    }
+    await _persistVault(existing.copyWith(name: name, content: content));
+  }
+
+  Future<void> setPushEnabled(String vaultId, bool enabled) async {
+    final existing = await getVault(vaultId);
+    if (existing == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    if (existing.pushEnabled == enabled) return;
+    await _persistVault(existing.copyWith(pushEnabled: enabled));
+    Log.info('Updated pushEnabled=$enabled for vault $vaultId');
+  }
+
+  Future<void> deleteVault(String id) async {
+    _backupConfigOverlay.remove(id);
+    await _db.vaultDao.deleteById(id);
+  }
+
+  Future<void> clearAll() async {
+    _backupConfigOverlay.clear();
+    await _db.transaction(() async {
+      await _db.delete(_db.distributionShares).go();
+      await _db.delete(_db.distributions).go();
+      await _db.delete(_db.stewards).go();
+      await _db.delete(_db.ownedVaults).go();
+      await _db.delete(_db.vaultRelays).go();
+      await _db.delete(_db.vaults).go();
+    });
+  }
+
   Future<void> refresh() async {
-    _isInitialized = false;
-    _cachedVaults = null;
-    await initialize();
+    final all = await getAllVaults();
+    _latest = all;
+    if (!_initialVaultsCompleter.isCompleted) {
+      _initialVaultsCompleter.complete(all);
+    }
+    _vaultsController.add(all);
   }
 
   // ========== Backup Config Operations ==========
 
-  /// Update backup configuration for a vault
   Future<void> updateBackupConfig(String vaultId, BackupConfig config) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
+    final existing = await getVault(vaultId);
+    if (existing == null) {
       throw ArgumentError('Vault not found: $vaultId');
     }
-
-    final vault = _cachedVaults![index];
-    final updatedVault = vault.copyWith(backupConfig: config);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
+    await _persistVault(existing.copyWith(backupConfig: config));
     Log.info('Updated backup configuration for vault $vaultId');
   }
 
-  /// Get backup configuration for a vault
   Future<BackupConfig?> getBackupConfig(String vaultId) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
-    );
-
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
     return vault.backupConfig;
   }
 
-  /// Update steward status in backup configuration
-  /// This is the single source of truth for steward status updates
   Future<void> updateStewardStatus({
     required String vaultId,
-    required String pubkey, // Hex format
+    required String pubkey,
     required StewardStatus status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
+    String? giftWrapEventId,
   }) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
-    );
-
-    final backupConfig = vault.backupConfig;
-    if (backupConfig == null) {
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    final config = vault.backupConfig;
+    if (config == null) {
       throw ArgumentError('Vault $vaultId has no backup configuration');
     }
-
-    // Find and update the steward
-    final stewardIndex = backupConfig.stewards.indexWhere(
-      (h) => h.pubkey == pubkey,
-    );
+    final stewardIndex = config.stewards.indexWhere((h) => h.pubkey == pubkey);
     if (stewardIndex == -1) {
       throw ArgumentError('Steward $pubkey not found in vault $vaultId');
     }
-
-    final updatedStewards = List<Steward>.from(backupConfig.stewards);
-    updatedStewards[stewardIndex] = updatedStewards[stewardIndex].copyWith(
+    final updatedStewards = List<Steward>.from(config.stewards);
+    final prior = updatedStewards[stewardIndex];
+    updatedStewards[stewardIndex] = prior.copyWith(
       status: status,
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: acknowledgmentEventId,
       acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+      giftWrapEventId: giftWrapEventId ?? prior.giftWrapEventId,
     );
-
-    final updatedConfig = copyBackupConfig(
-      backupConfig,
-      stewards: updatedStewards,
-    );
-    await updateBackupConfig(vaultId, updatedConfig);
-
+    final updated = config.copyWith(stewards: updatedStewards);
+    await updateBackupConfig(vaultId, updated);
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
   }
 
-  // ========== Shard Management Methods ==========
+  // ========== Shard Management (Phase 2 — `held_shares` table) ==========
 
-  /// Add a shard to a vault (supports multiple shards during recovery)
-  /// Checks for duplicate by nostrEventId to prevent adding the same shard twice
-  Future<void> addShardToVault(String vaultId, ShardData shard) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final vault = _cachedVaults![index];
-
-    // Check if a shard with the same nostrEventId already exists
-    if (shard.nostrEventId != null) {
-      final existingIndex = vault.shards.indexWhere(
-        (s) => s.nostrEventId != null && s.nostrEventId == shard.nostrEventId,
-      );
-
-      if (existingIndex != -1) {
-        Log.info(
-          'Shard with event ID ${shard.nostrEventId} already exists for vault $vaultId, skipping duplicate',
-        );
-        return; // Already have this exact shard, skip adding
-      }
-    }
-
-    // Add new shard
-    final updatedShards = List<ShardData>.from(vault.shards)..add(shard);
-
-    final updatedVault = vault.copyWith(shards: updatedShards);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info(
-      'Added shard to vault $vaultId (total shards: ${updatedShards.length})',
+  Future<void> addShardToVault(String vaultId, ShardData shard) {
+    throw UnimplementedError(
+      'addShardToVault: held_shares is restored in Phase 2 of the data layer '
+      'refactor. See docs/data_layer_refactor_plan.md.',
     );
   }
 
-  /// Get all shards for a vault
   Future<List<ShardData>> getShardsForVault(String vaultId) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
-    );
-
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
     return List.unmodifiable(vault.shards);
   }
 
-  /// Clear all shards for a vault
-  Future<void> clearShardsForVault(String vaultId) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final updatedVault = _cachedVaults![index].copyWith(shards: []);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info('Cleared all shards for vault $vaultId');
-  }
-
-  /// Delete vault content while preserving shards and backup config
-  /// This is used when owner has distributed keys and wants to delete
-  /// the local copy of content, relying on recovery to restore it later
-  Future<void> deleteVaultContent(String vaultId) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final updatedVault = _cachedVaults![index].copyWithContentDeleted();
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info('Deleted content for vault $vaultId (shards preserved)');
-  }
-
-  /// Check if we are a steward for a vault (have any shards)
-  Future<bool> isKeyHolderForVault(String vaultId) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
+  Future<void> clearShardsForVault(String vaultId) {
+    throw UnimplementedError(
+      'clearShardsForVault: held_shares is restored in Phase 2.',
     );
+  }
 
+  Future<void> deleteVaultContent(String vaultId) async {
+    final existing = await getVault(vaultId);
+    if (existing == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    await _persistVault(existing.copyWithContentDeleted());
+    Log.info('Deleted content for vault $vaultId');
+  }
+
+  Future<bool> isKeyHolderForVault(String vaultId) async {
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
     return vault.isSteward;
   }
 
-  // ========== Recovery Request Management Methods ==========
+  // ========== Recovery Request Management (Phase 3) ==========
 
-  /// Add a recovery request to a vault
   Future<void> addRecoveryRequestToVault(
     String vaultId,
     RecoveryRequest request,
-  ) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final vault = _cachedVaults![index];
-    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests)..add(request);
-
-    final updatedVault = vault.copyWith(recoveryRequests: updatedRequests);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info('Added recovery request ${request.id} to vault $vaultId');
+  ) {
+    throw UnimplementedError(
+      'addRecoveryRequestToVault: recovery_requests is restored in Phase 3.',
+    );
   }
 
-  /// Update a recovery request in a vault
   Future<void> updateRecoveryRequestInVault(
     String vaultId,
     String requestId,
     RecoveryRequest updatedRequest,
-  ) async {
-    await initialize();
-
-    final index = _cachedVaults!.indexWhere((lb) => lb.id == vaultId);
-    if (index == -1) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-
-    final vault = _cachedVaults![index];
-    final requestIndex = vault.recoveryRequests.indexWhere(
-      (r) => r.id == requestId,
+  ) {
+    throw UnimplementedError(
+      'updateRecoveryRequestInVault: recovery_requests is restored in Phase 3.',
     );
-
-    if (requestIndex == -1) {
-      throw ArgumentError('Recovery request not found: $requestId');
-    }
-
-    final updatedRequests = List<RecoveryRequest>.from(vault.recoveryRequests);
-    updatedRequests[requestIndex] = updatedRequest;
-
-    final updatedVault = vault.copyWith(recoveryRequests: updatedRequests);
-    _cachedVaults![index] = updatedVault;
-    await _saveVault(updatedVault);
-    Log.info('Updated recovery request $requestId in vault $vaultId');
   }
 
-  /// Get all recovery requests for a vault
   Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
     String vaultId,
   ) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
-    );
-
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
     return List.unmodifiable(vault.recoveryRequests);
   }
 
-  /// Get the active recovery request for a vault (if any)
   Future<RecoveryRequest?> getActiveRecoveryRequest(String vaultId) async {
-    await initialize();
-
-    final vault = _cachedVaults!.firstWhere(
-      (lb) => lb.id == vaultId,
-      orElse: () => throw ArgumentError('Vault not found: $vaultId'),
-    );
-
+    final vault = await getVault(vaultId);
+    if (vault == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
     return vault.activeRecoveryRequest;
   }
 
-  /// Get all recovery requests across all vaults
   Future<List<RecoveryRequest>> getAllRecoveryRequests() async {
-    await initialize();
-
-    final allRequests = <RecoveryRequest>[];
-    for (final vault in _cachedVaults!) {
-      allRequests.addAll(vault.recoveryRequests);
-    }
-
-    return allRequests;
+    final vaults = await getAllVaults();
+    return [for (final v in vaults) ...v.recoveryRequests];
   }
 
-  /// Dispose resources
   void dispose() {
+    _vaultRowsSubscription?.cancel();
     _vaultsController.close();
   }
 
-  // ========== Storage Helper Methods ==========
+  // ========== Hydration helpers ==========
 
-  /// Get all vault IDs that exist in storage
-  Future<List<String>> _getAllVaultIds() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final allKeys = prefs.getKeys();
-      final vaultIds = <String>[];
+  Future<List<Vault>> _hydrateAll(List<VaultRow> rows) async {
+    final result = <Vault>[];
+    for (final row in rows) {
+      result.add(await _hydrate(row));
+    }
+    return result;
+  }
 
-      for (final key in allKeys) {
-        if (key.startsWith(_vaultFilePrefix)) {
-          // Extract vault ID: "vault_<id>" -> "<id>"
-          final id = key.substring(_vaultFilePrefix.length);
-          vaultIds.add(id);
-        }
+  Future<Vault> _hydrate(VaultRow row) async {
+    final ownedRow = await _db.ownedVaultDao.getByVaultId(row.id);
+    final stewardRows = await _db.stewardDao.activeForVault(row.id);
+    final relayRows = await _db.vaultRelayDao.forVault(row.id);
+
+    final dbStewards = stewardRows.map(_stewardFromRow).toList();
+    BackupConfig? backupConfig;
+    if (dbStewards.isNotEmpty || row.threshold > 0) {
+      final overlay = _backupConfigOverlay[row.id];
+      final stewards = overlay == null
+          ? dbStewards
+          : [
+              for (final s in dbStewards)
+                overlay.stewards.firstWhere(
+                  (cached) => cached.id == s.id,
+                  orElse: () => s,
+                ),
+            ];
+      backupConfig = BackupConfig(
+        vaultId: row.id,
+        threshold: row.threshold,
+        stewards: stewards,
+        relays: relayRows.map((r) => r.url).toSet().toList(),
+        instructions: row.instructions,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
+        distributionVersion: row.currentDistributionVersion,
+      );
+    }
+
+    return Vault(
+      id: row.id,
+      name: row.name,
+      content: ownedRow?.content,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
+      ownerPubkey: row.ownerPubkey,
+      ownerName: row.ownerName,
+      shards: const [],
+      recoveryRequests: const [],
+      backupConfig: backupConfig,
+      archivedAt:
+          row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
+      archivedReason: row.archivedReason,
+      pushEnabled: row.pushEnabled,
+    );
+  }
+
+  Steward _stewardFromRow(StewardRow row) {
+    return Steward(
+      id: row.id,
+      pubkey: row.pubkey,
+      name: row.name,
+      contactInfo: row.contactInfo,
+      isOwner: row.isOwner,
+      // Phase 1 placeholder: status is not stored yet (lands in Phase 2/3
+      // alongside `distribution_shares` ack timestamps). Default to a safe
+      // value; the in-memory copy held by callers between writes already
+      // carries the precise status.
+      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+    );
+  }
+
+  Future<void> _persistVault(Vault vault) async {
+    final createdAtMs = vault.createdAt.millisecondsSinceEpoch;
+    final config = vault.backupConfig;
+    if (config != null) {
+      _backupConfigOverlay[vault.id] = config;
+    } else {
+      _backupConfigOverlay.remove(vault.id);
+    }
+    final archivedAtMs = vault.archivedAt?.millisecondsSinceEpoch;
+    final archivedReason = vault.archivedAt == null ? null : vault.archivedReason;
+    await _db.transaction(() async {
+      await _db.into(_db.vaults).insertOnConflictUpdate(
+            VaultsCompanion.insert(
+              id: vault.id,
+              name: vault.name,
+              ownerPubkey: vault.ownerPubkey,
+              ownerName: Value(vault.ownerName),
+              threshold: config?.threshold ?? 0,
+              totalShares: config?.totalKeys ?? 0,
+              currentDistributionVersion: Value(
+                config?.distributionVersion ?? 0,
+              ),
+              instructions: Value(config?.instructions),
+              pushEnabled: Value(vault.pushEnabled),
+              archivedAt: Value(archivedAtMs),
+              archivedReason: Value(archivedReason),
+              createdAt: createdAtMs,
+            ),
+          );
+
+      if (vault.content != null) {
+        await _db.into(_db.ownedVaults).insertOnConflictUpdate(
+              OwnedVaultsCompanion.insert(
+                vaultId: vault.id,
+                content: vault.content!,
+                contentHmac: _placeholderHmac(vault.content!),
+                createdBySelfAt: createdAtMs,
+              ),
+            );
+      } else {
+        await (_db.delete(
+          _db.ownedVaults,
+        )..where((v) => v.vaultId.equals(vault.id)))
+            .go();
       }
 
-      vaultIds.sort();
-      return vaultIds;
-    } catch (e) {
-      Log.error('Error getting vault IDs from SharedPreferences', e);
-      return [];
-    }
+      // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
+      // active stewards out as plain rows; the append-on-replace history
+      // bookkeeping lands in later phases. We replace-by-id for now: insert
+      // any new ids, leave existing rows in place, and soft-retire ones
+      // missing from the config.
+      if (config != null) {
+        final keptIds = config.stewards.map((s) => s.id).toSet();
+        final existing = await (_db.select(
+          _db.stewards,
+        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
+            .get();
+        for (final existingRow in existing) {
+          if (!keptIds.contains(existingRow.id)) {
+            await (_db.update(
+              _db.stewards,
+            )..where((s) => s.id.equals(existingRow.id)))
+                .write(
+              StewardsCompanion(
+                leftAt: Value(DateTime.now().millisecondsSinceEpoch),
+              ),
+            );
+          }
+        }
+
+        for (var i = 0; i < config.stewards.length; i++) {
+          final s = config.stewards[i];
+          await _db.into(_db.stewards).insertOnConflictUpdate(
+                StewardsCompanion.insert(
+                  id: s.id,
+                  vaultId: vault.id,
+                  shareIndex: i + 1,
+                  pubkey: Value(s.pubkey),
+                  name: Value(s.name),
+                  contactInfo: Value(s.contactInfo),
+                  isOwner: Value(s.isOwner),
+                  joinedAt: createdAtMs,
+                ).copyWith(
+                  // Clear leftAt so a re-added steward (same ID, previously
+                  // soft-retired) becomes visible to activeForVault queries again.
+                  leftAt: const Value(null),
+                ),
+              );
+        }
+
+        await _db.vaultRelayDao.replaceForVault(
+          vaultId: vault.id,
+          role: 'owner',
+          rows: [
+            for (final url in config.relays)
+              VaultRelaysCompanion.insert(
+                id: '${vault.id}-$url',
+                vaultId: vault.id,
+                url: url,
+                role: 'owner',
+                addedAt: DateTime.now().millisecondsSinceEpoch,
+              ),
+          ],
+        );
+      } else {
+        // Removing backup config must clear steward and relay rows; otherwise
+        // _hydrate would rebuild BackupConfig from stale DB state
+        // (dbStewards.isNotEmpty || row.threshold > 0).
+        final existing = await (_db.select(
+          _db.stewards,
+        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
+            .get();
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        for (final existingRow in existing) {
+          await (_db.update(
+            _db.stewards,
+          )..where((s) => s.id.equals(existingRow.id)))
+              .write(
+            StewardsCompanion(
+              leftAt: Value(nowMs),
+            ),
+          );
+        }
+        await _db.vaultRelayDao.replaceForVault(
+          vaultId: vault.id,
+          role: 'owner',
+          rows: [],
+        );
+      }
+    });
   }
 
-  /// Read vault data by ID
-  Future<String?> _readVault(String vaultId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final key = _getStorageKey(vaultId);
-      return prefs.getString(key);
-    } catch (e) {
-      Log.error('Error reading vault $vaultId from SharedPreferences', e);
-      return null;
-    }
-  }
-
-  /// Write vault data by ID
-  Future<void> _writeVault(String vaultId, String encryptedData) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final key = _getStorageKey(vaultId);
-      await prefs.setString(key, encryptedData);
-      Log.info('Saved encrypted vault $vaultId to SharedPreferences');
-    } catch (e) {
-      Log.error('Error writing vault $vaultId to SharedPreferences', e);
-      rethrow;
-    }
-  }
-
-  /// Delete vault data by ID
-  Future<void> _deleteVault(String vaultId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final key = _getStorageKey(vaultId);
-      await prefs.remove(key);
-      Log.info('Deleted vault $vaultId from SharedPreferences');
-    } catch (e) {
-      Log.error('Error deleting vault $vaultId from SharedPreferences', e);
-      rethrow;
-    }
-  }
-
-  String _getStorageKey(String vaultId) {
-    return '$_vaultFilePrefix$vaultId';
+  Uint8List _placeholderHmac(String content) {
+    // Phase 1: drift schema requires a non-null `content_hmac`. The keyed
+    // HMAC contract (HMAC-SHA-256 under the DB key) lands when the
+    // owner-side distribution flow moves into the database; until then we
+    // store a deterministic SHA-256 of the content so duplicate writes are
+    // stable. Documented in docs/data_layer_refactor_plan.md.
+    final digest = sha256.convert(utf8.encode(content));
+    return Uint8List.fromList(digest.bytes);
   }
 }

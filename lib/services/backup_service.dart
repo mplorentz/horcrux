@@ -49,21 +49,15 @@ List<Steward> _stewardsResetForRedistribution(List<Steward> stewards) {
   }).toList();
 }
 
-/// [config] with [BackupConfig.distributionVersion] incremented and stewards reset.
-///
-/// Optionally sets [lastContentChange] (e.g. vault body edit); otherwise preserves
-/// the existing value.
-BackupConfig _backupConfigWithBumpedDistribution(
-  BackupConfig config, {
-  DateTime? lastContentChange,
-}) {
-  final now = DateTime.now();
-  return copyBackupConfig(
-    config,
+/// [config] with [BackupConfig.distributionVersion] incremented and stewards
+/// reset. Phase 1 stops tracking `lastContentChange` / `lastUpdated` —
+/// callers that need "content has changed since last distribution" should
+/// drive that off [BackupConfig.distributionVersion] and the steward statuses
+/// reset by this call.
+BackupConfig _backupConfigWithBumpedDistribution(BackupConfig config) {
+  return config.copyWith(
     stewards: _stewardsResetForRedistribution(config.stewards),
     distributionVersion: config.distributionVersion + 1,
-    lastUpdated: now,
-    lastContentChange: lastContentChange ?? config.lastContentChange,
   );
 }
 
@@ -89,7 +83,6 @@ class BackupService {
     required List<Steward> stewards,
     required List<String> relays,
     String? instructions,
-    String? contentHash,
   }) async {
     // Validate inputs
     if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
@@ -117,7 +110,6 @@ class BackupService {
       stewards: stewards,
       relays: relays,
       instructions: instructions,
-      contentHash: contentHash,
     );
 
     // Store the configuration in the vault via repository
@@ -293,21 +285,14 @@ class BackupService {
     }
   }
 
-  /// Update backup status
+  /// Previously updated a persisted [BackupStatus] enum on the config.
+  /// `status` is no longer stored — it is derived from steward statuses and
+  /// distribution timestamps. Retained as a no-op to keep call sites compiling
+  /// during the data-layer refactor; remove in a follow-up cleanup pass.
   Future<void> updateBackupStatus(String vaultId, BackupStatus status) async {
-    final config = await _repository.getBackupConfig(vaultId);
-    if (config == null) {
-      throw ArgumentError('Backup configuration not found for vault $vaultId');
-    }
-
-    final updatedConfig = copyBackupConfig(
-      config,
-      status: status,
-      lastUpdated: DateTime.now(),
+    Log.info(
+      'updateBackupStatus($vaultId, $status) is a no-op: status is derived',
     );
-    await _repository.updateBackupConfig(vaultId, updatedConfig);
-
-    Log.info('Updated backup status for vault $vaultId to $status');
   }
 
   /// Update steward status
@@ -317,6 +302,7 @@ class BackupService {
     required StewardStatus status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
+    String? giftWrapEventId,
   }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
@@ -330,17 +316,14 @@ class BackupService {
           status: status,
           acknowledgedAt: acknowledgedAt,
           acknowledgmentEventId: acknowledgmentEventId,
+          giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
           // Preserve contactInfo when updating steward status
         );
       }
       return steward;
     }).toList();
 
-    final updatedConfig = copyBackupConfig(
-      config,
-      stewards: updatedStewards,
-      lastUpdated: DateTime.now(),
-    );
+    final updatedConfig = config.copyWith(stewards: updatedStewards);
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
 
@@ -433,9 +416,6 @@ class BackupService {
       mergedStewards = existingConfig.stewards;
     }
 
-    // Calculate new total keys based on merged stewards
-    final newTotalKeys = mergedStewards.length;
-
     // Increment distribution version if config changed
     final newDistributionVersion = configParamsChanged
         ? existingConfig.distributionVersion + 1
@@ -447,16 +427,12 @@ class BackupService {
         : mergedStewards;
 
     // Create merged config
-    final mergedConfig = copyBackupConfig(
-      existingConfig,
+    final mergedConfig = existingConfig.copyWith(
       threshold: newThreshold,
-      totalKeys: newTotalKeys,
       stewards: finalStewards,
       relays: newRelays,
       instructions: newInstructions,
-      lastUpdated: DateTime.now(),
       distributionVersion: newDistributionVersion,
-      // Preserve lastRedistribution - only updated when distribution succeeds
     );
 
     // Save merged config
@@ -489,10 +465,7 @@ class BackupService {
       return;
     }
 
-    final updatedConfig = _backupConfigWithBumpedDistribution(
-      config,
-      lastContentChange: DateTime.now(),
-    );
+    final updatedConfig = _backupConfigWithBumpedDistribution(config);
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
     Log.info(
@@ -510,7 +483,9 @@ class BackupService {
   /// [createAndDistributeBackup] so new shards carry the current preference.
   ///
   /// No-ops when there is no config or [BackupConfig.canDistribute] is false.
-  Future<void> redistributeForPushPreferenceChange({required String vaultId}) async {
+  Future<void> redistributeForPushPreferenceChange({
+    required String vaultId,
+  }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
       Log.info('BackupService: skip push redistribution (no backup config)');
@@ -570,7 +545,10 @@ class BackupService {
               await createAndDistributeBackup(vaultId: vaultId);
               Log.info('Auto-distributed keys after steward acceptance');
             } catch (e) {
-              Log.error('Failed to auto-distribute keys after steward acceptance', e);
+              Log.error(
+                'Failed to auto-distribute keys after steward acceptance',
+                e,
+              );
               // Don't fail if auto-distribution fails
             }
           }
@@ -725,7 +703,9 @@ class BackupService {
       // Step 5: Generate Shamir shares
       // Build stewards list with name, pubkey, and contactInfo maps
       // Include all stewards with pubkeys (including owner if they have a shard)
-      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((kh) {
+      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((
+        kh,
+      ) {
         final stewardMap = <String, String>{
           'name': kh.name ?? 'Unknown',
           'pubkey': kh.pubkey!,
@@ -767,17 +747,16 @@ class BackupService {
       if (currentConfig == null) {
         throw Exception('Backup configuration not found after distribution');
       }
-      final now = DateTime.now();
-      final updatedConfig = copyBackupConfig(
-        currentConfig, // Use current config, not the stale one from step 2
-        lastRedistribution: now,
-        lastUpdated: now,
-        status: BackupStatus.active,
-      );
-      await _repository.updateBackupConfig(vaultId, updatedConfig);
-      Log.info('Updated backup config with redistribution timestamp');
+      // Phase 1: distribution success is no longer materialized into a
+      // dedicated `lastRedistribution` / `status` column on `BackupConfig`.
+      // The successful publish surface comes from steward acks (which raise
+      // each steward's status to `holdingKey`) and the bumped
+      // `distributionVersion`. Persist the current config so the latest
+      // steward state from step 6 is durable.
+      await _repository.updateBackupConfig(vaultId, currentConfig);
+      Log.info('Updated backup config after redistribution');
 
-      return updatedConfig;
+      return currentConfig;
     } catch (e) {
       Log.error('Failed to create and distribute backup', e);
       rethrow;

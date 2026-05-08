@@ -7,7 +7,6 @@ import 'package:horcrux/models/shard_data.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
@@ -373,18 +372,13 @@ void main() {
       );
 
       // Create backup config with owner as steward
-      final backupConfig = copyBackupConfig(
-        createBackupConfig(
-          vaultId: 'test-vault',
-          threshold: 2,
-          totalKeys: 3,
-          stewards: [ownerSteward, stewardB, stewardC],
-          relays: ['wss://relay.example.com'],
-        ),
-        status: BackupStatus.active,
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
-        distributionVersion: 1,
-      );
+      final backupConfig = createBackupConfig(
+        vaultId: 'test-vault',
+        threshold: 2,
+        totalKeys: 3,
+        stewards: [ownerSteward, stewardB, stewardC],
+        relays: ['wss://relay.example.com'],
+      ).copyWith(distributionVersion: 1);
 
       final vault = Vault(
         id: 'test-vault',
@@ -440,18 +434,13 @@ void main() {
       );
 
       // Create backup config with owner NOT as steward
-      final backupConfig = copyBackupConfig(
-        createBackupConfig(
-          vaultId: 'test-vault',
-          threshold: 2,
-          totalKeys: 3,
-          stewards: [ownerSteward, stewardB, stewardC],
-          relays: ['wss://relay.example.com'],
-        ),
-        status: BackupStatus.active,
-        lastRedistribution: DateTime.now().subtract(const Duration(hours: 1)),
-        distributionVersion: 1,
-      );
+      final backupConfig = createBackupConfig(
+        vaultId: 'test-vault',
+        threshold: 2,
+        totalKeys: 3,
+        stewards: [ownerSteward, stewardB, stewardC],
+        relays: ['wss://relay.example.com'],
+      ).copyWith(distributionVersion: 1);
 
       final vault = Vault(
         id: 'test-vault',
