@@ -518,6 +518,23 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> mergeVaultRowFromIncomingShare(
+    String? vaultId,
+    _i10.Share? share,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #mergeVaultRowFromIncomingShare,
+          [
+            vaultId,
+            share,
+          ],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
   _i4.Future<void> deleteVaultContent(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #deleteVaultContent,
