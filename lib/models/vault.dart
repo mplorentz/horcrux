@@ -130,24 +130,48 @@ class Vault with _$Vault {
   /// recovery from the same Manage screen once enough stewards have approved.
   ///
   /// Pass [isPractice] to filter to real (`false`) or practice (`true`) sessions
-  /// only; leave it null to match either kind. Per-user exclusivity guarantees
-  /// at most one match per (kind), so callers do not need to disambiguate.
+  /// only; leave it null to consider **both** kinds independently and return the
+  /// single newer of the two manageable sessions (so the status banner stays in
+  /// sync with the bottom actions).
   ///
-  /// This intentionally does NOT consult the most-recent request on the vault
-  /// (as `recoveryStatusProvider` does) because in multi-initiator scenarios
-  /// that representative may belong to another user, hiding the current user's
-  /// own manageable session.
+  /// Selection is **per kind** (real vs practice): among matching requests we
+  /// take the **most recent** by [RecoveryRequest.requestedAt]. If the newest
+  /// request for that kind is `cancelled` or `archived`, we return null for that
+  /// kind so an older `completed` row does not keep "Manage recovery" visible
+  /// after the user cancels their latest attempt.
+  ///
+  /// Other users' requests are ignored ([initiatorPubkey] must match).
   RecoveryRequest? manageableRecoveryFor(String? pubkey, {bool? isPractice}) {
     if (pubkey == null) return null;
-    for (final r in recoveryRequests) {
-      if (r.initiatorPubkey != pubkey) continue;
-      if (!(r.status.isActive || r.status == RecoveryRequestStatus.completed)) {
-        continue;
-      }
-      if (isPractice != null && r.isPractice != isPractice) continue;
-      return r;
+    if (isPractice != null) {
+      return _manageableRecoveryForKind(pubkey, isPractice);
     }
-    return null;
+    final real = _manageableRecoveryForKind(pubkey, false);
+    final practice = _manageableRecoveryForKind(pubkey, true);
+    if (real == null) return practice;
+    if (practice == null) return real;
+    return real.requestedAt.isAfter(practice.requestedAt) ? real : practice;
+  }
+
+  RecoveryRequest? _manageableRecoveryForKind(String pubkey, bool isPractice) {
+    final mine = recoveryRequests
+        .where((r) => r.initiatorPubkey == pubkey && r.isPractice == isPractice)
+        .toList();
+    if (mine.isEmpty) return null;
+    mine.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    final latest = mine.first;
+    if (latest.status == RecoveryRequestStatus.cancelled ||
+        latest.status == RecoveryRequestStatus.archived) {
+      return null;
+    }
+    final manageable = mine
+        .where(
+          (r) => r.status.isActive || r.status == RecoveryRequestStatus.completed,
+        )
+        .toList();
+    if (manageable.isEmpty) return null;
+    manageable.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    return manageable.first;
   }
 
   /// Create a copy with content explicitly cleared (set to null)

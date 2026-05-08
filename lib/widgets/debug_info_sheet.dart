@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/key_provider.dart';
 import '../screens/horcrux_gallery_screen.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Provider for PackageInfo
 final packageInfoProvider = FutureProvider<PackageInfo>((ref) async {
@@ -209,12 +210,9 @@ class _KeyDisplay extends StatelessWidget {
 
   void _copyToClipboard(BuildContext context, String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    context.showHorcruxSnackBar(
+      '$label copied to clipboard',
+      duration: const Duration(seconds: 2),
     );
   }
 }

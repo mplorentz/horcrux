@@ -8,11 +8,13 @@ import '../app_navigator.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/shard_data.dart';
+import '../providers/key_provider.dart';
 import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
 import '../screens/recovery_status_screen.dart';
 import '../screens/vault_detail_screen.dart';
 import '../utils/push_notification_text.dart';
+import 'login_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart' show RecoveryResponseEvent;
 import 'notification_recency.dart';
@@ -20,8 +22,10 @@ import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
+  final loginService = ref.watch(loginServiceProvider);
   final service = LocalNotificationService(
     vaultRepository: vaultRepository,
+    loginService: loginService,
     getRecoveryService: () => ref.read(recoveryServiceProvider),
   );
   ref.onDispose(() => service.dispose());
@@ -52,6 +56,7 @@ String recoveryRequestRouteName(String recoveryRequestId) => '/recovery_request/
 /// in, but recency is enforced here as the single source of truth.
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
+  final LoginService _loginService;
   final RecoveryService Function() _getRecoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
@@ -63,8 +68,10 @@ class LocalNotificationService {
 
   LocalNotificationService({
     required VaultRepository vaultRepository,
+    required LoginService loginService,
     required RecoveryService Function() getRecoveryService,
   })  : _vaultRepository = vaultRepository,
+        _loginService = loginService,
         _getRecoveryService = getRecoveryService;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
@@ -166,6 +173,26 @@ class LocalNotificationService {
       event: event,
       vaultId: vaultId,
     );
+  }
+
+  /// Returns whether [pubkey] matches the current user's hex public key.
+  ///
+  /// Used to suppress local notifications for events the user themselves
+  /// signed -- which happens whenever the user is a steward of their own
+  /// vault, because the publish-to-stewards loop includes their own pubkey
+  /// and the corresponding gift wrap round-trips through their own client.
+  /// Returns `false` (i.e. "not self, do notify") if the lookup fails or no
+  /// key has been initialized yet, so a transient secure-storage hiccup
+  /// degrades to "show the notification" rather than swallowing it silently.
+  Future<bool> _isCurrentUserPubkey(String pubkey) async {
+    try {
+      final current = await _loginService.getCurrentPublicKey();
+      if (current == null || current.isEmpty) return false;
+      return current.toLowerCase() == pubkey.toLowerCase();
+    } catch (e, st) {
+      Log.warning('LocalNotificationService: self-pubkey lookup failed', e, st);
+      return false;
+    }
   }
 
   /// Returns whether [eventUtc] is recent enough to notify for, logging a
@@ -295,6 +322,19 @@ class LocalNotificationService {
   }) async {
     if (vaultId == null || vaultId.isEmpty) {
       Log.debug('Skipping ${kind.name} notification: missing vault id');
+      return;
+    }
+
+    // When the user is a steward of their own vault, every shard distribution
+    // and confirmation publish round-trips through their own client. Notifying
+    // about an event the current user just signed would surface lines like
+    // "Mac has confirmed they have the latest data..." on the device that
+    // *is* Mac. Skip those before composing any text. See horcrux_app-3b0.
+    if (await _isCurrentUserPubkey(event.pubKey)) {
+      Log.debug(
+        'Skipping ${kind.name} notification ${event.id}: '
+        'event was signed by the current user',
+      );
       return;
     }
 

@@ -9,7 +9,9 @@ import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../utils/nostr_display.dart';
 import '../widgets/row_button_stack.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Screen for viewing and responding to a recovery request
 class RecoveryRequestDetailScreen extends ConsumerStatefulWidget {
@@ -25,6 +27,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
   bool _isLoading = false;
   String? _currentPubkey;
 
+  /// Only explicit steward decisions should block re-entry/duplicate actions.
+  bool _isFinalStewardDecision(RecoveryResponseStatus status) {
+    return status == RecoveryResponseStatus.approved || status == RecoveryResponseStatus.denied;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,16 +46,46 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         setState(() {
           _currentPubkey = pubkey;
         });
+        final existingResponse = widget.recoveryRequest.stewardResponses[pubkey];
+        if (existingResponse != null && _isFinalStewardDecision(existingResponse.status)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showAlreadyRespondedDialog(existingResponse.status);
+          });
+        }
       }
     } catch (e) {
       Log.error('Error loading current pubkey', e);
     }
   }
 
+  Future<void> _showAlreadyRespondedDialog(RecoveryResponseStatus responseStatus) async {
+    final action = switch (responseStatus) {
+      RecoveryResponseStatus.approved => 'approved',
+      RecoveryResponseStatus.denied => 'denied',
+      _ => 'responded to',
+    };
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Already Responded'),
+        content: Text('You already $action this recovery request.'),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
   Future<void> _respondToRequest(RecoveryResponseStatus status) async {
     if (_currentPubkey == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Could not load current user')),
+      context.showHorcruxSnackBar(
+        'Error: Could not load current user',
+        kind: HorcruxSnackKind.error,
       );
       return;
     }
@@ -71,23 +108,20 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         // Invalidate the recovery status provider to force a refresh when navigating back
         ref.invalidate(recoveryStatusProvider(widget.recoveryRequest.vaultId));
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              status == RecoveryResponseStatus.approved
-                  ? 'Recovery request approved and key sent'
-                  : 'Recovery request denied',
-            ),
-          ),
+        context.showHorcruxSnackBar(
+          status == RecoveryResponseStatus.approved
+              ? 'Recovery request approved and key sent'
+              : 'Recovery request denied',
+          kind: status == RecoveryResponseStatus.approved
+              ? HorcruxSnackKind.success
+              : HorcruxSnackKind.info,
         );
         Navigator.pop(context);
       }
     } catch (e) {
       Log.error('Error responding to recovery request', e);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
         setState(() {
           _isLoading = false;
         });
@@ -163,14 +197,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultAsync = ref.watch(vaultProvider(request.vaultId));
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Recovery Request',
-          overflow: TextOverflow.visible,
-          maxLines: 2,
-        ),
-        centerTitle: false,
-      ),
+      appBar: const HorcruxAppBar(title: 'Recovery Request'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : vaultAsync.when(
@@ -186,6 +213,11 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     RecoveryRequest request,
     Vault? vault,
   ) {
+    final currentResponseStatus =
+        _currentPubkey == null ? null : request.stewardResponses[_currentPubkey]?.status;
+    final hasFinalResponse =
+        currentResponseStatus != null && _isFinalStewardDecision(currentResponseStatus);
+
     final initiatorName = displayNameFromPubkeyOrNull(vault, request.initiatorPubkey);
 
     // Get instructions from vault
@@ -419,7 +451,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         ),
 
         // Action buttons (RowButtonStack at bottom)
-        if (request.status.isActive)
+        if (request.status.isActive && !hasFinalResponse)
           RowButtonStack(
             buttons: [
               RowButtonConfig(

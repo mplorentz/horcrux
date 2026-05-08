@@ -9,7 +9,9 @@ import '../services/recovery_service.dart';
 import '../services/logger.dart';
 import '../screens/recovery_status_screen.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Screen to explain the processs for practicing recovery.
 /// This allows vault owners to initiate a practice recovery sesssion.
@@ -24,8 +26,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Practice Recovery'),
+      appBar: HorcruxAppBar(
+        title: 'Practice Recovery',
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
@@ -339,8 +341,9 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recovery request initiated and sent')),
+        context.showHorcruxSnackBar(
+          'Recovery request initiated and sent',
+          kind: HorcruxSnackKind.success,
         );
 
         ref.invalidate(recoveryStatusProvider(vaultId));
@@ -362,9 +365,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
       }
     }
   }

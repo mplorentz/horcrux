@@ -91,7 +91,7 @@ void main() {
     });
 
     testWidgets(
-      'shows Delete Local Copy button when owner has content and owner steward configured',
+      'shows Travel Mode button when owner has content and owner steward configured',
       (tester) async {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
@@ -144,14 +144,14 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Verify Delete Local Copy button is shown
-        expect(find.text('Delete Local Copy'), findsOneWidget);
+        // Verify Travel Mode button is shown
+        expect(find.text('Travel Mode'), findsOneWidget);
 
         container.dispose();
       },
     );
 
-    testWidgets('shows Delete Local Copy after distribution even without owner steward', (
+    testWidgets('shows Travel Mode after distribution even without owner steward', (
       tester,
     ) async {
       // Only regular stewards, no owner steward
@@ -205,8 +205,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify Delete Local Copy button IS shown after distribution (owner steward not required)
-      expect(find.text('Delete Local Copy'), findsOneWidget);
+      // Verify Travel Mode button IS shown after distribution (owner steward not required)
+      expect(find.text('Travel Mode'), findsOneWidget);
 
       container.dispose();
     });
@@ -306,6 +306,84 @@ void main() {
     // finalizes the recovery from the same Manage screen by tapping "Recover
     // Vault". If the widget filters by `isActive` only, that path disappears
     // and the user is incorrectly offered "Initiate Recovery" again.
+    // Regression for horcrux_app-e0h: an owner who deletes content, initiates
+    // recovery, and then creates new vault content goes from owner-steward
+    // (content == null) back to a regular owner (content != null). Their real
+    // recovery is still in flight, but the "Manage Recovery" button used to be
+    // gated solely by owner-steward state and disappeared the moment content
+    // came back.
+    testWidgets(
+      'shows Manage Recovery for an owner with content and an active real recovery',
+      (tester) async {
+        final ownerShard = createShardData(
+          shard: 'owner-shard-data',
+          threshold: 2,
+          shardIndex: 0,
+          totalShards: 3,
+          primeMod: 'test-prime-mod',
+          creatorPubkey: testPubkey,
+          vaultId: 'test-vault',
+          vaultName: 'Test Vault',
+          distributionVersion: 1,
+        );
+
+        final myRequest = RecoveryRequest(
+          id: 'my-request',
+          vaultId: 'test-vault',
+          initiatorPubkey: testPubkey,
+          requestedAt: DateTime(2024, 1, 1, 10),
+          status: RecoveryRequestStatus.inProgress,
+          threshold: 2,
+        );
+
+        // Owner restored content while a real recovery they initiated is still
+        // in flight. Shards may or may not still be present after content is
+        // recreated; the bug reproduces either way, but include the owner's
+        // shard to mirror the realistic state right after content recreation.
+        final vault = Vault(
+          id: 'test-vault',
+          name: 'Test Vault',
+          content: 'New vault content',
+          createdAt: DateTime(2024, 1, 1),
+          ownerPubkey: testPubkey,
+          shards: [ownerShard],
+          recoveryRequests: [myRequest],
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+            recoveryStatusProvider.overrideWith((ref, vaultId) {
+              return AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: true,
+                  canRecover: false,
+                  activeRecoveryRequest: myRequest,
+                  isInitiator: true,
+                ),
+              );
+            }),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Manage Recovery'), findsOneWidget);
+        // No new recovery should be initiable while one is already in flight.
+        expect(find.text('Initiate Recovery'), findsNothing);
+
+        container.dispose();
+      },
+    );
+
     testWidgets(
       'shows Manage Recovery when the current user\'s own request is completed',
       (tester) async {

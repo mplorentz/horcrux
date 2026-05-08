@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
+import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'backup_config_screen.dart';
 import 'vault_list_screen.dart';
@@ -53,7 +55,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('New Vault'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'New Vault'),
       body: Column(
         children: [
           Expanded(
@@ -118,11 +120,9 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
         MaterialPageRoute(builder: (context) => const VaultListScreen()),
         (route) => false,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vault created and recovery plan saved!'),
-          backgroundColor: Colors.green,
-        ),
+      context.showHorcruxSnackBar(
+        'Vault created and recovery plan saved!',
+        kind: HorcruxSnackKind.success,
       );
     } else {
       // Dismiss the modal and pass the vaultId back up the chain

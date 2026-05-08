@@ -6,10 +6,12 @@ import '../models/invitation_exceptions.dart';
 import '../services/invitation_service.dart';
 import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
-import '../widgets/row_button_stack.dart';
-import '../widgets/row_button.dart';
+import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/name_label.dart';
+import '../widgets/row_button.dart';
+import '../widgets/row_button_stack.dart';
 
 /// Screen for accepting or denying an invitation link
 ///
@@ -36,7 +38,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Invitation'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'Vault Invitation'),
       body: invitationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Padding(
@@ -108,12 +110,16 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   ) {
     final canAct = invitation.status.canRedeem && !_isProcessing;
     final isTerminal = invitation.status.isTerminal;
+    final trimmedOwnerName = invitation.ownerName?.trim();
+    final ownerHeadlineLabel = (trimmedOwnerName != null && trimmedOwnerName.isNotEmpty)
+        ? trimmedOwnerName
+        : 'The vault owner';
 
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -154,14 +160,18 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
                 // Title
                 Text(
-                  'You\'ve been invited',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  '$ownerHeadlineLabel is asking you to steward their vault.',
+                  style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 8),
 
                 // Explainer text
                 Text(
-                  'Accepting this invitation will grant you a single key to this vault. You\'ll then be able to recover the vault in coordination with the other vault stewards.',
+                  'Stewardship means you will store one key to their vault on '
+                  'this device. The vault requires multiple keys to open. If the '
+                  'vault ever needs to be opened you\'ll be asked to provide your '
+                  'key. If you accept, it\'s important that you keep Horcrux '
+                  'installed and up to date - especially when you get a new phone.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,
@@ -192,7 +202,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 // Invitee name (if provided)
                 if (invitation.inviteeName != null) ...[
                   Text(
-                    'Invited as',
+                    'To',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(
                             context,
@@ -212,7 +222,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
                 // Vault name (if available)
                 if (invitation.vaultName != defaultVaultName) ...[
                   Text(
-                    'Vault',
+                    'Vault Name',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Theme.of(
                             context,
@@ -407,11 +417,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invitation accepted successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Invitation accepted successfully!',
+          kind: HorcruxSnackKind.success,
         );
 
         // Refresh the invitation data
@@ -458,12 +466,10 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         });
 
         // Show error snackbar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        context.showHorcruxSnackBar(
+          errorMessage,
+          kind: HorcruxSnackKind.error,
+          duration: const Duration(seconds: 5),
         );
       }
     }
@@ -503,11 +509,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       await invitationService.denyInvitation(inviteCode: widget.inviteCode);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invitation denied'),
-            backgroundColor: Colors.orange,
-          ),
+        context.showHorcruxSnackBar(
+          'Invitation denied',
+          kind: HorcruxSnackKind.warning,
         );
 
         // Refresh the invitation data

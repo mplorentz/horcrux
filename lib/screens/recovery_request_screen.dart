@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/snackbar_helper.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
 /// Screen for initiating recovery of a vault
@@ -20,8 +22,8 @@ class _RecoveryRequestScreenState extends State<RecoveryRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: AppBar(
-        title: const Text('Initiate Recovery'),
+      appBar: HorcruxAppBar(
+        title: 'Initiate Recovery',
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -168,11 +170,9 @@ class _RecoveryRequestScreenState extends State<RecoveryRequestScreen> {
         });
 
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Recovery requests sent to stewards'),
-            backgroundColor: Colors.green,
-          ),
+        context.showHorcruxSnackBar(
+          'Recovery requests sent to stewards',
+          kind: HorcruxSnackKind.success,
         );
 
         Navigator.pop(context);

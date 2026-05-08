@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/row_button.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'vault_create_screen.dart';
 
@@ -22,7 +23,7 @@ class VaultExplainerScreen extends StatelessWidget {
     final textTheme = theme.textTheme;
 
     return HorcruxScaffold(
-      appBar: AppBar(title: const Text('Create Vault'), centerTitle: false),
+      appBar: const HorcruxAppBar(title: 'Create Vault'),
       body: Column(
         children: [
           Expanded(
@@ -38,14 +39,14 @@ class VaultExplainerScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   // Setup steps section
-                  Text('Setting one up involves:', style: textTheme.bodyLarge),
+                  Text('To set up a vault, you need to:', style: textTheme.bodyLarge),
                   const SizedBox(height: 16),
                   // Step 1
                   _buildStep(
                     context,
                     number: '1',
-                    title: 'Adding contents',
-                    description: 'Add the data that you want to back up.',
+                    title: 'Add content',
+                    description: 'Copy the data that you want to back up in Horcrux.',
                   ),
                   const SizedBox(height: 16),
                   // Step 2

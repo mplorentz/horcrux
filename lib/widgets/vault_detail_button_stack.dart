@@ -13,6 +13,7 @@ import '../screens/backup_config_screen.dart';
 import '../screens/edit_vault_screen.dart';
 import '../screens/recovery_status_screen.dart';
 import '../screens/practice_recovery_info_screen.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Button stack widget for vault detail screen
 class VaultDetailButtonStack extends ConsumerWidget {
@@ -152,8 +153,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         ),
                       );
 
-                      // Delete Local Copy Button - shown after distribution
-                      // Owner can delete vault content while keeping recovery capability
+                      // Travel Mode Button - shown after distribution
+                      // Erases the local copy of the vault contents while keeping the
+                      // recovery plan intact, so the owner can restore the contents later
+                      // via their stewards. Useful before crossing a border, lending the
+                      // device, or any other situation where the contents shouldn't be
+                      // accessible from this device.
                       if (currentVault != null) {
                         final backupConfig = currentVault.backupConfig;
                         if (backupConfig != null &&
@@ -162,9 +167,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             currentVault.content != null) {
                           buttons.add(
                             RowButtonConfig(
-                              onPressed: () => _showDeleteContentDialog(context, ref, currentVault),
-                              icon: Icons.delete_sweep,
-                              text: 'Delete Local Copy',
+                              onPressed: () => _showTravelModeDialog(context, ref, currentVault),
+                              icon: Icons.luggage,
+                              text: 'Travel Mode',
                             ),
                           );
                         }
@@ -221,17 +226,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                           );
                         }
                       }
-                    }
 
-                    // Owner-steward state: owner has deleted content but kept shards
-                    // Show special buttons for recovery
-                    final isOwnerSteward = isVaultOwner &&
-                        currentVault != null &&
-                        currentVault.content == null &&
-                        currentVault.shards.isNotEmpty;
-
-                    if (isOwnerSteward) {
-                      // Real recovery only: practice is managed via "Manage Practice Recovery" above.
+                      // Surface "Manage Recovery" for the owner whenever they have an
+                      // active real recovery, regardless of content state. Owners can
+                      // recreate vault content (or restore it) while a recovery is still
+                      // in flight; gating on owner-steward state alone made the button
+                      // vanish in that scenario (bug horcrux_app-e0h).
                       if (showManageRealRecovery) {
                         final myRecoveryId = myActiveRealRecovery.id;
                         buttons.add(
@@ -249,15 +249,27 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             text: 'Manage Recovery',
                           ),
                         );
-                      } else if (showInitiateRealRecovery) {
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () => _initiateRecovery(context, ref, vaultId),
-                            icon: Icons.restore,
-                            text: 'Initiate Recovery',
-                          ),
-                        );
                       }
+                    }
+
+                    // Owner-steward state: owner has deleted content but kept shards.
+                    // Only "Initiate Recovery" is gated on this state -- you can only
+                    // start a real recovery when you have shards but no content. Managing
+                    // an existing recovery is handled in the owner block above so it
+                    // survives the owner adding content back mid-recovery.
+                    final isOwnerSteward = isVaultOwner &&
+                        currentVault != null &&
+                        currentVault.content == null &&
+                        currentVault.shards.isNotEmpty;
+
+                    if (isOwnerSteward && showInitiateRealRecovery) {
+                      buttons.add(
+                        RowButtonConfig(
+                          onPressed: () => _initiateRecovery(context, ref, vaultId),
+                          icon: Icons.restore,
+                          text: 'Initiate Recovery',
+                        ),
+                      );
                     }
 
                     // Recovery buttons - only show for stewards (not owners, since owners already have contents)
@@ -377,23 +389,25 @@ class VaultDetailButtonStack extends ConsumerWidget {
     }
   }
 
-  /// Show confirmation dialog for deleting vault content (T011 stub, T013 implements)
-  Future<void> _showDeleteContentDialog(BuildContext context, WidgetRef ref, Vault vault) async {
+  /// Confirm enabling Travel Mode: erase the local copy of the vault contents
+  /// while keeping the recovery plan intact, so the owner can restore them
+  /// later via their stewards.
+  Future<void> _showTravelModeDialog(BuildContext context, WidgetRef ref, Vault vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Local Copy?'),
+        title: const Text('Enable Travel Mode?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'This will delete the vault content "${vault.name}" from this device.',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            const Text(
+              'Travel Mode wipes the vault contents from this device, so even if this device is compromised your vault will be safe.',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
-              'Your backup configuration will be preserved, allowing you to initiate recovery later to restore the content.',
+              'Your recovery plan stays intact, so you can restore the contents later with help from your stewards.',
             ),
             const SizedBox(height: 12),
             Container(
@@ -409,7 +423,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'You will need to initiate recovery to view this vault content again.',
+                      "You'll need to initiate recovery and wait for stewards to approve before you can view this vault's contents again.",
                       style: TextStyle(color: Colors.orange),
                     ),
                   ),
@@ -426,7 +440,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete Local Copy'),
+            child: const Text('Enable Travel Mode'),
           ),
         ],
       ),
@@ -438,20 +452,18 @@ class VaultDetailButtonStack extends ConsumerWidget {
         await repository.deleteVaultContent(vault.id);
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Local copy deleted. You can recover it later using your stewards.'),
-              backgroundColor: Colors.green,
-            ),
+          context.showHorcruxSnackBar(
+            'Travel Mode enabled.',
+            kind: HorcruxSnackKind.success,
           );
 
-          // Refresh vault data to show new state
           ref.invalidate(vaultProvider(vault.id));
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete local copy: $e'), backgroundColor: Colors.red),
+          context.showHorcruxSnackBar(
+            'Failed to enable Travel Mode: $e',
+            kind: HorcruxSnackKind.error,
           );
         }
       }
@@ -579,9 +591,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
       if (context.mounted) {
         Navigator.pop(context);
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recovery request initiated and sent')));
+        context.showHorcruxSnackBar(
+          'Recovery request initiated and sent',
+          kind: HorcruxSnackKind.success,
+        );
 
         ref.invalidate(recoveryStatusProvider(vaultId));
 
@@ -598,7 +611,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
       Log.error('Error initiating recovery', e);
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
       }
     }
   }

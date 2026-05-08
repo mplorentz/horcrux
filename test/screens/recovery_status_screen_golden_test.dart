@@ -508,5 +508,26 @@ void main() {
 
       container.dispose();
     });
+
+    testGoldens('vault recovered export dialog', (tester) async {
+      await pumpGoldenWidget(
+        tester,
+        AlertDialog(
+          title: const Text('Vault Recovered!'),
+          content: const Text(
+            'Your vault contents have been recovered. You can view them on this device '
+            'or export them as a text file.',
+          ),
+          actions: [
+            TextButton(onPressed: () {}, child: const Text('View Contents')),
+            TextButton(onPressed: () {}, child: const Text('Export as File')),
+            TextButton(onPressed: () {}, child: const Text('Close')),
+          ],
+        ),
+        surfaceSize: const Size(375, 420),
+      );
+
+      await screenMatchesGolden(tester, 'recovery_status_recovered_dialog');
+    });
   });
 }

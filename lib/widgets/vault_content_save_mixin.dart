@@ -6,6 +6,7 @@ import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
 import '../utils/invite_code_utils.dart';
+import '../utils/snackbar_helper.dart';
 
 /// Mixin for shared vault save logic between create and edit screens
 mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
@@ -69,20 +70,16 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
             try {
               await backupService.createAndDistributeBackup(vaultId: vaultId);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Keys distributed successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
+                context.showHorcruxSnackBar(
+                  'Keys distributed successfully!',
+                  kind: HorcruxSnackKind.success,
                 );
               }
             } catch (e) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to distribute keys: $e'),
-                    backgroundColor: Colors.orange,
-                  ),
+                context.showHorcruxSnackBar(
+                  'Failed to distribute keys: $e',
+                  kind: HorcruxSnackKind.warning,
                 );
               }
             }
@@ -129,8 +126,6 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
   void showError(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+    context.showHorcruxSnackBar(message, kind: HorcruxSnackKind.error);
   }
 }
