@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import 'steward.dart';
 import 'steward_status.dart';
 import 'vault.dart';
@@ -38,6 +40,34 @@ class BackupConfig {
     this.instructions,
   });
 
+  static const DeepCollectionEquality _stewardsEquality =
+      DeepCollectionEquality();
+  static const ListEquality<String> _relaysEquality = ListEquality<String>();
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is BackupConfig &&
+        vaultId == other.vaultId &&
+        threshold == other.threshold &&
+        _stewardsEquality.equals(stewards, other.stewards) &&
+        _relaysEquality.equals(relays, other.relays) &&
+        instructions == other.instructions &&
+        createdAt == other.createdAt &&
+        distributionVersion == other.distributionVersion;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        vaultId,
+        threshold,
+        _stewardsEquality.hash(stewards),
+        _relaysEquality.hash(relays),
+        instructions,
+        createdAt,
+        distributionVersion,
+      );
+
   /// Number of configured stewards (replaces the dropped `totalKeys` field —
   /// it duplicated `stewards.length`).
   int get totalKeys => stewards.length;
@@ -76,14 +106,12 @@ BackupConfig createBackupConfig({
   required List<String> relays,
   String? instructions,
 }) {
-  if (threshold < VaultBackupConstraints.minThreshold ||
-      threshold > totalKeys) {
+  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
     throw ArgumentError(
       'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
     );
   }
-  if (totalKeys < threshold ||
-      totalKeys > VaultBackupConstraints.maxTotalKeys) {
+  if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
     throw ArgumentError(
       'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
     );
@@ -101,10 +129,7 @@ BackupConfig createBackupConfig({
   }
 
   final stewardsWithPubkeys = stewards.where((h) => h.pubkey != null).toList();
-  final npubs = stewardsWithPubkeys
-      .map((h) => h.npub)
-      .where((n) => n != null)
-      .toSet();
+  final npubs = stewardsWithPubkeys.map((h) => h.npub).where((n) => n != null).toSet();
   if (npubs.length != stewardsWithPubkeys.length) {
     throw ArgumentError('All stewards with pubkeys must have unique npubs');
   }
@@ -163,12 +188,10 @@ Steward? getOwnerSteward(BackupConfig config) {
 extension BackupConfigExtension on BackupConfig {
   bool get isValid {
     try {
-      if (threshold < VaultBackupConstraints.minThreshold ||
-          threshold > totalKeys) {
+      if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
         return false;
       }
-      if (totalKeys < threshold ||
-          totalKeys > VaultBackupConstraints.maxTotalKeys) {
+      if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
         return false;
       }
       if (relays.isEmpty) return false;
@@ -176,13 +199,8 @@ extension BackupConfigExtension on BackupConfig {
       final ids = stewards.map((h) => h.id).toSet();
       if (ids.length != stewards.length) return false;
 
-      final stewardsWithPubkeys = stewards
-          .where((h) => h.pubkey != null)
-          .toList();
-      final npubs = stewardsWithPubkeys
-          .map((h) => h.npub)
-          .where((n) => n != null)
-          .toSet();
+      final stewardsWithPubkeys = stewards.where((h) => h.pubkey != null).toList();
+      final npubs = stewardsWithPubkeys.map((h) => h.npub).where((n) => n != null).toSet();
       if (npubs.length != stewardsWithPubkeys.length) {
         return false;
       }
@@ -219,9 +237,7 @@ extension BackupConfigExtension on BackupConfig {
   }
 
   int get pendingInvitationsCount {
-    return stewards
-        .where((h) => h.status == StewardStatus.invited && h.pubkey == null)
-        .length;
+    return stewards.where((h) => h.status == StewardStatus.invited && h.pubkey == null).length;
   }
 
   /// True when the owner still needs to publish shards for the current
@@ -237,8 +253,7 @@ extension BackupConfigExtension on BackupConfig {
     return stewards.any((s) {
       if (s.pubkey == null) return false;
       final awaitingSend =
-          s.status == StewardStatus.awaitingKey ||
-          s.status == StewardStatus.awaitingNewKey;
+          s.status == StewardStatus.awaitingKey || s.status == StewardStatus.awaitingNewKey;
       return awaitingSend && s.giftWrapEventId == null;
     });
   }
