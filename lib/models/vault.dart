@@ -33,6 +33,13 @@ enum VaultState {
 }
 
 /// Data model for a secure vault containing encrypted text content
+///
+/// **Archival:** [isArchived] and [archivedAt] are independent in this model,
+/// but [VaultRepository] persists archival only via `vaults.archived_at`.
+/// On read, [isArchived] is derived as `archivedAt != null`. Persistence
+/// normalizes: if [isArchived] is true and [archivedAt] is null, a timestamp
+/// is written; if [isArchived] is false, archive columns are cleared even when
+/// [archivedAt] was set in memory.
 @freezed
 class Vault with _$Vault {
   const factory Vault({

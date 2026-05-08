@@ -18,6 +18,22 @@ import '../services/login_service.dart';
 import '../services/logger.dart';
 import 'key_provider.dart';
 
+/// Archive columns stored on [Vaults] rows. Hydration sets [Vault.isArchived]
+/// from `archivedAt != null` only, so [Vault.isArchived] must be reflected
+/// here on write.
+({int? archivedAtMillis, String? archivedReason}) _archiveFieldsPersistedForVault(
+  Vault vault,
+) {
+  if (!vault.isArchived) {
+    return (archivedAtMillis: null, archivedReason: null);
+  }
+  final at = vault.archivedAt ?? DateTime.now();
+  return (
+    archivedAtMillis: at.millisecondsSinceEpoch,
+    archivedReason: vault.archivedReason,
+  );
+}
+
 /// Stream provider that automatically subscribes to vault changes
 final vaultListProvider = StreamProvider.autoDispose<List<Vault>>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
@@ -63,8 +79,7 @@ class VaultRepository {
   // ignore: unused_field
   final LoginService _loginService;
 
-  final StreamController<List<Vault>> _vaultsController =
-      StreamController<List<Vault>>.broadcast();
+  final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
   List<Vault> _latest = const [];
   StreamSubscription<List<Vault>>? _vaultRowsSubscription;
 
@@ -88,21 +103,18 @@ class VaultRepository {
   /// SharedPreferences-backed implementation. Production should always
   /// pass `db: ref.read(appDatabaseProvider)`.
   VaultRepository(LoginService loginService, {AppDatabase? db})
-    : _db = db ?? AppDatabase(NativeDatabase.memory()),
-      _loginService = loginService {
-    _vaultRowsSubscription = _db.vaultDao
-        .watchAll()
-        .asyncMap(_hydrateAll)
-        .listen(
-          (vaults) {
-            _latest = vaults;
-            _vaultsController.add(vaults);
-          },
-          onError: (Object e, StackTrace s) {
-            Log.error('vaultsStream hydration failed', e);
-            _vaultsController.addError(e, s);
-          },
-        );
+      : _db = db ?? AppDatabase(NativeDatabase.memory()),
+        _loginService = loginService {
+    _vaultRowsSubscription = _db.vaultDao.watchAll().asyncMap(_hydrateAll).listen(
+      (vaults) {
+        _latest = vaults;
+        _vaultsController.add(vaults);
+      },
+      onError: (Object e, StackTrace s) {
+        Log.error('vaultsStream hydration failed', e);
+        _vaultsController.addError(e, s);
+      },
+    );
   }
 
   /// Stream that replays the most recent hydrated vault list to new
@@ -375,9 +387,8 @@ class VaultRepository {
       recoveryRequests: const [],
       backupConfig: backupConfig,
       isArchived: row.archivedAt != null,
-      archivedAt: row.archivedAt == null
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
+      archivedAt:
+          row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
       archivedReason: row.archivedReason,
       pushEnabled: row.pushEnabled,
     );
@@ -394,9 +405,7 @@ class VaultRepository {
       // alongside `distribution_shares` ack timestamps). Default to a safe
       // value; the in-memory copy held by callers between writes already
       // carries the precise status.
-      status: row.pubkey == null
-          ? StewardStatus.invited
-          : StewardStatus.awaitingKey,
+      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
     );
   }
 
@@ -406,10 +415,9 @@ class VaultRepository {
     if (config != null) {
       _backupConfigOverlay[vault.id] = config;
     }
+    final archived = _archiveFieldsPersistedForVault(vault);
     await _db.transaction(() async {
-      await _db
-          .into(_db.vaults)
-          .insertOnConflictUpdate(
+      await _db.into(_db.vaults).insertOnConflictUpdate(
             VaultsCompanion.insert(
               id: vault.id,
               name: vault.name,
@@ -422,16 +430,14 @@ class VaultRepository {
               ),
               instructions: Value(config?.instructions),
               pushEnabled: Value(vault.pushEnabled),
-              archivedAt: Value(vault.archivedAt?.millisecondsSinceEpoch),
-              archivedReason: Value(vault.archivedReason),
+              archivedAt: Value(archived.archivedAtMillis),
+              archivedReason: Value(archived.archivedReason),
               createdAt: createdAtMs,
             ),
           );
 
       if (vault.content != null) {
-        await _db
-            .into(_db.ownedVaults)
-            .insertOnConflictUpdate(
+        await _db.into(_db.ownedVaults).insertOnConflictUpdate(
               OwnedVaultsCompanion.insert(
                 vaultId: vault.id,
                 content: vault.content!,
@@ -442,7 +448,8 @@ class VaultRepository {
       } else {
         await (_db.delete(
           _db.ownedVaults,
-        )..where((v) => v.vaultId.equals(vault.id))).go();
+        )..where((v) => v.vaultId.equals(vault.id)))
+            .go();
       }
 
       // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
@@ -454,12 +461,14 @@ class VaultRepository {
         final keptIds = config.stewards.map((s) => s.id).toSet();
         final existing = await (_db.select(
           _db.stewards,
-        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull())).get();
+        )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
+            .get();
         for (final existingRow in existing) {
           if (!keptIds.contains(existingRow.id)) {
             await (_db.update(
               _db.stewards,
-            )..where((s) => s.id.equals(existingRow.id))).write(
+            )..where((s) => s.id.equals(existingRow.id)))
+                .write(
               StewardsCompanion(
                 leftAt: Value(DateTime.now().millisecondsSinceEpoch),
               ),
@@ -469,9 +478,7 @@ class VaultRepository {
 
         for (var i = 0; i < config.stewards.length; i++) {
           final s = config.stewards[i];
-          await _db
-              .into(_db.stewards)
-              .insertOnConflictUpdate(
+          await _db.into(_db.stewards).insertOnConflictUpdate(
                 StewardsCompanion.insert(
                   id: s.id,
                   vaultId: vault.id,
