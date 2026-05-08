@@ -25,9 +25,9 @@ void main() {
         id: 'vault-archive-1',
         name: 'Test',
         content: null,
-        createdAt: DateTime.utc(2024, 1, 1),
+        createdAt: DateTime(2024, 1, 1),
         ownerPubkey: ownerPubkey,
-        archivedAt: DateTime.utc(2024, 2, 1),
+        archivedAt: DateTime(2024, 2, 1),
         archivedReason: 'user hid',
         pushEnabled: false,
       );
@@ -37,7 +37,7 @@ void main() {
 
       expect(loaded, isNotNull);
       expect(loaded!.isArchived, isTrue);
-      expect(loaded.archivedAt, DateTime.utc(2024, 2, 1));
+      expect(loaded.archivedAt, DateTime(2024, 2, 1));
       expect(loaded.archivedReason, 'user hid');
     });
 
@@ -47,9 +47,9 @@ void main() {
         id: 'vault-unarchive-1',
         name: 'Test',
         content: null,
-        createdAt: DateTime.utc(2024, 1, 1),
+        createdAt: DateTime(2024, 1, 1),
         ownerPubkey: ownerPubkey,
-        archivedAt: DateTime.utc(2024, 6, 15),
+        archivedAt: DateTime(2024, 6, 15),
         archivedReason: 'should not survive',
         pushEnabled: false,
       );

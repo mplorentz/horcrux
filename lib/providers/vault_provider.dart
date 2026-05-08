@@ -401,8 +401,7 @@ class VaultRepository {
       _backupConfigOverlay.remove(vault.id);
     }
     final archivedAtMs = vault.archivedAt?.millisecondsSinceEpoch;
-    final archivedReason =
-        vault.archivedAt == null ? null : vault.archivedReason;
+    final archivedReason = vault.archivedAt == null ? null : vault.archivedReason;
     await _db.transaction(() async {
       await _db.into(_db.vaults).insertOnConflictUpdate(
             VaultsCompanion.insert(
