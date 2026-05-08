@@ -1,8 +1,10 @@
-import 'package:collection/collection.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'steward.dart';
 import 'steward_status.dart';
 import 'vault.dart';
+
+part 'backup_config.freezed.dart';
 
 /// Backup configuration for a vault.
 ///
@@ -21,52 +23,19 @@ import 'vault.dart';
 ///   `distributionVersion` so existing UI keeps working.
 /// - `status` → derived from steward statuses (Phase 1 fallback) and from
 ///   `distribution_shares` ack timestamps (Phase 2/3).
-class BackupConfig {
-  final String vaultId;
-  final int threshold;
-  final List<Steward> stewards;
-  final List<String> relays;
-  final String? instructions;
-  final DateTime createdAt;
-  final int distributionVersion;
+@freezed
+class BackupConfig with _$BackupConfig {
+  const factory BackupConfig({
+    required String vaultId,
+    required int threshold,
+    required List<Steward> stewards,
+    required List<String> relays,
+    required DateTime createdAt,
+    required int distributionVersion,
+    String? instructions,
+  }) = _BackupConfig;
 
-  const BackupConfig({
-    required this.vaultId,
-    required this.threshold,
-    required this.stewards,
-    required this.relays,
-    required this.createdAt,
-    required this.distributionVersion,
-    this.instructions,
-  });
-
-  static const DeepCollectionEquality _stewardsEquality =
-      DeepCollectionEquality();
-  static const ListEquality<String> _relaysEquality = ListEquality<String>();
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is BackupConfig &&
-        vaultId == other.vaultId &&
-        threshold == other.threshold &&
-        _stewardsEquality.equals(stewards, other.stewards) &&
-        _relaysEquality.equals(relays, other.relays) &&
-        instructions == other.instructions &&
-        createdAt == other.createdAt &&
-        distributionVersion == other.distributionVersion;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-        vaultId,
-        threshold,
-        _stewardsEquality.hash(stewards),
-        _relaysEquality.hash(relays),
-        instructions,
-        createdAt,
-        distributionVersion,
-      );
+  const BackupConfig._();
 
   /// Number of configured stewards (replaces the dropped `totalKeys` field —
   /// it duplicated `stewards.length`).
@@ -75,26 +44,6 @@ class BackupConfig {
   /// True once any distribution has been authored. Replaces
   /// `lastRedistribution != null` checks throughout the UI.
   bool get hasBeenDistributed => distributionVersion > 0;
-
-  BackupConfig copyWith({
-    String? vaultId,
-    int? threshold,
-    List<Steward>? stewards,
-    List<String>? relays,
-    String? instructions,
-    DateTime? createdAt,
-    int? distributionVersion,
-  }) {
-    return BackupConfig(
-      vaultId: vaultId ?? this.vaultId,
-      threshold: threshold ?? this.threshold,
-      stewards: stewards ?? this.stewards,
-      relays: relays ?? this.relays,
-      instructions: instructions ?? this.instructions,
-      createdAt: createdAt ?? this.createdAt,
-      distributionVersion: distributionVersion ?? this.distributionVersion,
-    );
-  }
 }
 
 /// Create a new BackupConfig with validation.
@@ -151,7 +100,13 @@ BackupConfig createBackupConfig({
   );
 }
 
-/// Create a copy of this BackupConfig with updated fields.
+/// Merge-style copy matching the pre-freezed [BackupConfig.copyWith] semantics:
+/// only named arguments that callers intend to change should be passed; omitted
+/// arguments keep the corresponding field on [config].
+///
+/// For [instructions], `null` means "keep existing" (not "clear"). To clear
+/// instructions use [BackupConfig.copyWith] from freezed with an explicit null
+/// sentinel if needed.
 BackupConfig copyBackupConfig(
   BackupConfig config, {
   String? vaultId,
@@ -163,13 +118,13 @@ BackupConfig copyBackupConfig(
   int? distributionVersion,
 }) {
   return config.copyWith(
-    vaultId: vaultId,
-    threshold: threshold,
-    stewards: stewards,
-    relays: relays,
-    instructions: instructions,
-    createdAt: createdAt,
-    distributionVersion: distributionVersion,
+    vaultId: vaultId ?? config.vaultId,
+    threshold: threshold ?? config.threshold,
+    stewards: stewards ?? config.stewards,
+    relays: relays ?? config.relays,
+    instructions: instructions ?? config.instructions,
+    createdAt: createdAt ?? config.createdAt,
+    distributionVersion: distributionVersion ?? config.distributionVersion,
   );
 }
 
