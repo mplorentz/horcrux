@@ -18,20 +18,14 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$Vault {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  String? get content =>
-      throw _privateConstructorUsedError; // Nullable - null when content is not decrypted
   DateTime get createdAt => throw _privateConstructorUsedError;
-  String get ownerPubkey => throw _privateConstructorUsedError; // Hex format, 64 characters
-  String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner
-  List<Share> get shares =>
-      throw _privateConstructorUsedError; // Single as steward, multiple during recovery
-  List<RecoveryRequest> get recoveryRequests =>
-      throw _privateConstructorUsedError; // Embedded recovery requests
-  BackupConfig? get backupConfig =>
-      throw _privateConstructorUsedError; // Optional backup configuration
-  DateTime? get archivedAt => throw _privateConstructorUsedError; // When the vault was archived
-  String? get archivedReason => throw _privateConstructorUsedError; // Reason for archiving
-// Whether the vault owner has opted this vault into push notifications.
+  String get ownerPubkey => throw _privateConstructorUsedError;
+  String? get ownerName => throw _privateConstructorUsedError;
+  List<RecoveryRequest> get recoveryRequests => throw _privateConstructorUsedError;
+  BackupConfig? get backupConfig => throw _privateConstructorUsedError;
+  DateTime? get archivedAt => throw _privateConstructorUsedError;
+  String? get archivedReason =>
+      throw _privateConstructorUsedError; // Whether the vault owner has opted this vault into push notifications.
 //
 // This is independent of the per-user global opt-in (see
 // `PushNotificationReceiver.optInFlagKey`): a user who has never opted
@@ -56,11 +50,9 @@ abstract class $VaultCopyWith<$Res> {
   $Res call(
       {String id,
       String name,
-      String? content,
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<Share> shares,
       List<RecoveryRequest> recoveryRequests,
       BackupConfig? backupConfig,
       DateTime? archivedAt,
@@ -86,11 +78,9 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? content = freezed,
     Object? createdAt = null,
     Object? ownerPubkey = null,
     Object? ownerName = freezed,
-    Object? shares = null,
     Object? recoveryRequests = null,
     Object? backupConfig = freezed,
     Object? archivedAt = freezed,
@@ -106,10 +96,6 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      content: freezed == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -122,10 +108,6 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
           ? _value.ownerName
           : ownerName // ignore: cast_nullable_to_non_nullable
               as String?,
-      shares: null == shares
-          ? _value.shares
-          : shares // ignore: cast_nullable_to_non_nullable
-              as List<Share>,
       recoveryRequests: null == recoveryRequests
           ? _value.recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -173,11 +155,9 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
   $Res call(
       {String id,
       String name,
-      String? content,
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<Share> shares,
       List<RecoveryRequest> recoveryRequests,
       BackupConfig? backupConfig,
       DateTime? archivedAt,
@@ -201,11 +181,9 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? content = freezed,
     Object? createdAt = null,
     Object? ownerPubkey = null,
     Object? ownerName = freezed,
-    Object? shares = null,
     Object? recoveryRequests = null,
     Object? backupConfig = freezed,
     Object? archivedAt = freezed,
@@ -221,10 +199,6 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      content: freezed == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -237,10 +211,6 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
           ? _value.ownerName
           : ownerName // ignore: cast_nullable_to_non_nullable
               as String?,
-      shares: null == shares
-          ? _value._shares
-          : shares // ignore: cast_nullable_to_non_nullable
-              as List<Share>,
       recoveryRequests: null == recoveryRequests
           ? _value._recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -271,18 +241,15 @@ class _$VaultImpl extends _Vault {
   const _$VaultImpl(
       {required this.id,
       required this.name,
-      this.content,
       required this.createdAt,
       required this.ownerPubkey,
       this.ownerName,
-      final List<Share> shares = const [],
       final List<RecoveryRequest> recoveryRequests = const [],
       this.backupConfig,
       this.archivedAt,
       this.archivedReason,
       this.pushEnabled = true})
-      : _shares = shares,
-        _recoveryRequests = recoveryRequests,
+      : _recoveryRequests = recoveryRequests,
         super._();
 
   @override
@@ -290,29 +257,12 @@ class _$VaultImpl extends _Vault {
   @override
   final String name;
   @override
-  final String? content;
-// Nullable - null when content is not decrypted
-  @override
   final DateTime createdAt;
   @override
   final String ownerPubkey;
-// Hex format, 64 characters
   @override
   final String? ownerName;
-// Name of the vault owner
-  final List<Share> _shares;
-// Name of the vault owner
-  @override
-  @JsonKey()
-  List<Share> get shares {
-    if (_shares is EqualUnmodifiableListView) return _shares;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_shares);
-  }
-
-// Single as steward, multiple during recovery
   final List<RecoveryRequest> _recoveryRequests;
-// Single as steward, multiple during recovery
   @override
   @JsonKey()
   List<RecoveryRequest> get recoveryRequests {
@@ -321,16 +271,12 @@ class _$VaultImpl extends _Vault {
     return EqualUnmodifiableListView(_recoveryRequests);
   }
 
-// Embedded recovery requests
   @override
   final BackupConfig? backupConfig;
-// Optional backup configuration
   @override
   final DateTime? archivedAt;
-// When the vault was archived
   @override
   final String? archivedReason;
-// Reason for archiving
 // Whether the vault owner has opted this vault into push notifications.
 //
 // This is independent of the per-user global opt-in (see
@@ -347,7 +293,7 @@ class _$VaultImpl extends _Vault {
 
   @override
   String toString() {
-    return 'Vault(id: $id, name: $name, content: $content, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, shares: $shares, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, archivedAt: $archivedAt, archivedReason: $archivedReason, pushEnabled: $pushEnabled)';
+    return 'Vault(id: $id, name: $name, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, archivedAt: $archivedAt, archivedReason: $archivedReason, pushEnabled: $pushEnabled)';
   }
 
   @override
@@ -357,11 +303,9 @@ class _$VaultImpl extends _Vault {
             other is _$VaultImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.content, content) || other.content == content) &&
             (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.ownerPubkey, ownerPubkey) || other.ownerPubkey == ownerPubkey) &&
             (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
-            const DeepCollectionEquality().equals(other._shares, _shares) &&
             const DeepCollectionEquality().equals(other._recoveryRequests, _recoveryRequests) &&
             (identical(other.backupConfig, backupConfig) || other.backupConfig == backupConfig) &&
             (identical(other.archivedAt, archivedAt) || other.archivedAt == archivedAt) &&
@@ -375,11 +319,9 @@ class _$VaultImpl extends _Vault {
       runtimeType,
       id,
       name,
-      content,
       createdAt,
       ownerPubkey,
       ownerName,
-      const DeepCollectionEquality().hash(_shares),
       const DeepCollectionEquality().hash(_recoveryRequests),
       backupConfig,
       archivedAt,
@@ -399,11 +341,9 @@ abstract class _Vault extends Vault {
   const factory _Vault(
       {required final String id,
       required final String name,
-      final String? content,
       required final DateTime createdAt,
       required final String ownerPubkey,
       final String? ownerName,
-      final List<Share> shares,
       final List<RecoveryRequest> recoveryRequests,
       final BackupConfig? backupConfig,
       final DateTime? archivedAt,
@@ -416,24 +356,20 @@ abstract class _Vault extends Vault {
   @override
   String get name;
   @override
-  String? get content; // Nullable - null when content is not decrypted
-  @override
   DateTime get createdAt;
   @override
-  String get ownerPubkey; // Hex format, 64 characters
+  String get ownerPubkey;
   @override
-  String? get ownerName; // Name of the vault owner
+  String? get ownerName;
   @override
-  List<Share> get shares; // Single as steward, multiple during recovery
+  List<RecoveryRequest> get recoveryRequests;
   @override
-  List<RecoveryRequest> get recoveryRequests; // Embedded recovery requests
+  BackupConfig? get backupConfig;
   @override
-  BackupConfig? get backupConfig; // Optional backup configuration
+  DateTime? get archivedAt;
   @override
-  DateTime? get archivedAt; // When the vault was archived
-  @override
-  String? get archivedReason; // Reason for archiving
-// Whether the vault owner has opted this vault into push notifications.
+  String?
+      get archivedReason; // Whether the vault owner has opted this vault into push notifications.
 //
 // This is independent of the per-user global opt-in (see
 // `PushNotificationReceiver.optInFlagKey`): a user who has never opted

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/models/share.dart';
+import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
-import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/screens/vault_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/golden_test_helpers.dart';
@@ -30,57 +30,85 @@ void main() {
   final testPubkey = 'a' * 64; // 64-char hex pubkey
   final otherPubkey = 'b' * 64;
 
-  final ownedVault = Vault(
+  final ownedVault = OwnedVaultDetail(
     id: 'vault-1',
     name: 'My Private Keys',
-    content: 'nsec1...',
-    createdAt: DateTime(2024, 10, 1, 10, 30),
     ownerPubkey: testPubkey,
-    shares: [],
-    recoveryRequests: [],
+    ownerName: null,
+    threshold: 0,
+    totalShares: 0,
+    stewards: const [],
+    recoveryRequests: const [],
+    pushEnabled: true,
+    createdAt: DateTime(2024, 10, 1, 10, 30),
+    archivedAt: null,
+    archivedReason: null,
+    backupConfig: null,
+    content: 'ciphertext',
+    selfHeldShare: null,
   );
 
-  final keyHolderVault = Vault(
+  final keyHolderVault = StewardedVaultDetail(
     id: 'vault-2',
     name: "Alice's Backup",
-    content: null,
-    createdAt: DateTime(2024, 9, 15, 14, 20),
     ownerPubkey: otherPubkey,
-    shares: [
-      createShare(
-        payload: 'test_shard_data',
-        threshold: 2,
-        shareIndex: 0,
-        totalShares: 3,
-        primeMod: 'test_prime_mod',
-        creatorPubkey: otherPubkey,
-      ),
-    ],
-    recoveryRequests: [],
+    ownerName: null,
+    threshold: 2,
+    totalShares: 3,
+    stewards: const [],
+    recoveryRequests: const [],
+    pushEnabled: false,
+    createdAt: DateTime(2024, 9, 15, 14, 20),
+    archivedAt: null,
+    archivedReason: null,
+    backupConfig: null,
+    latestShare: createShare(
+      payload: 'test_shard_data',
+      threshold: 2,
+      shareIndex: 0,
+      totalShares: 3,
+      primeMod: 'test_prime_mod',
+      creatorPubkey: otherPubkey,
+    ),
   );
 
-  final awaitingKeyVault = Vault(
+  final awaitingKeyVault = StewardedVaultDetail(
     id: 'vault-awaiting',
     name: "Bob's Shared Vault",
-    content: null,
-    createdAt: DateTime(2024, 9, 25, 16, 45),
     ownerPubkey: otherPubkey,
-    shares: [], // No shards yet - awaiting key distribution
-    recoveryRequests: [],
+    ownerName: null,
+    threshold: 0,
+    totalShares: 0,
+    stewards: const [],
+    recoveryRequests: const [],
+    pushEnabled: false,
+    createdAt: DateTime(2024, 9, 25, 16, 45),
+    archivedAt: null,
+    archivedReason: null,
+    backupConfig: null,
+    latestShare: null,
   );
 
   final multipleVaults = [
     ownedVault,
     keyHolderVault,
     awaitingKeyVault,
-    Vault(
+    OwnedVaultDetail(
       id: 'vault-3',
       name: 'Work Documents',
-      content: null,
-      createdAt: DateTime(2024, 9, 20, 9, 15),
       ownerPubkey: testPubkey,
-      shares: [],
-      recoveryRequests: [],
+      ownerName: null,
+      threshold: 0,
+      totalShares: 0,
+      stewards: const [],
+      recoveryRequests: const [],
+      pushEnabled: true,
+      createdAt: DateTime(2024, 9, 20, 9, 15),
+      archivedAt: null,
+      archivedReason: null,
+      backupConfig: null,
+      content: 'ciphertext',
+      selfHeldShare: null,
     ),
   ];
 
@@ -94,7 +122,7 @@ void main() {
       final container = ProviderContainer(
         overrides: goldenOverrides([
           // Mock the vault stream provider to return empty list
-          vaultListProvider.overrideWith((ref) => Stream.value([])),
+          vaultDetailListProvider.overrideWith((ref) => Stream.value([])),
           // Mock the current user's pubkey
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ]),
@@ -120,7 +148,7 @@ void main() {
       final container = ProviderContainer(
         overrides: goldenOverrides([
           // Mock provider to throw an error
-          vaultListProvider.overrideWith(
+          vaultDetailListProvider.overrideWith(
             (ref) => Stream.error('Failed to load vaults'),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -141,7 +169,7 @@ void main() {
     testGoldens('single owned vault', (tester) async {
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith((ref) => Stream.value([ownedVault])),
+          vaultDetailListProvider.overrideWith((ref) => Stream.value([ownedVault])),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ]),
       );
@@ -160,7 +188,7 @@ void main() {
     testGoldens('single steward vault', (tester) async {
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith(
+          vaultDetailListProvider.overrideWith(
             (ref) => Stream.value([keyHolderVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -181,7 +209,7 @@ void main() {
     testGoldens('single awaiting key vault', (tester) async {
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith(
+          vaultDetailListProvider.overrideWith(
             (ref) => Stream.value([awaitingKeyVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -205,7 +233,7 @@ void main() {
     testGoldens('multiple vaults', (tester) async {
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
+          vaultDetailListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ]),
       );
@@ -224,7 +252,7 @@ void main() {
     testGoldens('multiple device sizes', (tester) async {
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
+          vaultDetailListProvider.overrideWith((ref) => Stream.value(multipleVaults)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ]),
       );
@@ -251,29 +279,33 @@ void main() {
     testGoldens('owner vault with no local content (holding shard)', (tester) async {
       // Vault owned by testPubkey but with no content, only a shard
       // This simulates the owner deleting local content while still holding a recovery shard
-      final ownerHoldingShardVault = Vault(
+      final ownerHoldingShardVault = StewardedVaultDetail(
         id: 'vault-owner-holding-shard',
         name: 'Owner Without Content',
-        content: null, // No local content
+        ownerPubkey: testPubkey,
+        ownerName: null,
+        threshold: 2,
+        totalShares: 3,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: false,
         createdAt: DateTime(2024, 10, 5, 12, 0),
-        ownerPubkey: testPubkey, // Owner is current user
-        shares: [
-          // Owner has a shard (e.g. as part of distributed backup)
-          createShare(
-            payload: 'owner_shard_data',
-            threshold: 2,
-            shareIndex: 1,
-            totalShares: 3,
-            primeMod: 'test_prime_mod',
-            creatorPubkey: testPubkey,
-          ),
-        ],
-        recoveryRequests: [],
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: null,
+        latestShare: createShare(
+          payload: 'owner_shard_data',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 3,
+          primeMod: 'test_prime_mod',
+          creatorPubkey: testPubkey,
+        ),
       );
 
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith(
+          vaultDetailListProvider.overrideWith(
             (ref) => Stream.value([ownerHoldingShardVault]),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -308,7 +340,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: goldenOverrides([
-          vaultListProvider.overrideWith((ref) => Stream.value([ownedVault])),
+          vaultDetailListProvider.overrideWith((ref) => Stream.value([ownedVault])),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock pending recovery requests provider to return the request
           pendingRecoveryRequestsProvider.overrideWith(

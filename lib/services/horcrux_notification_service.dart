@@ -322,12 +322,8 @@ class HorcruxNotificationService {
         add(steward.pubkey);
       }
 
-      final coStewards = vault.mostRecentShare?.stewards;
-      if (coStewards != null) {
-        for (final entry in coStewards) {
-          add(entry['pubkey']);
-        }
-      }
+      // Co-steward pubkeys come from the normalized stewards table (via
+      // backupConfig), already added in the loop above.
     }
 
     final result = senders.toList()..sort();

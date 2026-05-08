@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../providers/key_provider.dart';
 import 'name_label.dart';
 
 /// Widget that displays the vault owner information above the status banner
 class VaultOwnerDisplay extends ConsumerWidget {
-  final Vault vault;
+  final VaultDetail vault;
   final bool includePadding;
 
   const VaultOwnerDisplay({

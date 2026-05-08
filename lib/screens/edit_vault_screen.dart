@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+
+import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../widgets/vault_content_form.dart';
 import '../widgets/vault_content_save_mixin.dart';
@@ -22,7 +23,7 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
   final _contentController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  Vault? _vault;
+  VaultDetail? _vault;
 
   @override
   void initState() {
@@ -31,13 +32,13 @@ class _EditVaultScreenState extends ConsumerState<EditVaultScreen> with VaultCon
   }
 
   Future<void> _loadVault() async {
-    final repository = ref.read(vaultRepositoryProvider);
-    final vault = await repository.getVault(widget.vaultId);
+    final detailRepository = ref.read(vaultDetailRepositoryProvider);
+    final vault = await detailRepository.getVaultDetail(widget.vaultId);
     if (mounted && vault != null) {
       setState(() {
         _vault = vault;
         _nameController.text = vault.name;
-        _contentController.text = vault.content ?? '';
+        _contentController.text = vault is OwnedVaultDetail ? vault.content : '';
         _ownerNameController.text = vault.ownerName ?? '';
       });
     }

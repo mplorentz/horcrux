@@ -57,7 +57,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Important Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
@@ -88,7 +87,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: null, // No recovery plan
@@ -133,7 +131,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
@@ -177,7 +174,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
@@ -265,7 +261,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'High Security Vault',
-        content: 'top secret',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,

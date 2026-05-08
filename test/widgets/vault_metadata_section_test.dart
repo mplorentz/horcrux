@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/share.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/widgets/vault_metadata_section.dart';
@@ -32,18 +32,26 @@ void main() {
       createdAt: olderShard.createdAt + 10,
     );
 
-    final vault = Vault(
+    final vaultDetail = StewardedVaultDetail(
       id: vaultId,
       name: 'Latest Threshold Vault',
-      content: null,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: [olderShard, newerShard],
+      ownerName: null,
+      threshold: 2,
+      totalShares: 3,
+      stewards: const [],
+      recoveryRequests: const [],
+      pushEnabled: false,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      archivedAt: null,
+      archivedReason: null,
+      backupConfig: null,
+      latestShare: newerShard,
     );
 
     final container = ProviderContainer(
       overrides: [
-        vaultProvider(vaultId).overrideWith((ref) => Stream.value(vault)),
+        vaultDetailProvider(vaultId).overrideWith((ref) => Stream.value(vaultDetail)),
         currentPublicKeyProvider.overrideWith((ref) => Future.value(stewardPubkey)),
       ],
     );

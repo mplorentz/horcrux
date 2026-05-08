@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
@@ -49,19 +50,17 @@ void main() {
     );
   }
 
-  // Helper to create vault
+  // Helper to create vault (Phase 2c: no content/shares on Vault)
   Vault createTestVault({
     required String id,
     required String ownerPubkey,
-    List<Share>? shares,
+    List<dynamic>? shares, // ignored; use vaultDetailProvider override for share data
   }) {
     return Vault(
       id: id,
       name: 'Test Vault',
-      content: null, // No decrypted content for steward state
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: shares ?? [],
     );
   }
 
@@ -383,7 +382,6 @@ void main() {
       final vault = Vault(
         id: 'test-vault',
         name: 'Test Vault',
-        content: 'secret content',
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
@@ -445,7 +443,6 @@ void main() {
       final vault = Vault(
         id: 'test-vault',
         name: 'Test Vault',
-        content: 'secret content',
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
@@ -491,16 +488,32 @@ void main() {
       final vault = Vault(
         id: 'test-vault',
         name: 'Test Vault',
-        content: null,
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
-        shares: [shard],
+      );
+
+      final vaultDetail = StewardedVaultDetail(
+        id: 'test-vault',
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: 'Device A',
+        threshold: shard.threshold,
+        totalShares: shard.totalShares,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: null,
+        latestShare: shard,
       );
 
       final container = ProviderContainer(
         overrides: [
           vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(vaultDetail)),
           currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
         ],
       );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -15,7 +16,7 @@ class StewardList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vaultAsync = ref.watch(vaultProvider(vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return vaultAsync.when(
@@ -93,7 +94,7 @@ class StewardList extends ConsumerWidget {
   Widget _buildKeyHolderContent(
     BuildContext context,
     WidgetRef ref,
-    Vault vault,
+    VaultDetail vault,
     String? currentPubkey,
   ) {
     final stewards = _extractStewards(vault, currentPubkey);
@@ -260,17 +261,16 @@ class StewardList extends ConsumerWidget {
     );
   }
 
-  /// Extract stewards from vault shard data
-  /// Includes owner if they are also a steward (hold a shard)
-  List<StewardInfo> _extractStewards(Vault vault, String? currentPubkey) {
-    // NEW: Try backupConfig first (owner will have this)
+  /// Extract stewards from vault data.
+  ///
+  /// Phase 2d: contact info is gated on [VaultDetail.hasActiveRecovery].
+  List<StewardInfo> _extractStewards(VaultDetail vault, String? currentPubkey) {
+    // Use backupConfig stewards when available (populated from the normalized DB).
     if (vault.backupConfig != null) {
       final stewards = vault.backupConfig!.stewards.where((s) {
-        // Include owner only if they are holding a key (are a steward)
         if (s.isOwner) {
           return s.status == StewardStatus.holdingKey;
         }
-        // Include all non-owner stewards
         return true;
       }).map((s) {
         final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
@@ -278,13 +278,13 @@ class StewardList extends ConsumerWidget {
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
-          contactInfo: s.contactInfo,
-          isOwner: s.isOwner, // Preserve owner flag
-          status: s.status, // Use actual status from Steward model
+          // Phase 2d: only reveal contact info during an active recovery.
+          contactInfo: vault.hasActiveRecovery ? s.contactInfo : null,
+          isOwner: s.isOwner,
+          status: s.status,
         );
       }).toList();
 
-      // Sort: owner first, then others
       stewards.sort((a, b) {
         if (a.isOwner && !b.isOwner) return -1;
         if (!a.isOwner && b.isOwner) return 1;
@@ -294,14 +294,12 @@ class StewardList extends ConsumerWidget {
       return stewards;
     }
 
-    // FALLBACK: Use shard peers (steward perspective)
-    if (vault.shares.isEmpty) {
-      return [];
-    }
-
-    // Prefer the most recent shard so peers reflect the latest distribution
-    final shard = vault.mostRecentShare;
-    if (shard == null) {
+    // Fallback: steward perspective with no backupConfig.
+    final latestShare = switch (vault) {
+      StewardedVaultDetail(:final latestShare) => latestShare,
+      _ => null,
+    };
+    if (latestShare == null) {
       return [];
     }
     final stewardMap = <String, StewardInfo>{};
@@ -328,9 +326,10 @@ class StewardList extends ConsumerWidget {
       stewardMap[pubkey] = merged;
     }
 
-    // Add stewards - include owner if they appear in stewards
-    if (shard.stewards != null) {
-      for (final steward in shard.stewards!) {
+    // Add stewards from the share's embedded peer list.
+    // Phase 2d: contact info only visible during active recovery.
+    if (latestShare.stewards != null) {
+      for (final steward in latestShare.stewards!) {
         final stewardPubkey = steward['pubkey'];
         final stewardName = steward['name'];
         final stewardContactInfo = steward['contactInfo'];
@@ -340,7 +339,7 @@ class StewardList extends ConsumerWidget {
         addSteward(
           pubkey: stewardPubkey,
           name: stewardName,
-          contactInfo: stewardContactInfo,
+          contactInfo: vault.hasActiveRecovery ? stewardContactInfo : null,
           isOwner: isOwner,
         );
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/key_provider.dart';
 import '../screens/recovery_status_screen.dart';
@@ -39,7 +40,7 @@ class _StatusData {
 /// Banner widget that displays vault recovery readiness status
 /// Shows different messages for owners vs stewards
 class VaultStatusBanner extends ConsumerWidget {
-  final Vault vault;
+  final VaultDetail vault;
 
   const VaultStatusBanner({super.key, required this.vault});
 
@@ -91,7 +92,7 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, Vault vault) {
+  Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, VaultDetail vault) {
     if (isOwner) {
       return _buildOwnerStatus(context, vault);
     } else if (isSteward) {
@@ -113,7 +114,7 @@ class VaultStatusBanner extends ConsumerWidget {
     }
   }
 
-  Widget _buildOwnerStatus(BuildContext context, Vault vault) {
+  Widget _buildOwnerStatus(BuildContext context, VaultDetail vault) {
     final backupConfig = vault.backupConfig;
 
     // No recovery plan
@@ -254,7 +255,7 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildStewardStatus(BuildContext context, Vault vault) {
+  Widget _buildStewardStatus(BuildContext context, VaultDetail vault) {
     // Awaiting key
     if (vault.state == VaultState.awaitingShare) {
       return _buildBanner(

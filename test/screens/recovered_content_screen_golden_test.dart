@@ -15,7 +15,7 @@ void main() {
       await pumpGoldenWidget(
         tester,
         const RecoveredContentScreen(
-          content: 'nsec1abcdefghijklmnopqrstuvwxyz123456789',
+          content: 'my secret vault content',
         ),
         container: container,
         surfaceSize: const Size(375, 800),

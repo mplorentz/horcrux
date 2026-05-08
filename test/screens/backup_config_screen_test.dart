@@ -150,7 +150,6 @@ class _MockVaultRepository extends VaultRepository {
     return Vault(
       id: 'test-vault',
       name: 'Test',
-      content: 'secret',
       createdAt: DateTime(2024, 1, 1),
       ownerPubkey: 'a' * 64,
       pushEnabled: true,

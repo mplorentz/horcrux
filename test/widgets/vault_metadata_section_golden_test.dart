@@ -48,15 +48,12 @@ void main() {
   Vault createTestVault({
     required String id,
     required String ownerPubkey,
-    List<Share>? shares,
   }) {
     return Vault(
       id: id,
       name: 'Test Vault',
-      content: null, // No decrypted content for steward state
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: shares ?? [],
     );
   }
 
@@ -117,14 +114,6 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-            threshold: 2,
-          ),
-        ],
       );
 
       final container = ProviderContainer(
@@ -153,14 +142,6 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: otherPubkey, // Different owner
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: testPubkey, // Current user is recipient
-            vaultId: 'test-vault',
-            threshold: 3,
-          ),
-        ],
       );
 
       final container = ProviderContainer(
@@ -188,8 +169,7 @@ void main() {
     testGoldens('steward state with no shards', (tester) async {
       final vault = createTestVault(
         id: 'test-vault',
-        ownerPubkey: otherPubkey, // Different owner
-        shares: [], // No shards
+        ownerPubkey: otherPubkey, // Different owner // No shards
       );
 
       final container = ProviderContainer(
@@ -221,13 +201,6 @@ void main() {
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: otherPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: testPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
       );
 
       final container = ProviderContainer(

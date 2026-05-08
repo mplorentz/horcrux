@@ -7,7 +7,9 @@ import '../models/share.dart';
 import '../models/backup_status.dart';
 import '../models/steward_status.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
+import '../providers/vault_detail_repository.dart';
 import '../providers/key_provider.dart';
 import 'login_service.dart';
 import 'share_distribution_service.dart';
@@ -20,6 +22,7 @@ final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
 ) {
   return BackupService(
     ref.read(vaultRepositoryProvider),
+    ref.read(vaultDetailRepositoryProvider),
     ref.read(shareDistributionServiceProvider),
     ref.read(loginServiceProvider),
     ref.read(relayScanServiceProvider),
@@ -64,12 +67,14 @@ BackupConfig _backupConfigWithBumpedDistribution(BackupConfig config) {
 /// Service for managing distributed backup using Shamir's Secret Sharing
 class BackupService {
   final VaultRepository _repository;
+  final VaultDetailRepository _vaultDetailRepository;
   final ShareDistributionService _shareDistributionService;
   final LoginService _loginService;
   final RelayScanService _relayScanService;
 
   BackupService(
     this._repository,
+    this._vaultDetailRepository,
     this._shareDistributionService,
     this._loginService,
     this._relayScanService,
@@ -522,9 +527,9 @@ class BackupService {
   Future<void> distributeKeysIfNecessary(String vaultId) async {
     try {
       final backupConfig = await _repository.getBackupConfig(vaultId);
-      final vault = await _repository.getVault(vaultId);
+      final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
 
-      if (backupConfig != null && vault != null && vault.content != null) {
+      if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)
@@ -656,17 +661,15 @@ class BackupService {
     required String vaultId,
   }) async {
     try {
-      // Step 1: Load vault content
-      final vault = await _repository.getVault(vaultId);
-      if (vault == null) {
+      // Step 1: Load vault content (requires owned vault).
+      final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
+      if (vaultDetail == null) {
         throw Exception('Vault not found: $vaultId');
       }
-      final content = vault.content;
-      if (content == null) {
-        throw Exception(
-          'Cannot backup encrypted vault - content is not available',
-        );
+      if (vaultDetail is! OwnedVaultDetail) {
+        throw Exception('Cannot backup vault — this device is not the owner');
       }
+      final content = vaultDetail.content;
       Log.info('Loaded vault content for backup: $vaultId');
 
       // Step 2: Load backup configuration
@@ -721,14 +724,14 @@ class BackupService {
         threshold: config.threshold,
         totalShards: config.totalKeys,
         creatorPubkey: creatorPubkey,
-        vaultId: vault.id,
-        vaultName: vault.name,
+        vaultId: vaultDetail.id,
+        vaultName: vaultDetail.name,
         stewards: stewards,
-        ownerName: vault.ownerName,
+        ownerName: vaultDetail.ownerName,
         instructions: config.instructions,
         // Advertise the owner's current push preference so stewards learn
         // (or re-learn, on redistribution) whether this vault uses push.
-        pushEnabled: vault.pushEnabled,
+        pushEnabled: vaultDetail.pushEnabled,
       );
       Log.info('Generated ${shards.length} Shamir shares');
 

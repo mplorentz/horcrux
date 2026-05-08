@@ -67,7 +67,6 @@ void main() {
     return Vault(
       id: id,
       name: name,
-      content: null,
       createdAt: DateTime(2024, 10, 1, 10, 30),
       ownerPubkey: ownerPubkey,
       ownerName: ownerName,

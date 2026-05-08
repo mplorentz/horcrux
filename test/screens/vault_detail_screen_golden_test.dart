@@ -183,10 +183,8 @@ void main() {
       final ownedVault = Vault(
         id: 'test-vault',
         name: 'My Private Keys',
-        content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
-        ownerPubkey: testPubkey,
-        shares: [], // No shards yet - backup not configured
+        ownerPubkey: testPubkey, // No shards yet - backup not configured
         recoveryRequests: [],
       );
 
@@ -218,21 +216,8 @@ void main() {
       final ownedVault = Vault(
         id: 'test-vault',
         name: 'My Private Keys',
-        content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-          ),
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: thirdPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [], // No active recovery
       );
 
@@ -294,21 +279,8 @@ void main() {
       final ownedVault = Vault(
         id: 'test-vault',
         name: 'My Private Keys',
-        content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-          ),
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: thirdPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [recoveryRequest],
       );
 
@@ -354,16 +326,8 @@ void main() {
       final shardHolderVault = Vault(
         id: 'test-vault',
         name: "Alice's Backup",
-        content: null,
         createdAt: DateTime(2024, 9, 15, 14, 20),
         ownerPubkey: otherPubkey, // Different owner
-        shares: [
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: testPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [], // No active recovery
       );
 
@@ -425,16 +389,8 @@ void main() {
       final shardHolderVault = Vault(
         id: 'test-vault',
         name: "Alice's Backup",
-        content: null,
         createdAt: DateTime(2024, 9, 15, 14, 20),
         ownerPubkey: otherPubkey, // Different owner
-        shares: [
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: testPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [recoveryRequest],
       );
 
@@ -482,10 +438,8 @@ void main() {
       final awaitingKeyVault = Vault(
         id: 'test-vault',
         name: "Bob's Shared Vault",
-        content: null, // No content - invitee doesn't have access yet
         createdAt: DateTime(2024, 9, 25, 16, 45),
-        ownerPubkey: otherPubkey, // Different owner
-        shares: [], // No shards yet - awaiting key distribution
+        ownerPubkey: otherPubkey, // Different owner // No shards yet - awaiting key distribution
         recoveryRequests: [],
       );
 
@@ -528,21 +482,8 @@ void main() {
       final ownedVault = Vault(
         id: 'test-vault',
         name: 'My Private Keys',
-        content: null,
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-          ),
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: thirdPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [],
       );
 
@@ -603,21 +544,8 @@ void main() {
       final ownedVault = Vault(
         id: 'test-vault',
         name: 'My Private Keys',
-        content: null,
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-          ),
-          createTestShard(
-            shardIndex: 1,
-            recipientPubkey: thirdPubkey,
-            vaultId: 'test-vault',
-          ),
-        ],
         recoveryRequests: [],
       );
 

@@ -126,10 +126,8 @@ void main() {
         final stub = Vault(
           id: vaultId,
           name: 'Stub Name',
-          content: null,
           createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
           ownerPubkey: ownerPubkey,
-          shares: const [],
           backupConfig: null,
           pushEnabled: false,
         );
@@ -221,8 +219,8 @@ void main() {
           (_) async => Nip01Event(
             kind: NostrKind.shareConfirmation.value,
             pubKey: TestHexPubkeys.bob,
-            content: '',
             tags: const [],
+            content: '',
             createdAt: 1,
           ),
         );

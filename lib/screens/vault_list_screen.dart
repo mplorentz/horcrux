@@ -14,8 +14,7 @@ class VaultListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the vault stream provider
-    final vaultsAsync = ref.watch(vaultListProvider);
+    final vaultsAsync = ref.watch(vaultDetailListProvider);
 
     return HorcruxScaffold(
       showNotificationBanner: true,

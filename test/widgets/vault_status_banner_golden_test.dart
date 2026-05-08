@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
@@ -23,24 +23,72 @@ void main() {
   const steward2Pubkey = TestHexPubkeys.charlie; // Another steward
   const steward3Pubkey = TestHexPubkeys.diana; // Another steward
 
-  // Helper to create vault
-  Vault createTestVault({
+  // Helper to create vault detail (defaults to OwnedVaultDetail).
+  VaultDetail createTestVault({
     required String id,
     required String ownerPubkey,
     String? content,
-    List<Share>? shares,
+    Share? latestShare,
+    List<Share>? shares, // ignored (Phase 2c removed Vault.shares)
     BackupConfig? backupConfig,
     List<RecoveryRequest>? recoveryRequests,
   }) {
-    return Vault(
+    final theContent = content ?? '';
+    // OwnedVaultDetail when content is non-empty or no share provided.
+    if (latestShare == null && content != null && content.isNotEmpty) {
+      return OwnedVaultDetail(
+        id: id,
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: null,
+        threshold: backupConfig?.threshold ?? 0,
+        totalShares: backupConfig?.totalKeys ?? 0,
+        stewards: const [],
+        recoveryRequests: recoveryRequests ?? const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        content: theContent,
+        selfHeldShare: null,
+      );
+    }
+    if (latestShare != null) {
+      return StewardedVaultDetail(
+        id: id,
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: null,
+        threshold: backupConfig?.threshold ?? 0,
+        totalShares: backupConfig?.totalKeys ?? 0,
+        stewards: const [],
+        recoveryRequests: recoveryRequests ?? const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        latestShare: latestShare,
+      );
+    }
+    // Default: OwnedVaultDetail with empty content.
+    return OwnedVaultDetail(
       id: id,
       name: 'Test Vault',
-      content: content,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: shares ?? [],
+      ownerName: null,
+      threshold: backupConfig?.threshold ?? 0,
+      totalShares: backupConfig?.totalKeys ?? 0,
+      stewards: const [],
+      recoveryRequests: recoveryRequests ?? const [],
+      pushEnabled: false,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      archivedAt: null,
+      archivedReason: null,
       backupConfig: backupConfig,
-      recoveryRequests: recoveryRequests ?? [],
+      content: '',
+      selfHeldShare: null,
     );
   }
 
@@ -101,7 +149,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: null, // No backup config
         );
 
@@ -152,7 +199,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: invalidConfig,
         );
 
@@ -207,7 +253,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: inactiveConfig,
         );
 
@@ -268,7 +313,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
@@ -320,7 +364,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
@@ -386,7 +429,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
@@ -450,7 +492,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
@@ -496,7 +537,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           recoveryRequests: [recoveryRequest],
         );
 
@@ -538,7 +578,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null, // No decrypted content
           shares: [], // No shards - this triggers awaitingKey state
         );
 
@@ -596,7 +635,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null, // No decrypted content
           shares: [shard], // Has shard - steward ready
         );
 
@@ -638,8 +676,6 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null,
-          shares: [],
         );
 
         final container = ProviderContainer(

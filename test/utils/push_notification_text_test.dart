@@ -20,7 +20,6 @@ void main() {
     return Vault(
       id: 'v',
       name: name,
-      content: 'decrypted',
       createdAt: DateTime.utc(2024, 1, 1),
       ownerPubkey: TestHexPubkeys.alice,
       ownerName: ownerName,

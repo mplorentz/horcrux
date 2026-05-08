@@ -60,14 +60,13 @@ void main() {
 
       await repository.addShareToVault(fixture.vaultId, share);
 
-      final loaded = await repository.getVault(fixture.vaultId);
-      expect(loaded, isNotNull);
-      expect(loaded!.shares, hasLength(1));
+      final shares = await repository.getSharesForVault(fixture.vaultId);
+      expect(shares, hasLength(1));
 
       final expectedSeconds = createdAtMs ~/ 1000;
-      expect(loaded.shares.single.createdAt, expectedSeconds);
+      expect(shares.single.createdAt, expectedSeconds);
 
-      final json = shareToJson(loaded.shares.single);
+      final json = shareToJson(shares.single);
       expect(json['created_at'], expectedSeconds);
     });
 
@@ -81,7 +80,6 @@ void main() {
           Vault(
             id: vaultId,
             name: 'Stub',
-            content: null,
             createdAt: DateTime.utc(2024, 1, 2),
             ownerPubkey: TestHexPubkeys.alice,
             pushEnabled: false,
@@ -104,13 +102,13 @@ void main() {
         await repository.mergeVaultRowFromIncomingShare(vaultId, share);
         await repository.addShareToVault(vaultId, share);
 
-        final loaded = await repository.getVault(vaultId);
-        expect(loaded!.shares.single.isValid, isTrue);
-        expect(loaded.shares.single.threshold, 2);
-        expect(loaded.shares.single.totalShares, 4);
-        expect(loaded.shares.single.primeMod, 'prime-mod-bootstrap');
+        final shares = await repository.getSharesForVault(vaultId);
+        expect(shares.single.isValid, isTrue);
+        expect(shares.single.threshold, 2);
+        expect(shares.single.totalShares, 4);
+        expect(shares.single.primeMod, 'prime-mod-bootstrap');
 
-        final json = shareToJson(loaded.shares.single);
+        final json = shareToJson(shares.single);
         expect(json['threshold'], 2);
         expect(json['total_shards'], 4);
         expect(json['prime_mod'], 'prime-mod-bootstrap');
@@ -124,7 +122,6 @@ void main() {
         Vault(
           id: vaultId,
           name: 'V',
-          content: null,
           createdAt: DateTime.utc(2024, 1, 2),
           ownerPubkey: TestHexPubkeys.alice,
           pushEnabled: false,

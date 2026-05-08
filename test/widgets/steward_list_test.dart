@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/share.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
@@ -33,20 +33,26 @@ void main() {
       isReceived: true,
     );
 
-    final vault = Vault(
+    final vaultDetail = StewardedVaultDetail(
       id: vaultId,
       name: 'Vault Owner In Peers',
-      content: null,
-      createdAt: DateTime.now(),
       ownerPubkey: ownerPubkey,
       ownerName: 'Device A',
-      shares: [shard],
+      threshold: 2,
+      totalShares: 3,
+      stewards: const [],
       recoveryRequests: const [],
+      pushEnabled: false,
+      createdAt: DateTime.now(),
+      archivedAt: null,
+      archivedReason: null,
+      backupConfig: null,
+      latestShare: shard,
     );
 
     final container = ProviderContainer(
       overrides: [
-        vaultProvider(vaultId).overrideWith((ref) => Stream.value(vault)),
+        vaultDetailProvider(vaultId).overrideWith((ref) => Stream.value(vaultDetail)),
         currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
       ],
     );

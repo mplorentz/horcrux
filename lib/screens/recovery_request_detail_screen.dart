@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
-import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../services/recovery_service.dart';
 import '../providers/key_provider.dart';
 import '../services/logger.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
-import '../utils/nostr_display.dart';
+import '../utils/nostr_display.dart' show displayNameFromDetailOrNull;
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -194,7 +194,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
   @override
   Widget build(BuildContext context) {
     final request = widget.recoveryRequest;
-    final vaultAsync = ref.watch(vaultProvider(request.vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(request.vaultId));
 
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'Recovery Request'),
@@ -211,25 +211,27 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
   Widget _buildContent(
     BuildContext context,
     RecoveryRequest request,
-    Vault? vault,
+    VaultDetail? vault,
   ) {
     final currentResponseStatus =
         _currentPubkey == null ? null : request.stewardResponses[_currentPubkey]?.status;
     final hasFinalResponse =
         currentResponseStatus != null && _isFinalStewardDecision(currentResponseStatus);
 
-    final initiatorName = displayNameFromPubkeyOrNull(vault, request.initiatorPubkey);
+    final initiatorName = displayNameFromDetailOrNull(vault, request.initiatorPubkey);
 
     // Get instructions from vault
     String? instructions;
     if (vault != null) {
-      // First try to get from backupConfig
       if (vault.backupConfig?.instructions != null &&
           vault.backupConfig!.instructions!.isNotEmpty) {
         instructions = vault.backupConfig!.instructions;
-      } else if (vault.shares.isNotEmpty) {
-        // Fallback to shard data
-        instructions = vault.mostRecentShare?.instructions;
+      } else {
+        final share = switch (vault) {
+          StewardedVaultDetail(:final latestShare) => latestShare,
+          OwnedVaultDetail(:final selfHeldShare) => selfHeldShare,
+        };
+        instructions = share?.instructions;
       }
     }
 
@@ -237,10 +239,10 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultName = vault?.name ?? 'Unknown Vault';
     final ownerName = vault?.ownerName ?? 'Unknown Owner';
 
-    // Get initiator contact info from vault shard data
+    // Get initiator contact info from vault data
+    // Phase 2d: only reveal contact info during an active recovery.
     String? initiatorContactInfo;
-    if (vault != null) {
-      // First check backupConfig
+    if (vault != null && vault.hasActiveRecovery) {
       if (vault.backupConfig != null) {
         try {
           final steward = vault.backupConfig!.stewards.firstWhere(
@@ -249,19 +251,6 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
           initiatorContactInfo = steward.contactInfo;
         } catch (e) {
           // Steward not found in backupConfig
-        }
-      }
-
-      // Fallback to shard data
-      if (initiatorContactInfo == null) {
-        final shard = vault.mostRecentShare;
-        if (shard?.stewards != null) {
-          for (final steward in shard!.stewards!) {
-            if (steward['pubkey'] == request.initiatorPubkey) {
-              initiatorContactInfo = steward['contactInfo'];
-              break;
-            }
-          }
         }
       }
     }

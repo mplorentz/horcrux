@@ -102,8 +102,16 @@ class VaultShareService {
 
   /// Get the most recent share for a vault, or null if none exist.
   Future<Share?> getVaultShare(String vaultId) async {
-    final vault = await repository.getVault(vaultId);
-    return vault?.mostRecentShare;
+    final shares = await repository.getSharesForVault(vaultId);
+    if (shares.isEmpty) return null;
+    return shares.reduce((current, next) {
+      final currentVersion = current.distributionVersion ?? -1;
+      final nextVersion = next.distributionVersion ?? -1;
+      if (currentVersion != nextVersion) {
+        return nextVersion > currentVersion ? next : current;
+      }
+      return next.createdAt > current.createdAt ? next : current;
+    });
   }
 
   /// Add or update share data for a vault.
@@ -139,11 +147,12 @@ class VaultShareService {
   Future<void> processVaultShare(String vaultId, Share shardData) async {
     if (!shardData.isValid) throw ArgumentError('Invalid shard data');
 
-    // Dedup by nostrEventId.
+    // Dedup by nostrEventId. If the vault doesn't exist yet, skip the check
+    // and let addVaultShare create it.
     if (shardData.nostrEventId != null) {
-      final existing = await repository.getVault(vaultId);
-      if (existing != null) {
-        final hasDuplicate = existing.shares.any(
+      try {
+        final existingShares = await repository.getSharesForVault(vaultId);
+        final hasDuplicate = existingShares.any(
           (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
         );
         if (hasDuplicate) {
@@ -153,6 +162,8 @@ class VaultShareService {
           );
           return;
         }
+      } on ArgumentError {
+        // Vault not found — first time seeing this vault; proceed to create it.
       }
     }
 
@@ -420,7 +431,6 @@ class VaultShareService {
       final vault = Vault(
         id: vaultId,
         name: share.vaultName ?? defaultVaultName,
-        content: null,
         createdAt: DateTime.fromMillisecondsSinceEpoch(share.createdAt * 1000),
         ownerPubkey: share.creatorPubkey,
         ownerName: share.ownerName,
@@ -430,7 +440,10 @@ class VaultShareService {
       Log.info('_upsertStewardVaultAndSelf: created vault record $vaultId');
     } else {
       // Version-gate: only update vault metadata if incoming version is newer.
-      final storedVersion = existing.mostRecentShare?.distributionVersion ?? -1;
+      final storedVersion = (await repository.getSharesForVault(vaultId)).fold<int>(-1, (max, s) {
+        final v = s.distributionVersion ?? -1;
+        return v > max ? v : max;
+      });
       if (incomingVersion > storedVersion) {
         var updated = existing;
         if (share.vaultName != null && share.vaultName != existing.name) {

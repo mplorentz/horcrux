@@ -26,9 +26,9 @@ import 'invitation_acceptance_format_test.mocks.dart';
 Nip01Event _stubGiftWrap() => Nip01Event(
       kind: NostrKind.giftWrap.value,
       pubKey: 'a' * 64,
-      content: 'stub',
       tags: const [],
       createdAt: 1,
+      content: '',
     );
 
 @GenerateMocks([
@@ -132,9 +132,9 @@ void main() {
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
-          content: content, // Already decrypted JSON from NDK
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: content,
         );
 
         // Mock LoginService.getCurrentPublicKey() to return owner pubkey
@@ -165,7 +165,6 @@ void main() {
         final testVault = Vault(
           id: 'test-vault-id',
           name: 'Test Vault',
-          content: 'test content',
           createdAt: DateTime.now(),
           ownerPubkey: ownerPubkey,
         );
@@ -199,9 +198,9 @@ void main() {
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
-          content: invalidJson,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: invalidJson,
         );
 
         when(
@@ -237,9 +236,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: 'short',
-        content: invalidJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: invalidJson,
       );
 
       when(
@@ -276,9 +275,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: differentPubkey, // Different from payload
-        content: mismatchJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: mismatchJson,
       );
 
       when(
@@ -314,9 +313,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: inviteePubkey,
-        content: validJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: validJson,
       );
 
       when(

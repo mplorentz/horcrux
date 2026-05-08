@@ -60,8 +60,8 @@ void main() {
       pubKey: senderPubkey,
       kind: 1342,
       tags: const [],
-      content: '{}',
       createdAt: createdAt,
+      content: '',
     )..id = id;
   }
 
@@ -74,8 +74,8 @@ void main() {
       pubKey: senderPubkey,
       kind: 1337,
       tags: const [],
-      content: '{}',
       createdAt: createdAt,
+      content: '',
     )..id = id;
   }
 

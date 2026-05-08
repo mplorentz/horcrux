@@ -250,7 +250,6 @@ void main() {
         final v1 = Vault(
           id: 'vault-x',
           name: 'N',
-          content: null,
           createdAt: created,
           ownerPubkey: pubkey,
           backupConfig: cfg1,
@@ -259,7 +258,6 @@ void main() {
         final v2 = Vault(
           id: 'vault-x',
           name: 'N',
-          content: null,
           createdAt: created,
           ownerPubkey: pubkey,
           backupConfig: cfg2,

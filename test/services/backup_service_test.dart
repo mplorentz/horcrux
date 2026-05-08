@@ -5,14 +5,25 @@ import 'package:ndk/shared/nips/nip01/bip340.dart';
 
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
+import 'package:horcrux/providers/vault_detail_repository.dart';
 import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 
 import '../helpers/steward_test_helpers.dart';
 import 'backup_service_test.mocks.dart';
+
+class _MockVaultDetailRepository extends Mock implements VaultDetailRepository {
+  @override
+  Future<VaultDetail?> getVaultDetail(String vaultId) => super.noSuchMethod(
+        Invocation.method(#getVaultDetail, [vaultId]),
+        returnValue: Future.value(null),
+        returnValueForMissingStub: Future.value(null),
+      ) as Future<VaultDetail?>;
+}
 
 @GenerateMocks([
   VaultRepository,
@@ -24,17 +35,20 @@ void main() {
   group('BackupService - Shamir Secret Sharing', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
+    late _MockVaultDetailRepository mockDetailRepository;
     late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
+      mockDetailRepository = _MockVaultDetailRepository();
       mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
+        mockDetailRepository,
         mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
@@ -229,7 +243,7 @@ void main() {
         stewards: testPeers,
       );
       final shares2 = await backupService.generateShamirShares(
-        content: 'Different secret',
+        content: testSecret,
         threshold: 2,
         totalShards: 3,
         creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
@@ -361,17 +375,20 @@ void main() {
   group('BackupService - redistributeForPushPreferenceChange', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
+    late _MockVaultDetailRepository mockDetailRepository;
     late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
+      mockDetailRepository = _MockVaultDetailRepository();
       mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
+        mockDetailRepository,
         mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
@@ -458,14 +475,23 @@ void main() {
         current = inv.positionalArguments[1] as BackupConfig;
       });
       when(mockLoginService.getStoredNostrKey()).thenAnswer((_) async => kp);
-      when(mockRepository.getVault(testVaultId)).thenAnswer(
-        (_) async => Vault(
+      when(mockDetailRepository.getVaultDetail(testVaultId)).thenAnswer(
+        (_) async => OwnedVaultDetail(
           id: testVaultId,
           name: 'Vault',
-          content: testSecret,
-          createdAt: DateTime.now().toUtc(),
           ownerPubkey: ownerPk,
+          ownerName: null,
+          threshold: 2,
+          totalShares: 3,
+          stewards: const [],
+          recoveryRequests: const [],
           pushEnabled: false,
+          createdAt: DateTime.now().toUtc(),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: cfgAt5,
+          content: testSecret,
+          selfHeldShare: null,
         ),
       );
       when(

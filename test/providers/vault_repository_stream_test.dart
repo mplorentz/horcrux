@@ -30,7 +30,6 @@ void main() {
       final vault = Vault(
         id: 'vault-stream-1',
         name: 'Seeded vault',
-        content: 'secret',
         createdAt: DateTime(2026, 1, 1),
         ownerPubkey: ownerPubkey,
       );
