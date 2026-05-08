@@ -912,16 +912,6 @@ class MockVaultShareService extends _i1.Mock implements _i18.VaultShareService {
       ) as _i4.VaultRepository);
 
   @override
-  _i6.Future<void> initialize() => (super.noSuchMethod(
-        Invocation.method(
-          #initialize,
-          [],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
   _i6.Future<List<_i8.Share>> getVaultShares(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getVaultShares,
@@ -940,25 +930,16 @@ class MockVaultShareService extends _i1.Mock implements _i18.VaultShareService {
       ) as _i6.Future<_i8.Share?>);
 
   @override
-  _i6.Future<_i8.Share?> getShareByEventId(String? nostrEventId) => (super.noSuchMethod(
-        Invocation.method(
-          #getShareByEventId,
-          [nostrEventId],
-        ),
-        returnValue: _i6.Future<_i8.Share?>.value(),
-      ) as _i6.Future<_i8.Share?>);
-
-  @override
   _i6.Future<void> addVaultShare(
     String? vaultId,
-    _i8.Share? shardData,
+    _i8.Share? share,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
           #addVaultShare,
           [
             vaultId,
-            shardData,
+            share,
           ],
         ),
         returnValue: _i6.Future<void>.value(),
@@ -1006,62 +987,6 @@ class MockVaultShareService extends _i1.Mock implements _i18.VaultShareService {
       ) as _i6.Future<String?>);
 
   @override
-  _i6.Future<void> markShareAsReceived(String? vaultId) => (super.noSuchMethod(
-        Invocation.method(
-          #markShareAsReceived,
-          [vaultId],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<void> markShareAsReceivedByEventId(String? nostrEventId) => (super.noSuchMethod(
-        Invocation.method(
-          #markShareAsReceivedByEventId,
-          [nostrEventId],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<String?> reassembleVaultContent(String? vaultId) => (super.noSuchMethod(
-        Invocation.method(
-          #reassembleVaultContent,
-          [vaultId],
-        ),
-        returnValue: _i6.Future<String?>.value(),
-      ) as _i6.Future<String?>);
-
-  @override
-  _i6.Future<bool> hasShard(String? vaultId) => (super.noSuchMethod(
-        Invocation.method(
-          #hasShard,
-          [vaultId],
-        ),
-        returnValue: _i6.Future<bool>.value(false),
-      ) as _i6.Future<bool>);
-
-  @override
-  _i6.Future<List<_i8.Share>> getAllCollectedShards() => (super.noSuchMethod(
-        Invocation.method(
-          #getAllCollectedShards,
-          [],
-        ),
-        returnValue: _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
-      ) as _i6.Future<List<_i8.Share>>);
-
-  @override
-  _i6.Future<List<String>> getVaultsWithShares() => (super.noSuchMethod(
-        Invocation.method(
-          #getVaultsWithShares,
-          [],
-        ),
-        returnValue: _i6.Future<List<String>>.value(<String>[]),
-      ) as _i6.Future<List<String>>);
-
-  @override
   _i6.Future<bool> isKeyHolderForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #isKeyHolderForVault,
@@ -1090,23 +1015,15 @@ class MockVaultShareService extends _i1.Mock implements _i18.VaultShareService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> removeShareByEventId(String? nostrEventId) => (super.noSuchMethod(
+  _i6.Future<void> processKeyHolderRemoval({required _i3.Nip01Event? event}) => (super.noSuchMethod(
         Invocation.method(
-          #removeShareByEventId,
-          [nostrEventId],
+          #processKeyHolderRemoval,
+          [],
+          {#event: event},
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
       ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<int> getTotalShardCount() => (super.noSuchMethod(
-        Invocation.method(
-          #getTotalShardCount,
-          [],
-        ),
-        returnValue: _i6.Future<int>.value(0),
-      ) as _i6.Future<int>);
 
   @override
   _i6.Future<void> addRecoveryShard(
@@ -1174,27 +1091,6 @@ class MockVaultShareService extends _i1.Mock implements _i18.VaultShareService {
         Invocation.method(
           #clearAll,
           [],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<void> refresh() => (super.noSuchMethod(
-        Invocation.method(
-          #refresh,
-          [],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<void> processKeyHolderRemoval({required _i3.Nip01Event? event}) => (super.noSuchMethod(
-        Invocation.method(
-          #processKeyHolderRemoval,
-          [],
-          {#event: event},
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import 'connection.dart';
 import 'daos/distribution_dao.dart';
+import 'daos/held_share_dao.dart';
 import 'daos/owned_vault_dao.dart';
 import 'daos/steward_dao.dart';
 import 'daos/vault_dao.dart';
@@ -9,6 +10,7 @@ import 'daos/vault_relay_dao.dart';
 import 'db_key.dart';
 import 'tables/distribution_shares.dart';
 import 'tables/distributions.dart';
+import 'tables/held_shares.dart';
 import 'tables/owned_vaults.dart';
 import 'tables/stewards.dart';
 import 'tables/vault_relays.dart';
@@ -16,10 +18,10 @@ import 'tables/vaults.dart';
 
 part 'app_database.g.dart';
 
-/// Schema version 1 — corresponds to `drift_schemas/v1.json`. Any change to
-/// any [Table] in this database that affects the SQL schema MUST bump
-/// [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a new
-/// `drift_schemas/v<n>.json`, and add a migration test. The
+/// Schema version 1 — corresponds to `drift_schemas/drift_schema_v1.json`.
+/// Any change to any [Table] in this database that affects the SQL schema MUST
+/// bump [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a
+/// new `drift_schemas/drift_schema_v<n>.json`, and add a migration test. The
 /// `schema_parity_test.dart` CI gate enforces that the dumped schema matches
 /// what the code generates.
 @DriftDatabase(
@@ -30,6 +32,7 @@ part 'app_database.g.dart';
     Stewards,
     Distributions,
     DistributionShares,
+    HeldShares,
   ],
   daos: [
     VaultDao,
@@ -37,6 +40,7 @@ part 'app_database.g.dart';
     OwnedVaultDao,
     StewardDao,
     DistributionDao,
+    HeldShareDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -84,6 +88,20 @@ class AppDatabase extends _$AppDatabase {
           await customStatement(
             'CREATE INDEX IF NOT EXISTS distribution_shares_steward '
             'ON distribution_shares(steward_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS held_shares_vault '
+            'ON held_shares(vault_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS held_shares_vault_version '
+            'ON held_shares(vault_id, distribution_version DESC)',
+          );
+          // Dedup: same share event for the same (vault, version) is a no-op.
+          await customStatement(
+            'CREATE UNIQUE INDEX IF NOT EXISTS held_shares_vault_version_event '
+            'ON held_shares(vault_id, distribution_version, nostr_event_id) '
+            'WHERE nostr_event_id IS NOT NULL',
           );
         },
         beforeOpen: (details) async {

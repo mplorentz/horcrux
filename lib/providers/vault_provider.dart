@@ -41,13 +41,18 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
 });
 
 /// Repository for vaults backed by drift DAOs (`vaults`, `owned_vaults`,
-/// `stewards`).
+/// `stewards`, `held_shares`).
 ///
-/// **Phase 1 behavior** — see `docs/data_layer_refactor_plan.md`:
+/// **Phase 2a additions** — see `docs/data_layer_refactor_plan.md`:
 ///
-/// - `Vault.shares` always hydrates to `[]`. The `held_shares` table lands in
-///   Phase 2; until then [addShareToVault], [getSharesForVault], and
-///   [clearSharesForVault] throw [UnimplementedError]. Mocks should match.
+/// - `Vault.shares` is now hydrated from the `held_shares` table.
+///   [addShareToVault] writes a row and prunes old versions.
+///   [clearSharesForVault] deletes all rows for the vault.
+/// - Inserting a `held_shares` row also updates `vaults.last_synced_at` so
+///   the reactive vault stream re-emits and callers see the updated shares.
+///
+/// **Still Phase 1 / stub behavior**:
+///
 /// - `Vault.recoveryRequests` always hydrates to `[]`. The
 ///   `recovery_requests` / `recovery_responses` tables land in Phase 3; until
 ///   then [addRecoveryRequestToVault] and [updateRecoveryRequestInVault]
@@ -180,6 +185,7 @@ class VaultRepository {
       await _db.delete(_db.stewards).go();
       await _db.delete(_db.ownedVaults).go();
       await _db.delete(_db.vaultRelays).go();
+      await _db.delete(_db.heldShares).go();
       await _db.delete(_db.vaults).go();
     });
   }
@@ -247,26 +253,148 @@ class VaultRepository {
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
   }
 
-  // ========== Share management (Phase 2 — `held_shares` table) ==========
+  // ========== Share management (`held_shares` table) ==========
 
-  Future<void> addShareToVault(String vaultId, Share share) {
-    throw UnimplementedError(
-      'addShareToVault: held_shares is restored in Phase 2 of the data layer '
-      'refactor. See docs/data_layer_refactor_plan.md.',
+  /// True when this device owns [vaultId] (an `owned_vaults` row exists).
+  Future<bool> isOwnedVault(String vaultId) async {
+    final row = await _db.ownedVaultDao.getByVaultId(vaultId);
+    return row != null;
+  }
+
+  /// Write [share] into the `held_shares` table and prune old versions.
+  ///
+  /// Also bumps `vaults.last_synced_at` so the reactive vault stream
+  /// re-emits and callers see the updated [Vault.shares].
+  Future<void> addShareToVault(String vaultId, Share share) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final id = '${vaultId}_${share.shareIndex}_${share.distributionVersion ?? 0}_$now';
+
+    await _db.transaction(() async {
+      await _db.heldShareDao.insertIfNew(HeldSharesCompanion.insert(
+        id: id,
+        vaultId: vaultId,
+        shareIndex: share.shareIndex,
+        sharePayload: share.payload,
+        distributionVersion: share.distributionVersion ?? 0,
+        receivedAt: now,
+        nostrEventId: Value(share.nostrEventId),
+        lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
+        pushEnabled: Value(share.pushEnabled ?? true),
+      ));
+      await _db.heldShareDao.pruneOldVersions(vaultId);
+      // Touch last_synced_at so the vaults watchAll() stream re-emits and
+      // _hydrateAll picks up the new held_shares row.
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(lastSyncedAt: Value(now)),
+      );
+    });
+    Log.info(
+      'addShareToVault: wrote held_share for vault $vaultId '
+      '(shareIndex=${share.shareIndex}, version=${share.distributionVersion})',
     );
   }
 
+  /// All shares held for [vaultId], most-recent version first.
+  ///
+  /// Reads from the `held_shares` table directly so it is always consistent
+  /// with what [_hydrate] returns via [Vault.shares].
   Future<List<Share>> getSharesForVault(String vaultId) async {
-    final vault = await getVault(vaultId);
-    if (vault == null) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-    return List.unmodifiable(vault.shares);
+    final vaultRow = await _db.vaultDao.getById(vaultId);
+    if (vaultRow == null) throw ArgumentError('Vault not found: $vaultId');
+    final rows = await _db.heldShareDao.forVault(vaultId);
+    return rows.map((r) => _shareFromHeldShareRow(r, vaultRow)).toList();
   }
 
-  Future<void> clearSharesForVault(String vaultId) {
-    throw UnimplementedError(
-      'clearSharesForVault: held_shares is restored in Phase 2.',
+  /// Delete all `held_shares` rows for [vaultId].
+  Future<void> clearSharesForVault(String vaultId) async {
+    await _db.heldShareDao.deleteForVault(vaultId);
+    Log.info('clearSharesForVault: removed all held_shares for vault $vaultId');
+  }
+
+  /// Insert or update a steward row identified by [id].
+  ///
+  /// Used by [VaultShareService] during steward-side ingestion to upsert the
+  /// self-steward entry for a received share. The `left_at` column is cleared
+  /// so a previously soft-retired self-steward becomes active again on
+  /// redistribution.
+  Future<void> upsertStewardRow({
+    required String id,
+    required String vaultId,
+    required int shareIndex,
+    String? pubkey,
+    String? name,
+    bool isOwner = false,
+  }) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.stewardDao.upsert(
+      StewardsCompanion.insert(
+        id: id,
+        vaultId: vaultId,
+        shareIndex: shareIndex,
+        pubkey: Value(pubkey),
+        name: Value(name),
+        isOwner: Value(isOwner),
+        joinedAt: now,
+      ).copyWith(leftAt: const Value(null)),
+    );
+  }
+
+  /// Copies Shamir parameters and relay hints from [share] onto the `vaults`
+  /// row for steward-side ingestion.
+  ///
+  /// Without this, [_persistVault] paths that lack [BackupConfig] leave
+  /// `threshold` / `total_shares` / `prime_mod` at defaults; [_shareFromHeldShareRow]
+  /// would then hydrate invalid [Share] objects.
+  ///
+  /// No-op when [Share.distributionVersion] (null → 0) is **strictly less** than
+  /// the stored `vaults.current_distribution_version` so stale shares cannot
+  /// roll back metadata.
+  Future<void> mergeVaultRowFromIncomingShare(String vaultId, Share share) async {
+    final row = await _db.vaultDao.getById(vaultId);
+    if (row == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    final incomingDist = share.distributionVersion ?? 0;
+    if (incomingDist < row.currentDistributionVersion) {
+      return;
+    }
+
+    await _db.transaction(() async {
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(
+          threshold: Value(share.threshold),
+          totalShares: Value(share.totalShares),
+          primeMod: Value(share.primeMod),
+          currentDistributionVersion: Value(
+            incomingDist > row.currentDistributionVersion
+                ? incomingDist
+                : row.currentDistributionVersion,
+          ),
+        ),
+      );
+
+      final relays = share.relayUrls;
+      if (relays != null && relays.isNotEmpty) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        await _db.vaultRelayDao.replaceForVault(
+          vaultId: vaultId,
+          role: 'steward',
+          rows: [
+            for (var i = 0; i < relays.length; i++)
+              VaultRelaysCompanion.insert(
+                id: '$vaultId-steward-${relays[i]}-$i',
+                vaultId: vaultId,
+                url: relays[i],
+                role: 'steward',
+                addedAt: nowMs,
+              ),
+          ],
+        );
+      }
+    });
+    Log.debug(
+      'mergeVaultRowFromIncomingShare: vault $vaultId '
+      '(threshold=${share.threshold}, totalShares=${share.totalShares})',
     );
   }
 
@@ -350,6 +478,7 @@ class VaultRepository {
     final ownedRow = await _db.ownedVaultDao.getByVaultId(row.id);
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    final heldShareRows = await _db.heldShareDao.forVault(row.id);
 
     final dbStewards = stewardRows.map(_stewardFromRow).toList();
     BackupConfig? backupConfig;
@@ -375,6 +504,11 @@ class VaultRepository {
       );
     }
 
+    // Back-compat shim (Phase 2a): populate Vault.shares from held_shares.
+    // Phases 2b/2c will introduce the sealed VaultDetail read model and
+    // eventually drop this field.
+    final shares = heldShareRows.map((r) => _shareFromHeldShareRow(r, row)).toList();
+
     return Vault(
       id: row.id,
       name: row.name,
@@ -382,13 +516,42 @@ class VaultRepository {
       createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       ownerPubkey: row.ownerPubkey,
       ownerName: row.ownerName,
-      shares: const [],
+      shares: shares,
       recoveryRequests: const [],
       backupConfig: backupConfig,
       archivedAt:
           row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
       archivedReason: row.archivedReason,
       pushEnabled: row.pushEnabled,
+    );
+  }
+
+  /// Build a [Share] from a [HeldShareRow] supplemented with vault-level
+  /// metadata from [vaultRow]. Used both in [_hydrate] and [getSharesForVault].
+  ///
+  /// Not all [Share] fields are stored in `held_shares` (e.g. stewards list,
+  /// ownerName, instructions, relayUrls). Those remain null in the hydrated
+  /// Share — sufficient for UI that reads [Vault.shares]. The full wire
+  /// payload is not re-persisted after the gift-wrap is unwrapped.
+  ///
+  /// [VaultRow.createdAt] is milliseconds since epoch ([_persistVault]); [Share.createdAt]
+  /// and Nostr `created_at` are Unix seconds — convert here so [Share.ageInSeconds],
+  /// [Share.isRecent], and [shareToJson] stay correct.
+  Share _shareFromHeldShareRow(HeldShareRow r, VaultRow vaultRow) {
+    return Share(
+      payload: r.sharePayload,
+      threshold: vaultRow.threshold,
+      shareIndex: r.shareIndex,
+      totalShares: vaultRow.totalShares,
+      primeMod: vaultRow.primeMod ?? '',
+      creatorPubkey: vaultRow.ownerPubkey,
+      createdAt: vaultRow.createdAt ~/ 1000,
+      vaultId: r.vaultId,
+      vaultName: vaultRow.name,
+      nostrEventId: r.nostrEventId,
+      distributionVersion: r.distributionVersion,
+      pushEnabled: r.pushEnabled,
+      receivedAt: DateTime.fromMillisecondsSinceEpoch(r.receivedAt),
     );
   }
 
