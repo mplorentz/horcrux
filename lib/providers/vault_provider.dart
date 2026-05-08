@@ -64,7 +64,8 @@ class VaultRepository {
   final LoginService _loginService;
 
   final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
-  List<Vault> _latest = const [];
+  List<Vault>? _latest;
+  final Completer<List<Vault>> _initialVaultsCompleter = Completer<List<Vault>>();
   StreamSubscription<List<Vault>>? _vaultRowsSubscription;
 
   /// **Phase 1 carryover cache.** The drift schema does not yet track
@@ -92,10 +93,16 @@ class VaultRepository {
     _vaultRowsSubscription = _db.vaultDao.watchAll().asyncMap(_hydrateAll).listen(
       (vaults) {
         _latest = vaults;
+        if (!_initialVaultsCompleter.isCompleted) {
+          _initialVaultsCompleter.complete(vaults);
+        }
         _vaultsController.add(vaults);
       },
       onError: (Object e, StackTrace s) {
         Log.error('vaultsStream hydration failed', e);
+        if (!_initialVaultsCompleter.isCompleted) {
+          _initialVaultsCompleter.completeError(e, s);
+        }
         _vaultsController.addError(e, s);
       },
     );
@@ -104,7 +111,12 @@ class VaultRepository {
   /// Stream that replays the most recent hydrated vault list to new
   /// subscribers, then emits subsequent updates.
   Stream<List<Vault>> get vaultsStream async* {
-    yield _latest;
+    final latest = _latest;
+    if (latest == null) {
+      yield await _initialVaultsCompleter.future;
+    } else {
+      yield latest;
+    }
     yield* _vaultsController.stream;
   }
 
@@ -175,6 +187,9 @@ class VaultRepository {
   Future<void> refresh() async {
     final all = await getAllVaults();
     _latest = all;
+    if (!_initialVaultsCompleter.isCompleted) {
+      _initialVaultsCompleter.complete(all);
+    }
     _vaultsController.add(all);
   }
 
