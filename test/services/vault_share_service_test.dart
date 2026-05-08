@@ -35,9 +35,7 @@ void main() {
     sharedPreferencesMock.tearDownAll();
   });
 
-  group('VaultShareService.addVaultShare pushEnabled propagation',
-      skip: 'Phase 2 (held_shares table) of the data layer refactor — '
-          'addShareToVault is stubbed UnimplementedError until then.', () {
+  group('VaultShareService.addVaultShare pushEnabled propagation', () {
     const ownerPubkey = TestHexPubkeys.alice;
     const vaultId = 'test-vault';
 
@@ -62,6 +60,7 @@ void main() {
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
 
       mockNdkService = MockNdkService();
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
       when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);

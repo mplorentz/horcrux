@@ -724,6 +724,15 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<bool> isOwnedVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isOwnedVault,
+          [vaultId],
+        ),
+        returnValue: _i7.Future<bool>.value(false),
+      ) as _i7.Future<bool>);
+
+  @override
   _i7.Future<void> addShareToVault(
     String? vaultId,
     _i14.Share? share,
@@ -754,6 +763,32 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
         Invocation.method(
           #clearSharesForVault,
           [vaultId],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
+  _i7.Future<void> upsertStewardRow({
+    required String? id,
+    required String? vaultId,
+    required int? shareIndex,
+    String? pubkey,
+    String? name,
+    bool? isOwner = false,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #upsertStewardRow,
+          [],
+          {
+            #id: id,
+            #vaultId: vaultId,
+            #shareIndex: shareIndex,
+            #pubkey: pubkey,
+            #name: name,
+            #isOwner: isOwner,
+          },
         ),
         returnValue: _i7.Future<void>.value(),
         returnValueForMissingStub: _i7.Future<void>.value(),

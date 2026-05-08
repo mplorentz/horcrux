@@ -179,6 +179,49 @@ class VaultFixture {
 
 enum VaultFixtureRole { owned, stewarded }
 
+/// Fixture for inserting held_shares rows (Phase 2a+).
+///
+/// Example:
+/// ```dart
+/// final db = newTestDatabase();
+/// final vaultFixture = await VaultFixture.stewarded(db, ownerPubkey: 'aa'*32);
+/// await HeldShareFixture.insert(
+///   db,
+///   vaultId: vaultFixture.vaultId,
+///   shareIndex: 0,
+///   payload: 'shamir-bytes',
+/// );
+/// ```
+class HeldShareFixture {
+  /// Insert a [HeldShareRow] for [vaultId] and return the generated id.
+  static Future<String> insert(
+    AppDatabase db, {
+    required String vaultId,
+    required int shareIndex,
+    required String payload,
+    int distributionVersion = 1,
+    String? nostrEventId,
+    String? lastSeenRelay,
+    bool pushEnabled = true,
+    int? receivedAt,
+  }) async {
+    final now = receivedAt ?? DateTime.now().millisecondsSinceEpoch;
+    final id = '${vaultId}_share_${shareIndex}_${distributionVersion}_$now';
+    await db.into(db.heldShares).insert(HeldSharesCompanion.insert(
+          id: id,
+          vaultId: vaultId,
+          shareIndex: shareIndex,
+          sharePayload: payload,
+          distributionVersion: distributionVersion,
+          receivedAt: now,
+          nostrEventId: Value(nostrEventId),
+          lastSeenRelay: Value(lastSeenRelay),
+          pushEnabled: Value(pushEnabled),
+        ));
+    return id;
+  }
+}
+
 /// Placeholder for a recovery-session fixture. Recovery tables (`recovery_requests`,
 /// `recovery_responses`) land in Phase 3, at which point this fixture grows a
 /// real `inProgress(...)` constructor. Kept here so Phase 1+ tests can import

@@ -2546,6 +2546,492 @@ class DistributionSharesCompanion extends UpdateCompanion<DistributionShareRow> 
   }
 }
 
+class $HeldSharesTable extends HeldShares with TableInfo<$HeldSharesTable, HeldShareRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HeldSharesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _vaultIdMeta = const VerificationMeta('vaultId');
+  @override
+  late final GeneratedColumn<String> vaultId = GeneratedColumn<String>(
+      'vault_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES vaults (id) ON DELETE CASCADE'));
+  static const VerificationMeta _shareIndexMeta = const VerificationMeta('shareIndex');
+  @override
+  late final GeneratedColumn<int> shareIndex = GeneratedColumn<int>(
+      'share_index', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _sharePayloadMeta = const VerificationMeta('sharePayload');
+  @override
+  late final GeneratedColumn<String> sharePayload = GeneratedColumn<String>(
+      'share_payload', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _distributionVersionMeta =
+      const VerificationMeta('distributionVersion');
+  @override
+  late final GeneratedColumn<int> distributionVersion = GeneratedColumn<int>(
+      'distribution_version', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta('receivedAt');
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+      'received_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nostrEventIdMeta = const VerificationMeta('nostrEventId');
+  @override
+  late final GeneratedColumn<String> nostrEventId = GeneratedColumn<String>(
+      'nostr_event_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _lastSeenRelayMeta = const VerificationMeta('lastSeenRelay');
+  @override
+  late final GeneratedColumn<String> lastSeenRelay = GeneratedColumn<String>(
+      'last_seen_relay', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _pushEnabledMeta = const VerificationMeta('pushEnabled');
+  @override
+  late final GeneratedColumn<bool> pushEnabled = GeneratedColumn<bool>(
+      'push_enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("push_enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        vaultId,
+        shareIndex,
+        sharePayload,
+        distributionVersion,
+        receivedAt,
+        nostrEventId,
+        lastSeenRelay,
+        pushEnabled
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'held_shares';
+  @override
+  VerificationContext validateIntegrity(Insertable<HeldShareRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('vault_id')) {
+      context.handle(_vaultIdMeta, vaultId.isAcceptableOrUnknown(data['vault_id']!, _vaultIdMeta));
+    } else if (isInserting) {
+      context.missing(_vaultIdMeta);
+    }
+    if (data.containsKey('share_index')) {
+      context.handle(
+          _shareIndexMeta, shareIndex.isAcceptableOrUnknown(data['share_index']!, _shareIndexMeta));
+    } else if (isInserting) {
+      context.missing(_shareIndexMeta);
+    }
+    if (data.containsKey('share_payload')) {
+      context.handle(_sharePayloadMeta,
+          sharePayload.isAcceptableOrUnknown(data['share_payload']!, _sharePayloadMeta));
+    } else if (isInserting) {
+      context.missing(_sharePayloadMeta);
+    }
+    if (data.containsKey('distribution_version')) {
+      context.handle(
+          _distributionVersionMeta,
+          distributionVersion.isAcceptableOrUnknown(
+              data['distribution_version']!, _distributionVersionMeta));
+    } else if (isInserting) {
+      context.missing(_distributionVersionMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+          _receivedAtMeta, receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta));
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    if (data.containsKey('nostr_event_id')) {
+      context.handle(_nostrEventIdMeta,
+          nostrEventId.isAcceptableOrUnknown(data['nostr_event_id']!, _nostrEventIdMeta));
+    }
+    if (data.containsKey('last_seen_relay')) {
+      context.handle(_lastSeenRelayMeta,
+          lastSeenRelay.isAcceptableOrUnknown(data['last_seen_relay']!, _lastSeenRelayMeta));
+    }
+    if (data.containsKey('push_enabled')) {
+      context.handle(_pushEnabledMeta,
+          pushEnabled.isAcceptableOrUnknown(data['push_enabled']!, _pushEnabledMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  HeldShareRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HeldShareRow(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      vaultId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}vault_id'])!,
+      shareIndex: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}share_index'])!,
+      sharePayload: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}share_payload'])!,
+      distributionVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}distribution_version'])!,
+      receivedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}received_at'])!,
+      nostrEventId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}nostr_event_id']),
+      lastSeenRelay: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}last_seen_relay']),
+      pushEnabled: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}push_enabled'])!,
+    );
+  }
+
+  @override
+  $HeldSharesTable createAlias(String alias) {
+    return $HeldSharesTable(attachedDatabase, alias);
+  }
+}
+
+class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
+  final String id;
+  final String vaultId;
+
+  /// 0-based Shamir share position (matches [Share.shareIndex] and wire
+  /// `shard_index`).
+  final int shareIndex;
+
+  /// Raw Shamir share bytes. Application-layer plaintext protected by
+  /// SQLCipher whole-DB encryption. See "Share material lifecycle" in the
+  /// data layer refactor plan.
+  final String sharePayload;
+
+  /// Distribution version at which this share was generated. Used for
+  /// retention pruning and for serving a specific version during recovery.
+  final int distributionVersion;
+
+  /// Local clock timestamp (ms since epoch) when this row was first written.
+  /// Never sourced from the Nostr event `created_at` — see "Time,
+  /// monotonicity, clock skew" in the refactor plan.
+  final int receivedAt;
+
+  /// Nostr event ID of the gift-wrap that delivered this share. Used for
+  /// dedup (see unique index `held_shares_vault_version_event`).
+  final String? nostrEventId;
+
+  /// Relay URL this share was first ingested from. Lets the steward publish
+  /// an ack to a sensible relay without re-guessing.
+  final String? lastSeenRelay;
+
+  /// Mirrors the owner's push preference at distribution time. Combined with
+  /// `vaults.push_enabled` to determine whether to fire local push
+  /// notifications for this vault.
+  final bool pushEnabled;
+  const HeldShareRow(
+      {required this.id,
+      required this.vaultId,
+      required this.shareIndex,
+      required this.sharePayload,
+      required this.distributionVersion,
+      required this.receivedAt,
+      this.nostrEventId,
+      this.lastSeenRelay,
+      required this.pushEnabled});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['vault_id'] = Variable<String>(vaultId);
+    map['share_index'] = Variable<int>(shareIndex);
+    map['share_payload'] = Variable<String>(sharePayload);
+    map['distribution_version'] = Variable<int>(distributionVersion);
+    map['received_at'] = Variable<int>(receivedAt);
+    if (!nullToAbsent || nostrEventId != null) {
+      map['nostr_event_id'] = Variable<String>(nostrEventId);
+    }
+    if (!nullToAbsent || lastSeenRelay != null) {
+      map['last_seen_relay'] = Variable<String>(lastSeenRelay);
+    }
+    map['push_enabled'] = Variable<bool>(pushEnabled);
+    return map;
+  }
+
+  HeldSharesCompanion toCompanion(bool nullToAbsent) {
+    return HeldSharesCompanion(
+      id: Value(id),
+      vaultId: Value(vaultId),
+      shareIndex: Value(shareIndex),
+      sharePayload: Value(sharePayload),
+      distributionVersion: Value(distributionVersion),
+      receivedAt: Value(receivedAt),
+      nostrEventId:
+          nostrEventId == null && nullToAbsent ? const Value.absent() : Value(nostrEventId),
+      lastSeenRelay:
+          lastSeenRelay == null && nullToAbsent ? const Value.absent() : Value(lastSeenRelay),
+      pushEnabled: Value(pushEnabled),
+    );
+  }
+
+  factory HeldShareRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HeldShareRow(
+      id: serializer.fromJson<String>(json['id']),
+      vaultId: serializer.fromJson<String>(json['vaultId']),
+      shareIndex: serializer.fromJson<int>(json['shareIndex']),
+      sharePayload: serializer.fromJson<String>(json['sharePayload']),
+      distributionVersion: serializer.fromJson<int>(json['distributionVersion']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
+      nostrEventId: serializer.fromJson<String?>(json['nostrEventId']),
+      lastSeenRelay: serializer.fromJson<String?>(json['lastSeenRelay']),
+      pushEnabled: serializer.fromJson<bool>(json['pushEnabled']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'vaultId': serializer.toJson<String>(vaultId),
+      'shareIndex': serializer.toJson<int>(shareIndex),
+      'sharePayload': serializer.toJson<String>(sharePayload),
+      'distributionVersion': serializer.toJson<int>(distributionVersion),
+      'receivedAt': serializer.toJson<int>(receivedAt),
+      'nostrEventId': serializer.toJson<String?>(nostrEventId),
+      'lastSeenRelay': serializer.toJson<String?>(lastSeenRelay),
+      'pushEnabled': serializer.toJson<bool>(pushEnabled),
+    };
+  }
+
+  HeldShareRow copyWith(
+          {String? id,
+          String? vaultId,
+          int? shareIndex,
+          String? sharePayload,
+          int? distributionVersion,
+          int? receivedAt,
+          Value<String?> nostrEventId = const Value.absent(),
+          Value<String?> lastSeenRelay = const Value.absent(),
+          bool? pushEnabled}) =>
+      HeldShareRow(
+        id: id ?? this.id,
+        vaultId: vaultId ?? this.vaultId,
+        shareIndex: shareIndex ?? this.shareIndex,
+        sharePayload: sharePayload ?? this.sharePayload,
+        distributionVersion: distributionVersion ?? this.distributionVersion,
+        receivedAt: receivedAt ?? this.receivedAt,
+        nostrEventId: nostrEventId.present ? nostrEventId.value : this.nostrEventId,
+        lastSeenRelay: lastSeenRelay.present ? lastSeenRelay.value : this.lastSeenRelay,
+        pushEnabled: pushEnabled ?? this.pushEnabled,
+      );
+  HeldShareRow copyWithCompanion(HeldSharesCompanion data) {
+    return HeldShareRow(
+      id: data.id.present ? data.id.value : this.id,
+      vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
+      shareIndex: data.shareIndex.present ? data.shareIndex.value : this.shareIndex,
+      sharePayload: data.sharePayload.present ? data.sharePayload.value : this.sharePayload,
+      distributionVersion: data.distributionVersion.present
+          ? data.distributionVersion.value
+          : this.distributionVersion,
+      receivedAt: data.receivedAt.present ? data.receivedAt.value : this.receivedAt,
+      nostrEventId: data.nostrEventId.present ? data.nostrEventId.value : this.nostrEventId,
+      lastSeenRelay: data.lastSeenRelay.present ? data.lastSeenRelay.value : this.lastSeenRelay,
+      pushEnabled: data.pushEnabled.present ? data.pushEnabled.value : this.pushEnabled,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HeldShareRow(')
+          ..write('id: $id, ')
+          ..write('vaultId: $vaultId, ')
+          ..write('shareIndex: $shareIndex, ')
+          ..write('sharePayload: $sharePayload, ')
+          ..write('distributionVersion: $distributionVersion, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('nostrEventId: $nostrEventId, ')
+          ..write('lastSeenRelay: $lastSeenRelay, ')
+          ..write('pushEnabled: $pushEnabled')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, vaultId, shareIndex, sharePayload, distributionVersion,
+      receivedAt, nostrEventId, lastSeenRelay, pushEnabled);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HeldShareRow &&
+          other.id == this.id &&
+          other.vaultId == this.vaultId &&
+          other.shareIndex == this.shareIndex &&
+          other.sharePayload == this.sharePayload &&
+          other.distributionVersion == this.distributionVersion &&
+          other.receivedAt == this.receivedAt &&
+          other.nostrEventId == this.nostrEventId &&
+          other.lastSeenRelay == this.lastSeenRelay &&
+          other.pushEnabled == this.pushEnabled);
+}
+
+class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
+  final Value<String> id;
+  final Value<String> vaultId;
+  final Value<int> shareIndex;
+  final Value<String> sharePayload;
+  final Value<int> distributionVersion;
+  final Value<int> receivedAt;
+  final Value<String?> nostrEventId;
+  final Value<String?> lastSeenRelay;
+  final Value<bool> pushEnabled;
+  final Value<int> rowid;
+  const HeldSharesCompanion({
+    this.id = const Value.absent(),
+    this.vaultId = const Value.absent(),
+    this.shareIndex = const Value.absent(),
+    this.sharePayload = const Value.absent(),
+    this.distributionVersion = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.nostrEventId = const Value.absent(),
+    this.lastSeenRelay = const Value.absent(),
+    this.pushEnabled = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HeldSharesCompanion.insert({
+    required String id,
+    required String vaultId,
+    required int shareIndex,
+    required String sharePayload,
+    required int distributionVersion,
+    required int receivedAt,
+    this.nostrEventId = const Value.absent(),
+    this.lastSeenRelay = const Value.absent(),
+    this.pushEnabled = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        vaultId = Value(vaultId),
+        shareIndex = Value(shareIndex),
+        sharePayload = Value(sharePayload),
+        distributionVersion = Value(distributionVersion),
+        receivedAt = Value(receivedAt);
+  static Insertable<HeldShareRow> custom({
+    Expression<String>? id,
+    Expression<String>? vaultId,
+    Expression<int>? shareIndex,
+    Expression<String>? sharePayload,
+    Expression<int>? distributionVersion,
+    Expression<int>? receivedAt,
+    Expression<String>? nostrEventId,
+    Expression<String>? lastSeenRelay,
+    Expression<bool>? pushEnabled,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (vaultId != null) 'vault_id': vaultId,
+      if (shareIndex != null) 'share_index': shareIndex,
+      if (sharePayload != null) 'share_payload': sharePayload,
+      if (distributionVersion != null) 'distribution_version': distributionVersion,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (nostrEventId != null) 'nostr_event_id': nostrEventId,
+      if (lastSeenRelay != null) 'last_seen_relay': lastSeenRelay,
+      if (pushEnabled != null) 'push_enabled': pushEnabled,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HeldSharesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? vaultId,
+      Value<int>? shareIndex,
+      Value<String>? sharePayload,
+      Value<int>? distributionVersion,
+      Value<int>? receivedAt,
+      Value<String?>? nostrEventId,
+      Value<String?>? lastSeenRelay,
+      Value<bool>? pushEnabled,
+      Value<int>? rowid}) {
+    return HeldSharesCompanion(
+      id: id ?? this.id,
+      vaultId: vaultId ?? this.vaultId,
+      shareIndex: shareIndex ?? this.shareIndex,
+      sharePayload: sharePayload ?? this.sharePayload,
+      distributionVersion: distributionVersion ?? this.distributionVersion,
+      receivedAt: receivedAt ?? this.receivedAt,
+      nostrEventId: nostrEventId ?? this.nostrEventId,
+      lastSeenRelay: lastSeenRelay ?? this.lastSeenRelay,
+      pushEnabled: pushEnabled ?? this.pushEnabled,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (vaultId.present) {
+      map['vault_id'] = Variable<String>(vaultId.value);
+    }
+    if (shareIndex.present) {
+      map['share_index'] = Variable<int>(shareIndex.value);
+    }
+    if (sharePayload.present) {
+      map['share_payload'] = Variable<String>(sharePayload.value);
+    }
+    if (distributionVersion.present) {
+      map['distribution_version'] = Variable<int>(distributionVersion.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    if (nostrEventId.present) {
+      map['nostr_event_id'] = Variable<String>(nostrEventId.value);
+    }
+    if (lastSeenRelay.present) {
+      map['last_seen_relay'] = Variable<String>(lastSeenRelay.value);
+    }
+    if (pushEnabled.present) {
+      map['push_enabled'] = Variable<bool>(pushEnabled.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HeldSharesCompanion(')
+          ..write('id: $id, ')
+          ..write('vaultId: $vaultId, ')
+          ..write('shareIndex: $shareIndex, ')
+          ..write('sharePayload: $sharePayload, ')
+          ..write('distributionVersion: $distributionVersion, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('nostrEventId: $nostrEventId, ')
+          ..write('lastSeenRelay: $lastSeenRelay, ')
+          ..write('pushEnabled: $pushEnabled, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2555,17 +3041,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StewardsTable stewards = $StewardsTable(this);
   late final $DistributionsTable distributions = $DistributionsTable(this);
   late final $DistributionSharesTable distributionShares = $DistributionSharesTable(this);
+  late final $HeldSharesTable heldShares = $HeldSharesTable(this);
   late final VaultDao vaultDao = VaultDao(this as AppDatabase);
   late final VaultRelayDao vaultRelayDao = VaultRelayDao(this as AppDatabase);
   late final OwnedVaultDao ownedVaultDao = OwnedVaultDao(this as AppDatabase);
   late final StewardDao stewardDao = StewardDao(this as AppDatabase);
   late final DistributionDao distributionDao = DistributionDao(this as AppDatabase);
+  late final HeldShareDao heldShareDao = HeldShareDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [vaults, vaultRelays, ownedVaults, stewards, distributions, distributionShares];
+      [vaults, vaultRelays, ownedVaults, stewards, distributions, distributionShares, heldShares];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
         [
@@ -2597,6 +3085,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
             on: TableUpdateQuery.onTableName('distributions', limitUpdateKind: UpdateKind.delete),
             result: [
               TableUpdate('distribution_shares', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('vaults', limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('held_shares', kind: UpdateKind.delete),
             ],
           ),
         ],
@@ -2690,6 +3184,19 @@ final class $$VaultsTableReferences extends BaseReferences<_$AppDatabase, $Vault
         .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_distributionsRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$HeldSharesTable, List<HeldShareRow>> _heldSharesRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.heldShares,
+          aliasName: $_aliasNameGenerator(db.vaults.id, db.heldShares.vaultId));
+
+  $$HeldSharesTableProcessedTableManager get heldSharesRefs {
+    final manager = $$HeldSharesTableTableManager($_db, $_db.heldShares)
+        .filter((f) => f.vaultId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_heldSharesRefsTable($_db));
     return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
@@ -2812,6 +3319,24 @@ class $$VaultsTableFilterComposer extends Composer<_$AppDatabase, $VaultsTable> 
             $$DistributionsTableFilterComposer(
               $db: $db,
               $table: $db.distributions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> heldSharesRefs(Expression<bool> Function($$HeldSharesTableFilterComposer f) f) {
+    final $$HeldSharesTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.heldShares,
+        getReferencedColumn: (t) => t.vaultId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$HeldSharesTableFilterComposer(
+              $db: $db,
+              $table: $db.heldShares,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
@@ -2996,6 +3521,25 @@ class $$VaultsTableAnnotationComposer extends Composer<_$AppDatabase, $VaultsTab
             ));
     return f(composer);
   }
+
+  Expression<T> heldSharesRefs<T extends Object>(
+      Expression<T> Function($$HeldSharesTableAnnotationComposer a) f) {
+    final $$HeldSharesTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.heldShares,
+        getReferencedColumn: (t) => t.vaultId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$HeldSharesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.heldShares,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$VaultsTableTableManager extends RootTableManager<
@@ -3010,7 +3554,11 @@ class $$VaultsTableTableManager extends RootTableManager<
     (VaultRow, $$VaultsTableReferences),
     VaultRow,
     PrefetchHooks Function(
-        {bool vaultRelaysRefs, bool ownedVaultsRefs, bool stewardsRefs, bool distributionsRefs})> {
+        {bool vaultRelaysRefs,
+        bool ownedVaultsRefs,
+        bool stewardsRefs,
+        bool distributionsRefs,
+        bool heldSharesRefs})> {
   $$VaultsTableTableManager(_$AppDatabase db, $VaultsTable table)
       : super(TableManagerState(
           db: db,
@@ -3093,14 +3641,16 @@ class $$VaultsTableTableManager extends RootTableManager<
               {vaultRelaysRefs = false,
               ownedVaultsRefs = false,
               stewardsRefs = false,
-              distributionsRefs = false}) {
+              distributionsRefs = false,
+              heldSharesRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (vaultRelaysRefs) db.vaultRelays,
                 if (ownedVaultsRefs) db.ownedVaults,
                 if (stewardsRefs) db.stewards,
-                if (distributionsRefs) db.distributions
+                if (distributionsRefs) db.distributions,
+                if (heldSharesRefs) db.heldShares
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -3140,6 +3690,15 @@ class $$VaultsTableTableManager extends RootTableManager<
                             $$VaultsTableReferences(db, table, p0).distributionsRefs,
                         referencedItemsForCurrentItem: (item, referencedItems) =>
                             referencedItems.where((e) => e.vaultId == item.id),
+                        typedResults: items),
+                  if (heldSharesRefs)
+                    await $_getPrefetchedData<VaultRow, $VaultsTable, HeldShareRow>(
+                        currentTable: table,
+                        referencedTable: $$VaultsTableReferences._heldSharesRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$VaultsTableReferences(db, table, p0).heldSharesRefs,
+                        referencedItemsForCurrentItem: (item, referencedItems) =>
+                            referencedItems.where((e) => e.vaultId == item.id),
                         typedResults: items)
                 ];
               },
@@ -3160,7 +3719,11 @@ typedef $$VaultsTableProcessedTableManager = ProcessedTableManager<
     (VaultRow, $$VaultsTableReferences),
     VaultRow,
     PrefetchHooks Function(
-        {bool vaultRelaysRefs, bool ownedVaultsRefs, bool stewardsRefs, bool distributionsRefs})>;
+        {bool vaultRelaysRefs,
+        bool ownedVaultsRefs,
+        bool stewardsRefs,
+        bool distributionsRefs,
+        bool heldSharesRefs})>;
 typedef $$VaultRelaysTableCreateCompanionBuilder = VaultRelaysCompanion Function({
   required String id,
   required String vaultId,
@@ -4719,6 +5282,311 @@ typedef $$DistributionSharesTableProcessedTableManager = ProcessedTableManager<
     (DistributionShareRow, $$DistributionSharesTableReferences),
     DistributionShareRow,
     PrefetchHooks Function({bool distributionId, bool stewardId})>;
+typedef $$HeldSharesTableCreateCompanionBuilder = HeldSharesCompanion Function({
+  required String id,
+  required String vaultId,
+  required int shareIndex,
+  required String sharePayload,
+  required int distributionVersion,
+  required int receivedAt,
+  Value<String?> nostrEventId,
+  Value<String?> lastSeenRelay,
+  Value<bool> pushEnabled,
+  Value<int> rowid,
+});
+typedef $$HeldSharesTableUpdateCompanionBuilder = HeldSharesCompanion Function({
+  Value<String> id,
+  Value<String> vaultId,
+  Value<int> shareIndex,
+  Value<String> sharePayload,
+  Value<int> distributionVersion,
+  Value<int> receivedAt,
+  Value<String?> nostrEventId,
+  Value<String?> lastSeenRelay,
+  Value<bool> pushEnabled,
+  Value<int> rowid,
+});
+
+final class $$HeldSharesTableReferences
+    extends BaseReferences<_$AppDatabase, $HeldSharesTable, HeldShareRow> {
+  $$HeldSharesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $VaultsTable _vaultIdTable(_$AppDatabase db) =>
+      db.vaults.createAlias($_aliasNameGenerator(db.heldShares.vaultId, db.vaults.id));
+
+  $$VaultsTableProcessedTableManager get vaultId {
+    final $_column = $_itemColumn<String>('vault_id')!;
+
+    final manager =
+        $$VaultsTableTableManager($_db, $_db.vaults).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_vaultIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$HeldSharesTableFilterComposer extends Composer<_$AppDatabase, $HeldSharesTable> {
+  $$HeldSharesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sharePayload =>
+      $composableBuilder(column: $table.sharePayload, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get distributionVersion => $composableBuilder(
+      column: $table.distributionVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get receivedAt =>
+      $composableBuilder(column: $table.receivedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get nostrEventId =>
+      $composableBuilder(column: $table.nostrEventId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastSeenRelay =>
+      $composableBuilder(column: $table.lastSeenRelay, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => ColumnFilters(column));
+
+  $$VaultsTableFilterComposer get vaultId {
+    final $$VaultsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.vaultId,
+        referencedTable: $db.vaults,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$VaultsTableFilterComposer(
+              $db: $db,
+              $table: $db.vaults,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$HeldSharesTableOrderingComposer extends Composer<_$AppDatabase, $HeldSharesTable> {
+  $$HeldSharesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sharePayload =>
+      $composableBuilder(column: $table.sharePayload, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get distributionVersion => $composableBuilder(
+      column: $table.distributionVersion, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get receivedAt =>
+      $composableBuilder(column: $table.receivedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get nostrEventId =>
+      $composableBuilder(column: $table.nostrEventId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastSeenRelay => $composableBuilder(
+      column: $table.lastSeenRelay, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => ColumnOrderings(column));
+
+  $$VaultsTableOrderingComposer get vaultId {
+    final $$VaultsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.vaultId,
+        referencedTable: $db.vaults,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$VaultsTableOrderingComposer(
+              $db: $db,
+              $table: $db.vaults,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$HeldSharesTableAnnotationComposer extends Composer<_$AppDatabase, $HeldSharesTable> {
+  $$HeldSharesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get shareIndex =>
+      $composableBuilder(column: $table.shareIndex, builder: (column) => column);
+
+  GeneratedColumn<String> get sharePayload =>
+      $composableBuilder(column: $table.sharePayload, builder: (column) => column);
+
+  GeneratedColumn<int> get distributionVersion =>
+      $composableBuilder(column: $table.distributionVersion, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt =>
+      $composableBuilder(column: $table.receivedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get nostrEventId =>
+      $composableBuilder(column: $table.nostrEventId, builder: (column) => column);
+
+  GeneratedColumn<String> get lastSeenRelay =>
+      $composableBuilder(column: $table.lastSeenRelay, builder: (column) => column);
+
+  GeneratedColumn<bool> get pushEnabled =>
+      $composableBuilder(column: $table.pushEnabled, builder: (column) => column);
+
+  $$VaultsTableAnnotationComposer get vaultId {
+    final $$VaultsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.vaultId,
+        referencedTable: $db.vaults,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+            $$VaultsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.vaults,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$HeldSharesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $HeldSharesTable,
+    HeldShareRow,
+    $$HeldSharesTableFilterComposer,
+    $$HeldSharesTableOrderingComposer,
+    $$HeldSharesTableAnnotationComposer,
+    $$HeldSharesTableCreateCompanionBuilder,
+    $$HeldSharesTableUpdateCompanionBuilder,
+    (HeldShareRow, $$HeldSharesTableReferences),
+    HeldShareRow,
+    PrefetchHooks Function({bool vaultId})> {
+  $$HeldSharesTableTableManager(_$AppDatabase db, $HeldSharesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$HeldSharesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$HeldSharesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HeldSharesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> vaultId = const Value.absent(),
+            Value<int> shareIndex = const Value.absent(),
+            Value<String> sharePayload = const Value.absent(),
+            Value<int> distributionVersion = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
+            Value<String?> nostrEventId = const Value.absent(),
+            Value<String?> lastSeenRelay = const Value.absent(),
+            Value<bool> pushEnabled = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HeldSharesCompanion(
+            id: id,
+            vaultId: vaultId,
+            shareIndex: shareIndex,
+            sharePayload: sharePayload,
+            distributionVersion: distributionVersion,
+            receivedAt: receivedAt,
+            nostrEventId: nostrEventId,
+            lastSeenRelay: lastSeenRelay,
+            pushEnabled: pushEnabled,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String vaultId,
+            required int shareIndex,
+            required String sharePayload,
+            required int distributionVersion,
+            required int receivedAt,
+            Value<String?> nostrEventId = const Value.absent(),
+            Value<String?> lastSeenRelay = const Value.absent(),
+            Value<bool> pushEnabled = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              HeldSharesCompanion.insert(
+            id: id,
+            vaultId: vaultId,
+            shareIndex: shareIndex,
+            sharePayload: sharePayload,
+            distributionVersion: distributionVersion,
+            receivedAt: receivedAt,
+            nostrEventId: nostrEventId,
+            lastSeenRelay: lastSeenRelay,
+            pushEnabled: pushEnabled,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), $$HeldSharesTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({vaultId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<dynamic, dynamic, dynamic, dynamic, dynamic, dynamic,
+                      dynamic, dynamic, dynamic, dynamic, dynamic>>(state) {
+                if (vaultId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.vaultId,
+                    referencedTable: $$HeldSharesTableReferences._vaultIdTable(db),
+                    referencedColumn: $$HeldSharesTableReferences._vaultIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$HeldSharesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $HeldSharesTable,
+    HeldShareRow,
+    $$HeldSharesTableFilterComposer,
+    $$HeldSharesTableOrderingComposer,
+    $$HeldSharesTableAnnotationComposer,
+    $$HeldSharesTableCreateCompanionBuilder,
+    $$HeldSharesTableUpdateCompanionBuilder,
+    (HeldShareRow, $$HeldSharesTableReferences),
+    HeldShareRow,
+    PrefetchHooks Function({bool vaultId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4733,4 +5601,6 @@ class $AppDatabaseManager {
       $$DistributionsTableTableManager(_db, _db.distributions);
   $$DistributionSharesTableTableManager get distributionShares =>
       $$DistributionSharesTableTableManager(_db, _db.distributionShares);
+  $$HeldSharesTableTableManager get heldShares =>
+      $$HeldSharesTableTableManager(_db, _db.heldShares);
 }
