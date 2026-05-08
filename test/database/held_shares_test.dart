@@ -166,5 +166,42 @@ void main() {
       final rows = await db.heldShareDao.forVault(vaultId);
       expect(rows, hasLength(1));
     });
+
+    test(
+      'insertIfNew ignores duplicate (vault_id, distribution_version, '
+      'nostr_event_id) when primary key differs',
+      () async {
+        final vaultId = await seedVault();
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        await db.heldShareDao.insertIfNew(
+          HeldSharesCompanion.insert(
+            id: 'held-share-id-first',
+            vaultId: vaultId,
+            shareIndex: 0,
+            sharePayload: 'first-payload',
+            distributionVersion: 2,
+            receivedAt: now,
+            nostrEventId: const Value('same-nostr-event'),
+          ),
+        );
+        await db.heldShareDao.insertIfNew(
+          HeldSharesCompanion.insert(
+            id: 'held-share-id-second',
+            vaultId: vaultId,
+            shareIndex: 0,
+            sharePayload: 'second-payload',
+            distributionVersion: 2,
+            receivedAt: now + 1,
+            nostrEventId: const Value('same-nostr-event'),
+          ),
+        );
+
+        final rows = await db.heldShareDao.forVault(vaultId);
+        expect(rows, hasLength(1));
+        expect(rows.single.id, 'held-share-id-first');
+        expect(rows.single.sharePayload, 'first-payload');
+      },
+    );
   });
 }

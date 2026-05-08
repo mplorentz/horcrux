@@ -43,12 +43,23 @@ class HeldShareDao extends DatabaseAccessor<AppDatabase> with _$HeldShareDaoMixi
         ]))
       .watch();
 
-  /// Insert [row], ignoring duplicates (dedup by the unique index on
-  /// `(vault_id, distribution_version, nostr_event_id)`).
+  /// Insert [row], ignoring duplicates.
   ///
-  /// Returns the rowid of the inserted row, or -1 if it was a no-op due to
-  /// the unique constraint.
-  Future<int> insertIfNew(HeldSharesCompanion row) => into(heldShares).insertOnConflictUpdate(row);
+  /// Uses `INSERT OR IGNORE` so conflicts on **any** uniqueness constraint are
+  /// skipped without error — including the partial index
+  /// `held_shares_vault_version_event` on
+  /// `(vault_id, distribution_version, nostr_event_id)` where
+  /// `nostr_event_id IS NOT NULL`.
+  ///
+  /// [InsertStatement.insertOnConflictUpdate] only targets the primary key; the
+  /// ingestion path generates a fresh synthetic `id` per insert, so replays of
+  /// the same Nostr event would otherwise violate the partial unique index and
+  /// throw.
+  ///
+  /// Returns the value reported by the executor for `last_insert_rowid` (often
+  /// `0` when ignored); callers should not use this to detect dedup.
+  Future<int> insertIfNew(HeldSharesCompanion row) =>
+      into(heldShares).insert(row, mode: InsertMode.insertOrIgnore);
 
   /// Delete all held shares for [vaultId].
   Future<int> deleteForVault(String vaultId) =>
