@@ -107,9 +107,9 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                 if (vault.backupConfig?.instructions != null &&
                     vault.backupConfig!.instructions!.isNotEmpty) {
                   instructions = vault.backupConfig!.instructions;
-                } else if (vault.shards.isNotEmpty) {
+                } else if (vault.shares.isNotEmpty) {
                   // Fallback to shard data
-                  instructions = vault.mostRecentShard?.instructions;
+                  instructions = vault.mostRecentShare?.instructions;
                 }
               }
 

@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'backup_config.dart';
 import 'recovery_request.dart';
-import 'shard_data.dart';
+import 'share.dart';
 
 part 'vault.freezed.dart';
 
@@ -11,7 +11,7 @@ class VaultBackupConstraints {
   /// Minimum threshold value for Shamir's Secret Sharing
   static const int minThreshold = 1;
 
-  /// Maximum number of total keys/shards for backup distribution
+  /// Maximum number of total keys / shares for backup distribution
   static const int maxTotalKeys = 10;
 
   /// Default threshold value for new backups
@@ -24,12 +24,12 @@ class VaultBackupConstraints {
 /// Local vault material state for the current device (not who owns the vault).
 ///
 /// - [unlocked]: decrypted vault content is present locally.
-/// - [holdingShard]: at least one shard is stored locally but content is not decrypted.
-/// - [awaitingShard]: no local content and no shards yet (e.g. invite accepted, shard not received).
+/// - [holdingShare]: at least one share is stored locally but content is not decrypted.
+/// - [awaitingShare]: no local content and no shares yet (e.g. invite accepted, share not received).
 enum VaultState {
   unlocked,
-  holdingShard,
-  awaitingShard,
+  holdingShare,
+  awaitingShare,
 }
 
 /// Data model for a secure vault containing encrypted text content
@@ -46,8 +46,7 @@ class Vault with _$Vault {
     required DateTime createdAt,
     required String ownerPubkey, // Hex format, 64 characters
     String? ownerName, // Name of the vault owner
-    @Default([])
-    List<ShardData> shards, // List of shards (single as steward, multiple during recovery)
+    @Default([]) List<Share> shares, // Single as steward, multiple during recovery
     @Default([]) List<RecoveryRequest> recoveryRequests, // Embedded recovery requests
     BackupConfig? backupConfig, // Optional backup configuration
     DateTime? archivedAt, // When the vault was archived
@@ -70,7 +69,7 @@ class Vault with _$Vault {
   /// True when this vault is archived (see [archivedAt]).
   bool get isArchived => archivedAt != null;
 
-  /// Derives [VaultState] from locally stored content and shards (see [VaultState]).
+  /// Derives [VaultState] from locally stored content and shares (see [VaultState]).
   ///
   /// Recovery state is user-specific (only for the initiator) and should be checked with
   /// [recoveryStatusProvider], not here.
@@ -78,26 +77,26 @@ class Vault with _$Vault {
     if (content != null) {
       return VaultState.unlocked;
     }
-    if (shards.isNotEmpty) {
-      return VaultState.holdingShard;
+    if (shares.isNotEmpty) {
+      return VaultState.holdingShare;
     }
-    return VaultState.awaitingShard;
+    return VaultState.awaitingShare;
   }
 
   /// Whether [hexPubkey] (hex-encoded Nostr public key) is this vault's owner.
   bool isVaultOwner(String hexPubkey) => ownerPubkey == hexPubkey;
 
-  /// Check if we are a steward for this vault (have shards)
-  bool get isSteward => shards.isNotEmpty;
+  /// Check if we are a steward for this vault (have shares)
+  bool get isSteward => shares.isNotEmpty;
 
-  /// Get the most recent shard from this vault's shards.
-  /// Returns null if there are no shards.
-  /// Prefers shards with higher distributionVersion, then newer createdAt timestamp.
-  ShardData? get mostRecentShard {
-    if (shards.isEmpty) {
+  /// Get the most recent share from this vault's list.
+  /// Returns null if there are no shares.
+  /// Prefers shares with higher distributionVersion, then newer createdAt timestamp.
+  Share? get mostRecentShare {
+    if (shares.isEmpty) {
       return null;
     }
-    return shards.reduce((current, next) {
+    return shares.reduce((current, next) {
       // Compare distributionVersion (null treated as -1, meaning older)
       final currentVersion = current.distributionVersion ?? -1;
       final nextVersion = next.distributionVersion ?? -1;
@@ -175,7 +174,7 @@ class Vault with _$Vault {
   }
 
   /// Create a copy with content explicitly cleared (set to null)
-  /// This preserves shards, backup config, and other data
+  /// This preserves shares, backup config, and other data
   Vault copyWithContentDeleted() {
     return copyWith(content: null); // Explicitly clear content
   }

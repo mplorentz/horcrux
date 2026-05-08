@@ -282,7 +282,7 @@ class HorcruxNotificationService {
   /// On the owner's side co-stewards come from `backupConfig.stewards`. On
   /// the steward's side the local vault stub usually doesn't carry a
   /// backup config, so we fall back to the `stewards` list that the owner
-  /// piggybacks onto each shard payload (see [ShardData.stewards], which
+  /// piggybacks onto each shard payload (see [Share.stewards], which
   /// already excludes the creator).
   ///
   /// This is symmetric on purpose: any steward -- not just the owner --
@@ -322,7 +322,7 @@ class HorcruxNotificationService {
         add(steward.pubkey);
       }
 
-      final coStewards = vault.mostRecentShard?.stewards;
+      final coStewards = vault.mostRecentShare?.stewards;
       if (coStewards != null) {
         for (final entry in coStewards) {
           add(entry['pubkey']);
@@ -395,7 +395,7 @@ class HorcruxNotificationService {
   /// [NdkService.publishEncryptedEvent]; we forward it to the notifier
   /// as-is and derive the recipient pubkey from its `p` tag.
   ///
-  /// [kind] is the *inner rumor* kind (e.g. [NostrKind.shardData]), not the
+  /// [kind] is the *inner rumor* kind (e.g. [NostrKind.shareData]), not the
   /// gift wrap's outer kind (which is always 1059). The inner kind lives
   /// inside the NIP-59-encrypted seal, so it can't be recovered from the
   /// gift wrap without the recipient's key — callers have to pass it.

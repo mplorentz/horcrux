@@ -154,7 +154,7 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
                   ElevatedButton(
                     onPressed: () {
                       context.showHorcruxSnackBar(
-                        'Shards sync when stewards are online.',
+                        'Shares sync when stewards are online.',
                         kind: HorcruxSnackKind.info,
                       );
                     },

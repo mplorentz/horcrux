@@ -2,6 +2,38 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+
+/// Dart CLI path suitable for `dart run drift_dev ...`.
+///
+/// Under `flutter test`, [Platform.resolvedExecutable] is typically the test VM
+/// (`flutter_tester`), not the Dart SDK `dart` binary. Running `dart run` via
+/// that executable hangs indefinitely (wrong CLI semantics).
+String dartCliExecutablePath() {
+  final resolved = Platform.resolvedExecutable;
+  final basename = p.basename(resolved);
+  if (basename == 'dart' || basename == 'dart.exe') {
+    return resolved;
+  }
+
+  // flutter/bin/cache/dart-sdk/bin/dart
+  var dir = p.dirname(resolved);
+  for (var i = 0; i < 8; i++) {
+    final candidate = p.join(dir, 'dart-sdk', 'bin', 'dart');
+    if (File(candidate).existsSync()) {
+      return candidate;
+    }
+    final parent = p.dirname(dir);
+    if (parent == dir) {
+      break;
+    }
+    dir = parent;
+  }
+
+  // Last resort: rely on PATH (CI may have dart on PATH even when tests run
+  // under flutter_tester).
+  return 'dart';
+}
 
 /// CI gate: any code change that affects the SQL schema produced by drift
 /// must be matched by a fresh dump under `drift_schemas/`. Without this
@@ -32,8 +64,9 @@ void main() {
 
     final tempDir = await Directory.systemTemp.createTemp('drift_schema_parity');
     try {
+      final dartCli = dartCliExecutablePath();
       final result = await Process.run(
-        'dart',
+        dartCli,
         [
           'run',
           'drift_dev',

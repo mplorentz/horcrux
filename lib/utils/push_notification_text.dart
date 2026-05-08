@@ -53,7 +53,7 @@ PushNotificationText? composeNotificationText({
   final vaultName = resolvedName.isEmpty ? 'your vault' : resolvedName;
 
   switch (kind) {
-    case NostrKind.shardData:
+    case NostrKind.shareData:
       // The sender of a 1337 gift wrap is the vault owner; use their
       // display name to personalize the body.
       return (
@@ -72,10 +72,10 @@ PushNotificationText? composeNotificationText({
       } else if (recoveryApproved == false) {
         body = '$sender denied your recovery request for "$vaultName".';
       } else {
-        body = '$sender sent a shard for recovery of "$vaultName".';
+        body = '$sender sent a share for recovery of "$vaultName".';
       }
       return (title: 'Recovery response', body: body);
-    case NostrKind.shardConfirmation:
+    case NostrKind.shareConfirmation:
       return (
         title: 'Steward confirmed',
         body: '$sender has confirmed they have the latest data for vault "$vaultName"',
@@ -85,7 +85,7 @@ PushNotificationText? composeNotificationText({
     case NostrKind.httpAuth:
     case NostrKind.invitationAcceptance:
     case NostrKind.invitationDenial:
-    case NostrKind.shardError:
+    case NostrKind.shareError:
     case NostrKind.invitationInvalid:
     case NostrKind.keyHolderRemoved:
       return null;

@@ -1,27 +1,27 @@
 import 'event_status.dart';
 
-/// Represents a Nostr gift wrap event (kind 1059) containing an encrypted shard
+/// Represents a Nostr gift wrap event (kind 1059) carrying encrypted share material.
 ///
-/// This model contains information about a shard event that was published
-/// to Nostr relays for a specific steward.
-typedef ShardEvent = ({
+/// **Local JSON:** [shareEventToJson] keeps the `shardIndex` property name for
+/// backward compatibility with any persisted maps.
+typedef ShareEvent = ({
   String eventId,
   String recipientPubkey, // Hex format
   String encryptedContent,
   String backupConfigId,
-  int shardIndex,
+  int shareIndex,
   DateTime createdAt,
   DateTime? publishedAt,
   EventStatus status,
 });
 
-/// Create a new ShardEvent with validation
-ShardEvent createShardEvent({
+/// Create a new [ShareEvent] with validation
+ShareEvent createShareEvent({
   required String eventId,
   required String recipientPubkey, // Hex format
   required String encryptedContent,
   required String backupConfigId,
-  required int shardIndex,
+  required int shareIndex,
 }) {
   if (!_isValidEventId(eventId)) {
     throw ArgumentError('Invalid event ID format: $eventId');
@@ -29,8 +29,8 @@ ShardEvent createShardEvent({
   if (!_isValidHexPubkey(recipientPubkey)) {
     throw ArgumentError('Invalid recipient pubkey format: $recipientPubkey');
   }
-  if (shardIndex < 0) {
-    throw ArgumentError('Shard index must be >= 0');
+  if (shareIndex < 0) {
+    throw ArgumentError('Share index must be >= 0');
   }
   if (encryptedContent.isEmpty) {
     throw ArgumentError('Encrypted content cannot be empty');
@@ -41,21 +41,21 @@ ShardEvent createShardEvent({
     recipientPubkey: recipientPubkey,
     encryptedContent: encryptedContent,
     backupConfigId: backupConfigId,
-    shardIndex: shardIndex,
+    shareIndex: shareIndex,
     createdAt: DateTime.now(),
     publishedAt: null,
     status: EventStatus.created,
   );
 }
 
-/// Create a copy of this ShardEvent with updated fields
-ShardEvent copyShardEvent(
-  ShardEvent event, {
+/// Create a copy of this [ShareEvent] with updated fields
+ShareEvent copyShareEvent(
+  ShareEvent event, {
   String? eventId,
   String? recipientPubkey, // Hex format
   String? encryptedContent,
   String? backupConfigId,
-  int? shardIndex,
+  int? shareIndex,
   DateTime? createdAt,
   DateTime? publishedAt,
   EventStatus? status,
@@ -65,15 +65,15 @@ ShardEvent copyShardEvent(
     recipientPubkey: recipientPubkey ?? event.recipientPubkey,
     encryptedContent: encryptedContent ?? event.encryptedContent,
     backupConfigId: backupConfigId ?? event.backupConfigId,
-    shardIndex: shardIndex ?? event.shardIndex,
+    shareIndex: shareIndex ?? event.shareIndex,
     createdAt: createdAt ?? event.createdAt,
     publishedAt: publishedAt ?? event.publishedAt,
     status: status ?? event.status,
   );
 }
 
-/// Extension methods for ShardEvent
-extension ShardEventExtension on ShardEvent {
+/// Extension methods for [ShareEvent]
+extension ShareEventExtension on ShareEvent {
   /// Check if this event has been published
   bool get isPublished {
     return status == EventStatus.published || status == EventStatus.confirmed;
@@ -84,7 +84,7 @@ extension ShardEventExtension on ShardEvent {
     return status == EventStatus.confirmed;
   }
 
-  /// Check if this event failed
+  /// Check if this event has failed
   bool get hasFailed {
     return status == EventStatus.failed;
   }
@@ -101,14 +101,14 @@ extension ShardEventExtension on ShardEvent {
   }
 }
 
-/// Convert to JSON for storage
-Map<String, dynamic> shardEventToJson(ShardEvent event) {
+/// Convert to JSON for storage (legacy key `shardIndex` unchanged).
+Map<String, dynamic> shareEventToJson(ShareEvent event) {
   return {
     'eventId': event.eventId,
     'recipientPubkey': event.recipientPubkey, // Store hex format
     'encryptedContent': event.encryptedContent,
     'backupConfigId': event.backupConfigId,
-    'shardIndex': event.shardIndex,
+    'shardIndex': event.shareIndex,
     'createdAt': event.createdAt.toIso8601String(),
     'publishedAt': event.publishedAt?.toIso8601String(),
     'status': event.status.name,
@@ -116,13 +116,13 @@ Map<String, dynamic> shardEventToJson(ShardEvent event) {
 }
 
 /// Create from JSON
-ShardEvent shardEventFromJson(Map<String, dynamic> json) {
+ShareEvent shareEventFromJson(Map<String, dynamic> json) {
   return (
     eventId: json['eventId'] as String,
     recipientPubkey: json['recipientPubkey'] as String, // Read hex format
     encryptedContent: json['encryptedContent'] as String,
     backupConfigId: json['backupConfigId'] as String,
-    shardIndex: json['shardIndex'] as int,
+    shareIndex: json['shardIndex'] as int,
     createdAt: DateTime.parse(json['createdAt'] as String),
     publishedAt: json['publishedAt'] != null ? DateTime.parse(json['publishedAt'] as String) : null,
     status: EventStatus.values.firstWhere(
@@ -132,11 +132,11 @@ ShardEvent shardEventFromJson(Map<String, dynamic> json) {
   );
 }
 
-/// String representation of ShardEvent
-String shardEventToString(ShardEvent event) {
-  return 'ShardEvent(eventId: ${event.eventId.substring(0, 8)}..., '
+/// String representation of [ShareEvent]
+String shareEventToString(ShareEvent event) {
+  return 'ShareEvent(eventId: ${event.eventId.substring(0, 8)}..., '
       'recipient: ${event.recipientPubkey.substring(0, 8)}..., '
-      'status: ${event.status}, shardIndex: ${event.shardIndex})';
+      'status: ${event.status}, shareIndex: ${event.shareIndex})';
 }
 
 /// Validate event ID format (64-character hex string)

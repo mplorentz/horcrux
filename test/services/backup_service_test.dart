@@ -7,7 +7,7 @@ import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
-import 'package:horcrux/services/shard_distribution_service.dart';
+import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 
@@ -16,7 +16,7 @@ import 'backup_service_test.mocks.dart';
 
 @GenerateMocks([
   VaultRepository,
-  ShardDistributionService,
+  ShareDistributionService,
   LoginService,
   RelayScanService,
 ])
@@ -24,18 +24,18 @@ void main() {
   group('BackupService - Shamir Secret Sharing', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
-    late MockShardDistributionService mockShardDistributionService;
+    late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
-      mockShardDistributionService = MockShardDistributionService();
+      mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
-        mockShardDistributionService,
+        mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
       );
@@ -77,11 +77,11 @@ void main() {
       expect(shares, hasLength(totalShards));
       for (int i = 0; i < totalShards; i++) {
         expect(shares[i].threshold, threshold);
-        expect(shares[i].totalShards, totalShards);
-        expect(shares[i].shardIndex, i);
+        expect(shares[i].totalShares, totalShards);
+        expect(shares[i].shareIndex, i);
         expect(shares[i].creatorPubkey, testCreatorPubkey);
-        expect(shares[i].shard, isA<String>());
-        expect(shares[i].shard.isNotEmpty, true);
+        expect(shares[i].payload, isA<String>());
+        expect(shares[i].payload.isNotEmpty, true);
         expect(shares[i].primeMod, isA<String>());
         expect(shares[i].primeMod.isNotEmpty, true);
       }
@@ -104,7 +104,7 @@ void main() {
       );
 
       // Assert - All shares should be unique
-      final shardStrings = shares.map((s) => s.shard).toList();
+      final shardStrings = shares.map((s) => s.payload).toList();
       expect(shardStrings.toSet().length, totalShards);
     });
 
@@ -361,18 +361,18 @@ void main() {
   group('BackupService - redistributeForPushPreferenceChange', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
-    late MockShardDistributionService mockShardDistributionService;
+    late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
-      mockShardDistributionService = MockShardDistributionService();
+      mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
-        mockShardDistributionService,
+        mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
       );
@@ -388,10 +388,10 @@ void main() {
 
       verifyNever(mockRepository.updateBackupConfig(any, any));
       verifyNever(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       );
     });
@@ -420,10 +420,10 @@ void main() {
 
       verifyNever(mockRepository.updateBackupConfig(any, any));
       verifyNever(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       );
     });
@@ -469,10 +469,10 @@ void main() {
         ),
       );
       when(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       ).thenAnswer((_) async => []);
 
@@ -481,10 +481,10 @@ void main() {
       expect(current.distributionVersion, 6);
       expect(current.hasBeenDistributed, isTrue);
       verify(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       ).called(1);
     });

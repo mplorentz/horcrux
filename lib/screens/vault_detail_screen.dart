@@ -178,7 +178,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           // Determine background color based on vault state
           // We are doing some stupidly complex background color logic here to make the screen
           // look nice in all the various states.
-          final backgroundColor = vault.state == VaultState.awaitingShard
+          final backgroundColor = vault.state == VaultState.awaitingShare
               ? Theme.of(context).scaffoldBackgroundColor
               : Theme.of(context).colorScheme.surfaceContainer;
 
@@ -193,7 +193,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                     child: LayoutBuilder(
                       builder: (context, _) {
                         // For awaitingShard state, fill remaining space with darker background
-                        final isAwaitingShard = vault.state == VaultState.awaitingShard;
+                        final isAwaitingShard = vault.state == VaultState.awaitingShare;
                         final viewportHeight = constraints.maxHeight;
 
                         return ConstrainedBox(

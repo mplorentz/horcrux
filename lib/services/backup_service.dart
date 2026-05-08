@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ntcdcrypto/ntcdcrypto.dart';
 import '../models/backup_config.dart';
 import '../models/steward.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/backup_status.dart';
 import '../models/steward_status.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'login_service.dart';
-import 'shard_distribution_service.dart';
+import 'share_distribution_service.dart';
 import 'relay_scan_service.dart';
 import '../services/logger.dart';
 
@@ -20,7 +20,7 @@ final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
 ) {
   return BackupService(
     ref.read(vaultRepositoryProvider),
-    ref.read(shardDistributionServiceProvider),
+    ref.read(shareDistributionServiceProvider),
     ref.read(loginServiceProvider),
     ref.read(relayScanServiceProvider),
   );
@@ -64,13 +64,13 @@ BackupConfig _backupConfigWithBumpedDistribution(BackupConfig config) {
 /// Service for managing distributed backup using Shamir's Secret Sharing
 class BackupService {
   final VaultRepository _repository;
-  final ShardDistributionService _shardDistributionService;
+  final ShareDistributionService _shareDistributionService;
   final LoginService _loginService;
   final RelayScanService _relayScanService;
 
   BackupService(
     this._repository,
-    this._shardDistributionService,
+    this._shareDistributionService,
     this._loginService,
     this._relayScanService,
   );
@@ -150,7 +150,7 @@ class BackupService {
   }
 
   /// Generate Shamir shares for vault content
-  Future<List<ShardData>> generateShamirShares({
+  Future<List<Share>> generateShamirShares({
     required String content,
     required int threshold,
     required int totalShards,
@@ -189,14 +189,14 @@ class BackupService {
       final primeModHex = sss.prime.toRadixString(16);
       final primeMod = base64Url.encode(utf8.encode(primeModHex));
 
-      // Convert to ShardData objects
-      final shardDataList = <ShardData>[];
+      // Convert to Share objects
+      final shardDataList = <Share>[];
       for (int i = 0; i < totalShards; i++) {
-        final shardData = createShardData(
-          shard: shareStrings[i],
+        final shardData = createShare(
+          payload: shareStrings[i],
           threshold: threshold,
-          shardIndex: i,
-          totalShards: totalShards,
+          shareIndex: i,
+          totalShares: totalShards,
           primeMod: primeMod,
           creatorPubkey: creatorPubkey,
           vaultId: vaultId,
@@ -222,7 +222,7 @@ class BackupService {
 
   /// Reconstruct content from Shamir shares
   Future<String> reconstructFromShares({
-    required List<ShardData> shares,
+    required List<Share> shares,
   }) async {
     try {
       if (shares.isEmpty) {
@@ -231,13 +231,13 @@ class BackupService {
 
       // Validate that all shares have the same threshold and totalShards
       final threshold = shares.first.threshold;
-      final totalShards = shares.first.totalShards;
+      final totalSharesCount = shares.first.totalShares;
       final primeMod = shares.first.primeMod;
       final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
         if (share.threshold != threshold ||
-            share.totalShards != totalShards ||
+            share.totalShares != totalSharesCount ||
             share.primeMod != primeMod ||
             share.creatorPubkey != creatorPubkey) {
           throw ArgumentError('All shares must have the same parameters');
@@ -265,8 +265,8 @@ class BackupService {
         );
       }
 
-      // Extract the share strings from ShardData objects
-      final shareStrings = shares.map((s) => s.shard).toList();
+      // Extract the share strings from Share objects
+      final shareStrings = shares.map((s) => s.payload).toList();
 
       // Combine shares using Base64Url encoding (isBase64 = true)
       // This will reconstruct the original secret
@@ -733,10 +733,10 @@ class BackupService {
       Log.info('Generated ${shards.length} Shamir shares');
 
       // Step 6: Distribute shards using injected service
-      await _shardDistributionService.distributeShards(
+      await _shareDistributionService.distributeShares(
         ownerPubkey: creatorPubkey,
         config: config,
-        shards: shards,
+        shares: shards,
       );
       Log.info('Successfully distributed all shards');
 

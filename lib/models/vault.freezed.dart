@@ -23,8 +23,8 @@ mixin _$Vault {
   DateTime get createdAt => throw _privateConstructorUsedError;
   String get ownerPubkey => throw _privateConstructorUsedError; // Hex format, 64 characters
   String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner
-  List<ShardData> get shards =>
-      throw _privateConstructorUsedError; // List of shards (single as steward, multiple during recovery)
+  List<Share> get shares =>
+      throw _privateConstructorUsedError; // Single as steward, multiple during recovery
   List<RecoveryRequest> get recoveryRequests =>
       throw _privateConstructorUsedError; // Embedded recovery requests
   BackupConfig? get backupConfig =>
@@ -60,7 +60,7 @@ abstract class $VaultCopyWith<$Res> {
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<ShardData> shards,
+      List<Share> shares,
       List<RecoveryRequest> recoveryRequests,
       BackupConfig? backupConfig,
       DateTime? archivedAt,
@@ -90,7 +90,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
     Object? createdAt = null,
     Object? ownerPubkey = null,
     Object? ownerName = freezed,
-    Object? shards = null,
+    Object? shares = null,
     Object? recoveryRequests = null,
     Object? backupConfig = freezed,
     Object? archivedAt = freezed,
@@ -122,10 +122,10 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$R
           ? _value.ownerName
           : ownerName // ignore: cast_nullable_to_non_nullable
               as String?,
-      shards: null == shards
-          ? _value.shards
-          : shards // ignore: cast_nullable_to_non_nullable
-              as List<ShardData>,
+      shares: null == shares
+          ? _value.shares
+          : shares // ignore: cast_nullable_to_non_nullable
+              as List<Share>,
       recoveryRequests: null == recoveryRequests
           ? _value.recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -177,7 +177,7 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
       DateTime createdAt,
       String ownerPubkey,
       String? ownerName,
-      List<ShardData> shards,
+      List<Share> shares,
       List<RecoveryRequest> recoveryRequests,
       BackupConfig? backupConfig,
       DateTime? archivedAt,
@@ -205,7 +205,7 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
     Object? createdAt = null,
     Object? ownerPubkey = null,
     Object? ownerName = freezed,
-    Object? shards = null,
+    Object? shares = null,
     Object? recoveryRequests = null,
     Object? backupConfig = freezed,
     Object? archivedAt = freezed,
@@ -237,10 +237,10 @@ class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultI
           ? _value.ownerName
           : ownerName // ignore: cast_nullable_to_non_nullable
               as String?,
-      shards: null == shards
-          ? _value._shards
-          : shards // ignore: cast_nullable_to_non_nullable
-              as List<ShardData>,
+      shares: null == shares
+          ? _value._shares
+          : shares // ignore: cast_nullable_to_non_nullable
+              as List<Share>,
       recoveryRequests: null == recoveryRequests
           ? _value._recoveryRequests
           : recoveryRequests // ignore: cast_nullable_to_non_nullable
@@ -275,13 +275,13 @@ class _$VaultImpl extends _Vault {
       required this.createdAt,
       required this.ownerPubkey,
       this.ownerName,
-      final List<ShardData> shards = const [],
+      final List<Share> shares = const [],
       final List<RecoveryRequest> recoveryRequests = const [],
       this.backupConfig,
       this.archivedAt,
       this.archivedReason,
       this.pushEnabled = true})
-      : _shards = shards,
+      : _shares = shares,
         _recoveryRequests = recoveryRequests,
         super._();
 
@@ -300,19 +300,19 @@ class _$VaultImpl extends _Vault {
   @override
   final String? ownerName;
 // Name of the vault owner
-  final List<ShardData> _shards;
+  final List<Share> _shares;
 // Name of the vault owner
   @override
   @JsonKey()
-  List<ShardData> get shards {
-    if (_shards is EqualUnmodifiableListView) return _shards;
+  List<Share> get shares {
+    if (_shares is EqualUnmodifiableListView) return _shares;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_shards);
+    return EqualUnmodifiableListView(_shares);
   }
 
-// List of shards (single as steward, multiple during recovery)
+// Single as steward, multiple during recovery
   final List<RecoveryRequest> _recoveryRequests;
-// List of shards (single as steward, multiple during recovery)
+// Single as steward, multiple during recovery
   @override
   @JsonKey()
   List<RecoveryRequest> get recoveryRequests {
@@ -347,7 +347,7 @@ class _$VaultImpl extends _Vault {
 
   @override
   String toString() {
-    return 'Vault(id: $id, name: $name, content: $content, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, shards: $shards, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, archivedAt: $archivedAt, archivedReason: $archivedReason, pushEnabled: $pushEnabled)';
+    return 'Vault(id: $id, name: $name, content: $content, createdAt: $createdAt, ownerPubkey: $ownerPubkey, ownerName: $ownerName, shares: $shares, recoveryRequests: $recoveryRequests, backupConfig: $backupConfig, archivedAt: $archivedAt, archivedReason: $archivedReason, pushEnabled: $pushEnabled)';
   }
 
   @override
@@ -361,7 +361,7 @@ class _$VaultImpl extends _Vault {
             (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.ownerPubkey, ownerPubkey) || other.ownerPubkey == ownerPubkey) &&
             (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
-            const DeepCollectionEquality().equals(other._shards, _shards) &&
+            const DeepCollectionEquality().equals(other._shares, _shares) &&
             const DeepCollectionEquality().equals(other._recoveryRequests, _recoveryRequests) &&
             (identical(other.backupConfig, backupConfig) || other.backupConfig == backupConfig) &&
             (identical(other.archivedAt, archivedAt) || other.archivedAt == archivedAt) &&
@@ -379,7 +379,7 @@ class _$VaultImpl extends _Vault {
       createdAt,
       ownerPubkey,
       ownerName,
-      const DeepCollectionEquality().hash(_shards),
+      const DeepCollectionEquality().hash(_shares),
       const DeepCollectionEquality().hash(_recoveryRequests),
       backupConfig,
       archivedAt,
@@ -403,7 +403,7 @@ abstract class _Vault extends Vault {
       required final DateTime createdAt,
       required final String ownerPubkey,
       final String? ownerName,
-      final List<ShardData> shards,
+      final List<Share> shares,
       final List<RecoveryRequest> recoveryRequests,
       final BackupConfig? backupConfig,
       final DateTime? archivedAt,
@@ -424,7 +424,7 @@ abstract class _Vault extends Vault {
   @override
   String? get ownerName; // Name of the vault owner
   @override
-  List<ShardData> get shards; // List of shards (single as steward, multiple during recovery)
+  List<Share> get shares; // Single as steward, multiple during recovery
   @override
   List<RecoveryRequest> get recoveryRequests; // Embedded recovery requests
   @override

@@ -7,7 +7,7 @@ import 'dart:async' as _i4;
 
 import 'package:horcrux/models/nostr_kinds.dart' as _i5;
 import 'package:horcrux/models/recovery_request.dart' as _i7;
-import 'package:horcrux/models/shard_data.dart' as _i8;
+import 'package:horcrux/models/share.dart' as _i8;
 import 'package:horcrux/models/vault.dart' as _i11;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
 import 'package:horcrux/services/local_notification_service.dart' as _i6;
@@ -309,17 +309,17 @@ class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotifica
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> notifyShardDataProcessed({
+  _i4.Future<void> notifyShareDataProcessed({
     required _i2.Nip01Event? event,
-    required _i8.ShardData? shardData,
+    required _i8.Share? share,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #notifyShardDataProcessed,
+          #notifyShareDataProcessed,
           [],
           {
             #event: event,
-            #shardData: shardData,
+            #share: share,
           },
         ),
         returnValue: _i4.Future<void>.value(),
@@ -327,13 +327,13 @@ class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotifica
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> notifyShardConfirmationProcessed({
+  _i4.Future<void> notifyShareConfirmationProcessed({
     required _i2.Nip01Event? event,
     required String? vaultId,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #notifyShardConfirmationProcessed,
+          #notifyShareConfirmationProcessed,
           [],
           {
             #event: event,

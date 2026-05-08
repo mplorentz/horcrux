@@ -117,7 +117,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
     }
 
     // Fallback: use stewards from shards
-    final shard = vault.mostRecentShard;
+    final shard = vault.mostRecentShare;
     if (shard != null) {
       final stewardsMap = <String, _StewardInfo>{};
 

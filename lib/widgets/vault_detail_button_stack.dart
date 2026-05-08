@@ -40,7 +40,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
             final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
             final isSteward = currentPubkey != null &&
                 !vault.isVaultOwner(currentPubkey) &&
-                vault.shards.isNotEmpty;
+                vault.shares.isNotEmpty;
 
             // Watch vault for Generate and Distribute Keys button
             final vaultAsync = ref.watch(vaultProvider(vaultId));
@@ -112,7 +112,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                             } else if (currentVault != null) {
                               // Create new content (with warning if owner-steward)
                               final isOwnerSteward =
-                                  currentVault.content == null && currentVault.shards.isNotEmpty;
+                                  currentVault.content == null && currentVault.shares.isNotEmpty;
 
                               if (isOwnerSteward) {
                                 _showUpdateContentWarning(context, ref, currentVault);
@@ -260,7 +260,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     final isOwnerSteward = isVaultOwner &&
                         currentVault != null &&
                         currentVault.content == null &&
-                        currentVault.shards.isNotEmpty;
+                        currentVault.shares.isNotEmpty;
 
                     if (isOwnerSteward && showInitiateRealRecovery) {
                       buttons.add(
@@ -277,7 +277,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                     if (!isVaultOwner &&
                         !isOwnerSteward &&
                         currentVault != null &&
-                        currentVault.state != VaultState.awaitingShard) {
+                        currentVault.state != VaultState.awaitingShare) {
                       if (showManageRealRecovery) {
                         final myRecoveryId = myActiveRealRecovery.id;
                         buttons.add(
@@ -322,7 +322,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
   }
 
   String? _getInstructions(Vault vault) {
-    final shard = vault.mostRecentShard;
+    final shard = vault.mostRecentShare;
     if (shard != null) {
       return shard.instructions;
     }

@@ -4,21 +4,22 @@ import 'vault.dart';
 import '../services/logger.dart';
 import '../utils/date_time_extensions.dart';
 
-part 'shard_data.freezed.dart';
+part 'share.freezed.dart';
 
-/// Represents the decrypted shard data contained within a ShardEvent
-///
-/// This model contains the actual Shamir share data that is encrypted
-/// and stored in the ShardEvent for distribution to stewards.
+/// Represents the decrypted Shamir share material contained within a share event.
 ///
 /// Extended with optional recovery metadata for vault recovery feature.
+///
+/// **Wire format:** Nostr JSON uses `shard`, `shard_index`, `total_shards`, etc.
+/// ([shareToJson] / [shareFromJson]). Those keys stay stable for the protocol.
 @freezed
-class ShardData with _$ShardData {
-  const factory ShardData({
-    required String shard,
+class Share with _$Share {
+  const factory Share({
+    /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+    required String payload,
     required int threshold,
-    required int shardIndex,
-    required int totalShards,
+    required int shareIndex,
+    required int totalShares,
     required String primeMod,
     required String creatorPubkey,
     required int createdAt,
@@ -38,67 +39,67 @@ class ShardData with _$ShardData {
         distributionVersion, // Version tracking for redistribution detection (nullable for backward compatibility)
     // Whether the vault owner has push notifications enabled for this vault.
     //
-    // Nullable for backward compatibility: pre-push shards arrive without this
+    // Nullable for backward compatibility: pre-push shares arrive without this
     // field, in which case receivers should preserve whatever push setting
     // their local Vault already has (don't silently flip anything). When the
     // owner re-distributes after changing the flag, the new value overrides.
     // The owner is the only party whose opinion matters here because they are
     // the one whose pubkey/IP/contact-graph leaks to the notifier.
     bool? pushEnabled,
-  }) = _ShardData;
+  }) = _Share;
 
-  const ShardData._();
+  const Share._();
 
-  /// Check if this shard data is valid
+  /// Check if this share is valid
   bool get isValid {
     try {
-      if (shard.isEmpty) {
-        Log.error('ShardData validation failed: shard is empty');
+      if (payload.isEmpty) {
+        Log.error('Share validation failed: payload is empty');
         return false;
       }
 
       if (threshold < VaultBackupConstraints.minThreshold) {
         Log.error(
-          'ShardData validation failed: threshold ($threshold) is below minimum '
+          'Share validation failed: threshold ($threshold) is below minimum '
           '(${VaultBackupConstraints.minThreshold})',
         );
         return false;
       }
 
-      if (threshold > totalShards) {
+      if (threshold > totalShares) {
         Log.error(
-          'ShardData validation failed: threshold ($threshold) exceeds totalShards ($totalShards)',
+          'Share validation failed: threshold ($threshold) exceeds totalShares ($totalShares)',
         );
         return false;
       }
 
-      if (shardIndex < 0) {
+      if (shareIndex < 0) {
         Log.error(
-          'ShardData validation failed: shardIndex ($shardIndex) is negative',
+          'Share validation failed: shareIndex ($shareIndex) is negative',
         );
         return false;
       }
 
-      if (shardIndex >= totalShards) {
+      if (shareIndex >= totalShares) {
         Log.error(
-          'ShardData validation failed: shardIndex ($shardIndex) is out of bounds (should be 0 to ${totalShards - 1})',
+          'Share validation failed: shareIndex ($shareIndex) is out of bounds (should be 0 to ${totalShares - 1})',
         );
         return false;
       }
 
       if (primeMod.isEmpty) {
-        Log.error('ShardData validation failed: primeMod is empty');
+        Log.error('Share validation failed: primeMod is empty');
         return false;
       }
 
       if (creatorPubkey.isEmpty) {
-        Log.error('ShardData validation failed: creatorPubkey is empty');
+        Log.error('Share validation failed: creatorPubkey is empty');
         return false;
       }
 
       if (createdAt <= 0) {
         Log.error(
-          'ShardData validation failed: createdAt ($createdAt) is invalid (must be > 0)',
+          'Share validation failed: createdAt ($createdAt) is invalid (must be > 0)',
         );
         return false;
       }
@@ -108,26 +109,26 @@ class ShardData with _$ShardData {
         for (final steward in stewards!) {
           if (!steward.containsKey('name') || !steward.containsKey('pubkey')) {
             Log.error(
-              'ShardData validation failed: All stewards must have both "name" and "pubkey" keys',
+              'Share validation failed: All stewards must have both "name" and "pubkey" keys',
             );
             return false;
           }
           final pubkey = steward['pubkey']!;
           if (pubkey.length != 64 || !_isHexString(pubkey)) {
             Log.error(
-              'ShardData validation failed: All steward pubkeys must be valid hex format (64 characters): $pubkey',
+              'Share validation failed: All steward pubkeys must be valid hex format (64 characters): $pubkey',
             );
             return false;
           }
           if (steward['name'] == null || steward['name']!.isEmpty) {
-            Log.error('ShardData validation failed: All stewards must have a non-empty name');
+            Log.error('Share validation failed: All stewards must have a non-empty name');
             return false;
           }
           // contactInfo is optional, but if present, validate length
           final contactInfo = steward['contactInfo'];
           if (contactInfo != null && contactInfo.length > 500) {
             Log.error(
-              'ShardData validation failed: Steward contactInfo exceeds maximum length of 500 characters',
+              'Share validation failed: Steward contactInfo exceeds maximum length of 500 characters',
             );
             return false;
           }
@@ -136,23 +137,23 @@ class ShardData with _$ShardData {
 
       return true;
     } catch (e) {
-      Log.error('ShardData validation failed with exception', e);
+      Log.error('Share validation failed with exception', e);
       return false;
     }
   }
 
-  /// Get the age of this shard data in seconds
+  /// Get the age of this share in seconds
   int get ageInSeconds {
     final now = secondsSinceEpoch();
     return now - createdAt;
   }
 
-  /// Get the age of this shard data in hours
+  /// Get the age of this share in hours
   double get ageInHours {
     return ageInSeconds / 3600.0;
   }
 
-  /// Check if this shard data is recent (less than 24 hours old)
+  /// Check if this share is recent (less than 24 hours old)
   bool get isRecent {
     return ageInHours < 24.0;
   }
@@ -163,12 +164,12 @@ bool _isHexString(String str) {
   return RegExp(r'^[0-9a-fA-F]+$').hasMatch(str);
 }
 
-/// Create a new ShardData with validation
-ShardData createShardData({
-  required String shard,
+/// Create a new [Share] with validation
+Share createShare({
+  required String payload,
   required int threshold,
-  required int shardIndex,
-  required int totalShards,
+  required int shareIndex,
+  required int totalShares,
   required String primeMod,
   required String creatorPubkey,
   String? vaultId,
@@ -184,16 +185,16 @@ ShardData createShardData({
   int? distributionVersion,
   bool? pushEnabled,
 }) {
-  if (shard.isEmpty) {
-    throw ArgumentError('Shard cannot be empty');
+  if (payload.isEmpty) {
+    throw ArgumentError('Share payload cannot be empty');
   }
-  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalShards) {
+  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalShares) {
     throw ArgumentError(
-      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalShards',
+      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalShares',
     );
   }
-  if (shardIndex < 0 || shardIndex >= totalShards) {
-    throw ArgumentError('ShardIndex must be >= 0 and < totalShards');
+  if (shareIndex < 0 || shareIndex >= totalShares) {
+    throw ArgumentError('shareIndex must be >= 0 and < totalShares');
   }
   if (primeMod.isEmpty) {
     throw ArgumentError('PrimeMod cannot be empty');
@@ -237,11 +238,11 @@ ShardData createShardData({
     }
   }
 
-  return ShardData(
-    shard: shard,
+  return Share(
+    payload: payload,
     threshold: threshold,
-    shardIndex: shardIndex,
-    totalShards: totalShards,
+    shareIndex: shareIndex,
+    totalShares: totalShares,
     primeMod: primeMod,
     creatorPubkey: creatorPubkey,
     createdAt: secondsSinceEpoch(),
@@ -260,29 +261,29 @@ ShardData createShardData({
   );
 }
 
-/// Nostr / wire format: snake_case keys (see project Nostr payload conventions).
-Map<String, dynamic> shardDataToJson(ShardData shardData) {
+/// Nostr / wire format: snake_case keys; Shamir material remains `shard`,
+/// indexes remain `shard_*` / `total_shards` per protocol stability.
+Map<String, dynamic> shareToJson(Share share) {
   return {
-    'shard': shardData.shard,
-    'threshold': shardData.threshold,
-    'shard_index': shardData.shardIndex,
-    'total_shards': shardData.totalShards,
-    'prime_mod': shardData.primeMod,
-    'creator_pubkey': shardData.creatorPubkey,
-    'created_at': shardData.createdAt,
-    if (shardData.vaultId != null) 'vault_id': shardData.vaultId,
-    if (shardData.vaultName != null) 'vault_name': shardData.vaultName,
-    if (shardData.stewards != null) 'stewards': shardData.stewards,
-    if (shardData.ownerName != null) 'owner_name': shardData.ownerName,
-    if (shardData.instructions != null) 'instructions': shardData.instructions,
-    if (shardData.recipientPubkey != null) 'recipient_pubkey': shardData.recipientPubkey,
-    if (shardData.isReceived != null) 'is_received': shardData.isReceived,
-    if (shardData.receivedAt != null) 'received_at': shardData.receivedAt!.toIso8601String(),
-    if (shardData.nostrEventId != null) 'nostr_event_id': shardData.nostrEventId,
-    if (shardData.relayUrls != null) 'relay_urls': shardData.relayUrls,
-    if (shardData.distributionVersion != null)
-      'distribution_version': shardData.distributionVersion,
-    if (shardData.pushEnabled != null) 'push_enabled': shardData.pushEnabled,
+    'shard': share.payload,
+    'threshold': share.threshold,
+    'shard_index': share.shareIndex,
+    'total_shards': share.totalShares,
+    'prime_mod': share.primeMod,
+    'creator_pubkey': share.creatorPubkey,
+    'created_at': share.createdAt,
+    if (share.vaultId != null) 'vault_id': share.vaultId,
+    if (share.vaultName != null) 'vault_name': share.vaultName,
+    if (share.stewards != null) 'stewards': share.stewards,
+    if (share.ownerName != null) 'owner_name': share.ownerName,
+    if (share.instructions != null) 'instructions': share.instructions,
+    if (share.recipientPubkey != null) 'recipient_pubkey': share.recipientPubkey,
+    if (share.isReceived != null) 'is_received': share.isReceived,
+    if (share.receivedAt != null) 'received_at': share.receivedAt!.toIso8601String(),
+    if (share.nostrEventId != null) 'nostr_event_id': share.nostrEventId,
+    if (share.relayUrls != null) 'relay_urls': share.relayUrls,
+    if (share.distributionVersion != null) 'distribution_version': share.distributionVersion,
+    if (share.pushEnabled != null) 'push_enabled': share.pushEnabled,
   };
 }
 
@@ -304,20 +305,20 @@ bool? _readBoolNullable(Object? value) {
 }
 
 /// Create from JSON (Nostr / wire format: snake_case keys per project conventions).
-ShardData shardDataFromJson(Map<String, dynamic> json) {
+Share shareFromJson(Map<String, dynamic> json) {
   final stewardsData = json['stewards'];
 
-  final shardIndex = _readIntFlexible(json['shard_index']);
-  final totalShards = _readIntFlexible(json['total_shards']);
+  final shareIndex = _readIntFlexible(json['shard_index']);
+  final totalShares = _readIntFlexible(json['total_shards']);
   final createdAt = _readIntFlexible(json['created_at']);
 
   final receivedRaw = json['received_at'];
 
-  return ShardData(
-    shard: json['shard'] as String,
+  return Share(
+    payload: json['shard'] as String,
     threshold: _readIntFlexible(json['threshold']),
-    shardIndex: shardIndex,
-    totalShards: totalShards,
+    shareIndex: shareIndex,
+    totalShares: totalShares,
     primeMod: json['prime_mod'] as String,
     creatorPubkey: json['creator_pubkey'] as String,
     createdAt: createdAt,
@@ -340,8 +341,8 @@ ShardData shardDataFromJson(Map<String, dynamic> json) {
   );
 }
 
-/// String representation of ShardData
-String shardDataToString(ShardData shardData) {
-  return 'ShardData(shardIndex: ${shardData.shardIndex}/${shardData.totalShards}, '
-      'threshold: ${shardData.threshold}, creator: ${shardData.creatorPubkey.substring(0, 8)}...)';
+/// String representation of [Share]
+String shareToString(Share share) {
+  return 'Share(shareIndex: ${share.shareIndex}/${share.totalShares}, '
+      'threshold: ${share.threshold}, creator: ${share.creatorPubkey.substring(0, 8)}...)';
 }

@@ -38,7 +38,7 @@ extension StewardStatusExtension on StewardStatus {
       case StewardStatus.inactive:
         return 'Steward is unresponsive or offline';
       case StewardStatus.error:
-        return 'Error occurred during invitation or shard processing';
+        return 'Error occurred during invitation or share processing';
       case StewardStatus.revoked:
         return 'Steward has been removed from backup';
     }

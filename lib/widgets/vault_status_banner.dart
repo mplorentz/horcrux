@@ -256,7 +256,7 @@ class VaultStatusBanner extends ConsumerWidget {
 
   Widget _buildStewardStatus(BuildContext context, Vault vault) {
     // Awaiting key
-    if (vault.state == VaultState.awaitingShard) {
+    if (vault.state == VaultState.awaitingShare) {
       return _buildBanner(
         context,
         const _StatusData(
@@ -275,7 +275,7 @@ class VaultStatusBanner extends ConsumerWidget {
     // Key holder - stewards have received a shard
     // Note: We don't check backupConfig.status because stewards can't read it
     // (it's encrypted to the owner). If a steward has shards, they're ready to help.
-    if (vault.state == VaultState.holdingShard) {
+    if (vault.state == VaultState.holdingShare) {
       return _buildBanner(
         context,
         const _StatusData(

@@ -20,8 +20,9 @@ mixin _$RecoveryResponse {
   bool get approved =>
       throw _privateConstructorUsedError; // Whether the steward approved the request
   DateTime? get respondedAt => throw _privateConstructorUsedError;
-  ShardData? get shardData =>
-      throw _privateConstructorUsedError; // Actual shard data for reassembly (if approved)
+
+  /// Embedded share for reassembly when approved. JSON key stays `shardData`.
+  Share? get share => throw _privateConstructorUsedError;
   String? get nostrEventId => throw _privateConstructorUsedError;
   String? get errorMessage => throw _privateConstructorUsedError;
 
@@ -40,11 +41,11 @@ abstract class $RecoveryResponseCopyWith<$Res> {
       {String pubkey,
       bool approved,
       DateTime? respondedAt,
-      ShardData? shardData,
+      Share? share,
       String? nostrEventId,
       String? errorMessage});
 
-  $ShardDataCopyWith<$Res>? get shardData;
+  $ShareCopyWith<$Res>? get share;
 }
 
 /// @nodoc
@@ -65,7 +66,7 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
     Object? pubkey = null,
     Object? approved = null,
     Object? respondedAt = freezed,
-    Object? shardData = freezed,
+    Object? share = freezed,
     Object? nostrEventId = freezed,
     Object? errorMessage = freezed,
   }) {
@@ -82,10 +83,10 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
           ? _value.respondedAt
           : respondedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      shardData: freezed == shardData
-          ? _value.shardData
-          : shardData // ignore: cast_nullable_to_non_nullable
-              as ShardData?,
+      share: freezed == share
+          ? _value.share
+          : share // ignore: cast_nullable_to_non_nullable
+              as Share?,
       nostrEventId: freezed == nostrEventId
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
@@ -101,13 +102,13 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
   /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
-  $ShardDataCopyWith<$Res>? get shardData {
-    if (_value.shardData == null) {
+  $ShareCopyWith<$Res>? get share {
+    if (_value.share == null) {
       return null;
     }
 
-    return $ShardDataCopyWith<$Res>(_value.shardData!, (value) {
-      return _then(_value.copyWith(shardData: value) as $Val);
+    return $ShareCopyWith<$Res>(_value.share!, (value) {
+      return _then(_value.copyWith(share: value) as $Val);
     });
   }
 }
@@ -123,12 +124,12 @@ abstract class _$$RecoveryResponseImplCopyWith<$Res> implements $RecoveryRespons
       {String pubkey,
       bool approved,
       DateTime? respondedAt,
-      ShardData? shardData,
+      Share? share,
       String? nostrEventId,
       String? errorMessage});
 
   @override
-  $ShardDataCopyWith<$Res>? get shardData;
+  $ShareCopyWith<$Res>? get share;
 }
 
 /// @nodoc
@@ -147,7 +148,7 @@ class __$$RecoveryResponseImplCopyWithImpl<$Res>
     Object? pubkey = null,
     Object? approved = null,
     Object? respondedAt = freezed,
-    Object? shardData = freezed,
+    Object? share = freezed,
     Object? nostrEventId = freezed,
     Object? errorMessage = freezed,
   }) {
@@ -164,10 +165,10 @@ class __$$RecoveryResponseImplCopyWithImpl<$Res>
           ? _value.respondedAt
           : respondedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      shardData: freezed == shardData
-          ? _value.shardData
-          : shardData // ignore: cast_nullable_to_non_nullable
-              as ShardData?,
+      share: freezed == share
+          ? _value.share
+          : share // ignore: cast_nullable_to_non_nullable
+              as Share?,
       nostrEventId: freezed == nostrEventId
           ? _value.nostrEventId
           : nostrEventId // ignore: cast_nullable_to_non_nullable
@@ -187,7 +188,7 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
       {required this.pubkey,
       required this.approved,
       this.respondedAt,
-      this.shardData,
+      this.share,
       this.nostrEventId,
       this.errorMessage})
       : super._();
@@ -200,9 +201,10 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
 // Whether the steward approved the request
   @override
   final DateTime? respondedAt;
+
+  /// Embedded share for reassembly when approved. JSON key stays `shardData`.
   @override
-  final ShardData? shardData;
-// Actual shard data for reassembly (if approved)
+  final Share? share;
   @override
   final String? nostrEventId;
   @override
@@ -216,14 +218,14 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
             (identical(other.pubkey, pubkey) || other.pubkey == pubkey) &&
             (identical(other.approved, approved) || other.approved == approved) &&
             (identical(other.respondedAt, respondedAt) || other.respondedAt == respondedAt) &&
-            (identical(other.shardData, shardData) || other.shardData == shardData) &&
+            (identical(other.share, share) || other.share == share) &&
             (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
             (identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
   }
 
   @override
-  int get hashCode => Object.hash(
-      runtimeType, pubkey, approved, respondedAt, shardData, nostrEventId, errorMessage);
+  int get hashCode =>
+      Object.hash(runtimeType, pubkey, approved, respondedAt, share, nostrEventId, errorMessage);
 
   /// Create a copy of RecoveryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -239,7 +241,7 @@ abstract class _RecoveryResponse extends RecoveryResponse {
       {required final String pubkey,
       required final bool approved,
       final DateTime? respondedAt,
-      final ShardData? shardData,
+      final Share? share,
       final String? nostrEventId,
       final String? errorMessage}) = _$RecoveryResponseImpl;
   const _RecoveryResponse._() : super._();
@@ -250,8 +252,10 @@ abstract class _RecoveryResponse extends RecoveryResponse {
   bool get approved; // Whether the steward approved the request
   @override
   DateTime? get respondedAt;
+
+  /// Embedded share for reassembly when approved. JSON key stays `shardData`.
   @override
-  ShardData? get shardData; // Actual shard data for reassembly (if approved)
+  Share? get share;
   @override
   String? get nostrEventId;
   @override

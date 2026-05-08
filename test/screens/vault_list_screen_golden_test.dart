@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -36,7 +36,7 @@ void main() {
     content: 'nsec1...',
     createdAt: DateTime(2024, 10, 1, 10, 30),
     ownerPubkey: testPubkey,
-    shards: [],
+    shares: [],
     recoveryRequests: [],
   );
 
@@ -46,12 +46,12 @@ void main() {
     content: null,
     createdAt: DateTime(2024, 9, 15, 14, 20),
     ownerPubkey: otherPubkey,
-    shards: [
-      createShardData(
-        shard: 'test_shard_data',
+    shares: [
+      createShare(
+        payload: 'test_shard_data',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'test_prime_mod',
         creatorPubkey: otherPubkey,
       ),
@@ -65,7 +65,7 @@ void main() {
     content: null,
     createdAt: DateTime(2024, 9, 25, 16, 45),
     ownerPubkey: otherPubkey,
-    shards: [], // No shards yet - awaiting key distribution
+    shares: [], // No shards yet - awaiting key distribution
     recoveryRequests: [],
   );
 
@@ -79,7 +79,7 @@ void main() {
       content: null,
       createdAt: DateTime(2024, 9, 20, 9, 15),
       ownerPubkey: testPubkey,
-      shards: [],
+      shares: [],
       recoveryRequests: [],
     ),
   ];
@@ -257,13 +257,13 @@ void main() {
         content: null, // No local content
         createdAt: DateTime(2024, 10, 5, 12, 0),
         ownerPubkey: testPubkey, // Owner is current user
-        shards: [
+        shares: [
           // Owner has a shard (e.g. as part of distributed backup)
-          createShardData(
-            shard: 'owner_shard_data',
+          createShare(
+            payload: 'owner_shard_data',
             threshold: 2,
-            shardIndex: 1,
-            totalShards: 3,
+            shareIndex: 1,
+            totalShares: 3,
             primeMod: 'test_prime_mod',
             creatorPubkey: testPubkey,
           ),

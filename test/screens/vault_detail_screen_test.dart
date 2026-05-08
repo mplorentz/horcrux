@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -23,11 +23,11 @@ void main() {
       tester,
     ) async {
       // Owner-steward state: isOwner, content == null, shards.isNotEmpty
-      final ownerShard = createShardData(
-        shard: 'owner-shard-data',
+      final ownerShard = createShare(
+        payload: 'owner-shard-data',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'test-prime-mod',
         creatorPubkey: testPubkey,
         vaultId: 'test-vault',
@@ -53,7 +53,7 @@ void main() {
         content: null, // Content deleted
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey, // Current user is owner
-        shards: [ownerShard], // Has owner shard
+        shares: [ownerShard], // Has owner shard
         backupConfig: backupConfig,
       );
 
@@ -111,7 +111,7 @@ void main() {
           content: 'Secret content', // Has content
           createdAt: DateTime(2024, 1, 1),
           ownerPubkey: testPubkey, // Current user is owner
-          shards: [],
+          shares: [],
           backupConfig: backupConfig,
         );
 
@@ -169,7 +169,7 @@ void main() {
         content: 'Secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
-        shards: [],
+        shares: [],
         backupConfig: backupConfig,
       );
 
@@ -215,11 +215,11 @@ void main() {
     testWidgets(
       'shows Manage Recovery for the current user when another user has a newer active recovery',
       (tester) async {
-        final stewardShard = createShardData(
-          shard: 'steward-shard-data',
+        final stewardShard = createShare(
+          payload: 'steward-shard-data',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 2,
+          shareIndex: 0,
+          totalShares: 2,
           primeMod: 'test-prime-mod',
           creatorPubkey: otherPubkey,
           vaultId: 'test-vault',
@@ -252,7 +252,7 @@ void main() {
           content: null,
           createdAt: DateTime(2024, 1, 1),
           ownerPubkey: otherPubkey,
-          shards: [stewardShard],
+          shares: [stewardShard],
           recoveryRequests: [myRequest, otherRequest],
         );
 
@@ -309,11 +309,11 @@ void main() {
     testWidgets(
       'shows Manage Recovery for an owner with content and an active real recovery',
       (tester) async {
-        final ownerShard = createShardData(
-          shard: 'owner-shard-data',
+        final ownerShard = createShare(
+          payload: 'owner-shard-data',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'test-prime-mod',
           creatorPubkey: testPubkey,
           vaultId: 'test-vault',
@@ -340,7 +340,7 @@ void main() {
           content: 'New vault content',
           createdAt: DateTime(2024, 1, 1),
           ownerPubkey: testPubkey,
-          shards: [ownerShard],
+          shares: [ownerShard],
           recoveryRequests: [myRequest],
         );
 
@@ -381,11 +381,11 @@ void main() {
     testWidgets(
       'shows Manage Recovery when the current user\'s own request is completed',
       (tester) async {
-        final stewardShard = createShardData(
-          shard: 'steward-shard-data',
+        final stewardShard = createShare(
+          payload: 'steward-shard-data',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 2,
+          shareIndex: 0,
+          totalShares: 2,
           primeMod: 'test-prime-mod',
           creatorPubkey: otherPubkey,
           vaultId: 'test-vault',
@@ -408,7 +408,7 @@ void main() {
           content: null,
           createdAt: DateTime(2024, 1, 1),
           ownerPubkey: otherPubkey,
-          shards: [stewardShard],
+          shares: [stewardShard],
           recoveryRequests: [myCompletedRequest],
         );
 

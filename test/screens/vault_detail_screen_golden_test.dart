@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -31,17 +31,17 @@ void main() {
   final thirdPubkey = 'c' * 64;
 
   // Helper to create shard data
-  ShardData createTestShard({
+  Share createTestShard({
     required int shardIndex,
     required String recipientPubkey,
     required String vaultId,
     String vaultName = 'Test Vault',
   }) {
-    return createShardData(
-      shard: 'test_shard_$shardIndex',
+    return createShare(
+      payload: 'test_shard_$shardIndex',
       threshold: 2,
-      shardIndex: shardIndex,
-      totalShards: 3,
+      shareIndex: shardIndex,
+      totalShares: 3,
       primeMod: 'test_prime_mod',
       creatorPubkey: testPubkey,
       vaultId: vaultId,
@@ -84,7 +84,7 @@ void main() {
       pubkey: pubkey,
       approved: approved,
       respondedAt: respondedAt ?? DateTime.now().subtract(const Duration(minutes: 30)),
-      shardData: approved
+      share: approved
           ? createTestShard(
               shardIndex: 0,
               recipientPubkey: pubkey,
@@ -186,7 +186,7 @@ void main() {
         content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shards: [], // No shards yet - backup not configured
+        shares: [], // No shards yet - backup not configured
         recoveryRequests: [],
       );
 
@@ -221,7 +221,7 @@ void main() {
         content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -297,7 +297,7 @@ void main() {
         content: null, // Content is encrypted, not shown in detail view
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -357,7 +357,7 @@ void main() {
         content: null,
         createdAt: DateTime(2024, 9, 15, 14, 20),
         ownerPubkey: otherPubkey, // Different owner
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 1,
             recipientPubkey: testPubkey,
@@ -428,7 +428,7 @@ void main() {
         content: null,
         createdAt: DateTime(2024, 9, 15, 14, 20),
         ownerPubkey: otherPubkey, // Different owner
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 1,
             recipientPubkey: testPubkey,
@@ -485,7 +485,7 @@ void main() {
         content: null, // No content - invitee doesn't have access yet
         createdAt: DateTime(2024, 9, 25, 16, 45),
         ownerPubkey: otherPubkey, // Different owner
-        shards: [], // No shards yet - awaiting key distribution
+        shares: [], // No shards yet - awaiting key distribution
         recoveryRequests: [],
       );
 
@@ -531,7 +531,7 @@ void main() {
         content: null,
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,
@@ -606,7 +606,7 @@ void main() {
         content: null,
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
-        shards: [
+        shares: [
           createTestShard(
             shardIndex: 0,
             recipientPubkey: otherPubkey,

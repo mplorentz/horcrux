@@ -9,14 +9,14 @@ import 'package:horcrux/models/backup_config.dart' as _i8;
 import 'package:horcrux/models/event_status.dart' as _i13;
 import 'package:horcrux/models/recovery_request.dart' as _i11;
 import 'package:horcrux/models/relay_configuration.dart' as _i17;
-import 'package:horcrux/models/shard_data.dart' as _i10;
+import 'package:horcrux/models/share.dart' as _i10;
 import 'package:horcrux/models/steward_status.dart' as _i9;
 import 'package:horcrux/models/vault.dart' as _i7;
 import 'package:horcrux/providers/vault_provider.dart' as _i5;
 import 'package:horcrux/services/login_service.dart' as _i15;
 import 'package:horcrux/services/ndk_service.dart' as _i3;
 import 'package:horcrux/services/relay_scan_service.dart' as _i4;
-import 'package:horcrux/services/shard_distribution_service.dart' as _i12;
+import 'package:horcrux/services/share_distribution_service.dart' as _i12;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i16;
 import 'package:ndk/ndk.dart' as _i14;
@@ -258,16 +258,16 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> addShardToVault(
+  _i6.Future<void> addShareToVault(
     String? vaultId,
-    _i10.ShardData? shard,
+    _i10.Share? share,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
-          #addShardToVault,
+          #addShareToVault,
           [
             vaultId,
-            shard,
+            share,
           ],
         ),
         returnValue: _i6.Future<void>.value(),
@@ -275,18 +275,18 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i10.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<List<_i10.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #getShardsForVault,
+          #getSharesForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i10.ShardData>>.value(<_i10.ShardData>[]),
-      ) as _i6.Future<List<_i10.ShardData>>);
+        returnValue: _i6.Future<List<_i10.Share>>.value(<_i10.Share>[]),
+      ) as _i6.Future<List<_i10.Share>>);
 
   @override
-  _i6.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #clearShardsForVault,
+          #clearSharesForVault,
           [vaultId],
         ),
         returnValue: _i6.Future<void>.value(),
@@ -387,11 +387,11 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       );
 }
 
-/// A class which mocks [ShardDistributionService].
+/// A class which mocks [ShareDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistributionService {
-  MockShardDistributionService() {
+class MockShareDistributionService extends _i1.Mock implements _i12.ShareDistributionService {
+  MockShareDistributionService() {
     _i1.throwOnMissingStub(this);
   }
 
@@ -405,21 +405,21 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
             String eventId,
             DateTime? publishedAt,
             String recipientPubkey,
-            int shardIndex,
+            int shareIndex,
             _i13.EventStatus status
-          })>> distributeShards({
+          })>> distributeShares({
     required String? ownerPubkey,
     required _i8.BackupConfig? config,
-    required List<_i10.ShardData>? shards,
+    required List<_i10.Share>? shares,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #distributeShards,
+          #distributeShares,
           [],
           {
             #ownerPubkey: ownerPubkey,
             #config: config,
-            #shards: shards,
+            #shares: shares,
           },
         ),
         returnValue: _i6.Future<
@@ -431,7 +431,7 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
                   String eventId,
                   DateTime? publishedAt,
                   String recipientPubkey,
-                  int shardIndex,
+                  int shareIndex,
                   _i13.EventStatus status
                 })>>.value(<({
           String backupConfigId,
@@ -440,7 +440,7 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
           String eventId,
           DateTime? publishedAt,
           String recipientPubkey,
-          int shardIndex,
+          int shareIndex,
           _i13.EventStatus status
         })>[]),
       ) as _i6.Future<
@@ -452,7 +452,7 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
                 String eventId,
                 DateTime? publishedAt,
                 String recipientPubkey,
-                int shardIndex,
+                int shareIndex,
                 _i13.EventStatus status
               })>>);
 
@@ -467,10 +467,10 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
               String eventId,
               DateTime? publishedAt,
               String recipientPubkey,
-              int shardIndex,
+              int shareIndex,
               _i13.EventStatus status
             })>?
-        shardEvents,
+        shareEvents,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -478,7 +478,7 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
           [],
           {
             #vaultId: vaultId,
-            #shardEvents: shardEvents,
+            #shareEvents: shareEvents,
           },
         ),
         returnValue: _i6.Future<void>.value(),
@@ -486,10 +486,10 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> processShardConfirmationEvent({required _i14.Nip01Event? event}) =>
+  _i6.Future<void> processShareConfirmationEvent({required _i14.Nip01Event? event}) =>
       (super.noSuchMethod(
         Invocation.method(
-          #processShardConfirmationEvent,
+          #processShareConfirmationEvent,
           [],
           {#event: event},
         ),
@@ -498,9 +498,9 @@ class MockShardDistributionService extends _i1.Mock implements _i12.ShardDistrib
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> processShardErrorEvent({required _i14.Nip01Event? event}) => (super.noSuchMethod(
+  _i6.Future<void> processShareErrorEvent({required _i14.Nip01Event? event}) => (super.noSuchMethod(
         Invocation.method(
-          #processShardErrorEvent,
+          #processShareErrorEvent,
           [],
           {#event: event},
         ),

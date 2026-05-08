@@ -12,7 +12,7 @@ import 'package:ndk/shared/nips/nip01/key_pair.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
@@ -469,18 +469,18 @@ void main() {
       );
     }
 
-    ShardData shardFor({
+    Share shardFor({
       required String owner,
       required List<String> coStewardPubkeys,
       int? distributionVersion,
       int createdAt = 1000,
     }) {
-      return ShardData(
-        shard: 'encoded',
+      return Share(
+        payload: 'encoded',
         threshold: 1,
-        shardIndex: 0,
-        totalShards: coStewardPubkeys.length + 1,
-        primeMod: TestShardData.testPrimeMod,
+        shareIndex: 0,
+        totalShares: coStewardPubkeys.length + 1,
+        primeMod: TestShare.testPrimeMod,
         creatorPubkey: owner,
         createdAt: createdAt,
         distributionVersion: distributionVersion,
@@ -493,7 +493,7 @@ void main() {
     Vault stewardedVault({
       required String id,
       required String owner,
-      required ShardData shard,
+      required Share shard,
       BackupConfig? backupConfig,
     }) {
       return Vault(
@@ -502,7 +502,7 @@ void main() {
         content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: owner,
-        shards: [shard],
+        shares: [shard],
         backupConfig: backupConfig,
       );
     }
@@ -572,7 +572,7 @@ void main() {
     });
 
     test('prefers the most recent shard when multiple versions exist', () {
-      // The helper uses `vault.mostRecentShard`, so the older shard's stale
+      // The helper uses `vault.mostRecentShare`, so the older shard's stale
       // co-steward list must not leak into the consent set.
       final svc = buildForCompute();
       final oldShard = shardFor(
@@ -593,7 +593,7 @@ void main() {
         content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: TestHexPubkeys.alice,
-        shards: [oldShard, newShard],
+        shares: [oldShard, newShard],
       );
 
       final result = svc.computeConsentList(
@@ -695,7 +695,7 @@ void main() {
           stewards: [invited, valid],
           relays: const ['wss://relay.example'],
         ),
-        shards: [
+        shares: [
           // An owner-side-only test wouldn't normally have shards, but we
           // piggyback on this vault to also assert that bad shard entries
           // get filtered.

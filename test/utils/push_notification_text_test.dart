@@ -40,7 +40,7 @@ void main() {
   group('composeNotificationText', () {
     test('shard data -- owner sends, body names the owner', () {
       final result = composeNotificationText(
-        kind: NostrKind.shardData,
+        kind: NostrKind.shareData,
         vault: buildVault(),
         senderPubkey: TestHexPubkeys.alice,
       );
@@ -103,12 +103,12 @@ void main() {
       );
       expect(result, isNotNull);
       expect(result!.title, 'Recovery response');
-      expect(result.body, 'Bob sent a shard for recovery of "Family Vault".');
+      expect(result.body, 'Bob sent a share for recovery of "Family Vault".');
     });
 
     test('shard confirmation -- steward tells owner their shard is stored', () {
       final result = composeNotificationText(
-        kind: NostrKind.shardConfirmation,
+        kind: NostrKind.shareConfirmation,
         vault: buildVault(),
         senderPubkey: TestHexPubkeys.bob,
       );
@@ -178,7 +178,7 @@ void main() {
         NostrKind.httpAuth,
         NostrKind.invitationAcceptance,
         NostrKind.invitationDenial,
-        NostrKind.shardError,
+        NostrKind.shareError,
         NostrKind.invitationInvalid,
         NostrKind.keyHolderRemoved,
       ]) {

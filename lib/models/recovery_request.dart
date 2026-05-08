@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'shard_data.dart';
+import 'share.dart';
 
 part 'recovery_request.freezed.dart';
 
@@ -88,7 +88,9 @@ class RecoveryResponse with _$RecoveryResponse {
     required String pubkey, // hex format, 64 characters
     required bool approved, // Whether the steward approved the request
     DateTime? respondedAt,
-    ShardData? shardData, // Actual shard data for reassembly (if approved)
+
+    /// Embedded share for reassembly when approved. JSON key stays `shardData`.
+    Share? share,
     String? nostrEventId,
     String? errorMessage, // Error message if status is error
   }) = _RecoveryResponse;
@@ -107,8 +109,8 @@ class RecoveryResponse with _$RecoveryResponse {
       return false;
     }
 
-    // ShardData must be present if approved
-    if (approved && shardData == null) {
+    // Share must be present if approved
+    if (approved && share == null) {
       return false;
     }
 
@@ -128,7 +130,8 @@ class RecoveryResponse with _$RecoveryResponse {
       'pubkey': pubkey,
       'approved': approved,
       'respondedAt': respondedAt?.toIso8601String(),
-      'shardData': shardData != null ? shardDataToJson(shardData!) : null,
+      // Legacy key name — persisted recovery responses use `shardData`.
+      'shardData': share != null ? shareToJson(share!) : null,
       'nostrEventId': nostrEventId,
       'errorMessage': errorMessage,
     };
@@ -141,8 +144,8 @@ class RecoveryResponse with _$RecoveryResponse {
       approved: json['approved'] as bool? ?? false,
       respondedAt:
           json['respondedAt'] != null ? DateTime.parse(json['respondedAt'] as String) : null,
-      shardData: json['shardData'] != null
-          ? shardDataFromJson(json['shardData'] as Map<String, dynamic>)
+      share: json['shardData'] != null
+          ? shareFromJson(json['shardData'] as Map<String, dynamic>)
           : null,
       nostrEventId: json['nostrEventId'] as String?,
       errorMessage: json['errorMessage'] as String?,

@@ -379,10 +379,10 @@ class InvitationService {
         createdAt: invitation.createdAt,
         ownerPubkey: invitation.ownerPubkey,
         ownerName: invitation.ownerName, // Include owner name from invitation
-        shards: [], // No shards yet - awaiting key distribution
+        shares: [], // No shares yet - awaiting key distribution
         backupConfig: null,
         // Stub created at acceptance time; the authoritative push setting
-        // comes from the owner later via ShardData. Start opted-out so we
+        // comes from the owner later via Share. Start opted-out so we
         // never advertise push before the owner's intent is on the wire.
         pushEnabled: false,
       );

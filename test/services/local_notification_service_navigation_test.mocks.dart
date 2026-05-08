@@ -7,7 +7,7 @@ import 'dart:async' as _i3;
 
 import 'package:horcrux/models/backup_config.dart' as _i5;
 import 'package:horcrux/models/recovery_request.dart' as _i8;
-import 'package:horcrux/models/shard_data.dart' as _i7;
+import 'package:horcrux/models/share.dart' as _i7;
 import 'package:horcrux/models/steward_status.dart' as _i6;
 import 'package:horcrux/models/vault.dart' as _i4;
 import 'package:horcrux/providers/vault_provider.dart' as _i2;
@@ -219,16 +219,16 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<void> addShardToVault(
+  _i3.Future<void> addShareToVault(
     String? vaultId,
-    _i7.ShardData? shard,
+    _i7.Share? share,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
-          #addShardToVault,
+          #addShareToVault,
           [
             vaultId,
-            shard,
+            share,
           ],
         ),
         returnValue: _i3.Future<void>.value(),
@@ -236,18 +236,18 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i3.Future<void>);
 
   @override
-  _i3.Future<List<_i7.ShardData>> getShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i3.Future<List<_i7.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #getShardsForVault,
+          #getSharesForVault,
           [vaultId],
         ),
-        returnValue: _i3.Future<List<_i7.ShardData>>.value(<_i7.ShardData>[]),
-      ) as _i3.Future<List<_i7.ShardData>>);
+        returnValue: _i3.Future<List<_i7.Share>>.value(<_i7.Share>[]),
+      ) as _i3.Future<List<_i7.Share>>);
 
   @override
-  _i3.Future<void> clearShardsForVault(String? vaultId) => (super.noSuchMethod(
+  _i3.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
-          #clearShardsForVault,
+          #clearSharesForVault,
           [vaultId],
         ),
         returnValue: _i3.Future<void>.value(),
