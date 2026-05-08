@@ -473,6 +473,10 @@ class VaultRepository {
   /// ownerName, instructions, relayUrls). Those remain null in the hydrated
   /// Share — sufficient for UI that reads [Vault.shares]. The full wire
   /// payload is not re-persisted after the gift-wrap is unwrapped.
+  ///
+  /// [VaultRow.createdAt] is milliseconds since epoch ([_persistVault]); [Share.createdAt]
+  /// and Nostr `created_at` are Unix seconds — convert here so [Share.ageInSeconds],
+  /// [Share.isRecent], and [shareToJson] stay correct.
   Share _shareFromHeldShareRow(HeldShareRow r, VaultRow vaultRow) {
     return Share(
       payload: r.sharePayload,
@@ -481,7 +485,7 @@ class VaultRepository {
       totalShares: vaultRow.totalShares,
       primeMod: vaultRow.primeMod ?? '',
       creatorPubkey: vaultRow.ownerPubkey,
-      createdAt: vaultRow.createdAt,
+      createdAt: vaultRow.createdAt ~/ 1000,
       vaultId: r.vaultId,
       vaultName: vaultRow.name,
       nostrEventId: r.nostrEventId,
