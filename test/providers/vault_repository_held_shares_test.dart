@@ -160,5 +160,25 @@ void main() {
       expect(row.primeMod, 'prime-good');
       expect(row.currentDistributionVersion, 10);
     });
+
+    test('clearAll deletes held_shares explicitly before vaults', () async {
+      final fixture = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+      );
+      await HeldShareFixture.insert(
+        db,
+        vaultId: fixture.vaultId,
+        shareIndex: 0,
+        payload: 'payload',
+        distributionVersion: 1,
+      );
+      expect(await db.heldShareDao.forVault(fixture.vaultId), hasLength(1));
+
+      await repository.clearAll();
+
+      expect(await db.select(db.heldShares).get(), isEmpty);
+      expect(await db.vaultDao.getById(fixture.vaultId), equals(null));
+    });
   });
 }

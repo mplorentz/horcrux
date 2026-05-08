@@ -185,6 +185,7 @@ class VaultRepository {
       await _db.delete(_db.stewards).go();
       await _db.delete(_db.ownedVaults).go();
       await _db.delete(_db.vaultRelays).go();
+      await _db.delete(_db.heldShares).go();
       await _db.delete(_db.vaults).go();
     });
   }
