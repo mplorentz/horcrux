@@ -470,5 +470,10 @@ class VaultShareService {
       '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
       'shareIndex=${share.shareIndex + 1}',
     );
+
+    // Persist Shamir params from the wire share onto `vaults`. Without this,
+    // steward bootstrap rows stay at threshold/total_shares = 0 (no
+    // BackupConfig), and hydrated Vault.shares fail Share.isValid.
+    await repository.mergeVaultRowFromIncomingShare(vaultId, share);
   }
 }

@@ -4,6 +4,7 @@ import 'package:mockito/mockito.dart';
 
 import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/share.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/login_service.dart';
 
@@ -68,6 +69,96 @@ void main() {
 
       final json = shareToJson(loaded.shares.single);
       expect(json['created_at'], expectedSeconds);
+    });
+
+    test(
+      'mergeVaultRowFromIncomingShare persists Shamir metadata when vault has '
+      'no BackupConfig (steward bootstrap)',
+      () async {
+        const vaultId = 'bootstrap-steward-vault';
+
+        await repository.addVault(
+          Vault(
+            id: vaultId,
+            name: 'Stub',
+            content: null,
+            createdAt: DateTime.utc(2024, 1, 2),
+            ownerPubkey: TestHexPubkeys.alice,
+            pushEnabled: false,
+          ),
+        );
+
+        const share = Share(
+          payload: 'payload-bytes',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 4,
+          primeMod: 'prime-mod-bootstrap',
+          creatorPubkey: TestHexPubkeys.alice,
+          createdAt: 1704153600,
+          vaultId: vaultId,
+          distributionVersion: 3,
+          nostrEventId: 'nostr-evt-bootstrap',
+        );
+
+        await repository.mergeVaultRowFromIncomingShare(vaultId, share);
+        await repository.addShareToVault(vaultId, share);
+
+        final loaded = await repository.getVault(vaultId);
+        expect(loaded!.shares.single.isValid, isTrue);
+        expect(loaded.shares.single.threshold, 2);
+        expect(loaded.shares.single.totalShares, 4);
+        expect(loaded.shares.single.primeMod, 'prime-mod-bootstrap');
+
+        final json = shareToJson(loaded.shares.single);
+        expect(json['threshold'], 2);
+        expect(json['total_shards'], 4);
+        expect(json['prime_mod'], 'prime-mod-bootstrap');
+      },
+    );
+
+    test('mergeVaultRowFromIncomingShare ignores stale distribution_version', () async {
+      const vaultId = 'stale-dist-vault';
+
+      await repository.addVault(
+        Vault(
+          id: vaultId,
+          name: 'V',
+          content: null,
+          createdAt: DateTime.utc(2024, 1, 2),
+          ownerPubkey: TestHexPubkeys.alice,
+          pushEnabled: false,
+        ),
+      );
+
+      const fresh = Share(
+        payload: 'a',
+        threshold: 3,
+        shareIndex: 0,
+        totalShares: 5,
+        primeMod: 'prime-good',
+        creatorPubkey: TestHexPubkeys.alice,
+        createdAt: 1704153600,
+        vaultId: vaultId,
+        distributionVersion: 10,
+        nostrEventId: 'evt-fresh',
+      );
+      await repository.mergeVaultRowFromIncomingShare(vaultId, fresh);
+
+      final stale = fresh.copyWith(
+        distributionVersion: 4,
+        threshold: 1,
+        totalShares: 2,
+        primeMod: 'prime-bad',
+        nostrEventId: 'evt-stale',
+      );
+      await repository.mergeVaultRowFromIncomingShare(vaultId, stale);
+
+      final row = await db.vaultDao.getById(vaultId);
+      expect(row!.threshold, 3);
+      expect(row.totalShares, 5);
+      expect(row.primeMod, 'prime-good');
+      expect(row.currentDistributionVersion, 10);
     });
   });
 }

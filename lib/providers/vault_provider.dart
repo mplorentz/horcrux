@@ -338,6 +338,65 @@ class VaultRepository {
     );
   }
 
+  /// Copies Shamir parameters and relay hints from [share] onto the `vaults`
+  /// row for steward-side ingestion.
+  ///
+  /// Without this, [_persistVault] paths that lack [BackupConfig] leave
+  /// `threshold` / `total_shares` / `prime_mod` at defaults; [_shareFromHeldShareRow]
+  /// would then hydrate invalid [Share] objects.
+  ///
+  /// No-op when [Share.distributionVersion] (null → 0) is **strictly less** than
+  /// the stored `vaults.current_distribution_version` so stale shares cannot
+  /// roll back metadata.
+  Future<void> mergeVaultRowFromIncomingShare(String vaultId, Share share) async {
+    final row = await _db.vaultDao.getById(vaultId);
+    if (row == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    final incomingDist = share.distributionVersion ?? 0;
+    if (incomingDist < row.currentDistributionVersion) {
+      return;
+    }
+
+    await _db.transaction(() async {
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(
+          threshold: Value(share.threshold),
+          totalShares: Value(share.totalShares),
+          primeMod: Value(share.primeMod),
+          currentDistributionVersion: Value(
+            incomingDist > row.currentDistributionVersion
+                ? incomingDist
+                : row.currentDistributionVersion,
+          ),
+        ),
+      );
+
+      final relays = share.relayUrls;
+      if (relays != null && relays.isNotEmpty) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        await _db.vaultRelayDao.replaceForVault(
+          vaultId: vaultId,
+          role: 'steward',
+          rows: [
+            for (var i = 0; i < relays.length; i++)
+              VaultRelaysCompanion.insert(
+                id: '$vaultId-steward-${relays[i]}-$i',
+                vaultId: vaultId,
+                url: relays[i],
+                role: 'steward',
+                addedAt: nowMs,
+              ),
+          ],
+        );
+      }
+    });
+    Log.debug(
+      'mergeVaultRowFromIncomingShare: vault $vaultId '
+      '(threshold=${share.threshold}, totalShares=${share.totalShares})',
+    );
+  }
+
   Future<void> deleteVaultContent(String vaultId) async {
     final existing = await getVault(vaultId);
     if (existing == null) {
