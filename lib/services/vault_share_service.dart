@@ -54,11 +54,11 @@ class VaultShareService {
 
   Future<void> _ensureRecoveryInitialized() async {
     if (_recoveryInitialized) return;
-    await _loadRecoveryShards();
+    await _loadRecoveryShares();
     _recoveryInitialized = true;
   }
 
-  Future<void> _loadRecoveryShards() async {
+  Future<void> _loadRecoveryShares() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonData = prefs.getString(_recoveryShareKey);
     if (jsonData == null || jsonData.isEmpty) {
