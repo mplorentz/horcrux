@@ -18,13 +18,13 @@ import 'logger.dart';
 /// Provider for ShardDistributionService
 final Provider<ShardDistributionService> shardDistributionServiceProvider =
     Provider<ShardDistributionService>((ref) {
-      return ShardDistributionService(
-        ref.read(vaultRepositoryProvider),
-        ref.read(loginServiceProvider),
-        ref.read(ndkServiceProvider),
-        ref.read(horcruxNotificationServiceProvider),
-      );
-    });
+  return ShardDistributionService(
+    ref.read(vaultRepositoryProvider),
+    ref.read(loginServiceProvider),
+    ref.read(ndkServiceProvider),
+    ref.read(horcruxNotificationServiceProvider),
+  );
+});
 
 /// Service for distributing shards to stewards via Nostr
 class ShardDistributionService {
@@ -42,8 +42,7 @@ class ShardDistributionService {
 
   /// Distribute shards to all stewards
   Future<List<ShardEvent>> distributeShards({
-    required String
-    ownerPubkey, // Hex format - vault owner's pubkey for signing
+    required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
     required List<ShardData> shards,
   }) async {
@@ -85,8 +84,7 @@ class ShardDistributionService {
           final publishedEvent = await _ndkService.publishEncryptedEvent(
             content: shardString,
             kind: NostrKind.shardData.value,
-            recipientPubkey: keyHolder
-                .pubkey!, // Hex format - safe because we checked null above
+            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
             relays: config.relays,
             tags: [
               ['d', 'shard_${config.vaultId}_$i'], // Distinguisher tag
@@ -137,8 +135,7 @@ class ShardDistributionService {
                 pubkey: ownerPubkey,
                 status: StewardStatus.holdingKey,
                 acknowledgedAt: DateTime.now(),
-                acknowledgmentEventId:
-                    eventId, // Use shard event ID as acknowledgment
+                acknowledgmentEventId: eventId, // Use shard event ID as acknowledgment
                 acknowledgedDistributionVersion: config.distributionVersion,
                 giftWrapEventId: eventId,
               );
@@ -167,10 +164,8 @@ class ShardDistributionService {
           // Create ShardEvent record
           final shardEvent = createShardEvent(
             eventId: eventId,
-            recipientPubkey: keyHolder
-                .pubkey!, // Hex format - safe because we checked null above
-            encryptedContent:
-                shardString, // Store original content for reference
+            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
+            encryptedContent: shardString, // Store original content for reference
             backupConfigId: config.vaultId,
             shardIndex: i,
           );
@@ -244,8 +239,7 @@ class ShardDistributionService {
             // Get the backup config to get the current distribution version
             final vault = await _repository.getVault(vaultId);
             final backupConfig = vault?.backupConfig;
-            final currentDistributionVersion =
-                backupConfig?.distributionVersion;
+            final currentDistributionVersion = backupConfig?.distributionVersion;
 
             // Update steward status to holdingKey (confirmed receipt)
             await _repository.updateStewardStatus(
@@ -328,9 +322,8 @@ class ShardDistributionService {
       );
     }
 
-    final distributionVersion = distributionVersionStr != null
-        ? int.tryParse(distributionVersionStr)
-        : null;
+    final distributionVersion =
+        distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null;
 
     // Update steward status
     final keyHolderPubkey = event.pubKey;
