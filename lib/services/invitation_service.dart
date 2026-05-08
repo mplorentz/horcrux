@@ -945,6 +945,10 @@ class InvitationService {
   /// shards (holdingKey status) need to receive updated shards that include the new steward.
   /// This helper increments the distribution version, updates existing stewards accordingly,
   /// and returns the updated backup config.
+  ///
+  /// Stewards moved to [StewardStatus.awaitingNewKey] also clear [Steward.giftWrapEventId]
+  /// and [Steward.keyShare] so redistribution UI (via [BackupConfigExtension.needsRedistribution])
+  /// still treats them as pending shard delivery until publish succeeds again.
   BackupConfig _incrementDistributionVersionForNewSteward({
     required BackupConfig backupConfig,
     required List<Steward> stewards,
@@ -961,6 +965,8 @@ class InvitationService {
           acknowledgedAt: null,
           acknowledgmentEventId: null,
           acknowledgedDistributionVersion: null,
+          keyShare: null,
+          giftWrapEventId: null,
         );
       }
       return steward;

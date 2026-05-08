@@ -87,6 +87,8 @@ void main() {
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
           acknowledgedDistributionVersion: 1,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final initialBackupConfig = createBackupConfig(
@@ -166,12 +168,16 @@ void main() {
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was added with awaitingKey status
         final deviceCInUpdatedConfig =
             updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceCPubkey);
         expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
+
+        expect(updatedConfig.needsRedistribution, isTrue);
 
         // Verify totalKeys was updated
         expect(updatedConfig.totalKeys, equals(2));
@@ -198,6 +204,8 @@ void main() {
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
           acknowledgedDistributionVersion: 1,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final deviceCInvitedSteward = createInvitedSteward(
@@ -283,6 +291,8 @@ void main() {
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was updated from invited to awaitingKey
         final deviceCInUpdatedConfig =
@@ -291,6 +301,8 @@ void main() {
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
         // Note: inviteCode is preserved but we use the generated one, not the hardcoded test one
         expect(deviceCInUpdatedConfig.inviteCode, isNotNull);
+
+        expect(updatedConfig.needsRedistribution, isTrue);
 
         // Verify totalKeys - when updating an invited steward, totalKeys matches stewards length
         // Note: generateInvitationLink adds Device C as an invited steward, so we verify they match
@@ -314,6 +326,8 @@ void main() {
           name: 'Device B',
         ).copyWith(
           status: StewardStatus.holdingKey,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final deviceDSteward = createSteward(
@@ -394,6 +408,8 @@ void main() {
         final deviceBInUpdatedConfig =
             updatedConfig!.stewards.firstWhere((s) => s.pubkey == deviceBPubkey);
         expect(deviceBInUpdatedConfig.status, equals(StewardStatus.awaitingNewKey));
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Device D (awaitingKey) should remain unchanged
         final deviceDInUpdatedConfig =
