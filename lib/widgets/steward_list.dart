@@ -269,8 +269,9 @@ class StewardList extends ConsumerWidget {
 
     if (normalizedStewards.isNotEmpty) {
       final stewards = normalizedStewards.where((s) {
+        // Show invited stewards (no pubkey yet) so owners can see pending invitees.
         if (s.pubkey == null) {
-          return false;
+          return true;
         }
         if (s.isOwner) {
           return s.status == StewardStatus.holdingKey;
