@@ -137,20 +137,19 @@ void main() {
     });
 
     testGoldens('single steward', (tester) async {
+      final shard = createTestShard(
+        shardIndex: 0,
+        recipientPubkey: otherPubkey,
+        vaultId: 'test-vault',
+        stewards: [
+          {'name': 'Peer 1', 'pubkey': otherPubkey},
+        ], // Only one peer
+        threshold: 1, // Fix: threshold must be <= totalShards
+      );
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-            stewards: [
-              {'name': 'Peer 1', 'pubkey': otherPubkey},
-            ], // Only one peer
-            threshold: 1, // Fix: threshold must be <= totalShards
-          ),
-        ],
+        shares: [shard],
       );
 
       final harness = await pumpGoldenWidget(
@@ -160,8 +159,7 @@ void main() {
           vaultDetailProvider(
             'test-vault',
           ).overrideWith(
-            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
-          ),
+              (ref) => Stream.value(stewardedVaultDetailFromVault(vault, latestShare: shard))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 300),
@@ -174,21 +172,20 @@ void main() {
     });
 
     testGoldens('multiple stewards', (tester) async {
+      final shard = createTestShard(
+        shardIndex: 0,
+        recipientPubkey: otherPubkey,
+        vaultId: 'test-vault',
+        stewards: [
+          {'name': 'Peer 1', 'pubkey': otherPubkey},
+          {'name': 'Peer 2', 'pubkey': thirdPubkey},
+          {'name': 'Peer 3', 'pubkey': fourthPubkey},
+        ], // Multiple peers
+      );
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: testPubkey,
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: otherPubkey,
-            vaultId: 'test-vault',
-            stewards: [
-              {'name': 'Peer 1', 'pubkey': otherPubkey},
-              {'name': 'Peer 2', 'pubkey': thirdPubkey},
-              {'name': 'Peer 3', 'pubkey': fourthPubkey},
-            ], // Multiple peers
-          ),
-        ],
+        shares: [shard],
       );
 
       final harness = await pumpGoldenWidget(
@@ -198,8 +195,7 @@ void main() {
           vaultDetailProvider(
             'test-vault',
           ).overrideWith(
-            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
-          ),
+              (ref) => Stream.value(stewardedVaultDetailFromVault(vault, latestShare: shard))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 400),
@@ -212,20 +208,19 @@ void main() {
     });
 
     testGoldens('steward viewing list with owner in peers', (tester) async {
+      final shard = createTestShard(
+        shardIndex: 0,
+        recipientPubkey: testPubkey, // Current user is recipient
+        vaultId: 'test-vault',
+        stewards: [
+          {'name': 'Peer 1', 'pubkey': otherPubkey},
+          {'name': 'Peer 2', 'pubkey': thirdPubkey},
+        ], // Owner is in peers
+      );
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: otherPubkey, // Different owner
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: testPubkey, // Current user is recipient
-            vaultId: 'test-vault',
-            stewards: [
-              {'name': 'Peer 1', 'pubkey': otherPubkey},
-              {'name': 'Peer 2', 'pubkey': thirdPubkey},
-            ], // Owner is in peers
-          ),
-        ],
+        shares: [shard],
       );
 
       final harness = await pumpGoldenWidget(
@@ -235,8 +230,7 @@ void main() {
           vaultDetailProvider(
             'test-vault',
           ).overrideWith(
-            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
-          ),
+              (ref) => Stream.value(stewardedVaultDetailFromVault(vault, latestShare: shard))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 350),
@@ -249,20 +243,19 @@ void main() {
     });
 
     testGoldens('steward viewing list without owner in peers', (tester) async {
+      final shard = createTestShard(
+        shardIndex: 0,
+        recipientPubkey: testPubkey, // Current user is recipient
+        vaultId: 'test-vault',
+        stewards: [
+          {'name': 'Peer 1', 'pubkey': otherPubkey},
+          {'name': 'Peer 2', 'pubkey': thirdPubkey},
+        ], // Owner not in peers
+      );
       final vault = createTestVault(
         id: 'test-vault',
         ownerPubkey: fourthPubkey, // Owner not in peers
-        shares: [
-          createTestShard(
-            shardIndex: 0,
-            recipientPubkey: testPubkey, // Current user is recipient
-            vaultId: 'test-vault',
-            stewards: [
-              {'name': 'Peer 1', 'pubkey': otherPubkey},
-              {'name': 'Peer 2', 'pubkey': thirdPubkey},
-            ], // Owner not in peers
-          ),
-        ],
+        shares: [shard],
       );
 
       final harness = await pumpGoldenWidget(
@@ -272,8 +265,7 @@ void main() {
           vaultDetailProvider(
             'test-vault',
           ).overrideWith(
-            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
-          ),
+              (ref) => Stream.value(stewardedVaultDetailFromVault(vault, latestShare: shard))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 350),
