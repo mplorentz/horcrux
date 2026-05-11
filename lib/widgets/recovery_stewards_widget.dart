@@ -103,7 +103,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
       for (final kh in vault.backupConfig!.stewards) {
         final pubkey = kh.pubkey;
         if (pubkey == null) continue;
-        final response = request.stewardResponses[pubkey];
+        final response = request.responseForPubkey(pubkey);
         result.add(
           _StewardInfo(
             pubkey: pubkey,
@@ -124,7 +124,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
       if (!stewardsMap.containsKey(vault.ownerPubkey)) {
         final ownerName = vault.ownerName;
         if (ownerName != null) {
-          final response = request.stewardResponses[vault.ownerPubkey];
+          final response = request.responseForPubkey(vault.ownerPubkey);
           stewardsMap[vault.ownerPubkey] = _StewardInfo(
             pubkey: vault.ownerPubkey,
             name: ownerName,

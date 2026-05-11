@@ -584,20 +584,20 @@ class NdkService {
             ? thresholdRaw.toInt()
             : 1;
 
-    final recoveryRequest = RecoveryRequest(
+    final recoveryRequest = RecoveryRequest.makeFromParticipants(
       id: (requestData['recovery_request_id'] as String?) ?? event.id,
       vaultId: requestData['vault_id'] as String,
       initiatorPubkey: senderPubkey,
       requestedAt: DateTime.parse(requestedAtRaw!),
       status: RecoveryRequestStatus.sent,
       threshold: threshold,
+      stewardPubkeys: const [],
       nostrEventId: event.id,
       eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
         event.createdAt * 1000,
         isUtc: true,
       ),
       expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-      stewardResponses: {},
       isPractice: requestData['is_practice'] as bool? ?? false,
     );
 

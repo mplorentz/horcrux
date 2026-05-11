@@ -180,6 +180,48 @@ class RecoveryRequest with _$RecoveryRequest {
 
   const RecoveryRequest._();
 
+  /// Creates a request from normalized participant and response collections.
+  ///
+  /// Responses are keyed by `pubkey`, and any missing participant defaults to a
+  /// pending response placeholder.
+  static RecoveryRequest makeFromParticipants({
+    required String id,
+    required String vaultId,
+    required String initiatorPubkey,
+    required DateTime requestedAt,
+    required RecoveryRequestStatus status,
+    required int threshold,
+    required Iterable<String> stewardPubkeys,
+    Iterable<RecoveryResponse> responses = const [],
+    String? nostrEventId,
+    DateTime? eventCreationTime,
+    DateTime? expiresAt,
+    String? errorMessage,
+    bool isPractice = false,
+  }) {
+    final byPubkey = <String, RecoveryResponse>{
+      for (final pubkey in stewardPubkeys)
+        pubkey: RecoveryResponse(pubkey: pubkey, approved: false),
+    };
+    for (final response in responses) {
+      byPubkey[response.pubkey] = response;
+    }
+    return RecoveryRequest(
+      id: id,
+      vaultId: vaultId,
+      initiatorPubkey: initiatorPubkey,
+      requestedAt: requestedAt,
+      status: status,
+      threshold: threshold,
+      nostrEventId: nostrEventId,
+      eventCreationTime: eventCreationTime,
+      expiresAt: expiresAt,
+      stewardResponses: byPubkey,
+      errorMessage: errorMessage,
+      isPractice: isPractice,
+    );
+  }
+
   /// Validate the recovery request
   bool get isValid {
     // ID must be non-empty
@@ -216,6 +258,47 @@ class RecoveryRequest with _$RecoveryRequest {
   int getResponseCount(RecoveryResponseStatus status) {
     return stewardResponses.values.where((r) => r.status == status).length;
   }
+
+  /// Canonical participant pubkeys for this recovery request.
+  Iterable<String> get stewardPubkeys => stewardResponses.keys;
+
+  /// All known responses keyed by [stewardPubkeys].
+  Iterable<RecoveryResponse> get responses => stewardResponses.values;
+
+  /// Returns the response for a steward, if present.
+  RecoveryResponse? responseForPubkey(String? pubkey) {
+    if (pubkey == null) return null;
+    return stewardResponses[pubkey];
+  }
+
+  /// Mutable copy keyed by responder pubkey for update flows.
+  Map<String, RecoveryResponse> copyResponsesByPubkey() =>
+      Map<String, RecoveryResponse>.from(stewardResponses);
+
+  /// Returns a copy with one response updated by responder pubkey.
+  RecoveryRequest withUpsertedResponse({
+    required RecoveryResponse response,
+    RecoveryRequestStatus? status,
+  }) {
+    final updated = copyResponsesByPubkey();
+    updated[response.pubkey] = response;
+    return copyWith(status: status ?? this.status, stewardResponses: updated);
+  }
+
+  /// Approved responses that include share material.
+  Iterable<RecoveryResponse> get approvedResponsesWithShare => responses.where(
+        (r) => r.status == RecoveryResponseStatus.approved && r.share != null,
+      );
+
+  /// Pubkeys for stewards who approved this request.
+  List<String> get approvedResponderPubkeys => responses
+      .where((r) => r.status == RecoveryResponseStatus.approved)
+      .map((r) => r.pubkey)
+      .toList();
+
+  /// Share fragments collected from approved responses.
+  List<Share> get approvedSharesWithPayload =>
+      approvedResponsesWithShare.map((r) => r.share!).toList();
 
   /// Get total number of stewards
   int get totalStewards => stewardResponses.length;

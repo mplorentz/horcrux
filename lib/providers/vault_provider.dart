@@ -527,7 +527,7 @@ class VaultRepository {
             ),
           );
       await _db.batch((b) {
-        for (final pubkey in request.stewardResponses.keys) {
+        for (final pubkey in request.stewardPubkeys) {
           b.insert(
             _db.recoveryRequestParticipants,
             RecoveryRequestParticipantsCompanion.insert(
@@ -566,18 +566,17 @@ class VaultRepository {
         ),
       );
 
-      for (final e in updatedRequest.stewardResponses.entries) {
-        final resp = e.value;
+      for (final resp in updatedRequest.responses) {
         if (!resp.status.isResolved && resp.errorMessage == null) {
           continue;
         }
         final dist = resp.share?.distributionVersion ?? 0;
         await _db.into(_db.recoveryResponses).insertOnConflictUpdate(
               RecoveryResponsesCompanion.insert(
-                id: '${requestId}_${e.key}',
+                id: '${requestId}_${resp.pubkey}',
                 requestId: requestId,
                 stewardId: const Value.absent(),
-                responderPubkey: e.key,
+                responderPubkey: resp.pubkey,
                 sharePayload: resp.share != null ? jsonEncode(shareToJson(resp.share!)) : '',
                 shareDistributionVersion: dist,
                 receivedAt: resp.respondedAt?.millisecondsSinceEpoch ?? now,
@@ -760,16 +759,7 @@ class VaultRepository {
   Future<RecoveryRequest> _recoveryRequestFromRow(RecoveryRequestRow r) async {
     final participants = await _db.recoveryDao.participantsFor(r.id);
     final responses = await _db.recoveryDao.responsesFor(r.id);
-    final byPubkey = {
-      for (final row in responses) row.responderPubkey: _recoveryResponseFromRow(row),
-    };
-    final stewardResponses = <String, RecoveryResponse>{};
-    for (final p in participants) {
-      stewardResponses[p.pubkey] =
-          byPubkey[p.pubkey] ?? RecoveryResponse(pubkey: p.pubkey, approved: false);
-    }
-
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: r.id,
       vaultId: r.vaultId,
       initiatorPubkey: r.initiatorPubkey,
@@ -784,7 +774,8 @@ class VaultRepository {
           ? DateTime.fromMillisecondsSinceEpoch(r.eventCreationTimeMs!)
           : null,
       expiresAt: r.expiresAt == null ? null : DateTime.fromMillisecondsSinceEpoch(r.expiresAt!),
-      stewardResponses: stewardResponses,
+      stewardPubkeys: participants.map((p) => p.pubkey),
+      responses: responses.map(_recoveryResponseFromRow),
       errorMessage: r.errorMessage,
       isPractice: r.isPractice,
     );

@@ -46,7 +46,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
         setState(() {
           _currentPubkey = pubkey;
         });
-        final existingResponse = widget.recoveryRequest.stewardResponses[pubkey];
+        final existingResponse = widget.recoveryRequest.responseForPubkey(pubkey);
         if (existingResponse != null && _isFinalStewardDecision(existingResponse.status)) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _showAlreadyRespondedDialog(existingResponse.status);
@@ -213,8 +213,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     RecoveryRequest request,
     VaultDetail? vault,
   ) {
-    final currentResponseStatus =
-        _currentPubkey == null ? null : request.stewardResponses[_currentPubkey]?.status;
+    final currentResponseStatus = request.responseForPubkey(_currentPubkey)?.status;
     final hasFinalResponse =
         currentResponseStatus != null && _isFinalStewardDecision(currentResponseStatus);
 
