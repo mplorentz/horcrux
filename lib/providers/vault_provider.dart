@@ -450,8 +450,22 @@ class VaultRepository {
   }
 
   /// Delete the NIP-44 content for [vaultId] (removes the `owned_vaults` row).
+  ///
+  /// Also bumps `vaults.last_synced_at` in the same transaction so that
+  /// [vaultDao.watchAll] / [vaultDao.watchById] re-emit and both
+  /// [VaultRepository] and [VaultDetailRepository] reactive streams reflect
+  /// the change immediately. Without this touch the streams only observe
+  /// changes to the `vaults` table, so Travel Mode and exitRecoveryMode would
+  /// delete content but the UI would continue showing a stale
+  /// [OwnedVaultDetail] until something else modified the vault row.
   Future<void> deleteVaultContent(String vaultId) async {
-    await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vaultId))).go();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.transaction(() async {
+      await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vaultId))).go();
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(lastSyncedAt: Value(now)),
+      );
+    });
     Log.info('deleteVaultContent: removed owned_vaults row for vault $vaultId');
   }
 
