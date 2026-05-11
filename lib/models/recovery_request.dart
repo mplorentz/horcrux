@@ -200,19 +200,9 @@ class RecoveryRequest with _$RecoveryRequest {
     String? errorMessage,
     bool isPractice = false,
   }) {
-    final orderedPubkeys = <String>[];
-    void addPubkey(String pubkey) {
-      if (!orderedPubkeys.contains(pubkey)) {
-        orderedPubkeys.add(pubkey);
-      }
-    }
-
-    for (final pubkey in stewardPubkeys) {
-      addPubkey(pubkey);
-    }
-    for (final response in responses) {
-      addPubkey(response.pubkey);
-    }
+    final orderedPubkeys = <String>{}
+      ..addAll(stewardPubkeys)
+      ..addAll(responses.map((r) => r.pubkey));
 
     final byPubkey = <String, RecoveryResponse>{
       for (final response in responses) response.pubkey: response,
@@ -231,7 +221,7 @@ class RecoveryRequest with _$RecoveryRequest {
       nostrEventId: nostrEventId,
       eventCreationTime: eventCreationTime,
       expiresAt: expiresAt,
-      stewardPubkeys: orderedPubkeys,
+      stewardPubkeys: orderedPubkeys.toList(),
       responses: orderedResponses,
       errorMessage: errorMessage,
       isPractice: isPractice,
@@ -362,18 +352,13 @@ class RecoveryRequest with _$RecoveryRequest {
 
   /// Create from JSON
   factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
-    final participants = <String>[];
-    void addParticipant(String pubkey) {
-      if (!participants.contains(pubkey)) {
-        participants.add(pubkey);
-      }
-    }
+    final participants = <String>{};
 
     final stewardPubkeysJson = json['stewardPubkeys'];
     if (stewardPubkeysJson is List) {
       for (final pubkey in stewardPubkeysJson) {
         if (pubkey is String) {
-          addParticipant(pubkey);
+          participants.add(pubkey);
         }
       }
     }
@@ -390,26 +375,8 @@ class RecoveryRequest with _$RecoveryRequest {
       }
     }
 
-    final legacyResponsesJson = json['stewardResponses'] as Map<String, dynamic>?;
-    if (responses.isEmpty && legacyResponsesJson != null) {
-      for (final entry in legacyResponsesJson.entries) {
-        addParticipant(entry.key);
-        final value = entry.value;
-        if (value is Map<String, dynamic>) {
-          responses.add(RecoveryResponse.fromJson(value));
-        } else if (value is Map) {
-          responses.add(RecoveryResponse.fromJson(value.cast<String, dynamic>()));
-        }
-      }
-    } else {
-      for (final response in responses) {
-        addParticipant(response.pubkey);
-      }
-      if (legacyResponsesJson != null) {
-        for (final pubkey in legacyResponsesJson.keys) {
-          addParticipant(pubkey);
-        }
-      }
+    for (final response in responses) {
+      participants.add(response.pubkey);
     }
 
     return RecoveryRequest.makeFromParticipants(

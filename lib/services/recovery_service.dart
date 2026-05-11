@@ -741,10 +741,6 @@ class RecoveryService {
           }
         }
 
-        if (relayUrls.isEmpty) {
-          Log.warning('No relay URLs available for sending recovery response');
-        }
-
         if (relayUrls.isNotEmpty) {
           await sendRecoveryResponseViaNostr(
             request,
