@@ -458,9 +458,8 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   @override
   _i4.Future<void> addShareToVault(
     String? vaultId,
-    _i10.Share? share, {
-    bool? omitSharePayload = false,
-  }) =>
+    _i10.Share? share,
+  ) =>
       (super.noSuchMethod(
         Invocation.method(
           #addShareToVault,
@@ -468,7 +467,6 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             vaultId,
             share,
           ],
-          {#omitSharePayload: omitSharePayload},
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
@@ -500,6 +498,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
     required int? shareIndex,
     String? pubkey,
     String? name,
+    String? contactInfo,
     bool? isOwner = false,
   }) =>
       (super.noSuchMethod(
@@ -512,6 +511,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             #shareIndex: shareIndex,
             #pubkey: pubkey,
             #name: name,
+            #contactInfo: contactInfo,
             #isOwner: isOwner,
           },
         ),

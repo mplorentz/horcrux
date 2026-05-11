@@ -456,23 +456,55 @@ class VaultShareService {
       }
     }
 
-    // Upsert self-steward row. The self-steward is identified by
-    // share.shareIndex (0-based in Share model → 1-based in DB).
-    // We use a deterministic ID so repeated distribution events for the same
-    // position are idempotent.
-    final selfStewardId = '${vaultId}_steward_${share.shareIndex + 1}';
     final currentPubkey = await _getNdkService().getCurrentPubkey();
+
+    // Upsert every steward advertised by the wire payload into normalized
+    // `stewards` rows so UI/read paths no longer depend on Share.stewards.
+    final embeddedStewards = share.stewards;
+    if (embeddedStewards != null && embeddedStewards.isNotEmpty) {
+      for (var i = 0; i < embeddedStewards.length; i++) {
+        final steward = embeddedStewards[i];
+        final pubkey = steward['pubkey'];
+        if (pubkey == null || pubkey.isEmpty) {
+          continue;
+        }
+        await repository.upsertStewardRow(
+          id: '${vaultId}_steward_${i + 1}',
+          vaultId: vaultId,
+          shareIndex: i + 1, // 1-based in DB
+          pubkey: pubkey,
+          name: steward['name'],
+          contactInfo: steward['contactInfo'],
+          isOwner: pubkey == share.creatorPubkey,
+        );
+      }
+    }
+
+    // Ensure the recipient's own steward row exists even if older/legacy share
+    // payloads did not carry the full stewards list.
+    var selfShareIndex = share.shareIndex + 1; // 1-based in DB
+    String? selfName;
+    if (currentPubkey != null && embeddedStewards != null) {
+      for (var i = 0; i < embeddedStewards.length; i++) {
+        if (embeddedStewards[i]['pubkey'] == currentPubkey) {
+          selfShareIndex = i + 1;
+          selfName = embeddedStewards[i]['name'];
+          break;
+        }
+      }
+    }
+    final selfStewardId = '${vaultId}_steward_$selfShareIndex';
     await repository.upsertStewardRow(
       id: selfStewardId,
       vaultId: vaultId,
-      shareIndex: share.shareIndex + 1, // 1-based in DB
+      shareIndex: selfShareIndex,
       pubkey: currentPubkey,
-      name: null,
-      isOwner: false,
+      name: selfName,
+      isOwner: currentPubkey != null && currentPubkey == share.creatorPubkey,
     );
     Log.debug(
       '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
-      'shareIndex=${share.shareIndex + 1}',
+      'shareIndex=$selfShareIndex',
     );
 
     // Persist Shamir params from the wire share onto `vaults`. Without this,

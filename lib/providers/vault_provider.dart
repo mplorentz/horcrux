@@ -360,6 +360,7 @@ class VaultRepository {
     required int shareIndex,
     String? pubkey,
     String? name,
+    String? contactInfo,
     bool isOwner = false,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -370,6 +371,7 @@ class VaultRepository {
         shareIndex: shareIndex,
         pubkey: Value(pubkey),
         name: Value(name),
+        contactInfo: Value(contactInfo),
         isOwner: Value(isOwner),
         joinedAt: now,
       ).copyWith(leftAt: const Value(null)),
