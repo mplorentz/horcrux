@@ -55,6 +55,7 @@ void main() {
 
     test('closes DB, deletes files, and clears secure storage', () async {
       var deletedDbFiles = false;
+      var clearedSharedPreferences = false;
       var clearedSecureStorage = false;
       final service = LogoutService(
         vaultRepository: vaultRepository,
@@ -66,6 +67,9 @@ void main() {
         appDatabase: appDatabase,
         deleteDatabaseFiles: () async {
           deletedDbFiles = true;
+        },
+        clearSharedPreferences: () async {
+          clearedSharedPreferences = true;
         },
         clearSecureStorage: () async {
           clearedSecureStorage = true;
@@ -82,12 +86,14 @@ void main() {
       verify(processedStore.clearAll()).called(1);
       verify(loginService.clearStoredKeys()).called(1);
       expect(deletedDbFiles, isTrue);
+      expect(clearedSharedPreferences, isTrue);
       expect(clearedSecureStorage, isTrue);
     });
 
     test('continues cleanup when key clearing throws', () async {
       when(loginService.clearStoredKeys()).thenThrow(StateError('key clear failed'));
       var deletedDbFiles = false;
+      var clearedSharedPreferences = false;
       var clearedSecureStorage = false;
       final service = LogoutService(
         vaultRepository: vaultRepository,
@@ -100,6 +106,9 @@ void main() {
         deleteDatabaseFiles: () async {
           deletedDbFiles = true;
         },
+        clearSharedPreferences: () async {
+          clearedSharedPreferences = true;
+        },
         clearSecureStorage: () async {
           clearedSecureStorage = true;
         },
@@ -108,6 +117,7 @@ void main() {
       await service.logout();
 
       expect(deletedDbFiles, isTrue);
+      expect(clearedSharedPreferences, isTrue);
       expect(clearedSecureStorage, isTrue);
       verify(loginService.clearStoredKeys()).called(1);
     });

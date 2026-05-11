@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../database/connection.dart';
@@ -34,6 +35,7 @@ class LogoutService {
   final ProcessedNostrEventStore _processedNostrEventStore;
   final AppDatabase _appDatabase;
   final Future<void> Function() _deleteDatabaseFiles;
+  final Future<void> Function() _clearSharedPreferences;
   final Future<void> Function() _clearSecureStorage;
 
   LogoutService({
@@ -45,6 +47,7 @@ class LogoutService {
     required ProcessedNostrEventStore processedNostrEventStore,
     required AppDatabase appDatabase,
     Future<void> Function()? deleteDatabaseFiles,
+    Future<void> Function()? clearSharedPreferences,
     Future<void> Function()? clearSecureStorage,
   })  : _vaultRepository = vaultRepository,
         _vaultShareService = vaultShareService,
@@ -54,7 +57,13 @@ class LogoutService {
         _processedNostrEventStore = processedNostrEventStore,
         _appDatabase = appDatabase,
         _deleteDatabaseFiles = deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles,
+        _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
         _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe;
+
+  static Future<void> _clearAllSharedPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
 
   Future<void> logout() async {
     Log.info('LogoutService: clearing all vault data and keys');
@@ -100,6 +109,13 @@ class LogoutService {
       Log.info('LogoutService: deleted SQLCipher database files');
     } catch (e, st) {
       Log.error('Error deleting SQLCipher files during logout', e, st);
+    }
+
+    try {
+      await _clearSharedPreferences();
+      Log.info('LogoutService: cleared SharedPreferences');
+    } catch (e, st) {
+      Log.error('Error clearing SharedPreferences during logout', e, st);
     }
 
     try {

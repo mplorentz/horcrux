@@ -722,7 +722,8 @@ class HorcruxNotificationService {
   Future<List<String>> _loadLastSyncedConsentSnapshot() async {
     if (_database != null) {
       try {
-        return await _database.appStateDao.syncedConsentIds();
+        final raw = await _database.appStateDao.syncedConsentIds();
+        return _normalizeConsentIds(raw);
       } catch (e, st) {
         Log.warning(
           'HorcruxNotificationService: failed reading synced_consents snapshot',
@@ -735,13 +736,7 @@ class HorcruxNotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getStringList(_consentSnapshotPrefsKey) ?? const <String>[];
-      final normalized = raw
-          .map((e) => e.trim().toLowerCase())
-          .where((e) => isValidHexPubkey(e))
-          .toSet()
-          .toList()
-        ..sort();
-      return normalized;
+      return _normalizeConsentIds(raw);
     } catch (e, st) {
       Log.warning('HorcruxNotificationService: failed reading consent snapshot', e, st);
       return const <String>[];
@@ -749,7 +744,7 @@ class HorcruxNotificationService {
   }
 
   Future<void> _storeLastSyncedConsentSnapshot(List<String> senders) async {
-    final normalized = senders.map((e) => e.trim().toLowerCase()).toSet().toList()..sort();
+    final normalized = _normalizeConsentIds(senders);
     if (_database != null) {
       try {
         await _database.appStateDao.replaceSyncedConsentIds(normalized);
@@ -768,6 +763,16 @@ class HorcruxNotificationService {
     } catch (e, st) {
       Log.warning('HorcruxNotificationService: failed persisting consent snapshot', e, st);
     }
+  }
+
+  List<String> _normalizeConsentIds(Iterable<String> consentIds) {
+    final normalized = consentIds
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => isValidHexPubkey(e))
+        .toSet()
+        .toList()
+      ..sort();
+    return normalized;
   }
 
   bool _sameConsentSet(List<String> a, List<String> b) {
