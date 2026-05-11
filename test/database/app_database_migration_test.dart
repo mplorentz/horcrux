@@ -150,7 +150,7 @@ void main() {
       'relay_configurations': '[{"id":"relay-1","url":"wss://relay.example.com"}]',
       'scanning_status': '{"isActive":true}',
       'horcrux_first_open_utc_ms': 1715000000000,
-      'viewed_recovery_notification_ids': <String>['req-b', 'req-a', 'req-b'],
+      'viewed_recovery_notification_ids': '["req-b","req-a","req-b"]',
       'horcrux_notifier_last_synced_consents': <String>[
         'B',
         'a',

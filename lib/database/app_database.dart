@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -356,18 +358,42 @@ class AppDatabase extends _$AppDatabase {
     await migrateString(_legacyScanningStatusKey);
     await migrateInt(_legacyFirstOpenUtcMsKey);
 
+    List<String> readLegacyStringList(String key) {
+      try {
+        final direct = prefs.getStringList(key);
+        if (direct != null) {
+          return direct;
+        }
+      } catch (_) {
+        // Key exists but was stored as a different prefs type.
+      }
+      final encoded = prefs.getString(key);
+      if (encoded == null || encoded.isEmpty) {
+        return const <String>[];
+      }
+      try {
+        final decoded = jsonDecode(encoded);
+        if (decoded is List) {
+          return decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        return const <String>[];
+      }
+      return const <String>[];
+    }
+
     final viewedIds = await appStateDao.viewedNotificationIds();
     if (viewedIds.isEmpty) {
-      final legacyViewed = prefs.getStringList(_legacyViewedNotificationIdsKey);
-      if (legacyViewed != null && legacyViewed.isNotEmpty) {
+      final legacyViewed = readLegacyStringList(_legacyViewedNotificationIdsKey);
+      if (legacyViewed.isNotEmpty) {
         await appStateDao.replaceViewedNotificationIds(legacyViewed);
       }
     }
 
     final syncedConsentIds = await appStateDao.syncedConsentIds();
     if (syncedConsentIds.isEmpty) {
-      final legacySyncedConsents = prefs.getStringList(_legacySyncedConsentsKey);
-      if (legacySyncedConsents != null && legacySyncedConsents.isNotEmpty) {
+      final legacySyncedConsents = readLegacyStringList(_legacySyncedConsentsKey);
+      if (legacySyncedConsents.isNotEmpty) {
         await appStateDao.replaceSyncedConsentIds(legacySyncedConsents);
       }
     }
