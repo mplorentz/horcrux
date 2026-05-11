@@ -722,9 +722,19 @@ class VaultRepository {
                       (cached) => cached.id == s.id,
                       orElse: () => s,
                     )
-                    // Ensure the DB-sourced inviteCode (from invitations table) is
-                    // always present. The overlay may be stale or absent after restart.
-                    .copyWith(inviteCode: s.inviteCode),
+                    // Prefer the DB-sourced inviteCode (from invitations table) so it
+                    // survives restarts. Fall back to whatever the overlay has so that
+                    // in-memory-only invite codes (e.g. created via BackupConfig
+                    // directly without a DB invitation row) are also preserved.
+                    .copyWith(
+                      inviteCode: s.inviteCode ??
+                          overlay.stewards
+                              .firstWhere(
+                                (cached) => cached.id == s.id,
+                                orElse: () => s,
+                              )
+                              .inviteCode,
+                    ),
             ];
       backupConfig = BackupConfig(
         vaultId: row.id,
@@ -794,8 +804,7 @@ class VaultRepository {
     final rows = await _db.invitationDao.forVault(vaultId);
     return {
       for (final r in rows)
-        if (r.stewardId != null && r.acceptedAt == null && r.revokedAt == null)
-          r.stewardId!: r.code,
+        if (r.stewardId != null && r.revokedAt == null) r.stewardId!: r.code,
     };
   }
 

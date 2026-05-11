@@ -223,8 +223,7 @@ class VaultDetailRepository {
     final rows = await _db.invitationDao.forVault(vaultId);
     return {
       for (final r in rows)
-        if (r.stewardId != null && r.acceptedAt == null && r.revokedAt == null)
-          r.stewardId!: r.code,
+        if (r.stewardId != null && r.revokedAt == null) r.stewardId!: r.code,
     };
   }
 
