@@ -239,19 +239,21 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     final vaultName = vault?.name ?? 'Unknown Vault';
     final ownerName = vault?.ownerName ?? 'Unknown Owner';
 
-    // Get initiator contact info from vault data
-    // Phase 2d: only reveal contact info during an active recovery.
+    // Get initiator contact info from vault data.
+    // Contact info is shown unconditionally here because the user is already
+    // viewing a recovery request — the screen context implies an active
+    // recovery. The vault-level hasActiveRecovery gate cannot fire until Phase 3
+    // populates VaultDetail.recoveryRequests from the recovery_requests table.
+    // TODO(Phase 3): remove this comment once hasActiveRecovery is reliable.
     String? initiatorContactInfo;
-    if (vault != null && vault.hasActiveRecovery) {
-      if (vault.backupConfig != null) {
-        try {
-          final steward = vault.backupConfig!.stewards.firstWhere(
-            (s) => s.pubkey == request.initiatorPubkey,
-          );
-          initiatorContactInfo = steward.contactInfo;
-        } catch (e) {
-          // Steward not found in backupConfig
-        }
+    if (vault != null && vault.backupConfig != null) {
+      try {
+        final steward = vault.backupConfig!.stewards.firstWhere(
+          (s) => s.pubkey == request.initiatorPubkey,
+        );
+        initiatorContactInfo = steward.contactInfo;
+      } catch (e) {
+        // Steward not found in backupConfig
       }
     }
 

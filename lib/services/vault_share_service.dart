@@ -102,16 +102,7 @@ class VaultShareService {
 
   /// Get the most recent share for a vault, or null if none exist.
   Future<Share?> getVaultShare(String vaultId) async {
-    final shares = await repository.getSharesForVault(vaultId);
-    if (shares.isEmpty) return null;
-    return shares.reduce((current, next) {
-      final currentVersion = current.distributionVersion ?? -1;
-      final nextVersion = next.distributionVersion ?? -1;
-      if (currentVersion != nextVersion) {
-        return nextVersion > currentVersion ? next : current;
-      }
-      return next.createdAt > current.createdAt ? next : current;
-    });
+    return latestShare(await repository.getSharesForVault(vaultId));
   }
 
   /// Add or update share data for a vault.
