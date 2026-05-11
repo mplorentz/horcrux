@@ -262,8 +262,6 @@ class StewardList extends ConsumerWidget {
   }
 
   /// Extract stewards from vault data.
-  ///
-  /// Phase 2d: contact info is gated on [VaultDetail.hasActiveRecovery].
   List<StewardInfo> _extractStewards(VaultDetail vault, String? currentPubkey) {
     // Use backupConfig stewards when available (populated from the normalized DB).
     if (vault.backupConfig != null) {
@@ -278,8 +276,11 @@ class StewardList extends ConsumerWidget {
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
-          // Phase 2d: only reveal contact info during an active recovery.
-          contactInfo: vault.hasActiveRecovery ? s.contactInfo : null,
+          // TODO(Phase 3): gate contactInfo on vault.hasActiveRecovery once the
+          // recovery_requests table is populated by VaultDetailRepository. Until
+          // then recoveryRequests is always empty, so hasActiveRecovery is always
+          // false and contact info would be unconditionally hidden.
+          contactInfo: s.contactInfo,
           isOwner: s.isOwner,
           status: s.status,
         );
@@ -327,7 +328,8 @@ class StewardList extends ConsumerWidget {
     }
 
     // Add stewards from the share's embedded peer list.
-    // Phase 2d: contact info only visible during active recovery.
+    // TODO(Phase 3): gate contactInfo on vault.hasActiveRecovery once
+    // VaultDetailRepository populates recoveryRequests from the DB.
     if (latestShare.stewards != null) {
       for (final steward in latestShare.stewards!) {
         final stewardPubkey = steward['pubkey'];
@@ -339,7 +341,7 @@ class StewardList extends ConsumerWidget {
         addSteward(
           pubkey: stewardPubkey,
           name: stewardName,
-          contactInfo: vault.hasActiveRecovery ? stewardContactInfo : null,
+          contactInfo: stewardContactInfo,
           isOwner: isOwner,
         );
       }
