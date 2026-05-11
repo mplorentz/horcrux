@@ -295,15 +295,7 @@ class VaultRepository {
   /// Write [share] into the `held_shares` table and prune old versions.
   ///
   /// Also bumps `vaults.last_synced_at` so the reactive vault stream re-emits.
-  ///
-  /// When [omitSharePayload] is true, [sharePayload] is stored as empty for the
-  /// owner-as-steward carve-out (shard bytes live only on Nostr until
-  /// [RecoveryService] hydrates them by gift-wrap id).
-  Future<void> addShareToVault(
-    String vaultId,
-    Share share, {
-    bool omitSharePayload = false,
-  }) async {
+  Future<void> addShareToVault(String vaultId, Share share) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final id = '${vaultId}_${share.shareIndex}_${share.distributionVersion ?? 0}_$now';
 
@@ -312,7 +304,7 @@ class VaultRepository {
         id: id,
         vaultId: vaultId,
         shareIndex: share.shareIndex,
-        sharePayload: omitSharePayload ? '' : share.payload,
+        sharePayload: share.payload,
         distributionVersion: share.distributionVersion ?? 0,
         receivedAt: now,
         nostrEventId: Value(share.nostrEventId),

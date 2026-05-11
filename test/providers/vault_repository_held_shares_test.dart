@@ -70,43 +70,6 @@ void main() {
       expect(json['created_at'], expectedSeconds);
     });
 
-    test('addShareToVault omitSharePayload stores empty shard bytes', () async {
-      const vaultId = 'omit-payload-vault';
-
-      await repository.addVault(
-        Vault(
-          id: vaultId,
-          name: 'V',
-          createdAt: DateTime.utc(2024, 1, 2),
-          ownerPubkey: TestHexPubkeys.alice,
-          pushEnabled: false,
-        ),
-      );
-
-      const share = Share(
-        payload: 'secret-shard-should-not-persist',
-        threshold: 2,
-        shareIndex: 0,
-        totalShares: 3,
-        primeMod: 'pm',
-        creatorPubkey: TestHexPubkeys.alice,
-        createdAt: 1704153600,
-        vaultId: vaultId,
-        distributionVersion: 1,
-        nostrEventId: 'evt-omit-1',
-      );
-
-      await repository.addShareToVault(vaultId, share, omitSharePayload: true);
-
-      final rows = await db.heldShareDao.forVault(vaultId);
-      expect(rows, hasLength(1));
-      expect(rows.single.sharePayload, isEmpty);
-      expect(rows.single.nostrEventId, 'evt-omit-1');
-
-      final shares = await repository.getSharesForVault(vaultId);
-      expect(shares.single.payload, isEmpty);
-    });
-
     test(
       'mergeVaultRowFromIncomingShare persists Shamir metadata when vault has '
       'no BackupConfig (steward bootstrap)',

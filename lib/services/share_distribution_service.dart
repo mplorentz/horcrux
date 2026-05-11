@@ -123,12 +123,10 @@ class ShareDistributionService {
                 recipientPubkey: ownerPubkey,
               );
 
-              // Owner carve-out: keep version/index/event metadata in
-              // `held_shares` but do not persist Shamir material locally.
+              // Store share locally (same persistence model as steward-held keys).
               await _repository.addShareToVault(
                 config.vaultId,
                 shareWithEventId,
-                omitSharePayload: true,
               );
 
               // Immediately acknowledge with current distribution version

@@ -122,11 +122,7 @@ class VaultDetailRepository {
       // This device owns the vault.
       Share? selfHeldShare;
       if (heldShareRows.isNotEmpty) {
-        final held = heldShareRows.first;
-        // Owner carve-out: metadata-only row (empty payload); omit invalid Share.
-        if (held.sharePayload.isNotEmpty) {
-          selfHeldShare = _shareFromRow(held, row);
-        }
+        selfHeldShare = _shareFromRow(heldShareRows.first, row);
       }
       return OwnedVaultDetail(
         id: row.id,
