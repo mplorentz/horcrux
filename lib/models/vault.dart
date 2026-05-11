@@ -2,7 +2,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'backup_config.dart';
 import 'recovery_request.dart';
-import 'share.dart';
 
 part 'vault.freezed.dart';
 
@@ -23,34 +22,42 @@ class VaultBackupConstraints {
 
 /// Local vault material state for the current device (not who owns the vault).
 ///
-/// - [unlocked]: decrypted vault content is present locally.
-/// - [holdingShare]: at least one share is stored locally but content is not decrypted.
-/// - [awaitingShare]: no local content and no shares yet (e.g. invite accepted, share not received).
+/// **Phase 6 note**: This enum will be dropped when all UI sites migrate to
+/// pattern-matching on [VaultDetail]. Until then, [VaultDetail.state] exposes
+/// it for incremental migration.
+///
+/// - [unlocked]: this device owns the vault (OwnedVaultDetail).
+/// - [holdingShare]: this device holds a steward share (StewardedVaultDetail
+///   with a non-null latestShare).
+/// - [awaitingShare]: invite accepted but share not yet received
+///   (StewardedVaultDetail with latestShare == null).
 enum VaultState {
   unlocked,
   holdingShare,
   awaitingShare,
 }
 
-/// Data model for a secure vault containing encrypted text content
+/// Shared data model for a vault entry on the current device.
+///
+/// **Phase 2c**: [content] and [shares] have been removed. Role-specific data
+/// (vault content for owners, held share for stewards) now lives exclusively
+/// in [VaultDetail] (see [vaultDetailProvider]).
 ///
 /// **Archival:** archived state is defined only by [archivedAt] (and optional
-/// [archivedReason]). Use [isArchived] as a convenience read for
+/// [archivedReason]). Use [isArchived] as a convenience for
 /// `archivedAt != null`.
 @freezed
 class Vault with _$Vault {
   const factory Vault({
     required String id,
     required String name,
-    String? content, // Nullable - null when content is not decrypted
     required DateTime createdAt,
-    required String ownerPubkey, // Hex format, 64 characters
-    String? ownerName, // Name of the vault owner
-    @Default([]) List<Share> shares, // Single as steward, multiple during recovery
-    @Default([]) List<RecoveryRequest> recoveryRequests, // Embedded recovery requests
-    BackupConfig? backupConfig, // Optional backup configuration
-    DateTime? archivedAt, // When the vault was archived
-    String? archivedReason, // Reason for archiving
+    required String ownerPubkey,
+    String? ownerName,
+    @Default([]) List<RecoveryRequest> recoveryRequests,
+    BackupConfig? backupConfig,
+    DateTime? archivedAt,
+    String? archivedReason,
     // Whether the vault owner has opted this vault into push notifications.
     //
     // This is independent of the per-user global opt-in (see
@@ -69,52 +76,15 @@ class Vault with _$Vault {
   /// True when this vault is archived (see [archivedAt]).
   bool get isArchived => archivedAt != null;
 
-  /// Derives [VaultState] from locally stored content and shares (see [VaultState]).
-  ///
-  /// Recovery state is user-specific (only for the initiator) and should be checked with
-  /// [recoveryStatusProvider], not here.
-  VaultState get state {
-    if (content != null) {
-      return VaultState.unlocked;
-    }
-    if (shares.isNotEmpty) {
-      return VaultState.holdingShare;
-    }
-    return VaultState.awaitingShare;
-  }
-
   /// Whether [hexPubkey] (hex-encoded Nostr public key) is this vault's owner.
   bool isVaultOwner(String hexPubkey) => ownerPubkey == hexPubkey;
 
-  /// Check if we are a steward for this vault (have shares)
-  bool get isSteward => shares.isNotEmpty;
-
-  /// Get the most recent share from this vault's list.
-  /// Returns null if there are no shares.
-  /// Prefers shares with higher distributionVersion, then newer createdAt timestamp.
-  Share? get mostRecentShare {
-    if (shares.isEmpty) {
-      return null;
-    }
-    return shares.reduce((current, next) {
-      // Compare distributionVersion (null treated as -1, meaning older)
-      final currentVersion = current.distributionVersion ?? -1;
-      final nextVersion = next.distributionVersion ?? -1;
-
-      if (currentVersion != nextVersion) {
-        return nextVersion > currentVersion ? next : current;
-      }
-
-      return next.createdAt > current.createdAt ? next : current;
-    });
-  }
-
-  /// Check if this vault has an active recovery request
+  /// True when at least one recovery request is active.
   bool get hasActiveRecovery {
     return recoveryRequests.any((request) => request.status.isActive);
   }
 
-  /// Get the active recovery request if one exists
+  /// The active recovery request if one exists, else null.
   RecoveryRequest? get activeRecoveryRequest {
     try {
       return recoveryRequests.firstWhere((request) => request.status.isActive);
@@ -123,23 +93,11 @@ class Vault with _$Vault {
     }
   }
 
-  /// Return the recovery request the given user is currently entitled to manage
-  /// from this vault, or null. "Manageable" mirrors `recoveryStatusProvider`:
-  /// any in-flight status (`isActive`) plus `completed`, since users finalize a
-  /// recovery from the same Manage screen once enough stewards have approved.
+  /// Returns the most recent manageable [RecoveryRequest] for [pubkey].
   ///
-  /// Pass [isPractice] to filter to real (`false`) or practice (`true`) sessions
-  /// only; leave it null to consider **both** kinds independently and return the
-  /// single newer of the two manageable sessions (so the status banner stays in
-  /// sync with the bottom actions).
-  ///
-  /// Selection is **per kind** (real vs practice): among matching requests we
-  /// take the **most recent** by [RecoveryRequest.requestedAt]. If the newest
-  /// request for that kind is `cancelled` or `archived`, we return null for that
-  /// kind so an older `completed` row does not keep "Manage recovery" visible
-  /// after the user cancels their latest attempt.
-  ///
-  /// Other users' requests are ignored ([initiatorPubkey] must match).
+  /// "Manageable" means any in-flight status (`isActive`) plus `completed`.
+  /// Pass [isPractice] to limit to one kind; omit to return the newer of the
+  /// two kinds. Returns null when no manageable request exists.
   RecoveryRequest? manageableRecoveryFor(String? pubkey, {bool? isPractice}) {
     if (pubkey == null) return null;
     if (isPractice != null) {
@@ -171,11 +129,5 @@ class Vault with _$Vault {
     if (manageable.isEmpty) return null;
     manageable.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
     return manageable.first;
-  }
-
-  /// Create a copy with content explicitly cleared (set to null)
-  /// This preserves shares, backup config, and other data
-  Vault copyWithContentDeleted() {
-    return copyWith(content: null); // Explicitly clear content
   }
 }

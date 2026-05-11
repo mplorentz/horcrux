@@ -113,7 +113,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -146,9 +145,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Process invitation acceptance (which adds Device C as a new steward)
@@ -235,7 +234,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault Invited',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -269,9 +267,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Device C accepts the invitation
@@ -362,7 +360,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault Mixed Statuses',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -392,9 +389,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Add Device C as a new steward

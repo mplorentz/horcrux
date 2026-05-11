@@ -57,9 +57,9 @@ void main() {
         return Nip01Event(
           kind: 1059,
           pubKey: 'a' * 64,
-          content: 'stub-${DateTime.now().microsecondsSinceEpoch}',
           tags: const [],
           createdAt: 1,
+          content: '',
         );
       }
 
@@ -241,7 +241,7 @@ void main() {
         () => shardDistributionService.distributeShares(
           ownerPubkey: testOwnerPubkey,
           config: emptyConfig,
-          shares: [],
+          shares: const [],
         ),
         throwsA(isA<Exception>()),
       );

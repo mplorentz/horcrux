@@ -375,11 +375,9 @@ class InvitationService {
       final vaultStub = Vault(
         id: invitation.vaultId,
         name: invitation.vaultName,
-        content: null, // No content yet - waiting for shard
         createdAt: invitation.createdAt,
         ownerPubkey: invitation.ownerPubkey,
-        ownerName: invitation.ownerName, // Include owner name from invitation
-        shares: [], // No shares yet - awaiting key distribution
+        ownerName: invitation.ownerName,
         backupConfig: null,
         // Stub created at acceptance time; the authoritative push setting
         // comes from the owner later via Share. Start opted-out so we

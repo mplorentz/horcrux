@@ -14,9 +14,11 @@ import '../models/share.dart';
 import '../models/steward.dart';
 import '../models/steward_status.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../services/login_service.dart';
 import '../services/logger.dart';
 import 'key_provider.dart';
+import 'vault_detail_repository.dart';
 
 /// Stream provider that automatically subscribes to vault changes
 final vaultListProvider = StreamProvider.autoDispose<List<Vault>>((ref) {
@@ -38,6 +40,28 @@ final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   );
   ref.onDispose(repository.dispose);
   return repository;
+});
+
+/// Provider for [VaultDetailRepository].
+final vaultDetailRepositoryProvider = Provider<VaultDetailRepository>((ref) {
+  final repository = VaultDetailRepository(db: ref.read(appDatabaseProvider));
+  ref.onDispose(repository.dispose);
+  return repository;
+});
+
+/// Stream provider for the role-typed [VaultDetail] of a specific vault.
+///
+/// Emits null when the vault does not exist. Emits [OwnedVaultDetail] when
+/// this device owns the vault, or [StewardedVaultDetail] otherwise.
+final vaultDetailProvider = StreamProvider.family<VaultDetail?, String>((ref, vaultId) {
+  final repository = ref.watch(vaultDetailRepositoryProvider);
+  return repository.watchVaultDetail(vaultId);
+});
+
+/// Stream provider for the list of all [VaultDetail] entries.
+final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((ref) {
+  final repository = ref.watch(vaultDetailRepositoryProvider);
+  return repository.vaultListStream;
 });
 
 /// Repository for vaults backed by drift DAOs (`vaults`, `owned_vaults`,
@@ -153,13 +177,14 @@ class VaultRepository {
 
   Future<void> addVault(Vault vault) => _persistVault(vault);
 
-  /// Update the textual fields of an existing vault.
+  /// Update the textual fields and content of an existing owned vault.
   Future<void> updateVault(String id, String name, String content) async {
     final existing = await getVault(id);
     if (existing == null) {
       throw ArgumentError('Vault not found: $id');
     }
-    await _persistVault(existing.copyWith(name: name, content: content));
+    await _persistVault(existing.copyWith(name: name));
+    await saveOwnedVaultContent(id, content);
   }
 
   Future<void> setPushEnabled(String vaultId, bool enabled) async {
@@ -282,11 +307,18 @@ class VaultRepository {
         pushEnabled: Value(share.pushEnabled ?? true),
       ));
       await _db.heldShareDao.pruneOldVersions(vaultId);
-      // Touch last_synced_at so the vaults watchAll() stream re-emits and
-      // _hydrateAll picks up the new held_shares row.
-      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
-        VaultsCompanion(lastSyncedAt: Value(now)),
-      );
+      // Write primeMod to the vault row when provided so that
+      // _shareFromHeldShareRow can hydrate valid Share objects. For owned
+      // vaults, _persistVault doesn't write primeMod (BackupConfig doesn't
+      // carry it); persisting it here fills that gap. For steward vaults
+      // mergeVaultRowFromIncomingShare already set it, so this is idempotent.
+      final vaultsUpdate = share.primeMod.isNotEmpty
+          ? VaultsCompanion(
+              primeMod: Value(share.primeMod),
+              lastSyncedAt: Value(now),
+            )
+          : VaultsCompanion(lastSyncedAt: Value(now));
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(vaultsUpdate);
     });
     Log.info(
       'addShareToVault: wrote held_share for vault $vaultId '
@@ -398,21 +430,64 @@ class VaultRepository {
     );
   }
 
-  Future<void> deleteVaultContent(String vaultId) async {
-    final existing = await getVault(vaultId);
-    if (existing == null) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-    await _persistVault(existing.copyWithContentDeleted());
-    Log.info('Deleted content for vault $vaultId');
+  /// Write or replace the NIP-44 [content] ciphertext for an owned vault.
+  ///
+  /// Creates the `owned_vaults` row on first call; subsequent calls update it
+  /// in-place. This is the only path that touches `owned_vaults.content` after
+  /// Phase 2c (where [Vault.content] was removed).
+  ///
+  /// Bumps `vaults.last_synced_at` in the same transaction so that
+  /// [vaultDao.watchAll] / [vaultDao.watchById] re-emit *after* the
+  /// `owned_vaults` row is committed. Without this touch, callers that do
+  /// `addVault` then `saveOwnedVaultContent` (create-new-vault) or
+  /// `_persistVault` then `saveOwnedVaultContent` (updateVault) expose a race:
+  /// the first vaults-table write fires a re-emission that may hydrate
+  /// [OwnedVaultDetail] before the `owned_vaults` row exists, permanently
+  /// classifying the vault as [StewardedVaultDetail] until the next
+  /// unrelated vaults write.
+  Future<void> saveOwnedVaultContent(String vaultId, String content) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final createdAtMs = (await _db.vaultDao.getById(vaultId))?.createdAt ?? now;
+    await _db.transaction(() async {
+      await _db.into(_db.ownedVaults).insertOnConflictUpdate(
+            OwnedVaultsCompanion.insert(
+              vaultId: vaultId,
+              content: content,
+              contentHmac: _placeholderHmac(content),
+              createdBySelfAt: createdAtMs,
+            ),
+          );
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(lastSyncedAt: Value(now)),
+      );
+    });
+    Log.info('saveOwnedVaultContent: wrote content for vault $vaultId');
   }
 
+  /// Delete the NIP-44 content for [vaultId] (removes the `owned_vaults` row).
+  ///
+  /// Also bumps `vaults.last_synced_at` in the same transaction so that
+  /// [vaultDao.watchAll] / [vaultDao.watchById] re-emit and both
+  /// [VaultRepository] and [VaultDetailRepository] reactive streams reflect
+  /// the change immediately. Without this touch the streams only observe
+  /// changes to the `vaults` table, so Travel Mode and exitRecoveryMode would
+  /// delete content but the UI would continue showing a stale
+  /// [OwnedVaultDetail] until something else modified the vault row.
+  Future<void> deleteVaultContent(String vaultId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.transaction(() async {
+      await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vaultId))).go();
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(lastSyncedAt: Value(now)),
+      );
+    });
+    Log.info('deleteVaultContent: removed owned_vaults row for vault $vaultId');
+  }
+
+  /// True when at least one `held_shares` row exists for [vaultId].
   Future<bool> isKeyHolderForVault(String vaultId) async {
-    final vault = await getVault(vaultId);
-    if (vault == null) {
-      throw ArgumentError('Vault not found: $vaultId');
-    }
-    return vault.isSteward;
+    final row = await _db.heldShareDao.mostRecentForVault(vaultId);
+    return row != null;
   }
 
   // ========== Recovery Request Management (Phase 3) ==========
@@ -475,10 +550,8 @@ class VaultRepository {
   }
 
   Future<Vault> _hydrate(VaultRow row) async {
-    final ownedRow = await _db.ownedVaultDao.getByVaultId(row.id);
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
-    final heldShareRows = await _db.heldShareDao.forVault(row.id);
 
     final dbStewards = stewardRows.map(_stewardFromRow).toList();
     BackupConfig? backupConfig;
@@ -504,19 +577,12 @@ class VaultRepository {
       );
     }
 
-    // Back-compat shim (Phase 2a): populate Vault.shares from held_shares.
-    // Phases 2b/2c will introduce the sealed VaultDetail read model and
-    // eventually drop this field.
-    final shares = heldShareRows.map((r) => _shareFromHeldShareRow(r, row)).toList();
-
     return Vault(
       id: row.id,
       name: row.name,
-      content: ownedRow?.content,
       createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       ownerPubkey: row.ownerPubkey,
       ownerName: row.ownerName,
-      shares: shares,
       recoveryRequests: const [],
       backupConfig: backupConfig,
       archivedAt:
@@ -527,16 +593,15 @@ class VaultRepository {
   }
 
   /// Build a [Share] from a [HeldShareRow] supplemented with vault-level
-  /// metadata from [vaultRow]. Used both in [_hydrate] and [getSharesForVault].
+  /// metadata from [vaultRow]. Used by [getSharesForVault].
   ///
   /// Not all [Share] fields are stored in `held_shares` (e.g. stewards list,
   /// ownerName, instructions, relayUrls). Those remain null in the hydrated
-  /// Share — sufficient for UI that reads [Vault.shares]. The full wire
-  /// payload is not re-persisted after the gift-wrap is unwrapped.
+  /// Share. The full wire payload is not re-persisted after the gift-wrap is
+  /// unwrapped.
   ///
-  /// [VaultRow.createdAt] is milliseconds since epoch ([_persistVault]); [Share.createdAt]
-  /// and Nostr `created_at` are Unix seconds — convert here so [Share.ageInSeconds],
-  /// [Share.isRecent], and [shareToJson] stay correct.
+  /// [VaultRow.createdAt] is milliseconds since epoch; [Share.createdAt] and
+  /// Nostr `created_at` are Unix seconds — convert here.
   Share _shareFromHeldShareRow(HeldShareRow r, VaultRow vaultRow) {
     return Share(
       payload: r.sharePayload,
@@ -599,22 +664,6 @@ class VaultRepository {
               createdAt: createdAtMs,
             ),
           );
-
-      if (vault.content != null) {
-        await _db.into(_db.ownedVaults).insertOnConflictUpdate(
-              OwnedVaultsCompanion.insert(
-                vaultId: vault.id,
-                content: vault.content!,
-                contentHmac: _placeholderHmac(vault.content!),
-                createdBySelfAt: createdAtMs,
-              ),
-            );
-      } else {
-        await (_db.delete(
-          _db.ownedVaults,
-        )..where((v) => v.vaultId.equals(vault.id)))
-            .go();
-      }
 
       // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
       // active stewards out as plain rows; the append-on-replace history

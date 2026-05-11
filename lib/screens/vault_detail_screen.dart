@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
@@ -49,7 +50,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vaultAsync = ref.watch(vaultProvider(vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
 
     return vaultAsync.when(
       loading: () => const Scaffold(
@@ -67,7 +68,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
               Text('Error: $error'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.refresh(vaultProvider(vaultId)),
+                onPressed: () => ref.refresh(vaultDetailProvider(vaultId)),
                 child: const Text('Retry'),
               ),
             ],
@@ -88,7 +89,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, Vault vault) {
+  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, VaultDetail vault) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return PopScope(
@@ -110,7 +111,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
   Widget _buildScaffold(
     BuildContext context,
     WidgetRef ref,
-    Vault vault,
+    VaultDetail vault,
     AsyncValue<String?> currentPubkeyAsync,
   ) {
     return HorcruxScaffold(
@@ -233,7 +234,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Vault vault) {
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -263,7 +264,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showRedistributeDialog(BuildContext context, WidgetRef ref, Vault vault) {
+  void _showRedistributeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
     if (vault.backupConfig == null) {
       context.showHorcruxSnackBar(
         'Recovery plan not found',
@@ -281,7 +282,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       return;
     }
 
-    if (vault.content == null) {
+    if (vault is! OwnedVaultDetail) {
       context.showHorcruxSnackBar(
         'Cannot redistribute: vault content is not available',
         kind: HorcruxSnackKind.error,
@@ -331,7 +332,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, Vault vault) async {
+  Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, VaultDetail vault) async {
     if (!context.mounted) return;
 
     // Show loading indicator on root navigator (so it persists even if context becomes unmounted)

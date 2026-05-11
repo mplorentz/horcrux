@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/widgets/vault_status_banner.dart';
@@ -18,18 +18,28 @@ void main() {
   final me = 'a' * 64;
   final other = 'b' * 64;
 
-  Vault buildVault({required List<RecoveryRequest> requests, String? ownerPubkey}) {
-    return Vault(
+  VaultDetail buildVault({required List<RecoveryRequest> requests, String? ownerPubkey}) {
+    return OwnedVaultDetail(
       id: 'vault-1',
       name: 'Test Vault',
-      content: 'plaintext',
-      createdAt: DateTime(2024, 1, 1),
       ownerPubkey: ownerPubkey ?? me,
+      ownerName: null,
+      threshold: 0,
+      totalShares: 0,
+      stewards: const [],
       recoveryRequests: requests,
+      pushEnabled: true,
+      createdAt: DateTime(2024, 1, 1),
+      archivedAt: null,
+      archivedReason: null,
+      backupConfig: null,
+      content: 'plaintext',
+      selfHeldShare: null,
     );
   }
 
-  Future<void> pumpBanner(WidgetTester tester, ProviderContainer container, Vault vault) async {
+  Future<void> pumpBanner(
+      WidgetTester tester, ProviderContainer container, VaultDetail vault) async {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,

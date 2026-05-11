@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
@@ -12,6 +12,7 @@ import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
 import 'dart:async';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   // Sample test data
@@ -49,37 +50,31 @@ void main() {
     );
   }
 
-  // Helper to create vault
+  // Helper to create vault (Phase 2c: no content/shares on Vault)
   Vault createTestVault({
     required String id,
     required String ownerPubkey,
-    List<Share>? shares,
+    List<dynamic>? shares, // ignored; use vaultDetailProvider override for share data
   }) {
     return Vault(
       id: id,
       name: 'Test Vault',
-      content: null, // No decrypted content for steward state
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: shares ?? [],
     );
   }
 
   group('StewardList Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const StewardList(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
         waitForSettle: false,
@@ -90,32 +85,28 @@ void main() {
         'steward_list_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const StewardList(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('empty state', (tester) async {
@@ -125,26 +116,24 @@ void main() {
         shares: [], // No shards
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 300),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_empty');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('single steward', (tester) async {
@@ -164,26 +153,24 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 300),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_single');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple stewards', (tester) async {
@@ -204,26 +191,24 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 400),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_multiple');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('steward viewing list with owner in peers', (tester) async {
@@ -243,26 +228,24 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 350),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_with_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('steward viewing list without owner in peers', (tester) async {
@@ -282,26 +265,24 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 350),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_without_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('current user key loading', (tester) async {
@@ -320,19 +301,17 @@ void main() {
       // Create a completer that never completes to simulate loading
       final completer = Completer<String?>();
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => completer.future),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => completer.future),
+        ],
         surfaceSize: const Size(375, 200),
         useScaffold: true,
         waitForSettle: false,
@@ -343,7 +322,7 @@ void main() {
         'steward_list_user_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('owner as steward appears in list (backupConfig path)', (tester) async {
@@ -383,31 +362,28 @@ void main() {
       final vault = Vault(
         id: 'test-vault',
         name: 'Test Vault',
-        content: 'secret content',
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
         surfaceSize: const Size(375, 400),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_owner_as_steward_backup_config');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('owner not as steward excluded from list', (tester) async {
@@ -445,31 +421,28 @@ void main() {
       final vault = Vault(
         id: 'test-vault',
         name: 'Test Vault',
-        content: 'secret content',
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
         surfaceSize: const Size(375, 350),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_owner_not_steward');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('owner in shard peers appears in list (shard fallback path)', (tester) async {
@@ -488,34 +461,39 @@ void main() {
         ],
       );
 
-      final vault = Vault(
+      final vaultDetail = StewardedVaultDetail(
         id: 'test-vault',
         name: 'Test Vault',
-        content: null,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ownerPubkey: ownerPubkey,
         ownerName: 'Device A',
-        shares: [shard],
+        threshold: shard.threshold,
+        totalShares: shard.totalShares,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: null,
+        latestShare: shard,
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const StewardList(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(vaultDetail),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
+        ],
         surfaceSize: const Size(375, 400),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'steward_list_owner_in_shard_peers_fallback');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

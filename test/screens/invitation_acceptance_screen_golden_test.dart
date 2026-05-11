@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/invitation_link.dart';
@@ -45,7 +44,9 @@ void main() {
 
   group('InvitationAcceptanceScreen Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
         overrides: [
           // Use a Stream that never emits to show loading state
           invitationByCodeProvider('test-code').overrideWith(
@@ -58,12 +59,7 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
-        container: container,
         waitForSettle: false, // Loading state
       );
 
@@ -72,11 +68,13 @@ void main() {
         'invitation_acceptance_screen_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
         overrides: [
           invitationByCodeProvider(
             'test-code',
@@ -87,19 +85,15 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(tester, 'invitation_acceptance_screen_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('invitation not found', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'invalid-code'),
         overrides: [
           invitationByCodeProvider(
             'invalid-code',
@@ -110,18 +104,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'invalid-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_not_found',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - logged in user', (tester) async {
@@ -132,7 +120,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code'),
         overrides: [
           invitationByCodeProvider(
             'active-code',
@@ -143,18 +133,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_active_logged_in',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - no invitee name', (tester) async {
@@ -165,7 +149,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code-2'),
         overrides: [
           invitationByCodeProvider(
             'active-code-2',
@@ -176,18 +162,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-2'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_active_no_name',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - multiple relays', (tester) async {
@@ -203,7 +183,9 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code-3'),
         overrides: [
           invitationByCodeProvider(
             'active-code-3',
@@ -214,18 +196,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-3'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_active_multiple_relays',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - not logged in', (tester) async {
@@ -236,7 +212,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code-4'),
         overrides: [
           invitationByCodeProvider(
             'active-code-4',
@@ -245,18 +223,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-4'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_active_not_logged_in',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - checking account', (tester) async {
@@ -267,7 +239,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code-5'),
         overrides: [
           invitationByCodeProvider(
             'active-code-5',
@@ -278,12 +252,7 @@ void main() {
             return completer.future; // This will never complete
           }),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-5'),
-        container: container,
         waitForSettle: false, // Loading state
       );
 
@@ -292,7 +261,7 @@ void main() {
         'invitation_acceptance_screen_active_checking_account',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active invitation - account check error', (tester) async {
@@ -303,7 +272,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'active-code-6'),
         overrides: [
           invitationByCodeProvider(
             'active-code-6',
@@ -314,18 +285,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-6'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_active_account_error',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('redeemed invitation', (tester) async {
@@ -338,7 +303,9 @@ void main() {
         redeemedAt: DateTime(2024, 10, 1, 11, 0),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'redeemed-code'),
         overrides: [
           invitationByCodeProvider(
             'redeemed-code',
@@ -349,18 +316,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'redeemed-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_redeemed',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('denied invitation', (tester) async {
@@ -371,7 +332,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'denied-code'),
         overrides: [
           invitationByCodeProvider(
             'denied-code',
@@ -382,15 +345,9 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'denied-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(tester, 'invitation_acceptance_screen_denied');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('invalidated invitation', (tester) async {
@@ -401,7 +358,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'invalidated-code'),
         overrides: [
           invitationByCodeProvider(
             'invalidated-code',
@@ -412,18 +371,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'invalidated-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_invalidated',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error status invitation', (tester) async {
@@ -434,7 +387,9 @@ void main() {
         ownerName: 'Bob',
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const InvitationAcceptanceScreen(inviteCode: 'error-code'),
         overrides: [
           invitationByCodeProvider(
             'error-code',
@@ -445,18 +400,12 @@ void main() {
         ],
       );
 
-      await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'error-code'),
-        container: container,
-      );
-
       await screenMatchesGolden(
         tester,
         'invitation_acceptance_screen_error_status',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
@@ -468,16 +417,14 @@ void main() {
         relayUrls: ['wss://relay1.example.com', 'wss://relay2.example.com'],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          invitationByCodeProvider(
-            'device-test-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
-          currentPublicKeyProvider.overrideWith(
-            (ref) => Future.value(testPubkey),
-          ),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        invitationByCodeProvider(
+          'device-test-code',
+        ).overrideWith((ref) => Stream.value(invitation)),
+        currentPublicKeyProvider.overrideWith(
+          (ref) => Future.value(testPubkey),
+        ),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -494,7 +441,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -503,7 +450,7 @@ void main() {
         'invitation_acceptance_screen_multiple_devices',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

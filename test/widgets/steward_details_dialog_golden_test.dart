@@ -9,7 +9,7 @@ void main() {
     testGoldens('owner steward with contact info', (tester) async {
       final pubkey = 'a' * 64; // 64-char hex pubkey
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -35,12 +35,14 @@ void main() {
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_owner_with_contact');
+
+      await harness.dispose();
     });
 
     testGoldens('non-owner steward with contact info', (tester) async {
       final pubkey = 'b' * 64;
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -66,12 +68,14 @@ void main() {
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_steward_with_contact');
+
+      await harness.dispose();
     });
 
     testGoldens('steward without contact info', (tester) async {
       final pubkey = 'c' * 64;
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -97,6 +101,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_no_contact');
+
+      await harness.dispose();
     });
 
     testGoldens('steward with long contact info', (tester) async {
@@ -107,7 +113,7 @@ It contains important details about how to reach this steward.
 You can contact them via email, phone, or other methods.
 Please use this information responsibly.''';
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -133,12 +139,14 @@ Please use this information responsibly.''';
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_long_contact');
+
+      await harness.dispose();
     });
 
     testGoldens('steward with no display name', (tester) async {
       final pubkey = 'e' * 64;
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -164,12 +172,14 @@ Please use this information responsibly.''';
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_no_display_name');
+
+      await harness.dispose();
     });
 
     testGoldens('owner without contact info', (tester) async {
       final pubkey = 'f' * 64;
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         Builder(
           builder: (context) => ElevatedButton(
@@ -195,6 +205,8 @@ Please use this information responsibly.''';
       await tester.pumpAndSettle();
 
       await screenMatchesGolden(tester, 'steward_details_dialog_owner_no_contact');
+
+      await harness.dispose();
     });
   });
 }

@@ -454,7 +454,6 @@ void main() {
       return Vault(
         id: id,
         name: id,
-        content: 'decrypted',
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: owner,
         backupConfig: stewards.isEmpty
@@ -490,20 +489,35 @@ void main() {
       );
     }
 
+    /// Creates a stewarded vault whose co-steward list is built from [shard]'s
+    /// embedded peer list. After Phase 2c, co-steward discovery goes through
+    /// backupConfig (normalized stewards table), not shard.stewards directly.
     Vault stewardedVault({
       required String id,
       required String owner,
       required Share shard,
       BackupConfig? backupConfig,
     }) {
+      final config = backupConfig ??
+          (shard.stewards != null && shard.stewards!.isNotEmpty
+              ? createBackupConfig(
+                  vaultId: id,
+                  threshold: 1,
+                  totalKeys: shard.stewards!.length,
+                  stewards: [
+                    for (final s in shard.stewards!)
+                      if (s['pubkey'] != null)
+                        createSteward(pubkey: s['pubkey']!, name: s['name'] ?? ''),
+                  ],
+                  relays: const ['wss://relay.example'],
+                )
+              : null);
       return Vault(
         id: id,
         name: id,
-        content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: owner,
-        shares: [shard],
-        backupConfig: backupConfig,
+        backupConfig: config,
       );
     }
 
@@ -571,29 +585,27 @@ void main() {
       svc.dispose();
     });
 
-    test('prefers the most recent shard when multiple versions exist', () {
-      // The helper uses `vault.mostRecentShare`, so the older shard's stale
-      // co-steward list must not leak into the consent set.
+    test('uses stewards from backupConfig (reflects current distribution state)', () {
+      // Phase 2c: co-steward discovery goes through backupConfig (DB-normalized
+      // stewards table), not shard.stewards. A vault whose backupConfig was
+      // updated to charlie (distribution v2) must not include diana (v1).
       final svc = buildForCompute();
-      final oldShard = shardFor(
-        owner: TestHexPubkeys.alice,
-        coStewardPubkeys: [TestHexPubkeys.diana],
-        distributionVersion: 1,
-        createdAt: 1000,
-      );
-      final newShard = shardFor(
-        owner: TestHexPubkeys.alice,
-        coStewardPubkeys: [TestHexPubkeys.charlie],
-        distributionVersion: 2,
-        createdAt: 2000,
-      );
+      // backupConfig reflects the current (v2) distribution: charlie is the co-steward.
       final vault = Vault(
         id: 'v2',
         name: 'v2',
-        content: null,
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: TestHexPubkeys.alice,
-        shares: [oldShard, newShard],
+        backupConfig: createBackupConfig(
+          vaultId: 'v2',
+          threshold: 1,
+          totalKeys: 2,
+          stewards: [
+            createSteward(pubkey: TestHexPubkeys.bob, name: 'Bob'),
+            createSteward(pubkey: TestHexPubkeys.charlie, name: 'Charlie'),
+          ],
+          relays: const ['wss://relay.example'],
+        ),
       );
 
       final result = svc.computeConsentList(
@@ -667,12 +679,8 @@ void main() {
       svc.dispose();
     });
 
-    test('ignores invalid pubkeys, blanks, and invited stewards (no pubkey)', () {
+    test('ignores invited stewards (no pubkey) from backupConfig', () {
       final svc = buildForCompute();
-      // Exercise both input paths:
-      // - backupConfig.stewards: a legitimate invited steward (pubkey == null)
-      // - shard.stewards: raw maps from the owner's payload, which we must
-      //   defensively filter on the way in (non-hex, wrong length, blanks).
       const invited = Steward(
         id: 'invited',
         pubkey: null,
@@ -685,7 +693,6 @@ void main() {
       final vault = Vault(
         id: 'v',
         name: 'v',
-        content: 'c',
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: TestHexPubkeys.alice,
         backupConfig: createBackupConfig(
@@ -695,22 +702,6 @@ void main() {
           stewards: [invited, valid],
           relays: const ['wss://relay.example'],
         ),
-        shares: [
-          // An owner-side-only test wouldn't normally have shards, but we
-          // piggyback on this vault to also assert that bad shard entries
-          // get filtered.
-          shardFor(
-            owner: TestHexPubkeys.alice,
-            coStewardPubkeys: const [],
-          ).copyWith(
-            stewards: [
-              {'pubkey': 'not-hex', 'name': 'bad'},
-              {'pubkey': 'abcdef', 'name': 'short'},
-              {'pubkey': '', 'name': 'blank'},
-              {'pubkey': TestHexPubkeys.charlie, 'name': 'Charlie'},
-            ],
-          ),
-        ],
       );
 
       final result = svc.computeConsentList(
@@ -718,10 +709,8 @@ void main() {
         vaults: [vault],
       );
 
-      expect(
-        result,
-        equals([TestHexPubkeys.bob, TestHexPubkeys.charlie]..sort()),
-      );
+      // Bob is a valid steward; invited has no pubkey and should be ignored.
+      expect(result, equals([TestHexPubkeys.bob]..sort()));
       svc.dispose();
     });
 
@@ -788,7 +777,6 @@ void main() {
       final vault = Vault(
         id: 'v',
         name: 'v',
-        content: 'secret',
         createdAt: DateTime.utc(2024, 1, 1),
         ownerPubkey: TestHexPubkeys.alice,
         backupConfig: createBackupConfig(
@@ -954,7 +942,6 @@ void main() {
           Vault(
             id: 'v',
             name: 'v',
-            content: 'secret',
             createdAt: DateTime.utc(2024, 1, 1),
             ownerPubkey: TestHexPubkeys.alice,
             backupConfig: createBackupConfig(
@@ -1051,11 +1038,11 @@ void _tryPushForEventTests({
     return Nip01Event(
       kind: NostrKind.giftWrap.value,
       pubKey: 'a' * 64,
-      content: content,
       tags: [
         ['p', recipientPubkey],
       ],
       createdAt: 1700000000,
+      content: content,
     );
   }
 
@@ -1063,7 +1050,6 @@ void _tryPushForEventTests({
     return Vault(
       id: 'vault-push-1',
       name: name ?? 'Family Vault',
-      content: 'decrypted',
       createdAt: DateTime.utc(2024, 1, 1),
       ownerPubkey: TestHexPubkeys.alice,
       pushEnabled: pushEnabled,

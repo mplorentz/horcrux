@@ -53,6 +53,7 @@ dev_dependencies:
   golden_toolkit: ^0.15.0
   marionette_mcp: ^0.1.0
   drift_dev: ^2.20.0
+  sqlite3: ^2.9.4
   share_plus_platform_interface: ^6.1.0
 
 flutter_launcher_icons:

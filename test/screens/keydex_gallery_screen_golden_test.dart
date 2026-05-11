@@ -9,13 +9,15 @@ void main() {
 
   group('HorcruxGallery Golden Test', () {
     testGoldens('gallery screen - horcrux3 theme', (tester) async {
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const HorcruxGallery(),
         surfaceSize: const Size(375, 812), // iPhone X size
       );
 
       await screenMatchesGolden(tester, 'horcrux_gallery_screen');
+
+      await harness.dispose();
     });
   });
 }

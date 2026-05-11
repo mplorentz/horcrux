@@ -9,7 +9,6 @@ void main() {
     return Vault(
       id: 'v1',
       name: 'V',
-      content: 'x',
       createdAt: DateTime(2024, 1, 1),
       ownerPubkey: me,
       recoveryRequests: requests,

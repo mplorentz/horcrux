@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
@@ -9,7 +8,9 @@ import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/recovery_request_detail_screen.dart';
+import 'package:horcrux/services/login_service.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   // Sample test data
@@ -67,7 +68,6 @@ void main() {
     return Vault(
       id: id,
       name: name,
-      content: null,
       createdAt: DateTime(2024, 10, 1, 10, 30),
       ownerPubkey: ownerPubkey,
       ownerName: ownerName,
@@ -89,10 +89,15 @@ void main() {
         initiatorPubkey: initiatorPubkey,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
           // Mock the vault provider to return loading state
-          vaultProvider('test-vault').overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(null).asyncMap((_) async {
               await Future.delayed(
                 const Duration(seconds: 10),
@@ -102,12 +107,7 @@ void main() {
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
         surfaceSize: const Size(375, 1200),
         waitForSettle: false, // Loading state has infinite animations
       );
@@ -117,7 +117,7 @@ void main() {
         'recovery_request_detail_screen_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
@@ -126,26 +126,25 @@ void main() {
         initiatorPubkey: initiatorPubkey,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
           // Mock provider to throw an error
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
         surfaceSize: const Size(375, 1000),
       );
 
       await screenMatchesGolden(tester, 'recovery_request_detail_screen_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active request with instructions', (tester) async {
@@ -179,19 +178,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1200),
       );
 
@@ -200,7 +198,7 @@ void main() {
         'recovery_request_detail_screen_active_with_instructions',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('active request without instructions', (tester) async {
@@ -223,19 +221,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1000),
       );
 
@@ -244,7 +241,7 @@ void main() {
         'recovery_request_detail_screen_active_no_instructions',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('request with unknown initiator', (tester) async {
@@ -266,19 +263,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1000),
       );
 
@@ -287,7 +283,7 @@ void main() {
         'recovery_request_detail_screen_unknown_initiator',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('completed request (no action buttons)', (tester) async {
@@ -315,19 +311,18 @@ void main() {
         instructions: 'Recovery completed successfully.',
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1000),
       );
 
@@ -336,7 +331,7 @@ void main() {
         'recovery_request_detail_screen_completed',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
@@ -354,14 +349,15 @@ void main() {
         instructions: 'Please verify the requester\'s identity before approving.',
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        loginServiceProvider.overrideWithValue(
+          _GoldenFakeLoginService(testPubkey),
+        ),
+        vaultDetailProvider(
+          'test-vault',
+        ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+        currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -376,7 +372,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -385,7 +381,7 @@ void main() {
         'recovery_request_detail_screen_multiple_devices',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery request - pending', (tester) async {
@@ -419,19 +415,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1200),
       );
 
@@ -440,7 +435,7 @@ void main() {
         'recovery_request_detail_screen_practice_pending',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery request - in progress with responses', (
@@ -477,19 +472,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1200),
       );
 
@@ -498,7 +492,7 @@ void main() {
         'recovery_request_detail_screen_practice_in_progress',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery request - completed', (tester) async {
@@ -537,19 +531,18 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
-        container: container,
+        overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
         surfaceSize: const Size(375, 1200),
       );
 
@@ -558,7 +551,16 @@ void main() {
         'recovery_request_detail_screen_practice_completed',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
+}
+
+class _GoldenFakeLoginService extends LoginService {
+  _GoldenFakeLoginService(this._pubkey);
+
+  final String _pubkey;
+
+  @override
+  Future<String?> getCurrentPublicKey() async => _pubkey;
 }

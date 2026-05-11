@@ -119,7 +119,6 @@ void main() {
       final testVault = Vault(
         id: testVaultId,
         name: 'Test Vault',
-        content: 'Test vault content',
         createdAt: DateTime.now(),
         ownerPubkey: testCreatorPubkey,
       );
@@ -680,9 +679,9 @@ void main() {
             Nip01Event(
               kind: NostrKind.giftWrap.value,
               pubKey: 'a' * 64,
-              content: 'mock',
               tags: const [],
               createdAt: 1,
+              content: '',
             ),
           );
         });
@@ -772,9 +771,9 @@ void main() {
           Nip01Event(
             kind: NostrKind.giftWrap.value,
             pubKey: 'a' * 64,
-            content: 'mock',
             tags: const [],
             createdAt: 1,
+            content: '',
           ),
         );
       });

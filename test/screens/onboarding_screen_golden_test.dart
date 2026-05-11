@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -36,20 +35,16 @@ void main() {
 
       // Only override loginServiceProvider - other providers won't be accessed
       // during build, only when "Get Started" button is pressed
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const OnboardingScreen(),
-        container: container,
+        overrides: [loginServiceProvider.overrideWithValue(loginService)],
         surfaceSize: const Size(375, 667), // iPhone SE size
       );
 
       await screenMatchesGolden(tester, 'onboarding_screen_default');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('onboarding screen - multiple device sizes', (tester) async {
@@ -58,9 +53,9 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        loginServiceProvider.overrideWithValue(loginService),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -72,13 +67,13 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'onboarding_screen_multiple_devices');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

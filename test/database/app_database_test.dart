@@ -16,8 +16,8 @@ void main() {
       await db.close();
     });
 
-    test('opens at schema version 1', () {
-      expect(db.schemaVersion, 1);
+    test('opens at schema version 2', () {
+      expect(db.schemaVersion, 2);
     });
 
     test('VaultFixture.owned inserts vault + owned_vaults rows', () async {

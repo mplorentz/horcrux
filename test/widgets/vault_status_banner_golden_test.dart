@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
@@ -23,24 +23,72 @@ void main() {
   const steward2Pubkey = TestHexPubkeys.charlie; // Another steward
   const steward3Pubkey = TestHexPubkeys.diana; // Another steward
 
-  // Helper to create vault
-  Vault createTestVault({
+  // Helper to create vault detail (defaults to OwnedVaultDetail).
+  VaultDetail createTestVault({
     required String id,
     required String ownerPubkey,
     String? content,
-    List<Share>? shares,
+    Share? latestShare,
+    List<Share>? shares, // ignored (Phase 2c removed Vault.shares)
     BackupConfig? backupConfig,
     List<RecoveryRequest>? recoveryRequests,
   }) {
-    return Vault(
+    final theContent = content ?? '';
+    // OwnedVaultDetail when content is non-empty or no share provided.
+    if (latestShare == null && content != null && content.isNotEmpty) {
+      return OwnedVaultDetail(
+        id: id,
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: null,
+        threshold: backupConfig?.threshold ?? 0,
+        totalShares: backupConfig?.totalKeys ?? 0,
+        stewards: const [],
+        recoveryRequests: recoveryRequests ?? const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        content: theContent,
+        selfHeldShare: null,
+      );
+    }
+    if (latestShare != null) {
+      return StewardedVaultDetail(
+        id: id,
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: null,
+        threshold: backupConfig?.threshold ?? 0,
+        totalShares: backupConfig?.totalKeys ?? 0,
+        stewards: const [],
+        recoveryRequests: recoveryRequests ?? const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        latestShare: latestShare,
+      );
+    }
+    // Default: OwnedVaultDetail with empty content.
+    return OwnedVaultDetail(
       id: id,
       name: 'Test Vault',
-      content: content,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: ownerPubkey,
-      shares: shares ?? [],
+      ownerName: null,
+      threshold: backupConfig?.threshold ?? 0,
+      totalShares: backupConfig?.totalKeys ?? 0,
+      stewards: const [],
+      recoveryRequests: recoveryRequests ?? const [],
+      pushEnabled: false,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      archivedAt: null,
+      archivedReason: null,
       backupConfig: backupConfig,
-      recoveryRequests: recoveryRequests ?? [],
+      content: '',
+      selfHeldShare: null,
     );
   }
 
@@ -101,11 +149,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: null, // No backup config
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -119,12 +168,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -134,7 +177,7 @@ void main() {
           'vault_status_banner_owner_no_plan',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('plan needs attention - invalid', (tester) async {
@@ -152,11 +195,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: invalidConfig,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -170,12 +214,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -185,7 +223,7 @@ void main() {
           'vault_status_banner_owner_plan_needs_attention',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('plan needs attention - inactive', (tester) async {
@@ -207,11 +245,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: inactiveConfig,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -225,12 +264,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -240,7 +273,7 @@ void main() {
           'vault_status_banner_owner_plan_needs_attention_inactive',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('waiting for stewards to join - pending invitations', (tester) async {
@@ -268,11 +301,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -286,12 +320,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -301,7 +329,7 @@ void main() {
           'vault_status_banner_owner_waiting_stewards_join',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('keys not distributed', (tester) async {
@@ -320,11 +348,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -338,12 +367,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -353,7 +376,7 @@ void main() {
           'vault_status_banner_owner_keys_not_distributed',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('almost ready - waiting for confirmations', (tester) async {
@@ -386,11 +409,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -404,12 +428,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -419,7 +437,7 @@ void main() {
           'vault_status_banner_owner_almost_ready',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('ready for recovery', (tester) async {
@@ -450,11 +468,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           backupConfig: config,
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -468,12 +487,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -483,7 +496,7 @@ void main() {
           'vault_status_banner_owner_ready',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('recovery in progress', (tester) async {
@@ -496,11 +509,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: 'Decrypted content',
           recoveryRequests: [recoveryRequest],
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -514,12 +528,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -529,7 +537,7 @@ void main() {
           'vault_status_banner_recovery_in_progress',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
     });
 
@@ -538,11 +546,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null, // No decrypted content
           shares: [], // No shards - this triggers awaitingKey state
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(stewardPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -556,12 +565,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -571,7 +574,7 @@ void main() {
           'vault_status_banner_steward_awaiting_key',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
 
       testGoldens('steward ready to help', (tester) async {
@@ -596,11 +599,12 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null, // No decrypted content
           shares: [shard], // Has shard - steward ready
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             currentPublicKeyProvider.overrideWith((ref) => Future.value(stewardPubkey)),
             recoveryStatusProvider('test-vault').overrideWith(
@@ -614,12 +618,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -629,7 +627,7 @@ void main() {
           'vault_status_banner_steward_ready',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
     });
 
@@ -638,11 +636,11 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
-          content: null,
-          shares: [],
         );
 
-        final container = ProviderContainer(
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
           overrides: [
             // Current user is neither owner nor steward (different pubkey)
             currentPublicKeyProvider.overrideWith((ref) => Future.value('x' * 64)),
@@ -657,12 +655,6 @@ void main() {
               ),
             ),
           ],
-        );
-
-        await pumpGoldenWidget(
-          tester,
-          VaultStatusBanner(vault: vault),
-          container: container,
           surfaceSize: const Size(375, 150),
           useScaffold: true,
         );
@@ -672,7 +664,7 @@ void main() {
           'vault_status_banner_unknown',
         );
 
-        container.dispose();
+        await harness.dispose();
       });
     });
   });

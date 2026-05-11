@@ -24,7 +24,6 @@ void main() {
       final vault = Vault(
         id: 'vault-archive-1',
         name: 'Test',
-        content: null,
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: ownerPubkey,
         archivedAt: DateTime(2024, 2, 1),
@@ -46,7 +45,6 @@ void main() {
       final vault = Vault(
         id: 'vault-unarchive-1',
         name: 'Test',
-        content: null,
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: ownerPubkey,
         archivedAt: DateTime(2024, 6, 15),

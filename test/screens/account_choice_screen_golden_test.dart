@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -33,20 +32,16 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const AccountChoiceScreen(),
-        container: container,
+        overrides: [loginServiceProvider.overrideWithValue(loginService)],
         surfaceSize: const Size(375, 667), // iPhone SE size
       );
 
       await screenMatchesGolden(tester, 'account_choice_screen_default');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('account choice screen - multiple device sizes', (
@@ -56,9 +51,9 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        loginServiceProvider.overrideWithValue(loginService),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -73,7 +68,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -82,7 +77,7 @@ void main() {
         'account_choice_screen_multiple_devices',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

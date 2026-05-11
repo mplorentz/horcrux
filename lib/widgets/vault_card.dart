@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../providers/key_provider.dart';
 import '../screens/vault_detail_screen.dart';
 import 'name_label.dart';
@@ -9,7 +10,7 @@ import 'name_label.dart';
 ///
 /// Shows the vault name, owner, and state icon. Tapping navigates to [VaultDetailScreen].
 class VaultCard extends ConsumerWidget {
-  final Vault vault;
+  final VaultDetail vault;
 
   const VaultCard({super.key, required this.vault});
 

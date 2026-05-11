@@ -1,0 +1,23 @@
+name: Database schema check
+
+# Ensures semantic changes under drift_schemas/ are paired with a
+# schemaVersion bump in lib/database/app_database.dart (see
+# scripts/check-drift-schema-version-bump.sh). No Flutter/Dart build.
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    name: Require schemaVersion bump when Drift snapshots change
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Drift snapshot vs base requires schemaVersion edit
+        run: scripts/check-drift-schema-version-bump.sh "${{ github.event.pull_request.base.sha }}"

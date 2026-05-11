@@ -29,7 +29,6 @@ void main() {
     final vault = Vault(
       id: 'test-vault',
       name: 'Test Vault',
-      content: 'test content',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ownerPubkey: testPubkey1,
       backupConfig: createBackupConfig(

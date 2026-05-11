@@ -2,23 +2,23 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
     # Run on all pull requests, regardless of target branch
 
 jobs:
   test:
     name: Run Tests
-    runs-on: macos-latest  # macOS required for consistent golden test rendering
+    runs-on: macos-latest # macOS required for consistent golden test rendering
     permissions:
       contents: read
       pull-requests: write
       issues: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Restore Pub cache with fallback
         uses: actions/cache@v4
         id: pub_cache_restore
@@ -29,17 +29,17 @@ jobs:
           restore-keys: |
             pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
             pub-${{ runner.os }}-
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: 'pubspec.yaml'
-          channel: 'stable'
+          flutter-version-file: "pubspec.yaml"
+          channel: "stable"
           cache: true
           # Use explicit path instead of wildcard to avoid macOS hashFiles issues
           cache-key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
           pub-cache-key: flutter-pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
-      
+
       - name: Save Pub cache (if updated)
         if: steps.pub_cache_restore.outputs.cache-hit != 'true'
         uses: actions/cache@v4
@@ -49,11 +49,11 @@ jobs:
           key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
           restore-keys: |
             pub-${{ runner.os }}-
-      
+
       - name: Get dependencies
         run: flutter pub get
-      
-      - name: Verify codegen 
+
+      - name: Verify codegen
         # Run codegen first, then format everything (including generated files),
         # then check if anything changed. This ensures generated files are formatted
         # consistently with the rest of the codebase.
@@ -66,21 +66,21 @@ jobs:
             echo "::error ::Codegen or formatting is out of date. Run 'flutter pub run build_runner build --delete-conflicting-outputs && dart format .' and commit the changes."
             exit 1
           fi
-      
+
       - name: Analyze code
         run: flutter analyze
-      
+
       - name: Verify drift schema dump is up to date
         # Re-runs `dart run drift_dev schema dump` and diffs against the
-        # committed `drift_schemas/`. If this fails, the developer changed a
-        # drift table without updating the dump (and likely without bumping
-        # AppDatabase.schemaVersion / adding a migration).
+        # committed `drift_schemas/`. This catches a stale snapshot but does
+        # NOT catch re-dumping into drift_schema_vN.json without bumping N;
+        # We have `.github/workflows/drift-schema-version.yml` to catch that.
         run: flutter test test/database/schema_parity_test.dart
 
       - name: Run unit tests
         # Exclude drift-schema: schema parity runs in "Verify drift schema dump" (shells drift_dev).
         run: flutter test --exclude-tags=golden,drift-schema
-      
+
       - name: Run golden tests
         run: flutter test --tags=golden
         id: golden_tests
@@ -88,7 +88,7 @@ jobs:
         # Developer needs to either:
         # 1. Fix the unintended UI change, OR
         # 2. Update goldens: flutter test test/screens --update-goldens
-      
+
       - name: Upload golden test failures
         if: failure() && steps.golden_tests.outcome == 'failure'
         uses: actions/upload-artifact@v4
@@ -98,7 +98,7 @@ jobs:
             test/**/failures/
             test/**/goldens/
           retention-days: 7
-      
+
       - name: Comment on PR with golden test instructions
         if: failure() && steps.golden_tests.outcome == 'failure' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -110,4 +110,3 @@ jobs:
               repo: context.repo.repo,
               body: '## ⚠️ Golden Tests Failed\n\nThe golden screenshot tests have failed. This could mean:\n\n1. **Intentional UI changes**: If you updated the UI, you need to update the golden files:\n   ```bash\n   flutter test test/screens --update-goldens\n   git add test/screens/goldens/*.png\n   git commit -m "Update golden test screenshots"\n   ```\n\n2. **Unintentional changes**: Review the diff images in the [test artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see what changed.\n\n3. **Platform differences**: Golden tests must be generated on macOS. If you\'re on Linux/Windows, ask a macOS team member to regenerate them.\n\n📦 Download the failure artifacts above to see before/after comparisons.'
             })
-

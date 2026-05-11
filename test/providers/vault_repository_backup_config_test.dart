@@ -38,7 +38,6 @@ void main() {
       final withConfig = Vault(
         id: 'vault-del-bc',
         name: 'V',
-        content: 'secret',
         createdAt: created,
         ownerPubkey: ownerPubkey,
         backupConfig: config,

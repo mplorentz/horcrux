@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -31,33 +32,34 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
         // Create new vault
         final vault = await _createNewVault(
           name,
-          content,
           ownerName,
           pushEnabled: pushEnabledForNewVault,
         );
         await repository.addVault(vault);
+        await repository.saveOwnedVaultContent(vault.id, content);
         return vault.id;
       } else {
         // Update existing vault - check if content, name, or ownerName changed
-        final existingVault = await repository.getVault(vaultId);
-        if (existingVault == null) {
+        final detailRepository = ref.read(vaultDetailRepositoryProvider);
+        final existingDetail = await detailRepository.getVaultDetail(vaultId);
+        if (existingDetail == null) {
           throw Exception('Vault not found: $vaultId');
         }
 
-        final contentChanged = existingVault.content != content;
-        final nameChanged = existingVault.name != name.trim();
+        final existingContent = existingDetail is OwnedVaultDetail ? existingDetail.content : null;
+        final contentChanged = existingContent != content;
+        final nameChanged = existingDetail.name != name.trim();
         final newOwnerName = ownerName?.trim().isEmpty == true ? null : ownerName?.trim();
-        final ownerNameChanged = existingVault.ownerName != newOwnerName;
+        final ownerNameChanged = existingDetail.ownerName != newOwnerName;
 
-        // Update vault with all changes at once
-        // Important: Use copyWith on existingVault but include the new content
-        // to avoid overwriting content that was just saved
+        final existingVault = await repository.getVault(vaultId);
+        if (existingVault == null) throw Exception('Vault not found: $vaultId');
         final updatedVault = existingVault.copyWith(
           name: name.trim(),
-          content: content,
           ownerName: newOwnerName,
         );
         await repository.saveVault(updatedVault);
+        await repository.saveOwnedVaultContent(vaultId, content);
 
         // If content, name, or ownerName changed, increment distributionVersion and auto-distribute
         if (contentChanged || nameChanged || ownerNameChanged) {
@@ -94,10 +96,10 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
     }
   }
 
-  /// Create a new vault with the current user's public key
+  /// Create a new vault with the current user's public key (no content; call
+  /// [VaultRepository.saveOwnedVaultContent] separately).
   Future<Vault> _createNewVault(
     String name,
-    String content,
     String? ownerName, {
     required bool pushEnabled,
   }) async {
@@ -107,14 +109,11 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
       throw Exception('Unable to get current user public key');
     }
 
-    // Generate cryptographically secure vault ID
-    // Vault IDs are exposed in invitation URLs, so they must be unguessable
     final vaultId = generateSecureID();
 
     return Vault(
       id: vaultId,
       name: name.trim(),
-      content: content,
       createdAt: DateTime.now(),
       ownerPubkey: currentPubkey,
       ownerName: ownerName?.trim().isEmpty == true ? null : ownerName?.trim(),

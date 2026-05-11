@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
+import '../models/vault_detail.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../services/recovery_service.dart';
@@ -94,7 +95,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           }
 
           // Get vault to extract instructions
-          final vaultAsync = ref.watch(vaultProvider(request.vaultId));
+          final vaultAsync = ref.watch(vaultDetailProvider(request.vaultId));
 
           return vaultAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -103,13 +104,15 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
               // Get instructions from vault
               String? instructions;
               if (vault != null) {
-                // First try to get from backupConfig
                 if (vault.backupConfig?.instructions != null &&
                     vault.backupConfig!.instructions!.isNotEmpty) {
                   instructions = vault.backupConfig!.instructions;
-                } else if (vault.shares.isNotEmpty) {
-                  // Fallback to shard data
-                  instructions = vault.mostRecentShare?.instructions;
+                } else {
+                  final share = switch (vault) {
+                    StewardedVaultDetail(:final latestShare) => latestShare,
+                    OwnedVaultDetail(:final selfHeldShare) => selfHeldShare,
+                  };
+                  instructions = share?.instructions;
                 }
               }
 

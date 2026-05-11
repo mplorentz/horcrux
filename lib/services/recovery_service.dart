@@ -352,19 +352,15 @@ class RecoveryService {
         throw StateError('No relays configured in recovery plan');
       }
     } else {
-      // Real recovery: use shard data
-      if (vault.shares.isEmpty) {
+      // Real recovery: use held share data from the database.
+      final shares = await repository.getSharesForVault(vaultId);
+      if (shares.isEmpty) {
         throw StateError(
           'Cannot recover: you don\'t have a key to this vault.',
         );
       }
 
-      final selectedShard = vault.mostRecentShare;
-      if (selectedShard == null) {
-        throw StateError(
-          'Cannot recover: you don\'t have a key to this vault.',
-        );
-      }
+      final selectedShard = latestShare(shares)!;
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
@@ -692,14 +688,11 @@ class RecoveryService {
     // If approving and NOT a practice request, get the share material for this vault
     // Practice requests should not include share payloads
     if (approved && !request.isPractice) {
-      final vault = await repository.getVault(request.vaultId);
-      if (vault == null) {
-        throw ArgumentError('Vault not found: ${request.vaultId}');
-      }
-      stewardShare = vault.mostRecentShare;
-      if (stewardShare == null) {
+      final shares = await repository.getSharesForVault(request.vaultId);
+      if (shares.isEmpty) {
         throw ArgumentError('No share data found for vault ${request.vaultId}');
       }
+      stewardShare = latestShare(shares)!;
       Log.info(
         'Selected share with distributionVersion ${stewardShare.distributionVersion} for recovery request $recoveryRequestId',
       );
@@ -738,12 +731,10 @@ class RecoveryService {
               relayUrls = vault.backupConfig!.relays;
               Log.info('Using relay URLs from backup config for recovery response');
             } else {
-              // Fall back to relay URLs from steward-held share
-              final latestShare = vault.mostRecentShare;
-              if (latestShare != null &&
-                  latestShare.relayUrls != null &&
-                  latestShare.relayUrls!.isNotEmpty) {
-                relayUrls = latestShare.relayUrls!;
+              // Fall back to relay URLs from steward-held share.
+              final share = latestShare(await repository.getSharesForVault(request.vaultId));
+              if (share != null && share.relayUrls != null && share.relayUrls!.isNotEmpty) {
+                relayUrls = share.relayUrls!;
                 Log.info('Using relay URLs from steward share data for recovery response');
               }
             }
@@ -836,10 +827,10 @@ class RecoveryService {
       RecoveryRequestStatus.archived,
     );
 
-    // Delete recovered content from vault (set to null)
-    final vault = await repository.getVault(request.vaultId);
-    if (vault != null) {
-      await repository.saveVault(vault.copyWith(content: null));
+    // Delete recovered content (owned_vaults row) from vault
+    final vaultExists = await repository.getVault(request.vaultId) != null;
+    if (vaultExists) {
+      await repository.deleteVaultContent(request.vaultId);
       Log.info('Deleted recovered content from vault ${request.vaultId}');
     }
 
