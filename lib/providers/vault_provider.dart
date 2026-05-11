@@ -1008,27 +1008,32 @@ class VaultRepository {
             ),
           );
 
-      // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
-      // active stewards out as plain rows; the append-on-replace history
-      // bookkeeping lands in later phases. We replace-by-id for now: insert
-      // any new ids, leave existing rows in place, and soft-retire ones
-      // missing from the config.
+      // Reconcile stewards from the in-memory backupConfig. Retire all
+      // currently active stewards first, then reinsert the authoritative set.
+      // Retiring up-front avoids UNIQUE-constraint violations on the partial
+      // index (vault_id, share_index) WHERE left_at IS NULL when stewards are
+      // reassigned to different positions (e.g. owner added at index 1 while
+      // an existing steward also held index 1).
       if (config != null) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
         final keptIds = config.stewards.map((s) => s.id).toSet();
         final existing = await (_db.select(
           _db.stewards,
         )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
             .get();
         for (final existingRow in existing) {
-          if (!keptIds.contains(existingRow.id)) {
+          // Retire rows removed from the config permanently, and rows that ARE
+          // being kept but need a clean re-insert (to avoid position conflicts).
+          // Kept rows are immediately re-activated below with left_at = null.
+          final willReinsert = keptIds.contains(existingRow.id);
+          final conflictsOnPosition = willReinsert &&
+              config.stewards.indexWhere((s) => s.id == existingRow.id) + 1 !=
+                  existingRow.shareIndex;
+          if (!willReinsert || conflictsOnPosition) {
             await (_db.update(
               _db.stewards,
             )..where((s) => s.id.equals(existingRow.id)))
-                .write(
-              StewardsCompanion(
-                leftAt: Value(DateTime.now().millisecondsSinceEpoch),
-              ),
-            );
+                .write(StewardsCompanion(leftAt: Value(nowMs)));
           }
         }
 
