@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
+import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
@@ -16,6 +17,7 @@ import 'share_distribution_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
 import 'publish_service.dart';
+import '../database/app_database.dart';
 import '../models/nostr_kinds.dart';
 import '../models/share.dart';
 import '../models/recovery_request.dart';
@@ -72,12 +74,13 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
     ref: ref,
     loginService: loginService,
     processedEventStore: processedEventStore,
+    database: ref.read(appDatabaseProvider),
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
 
-  // Clean up when disposed
-  ref.onDispose(() async {
-    await service.dispose();
+  ref.onDispose(() {
+    service.disposePublishWorkerSync();
+    unawaited(service.dispose());
   });
 
   return service;
@@ -106,6 +109,7 @@ class NdkService {
     required Ref ref,
     required LoginService loginService,
     required ProcessedNostrEventStore processedEventStore,
+    required AppDatabase database,
     required InvitationService Function() getInvitationService,
   })  : _ref = ref,
         _loginService = loginService,
@@ -113,6 +117,7 @@ class NdkService {
         _getInvitationService = getInvitationService {
     _publishService = PublishService(
       getNdk: getNdk,
+      database: database,
     );
     unawaited(_publishService.initialize());
   }
@@ -180,7 +185,7 @@ class NdkService {
 
       // Restart subscriptions to include new relay
       await _setupSubscriptions();
-      _publishService.onRelayReconnected(relayUrl);
+      unawaited(_publishService.onRelayReconnected(relayUrl));
     } catch (e) {
       Log.error('Error adding relay $relayUrl', e);
       _activeRelays.remove(relayUrl);
@@ -813,6 +818,7 @@ class NdkService {
     required List<String> relays,
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
+    String? vaultId,
   }) async {
     await _ensureInitialized();
 
@@ -831,6 +837,7 @@ class NdkService {
       final result = await _publishService.enqueueEvent(
         event: giftWrap,
         relays: relays,
+        vaultId: vaultId,
       );
 
       if (result.successfulRelays.isEmpty) {
@@ -910,6 +917,7 @@ class NdkService {
     required List<String> relays,
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
+    String? vaultId,
   }) async {
     await _ensureInitialized();
 
@@ -925,6 +933,7 @@ class NdkService {
             relays: relays,
             tags: tags,
             customPubkey: customPubkey,
+            vaultId: vaultId,
           ),
         );
       } catch (e) {
@@ -959,14 +968,17 @@ class NdkService {
     _isInitialized = true;
   }
 
+  /// Stops the outbox worker synchronously (see [PublishService.disposeSync]).
+  void disposePublishWorkerSync() {
+    _publishService.disposeSync();
+  }
+
   /// Dispose of NDK resources
   /// This stops all listening, closes subscriptions, and cleans up resources
   Future<void> dispose() async {
-    // Stop listening to all subscriptions first
-    await closeSubscriptions();
+    _publishService.disposeSync();
 
-    // Dispose publish service
-    await _publishService.dispose();
+    await closeSubscriptions();
 
     // Clear state
     _activeRelays.clear();

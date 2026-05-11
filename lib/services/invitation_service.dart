@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/invitation_link.dart';
 import '../models/invitation_status.dart';
 import '../models/invitation_exceptions.dart';
@@ -31,6 +33,7 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
     () => ref.read(ndkServiceProvider),
     ref.read(relayScanServiceProvider),
     ref.read(backupServiceProvider),
+    ref.read(appDatabaseProvider),
   );
 
   // Properly clean up when the provider is disposed
@@ -49,13 +52,10 @@ class InvitationService {
   final NdkService Function() _getNdkService;
   final RelayScanService _relayScanService;
   final BackupService _backupService;
+  final AppDatabase _db;
 
   // Stream controller for notifying listeners when invitations change
   final StreamController<void> _invitationsChangedController = StreamController<void>.broadcast();
-
-  // SharedPreferences keys
-  static String _invitationKey(String inviteCode) => 'invitation_$inviteCode';
-  static String _vaultInvitationsKey(String vaultId) => 'invitations_$vaultId';
 
   InvitationService(
     this.repository,
@@ -64,6 +64,7 @@ class InvitationService {
     this._getNdkService,
     this._relayScanService,
     this._backupService,
+    this._db,
   );
 
   /// Stream that emits whenever invitations change
@@ -84,7 +85,7 @@ class InvitationService {
   ///
   /// Validates vault exists and user is owner.
   /// Generates cryptographically secure invite code.
-  /// Creates InvitationLink and stores in SharedPreferences.
+  /// Creates InvitationLink and persists it in `invitations`.
   /// Returns invitation link with URL.
   Future<({InvitationLink invitation, Steward steward})> generateInvitationLink({
     required String vaultId,
@@ -138,12 +139,6 @@ class InvitationService {
     // Validate the invitation
     validateInvitationLink(pendingInvitation);
 
-    // Store invitation
-    await _saveInvitation(pendingInvitation);
-
-    // Add to vault invitations index
-    await _addToVaultIndex(vaultId, inviteCode);
-
     // Ensure relay URLs are added to NDK service so we can receive invitation acceptance events
     // Add relays asynchronously - don't fail invitation generation if relay addition fails
     _addRelaysToNdk(relayUrls);
@@ -184,6 +179,8 @@ class InvitationService {
       inviteCode: inviteCode,
     );
 
+    await _saveInvitation(pendingInvitation, stewardId: createdSteward.id);
+
     // Notify listeners
     _notifyInvitationsChanged();
 
@@ -196,7 +193,7 @@ class InvitationService {
 
   /// Retrieves all pending invitations for a vault
   ///
-  /// Loads invitations from SharedPreferences.
+  /// Loads invitations from `invitations`.
   /// Filters to pending status.
   /// Returns sorted by creation date.
   Future<List<InvitationLink>> getPendingInvitations(String vaultId) async {
@@ -221,7 +218,7 @@ class InvitationService {
 
   /// Looks up invitation details by invite code
   ///
-  /// Looks up invitation code in SharedPreferences.
+  /// Looks up invitation code in `invitations`.
   /// Returns InvitationLink if found, null otherwise.
   /// Throws ArgumentError if invite code format is invalid.
   Future<InvitationLink?> lookupInvitationByCode(String inviteCode) async {
@@ -253,6 +250,21 @@ class InvitationService {
     if (existing != null) {
       Log.debug('Invitation $inviteCode already exists, skipping creation');
       return;
+    }
+
+    final existingVault = await repository.getVault(vaultId);
+    if (existingVault == null) {
+      await repository.addVault(
+        Vault(
+          id: vaultId,
+          name: vaultName ?? defaultVaultName,
+          createdAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+          ownerName: ownerName,
+          backupConfig: null,
+          pushEnabled: false,
+        ),
+      );
     }
 
     // Create invitation record from received link data
@@ -749,27 +761,45 @@ class InvitationService {
 
   // ========== Storage Helper Methods ==========
 
-  /// Save an invitation to SharedPreferences
-  Future<void> _saveInvitation(InvitationLink invitation) async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = invitationLinkToJson(invitation);
-    final jsonString = jsonEncode(json);
+  Future<void> _saveInvitation(
+    InvitationLink invitation, {
+    String? stewardId,
+  }) async {
+    final existing = await _db.invitationDao.getByCode(invitation.inviteCode);
+    final createdMs = existing?.createdAt ?? invitation.createdAt.millisecondsSinceEpoch;
+    final sid = stewardId ?? existing?.stewardId;
+    final payloadMap = invitationLinkToJson(invitation);
 
-    await prefs.setString(_invitationKey(invitation.inviteCode), jsonString);
-    Log.debug('Saved invitation ${invitation.inviteCode} to SharedPreferences');
-  }
-
-  /// Load an invitation from SharedPreferences
-  Future<InvitationLink?> _loadInvitation(String inviteCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_invitationKey(inviteCode));
-
-    if (jsonString == null) {
-      return null;
+    int? revokedMs = existing?.revokedAt;
+    if (invitation.status == InvitationStatus.invalidated ||
+        invitation.status == InvitationStatus.denied) {
+      revokedMs = DateTime.now().millisecondsSinceEpoch;
     }
 
+    await _db.into(_db.invitations).insertOnConflictUpdate(
+          InvitationsCompanion.insert(
+            code: invitation.inviteCode,
+            vaultId: invitation.vaultId,
+            stewardId: sid != null ? Value(sid) : const Value.absent(),
+            payload: jsonEncode(payloadMap),
+            createdAt: createdMs,
+            expiresAt:
+                existing?.expiresAt != null ? Value(existing!.expiresAt) : const Value.absent(),
+            acceptedAt: Value(invitation.redeemedAt?.millisecondsSinceEpoch),
+            acceptedByPubkey: Value(invitation.redeemedBy),
+            revokedAt: Value(revokedMs),
+          ),
+        );
+    Log.debug('Saved invitation ${invitation.inviteCode} to invitations table');
+  }
+
+  Future<InvitationLink?> _loadInvitation(String inviteCode) async {
+    final row = await _db.invitationDao.getByCode(inviteCode);
+    if (row == null) {
+      return null;
+    }
     try {
-      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final json = jsonDecode(row.payload) as Map<String, dynamic>;
       return invitationLinkFromJson(json);
     } catch (e) {
       Log.error('Error loading invitation $inviteCode', e);
@@ -777,24 +807,9 @@ class InvitationService {
     }
   }
 
-  /// Add invite code to vault invitations index
-  Future<void> _addToVaultIndex(String vaultId, String inviteCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = _vaultInvitationsKey(vaultId);
-
-    final existingCodes = prefs.getStringList(key) ?? [];
-    if (!existingCodes.contains(inviteCode)) {
-      existingCodes.add(inviteCode);
-      await prefs.setStringList(key, existingCodes);
-      Log.debug('Added invite code $inviteCode to vault $vaultId index');
-    }
-  }
-
-  /// Get all invite codes for a vault
   Future<List<String>> _getVaultInviteCodes(String vaultId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = _vaultInvitationsKey(vaultId);
-    return prefs.getStringList(key) ?? [];
+    final rows = await _db.invitationDao.forVault(vaultId);
+    return rows.map((r) => r.code).toList();
   }
 
   /// Add a steward to backup config (or create config if it doesn't exist)

@@ -63,6 +63,7 @@ class RecoveryService {
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
+  Timer? _expirySweepTimer;
 
   /// Per-(vault, initiator) mutex serializing [initiateRecovery] calls. The
   /// check-then-act against `getRecoveryRequestsForVault` is async, so without
@@ -99,6 +100,8 @@ class RecoveryService {
 
   /// Dispose resources
   void dispose() {
+    _expirySweepTimer?.cancel();
+    _expirySweepTimer = null;
     _notificationController.close();
     _recoveryRequestController.close();
   }
@@ -126,6 +129,11 @@ class RecoveryService {
 
     // Emit existing recovery requests to the notification stream
     await _emitNotificationUpdate();
+
+    await repository.cleanupExpiredRecoverySessions();
+    _expirySweepTimer ??= Timer.periodic(const Duration(minutes: 5), (_) {
+      unawaited(repository.cleanupExpiredRecoverySessions());
+    });
   }
 
   /// Load viewed notification IDs from storage
@@ -1021,6 +1029,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
         ],
         customPubkey: currentPubkey,
+        vaultId: request.vaultId,
       );
 
       final eventIds = [
@@ -1112,6 +1121,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
           ['approved', approved.toString()],
         ],
+        vaultId: request.vaultId,
       );
 
       if (publishedEvent == null) {

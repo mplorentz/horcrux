@@ -3,12 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ndk/ndk.dart';
+import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
+import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/backup_service.dart';
@@ -21,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'recovery_service_test.mocks.dart';
 import '../helpers/secure_storage_mock.dart';
+import '../helpers/test_database.dart';
 
 @GenerateMocks([
   BackupService,
@@ -44,10 +49,7 @@ void main() {
     secureStorageMock.tearDownAll();
   });
 
-  group('RecoveryService - Nostr Event Payload Validation',
-      skip: 'Phase 3 (recovery_requests / recovery_responses tables) of the data '
-          'layer refactor — addRecoveryRequestToVault is stubbed '
-          'UnimplementedError until then.', () {
+  group('RecoveryService - Nostr Event Payload Validation', () {
     late String testCreatorPubkey;
     late LoginService loginService;
     late VaultRepository repository;
@@ -56,6 +58,7 @@ void main() {
     late VaultShareService vaultShareService;
     late MockLocalNotificationService mockLocalNotificationService;
     late RecoveryService recoveryService;
+    late AppDatabase testDb;
     const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
     const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
     const testVaultId = 'vault-test-123';
@@ -72,8 +75,9 @@ void main() {
       final keyPair = await loginService.generateAndStoreNostrKey();
       testCreatorPubkey = keyPair.publicKey;
 
+      testDb = newTestDatabase();
       // Clear any existing recovery requests and vaults
-      repository = VaultRepository(loginService);
+      repository = VaultRepository(loginService, db: testDb);
       // Create mocks for circular dependency
       final mockBackupService = MockBackupService();
       final mockNdkService = MockNdkService();
@@ -123,12 +127,24 @@ void main() {
         ownerPubkey: testCreatorPubkey,
       );
       await repository.addVault(testVault);
+
+      final relayPlan = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 1,
+        totalKeys: 1,
+        stewards: [
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+        ],
+        relays: ['wss://relay.example.com'],
+      );
+      await repository.updateBackupConfig(testVaultId, relayPlan);
     });
 
     tearDown(() async {
       await repository.clearAll();
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
+      await testDb.close();
     });
 
     test('concurrent initiateRecovery calls from same user do not create duplicates', () async {
@@ -672,6 +688,7 @@ void main() {
             recipientPubkey: anyNamed('recipientPubkey'),
             relays: anyNamed('relays'),
             tags: anyNamed('tags'),
+            vaultId: anyNamed('vaultId'),
           ),
         ).thenAnswer((invocation) {
           capturedContent = invocation.namedArguments[#content] as String?;
@@ -701,6 +718,7 @@ void main() {
             recipientPubkey: anyNamed('recipientPubkey'),
             relays: anyNamed('relays'),
             tags: anyNamed('tags'),
+            vaultId: anyNamed('vaultId'),
           ),
         ).called(1);
 
@@ -764,6 +782,7 @@ void main() {
           recipientPubkey: anyNamed('recipientPubkey'),
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
+          vaultId: anyNamed('vaultId'),
         ),
       ).thenAnswer((invocation) {
         capturedContent = invocation.namedArguments[#content] as String?;
@@ -793,6 +812,7 @@ void main() {
           recipientPubkey: anyNamed('recipientPubkey'),
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
+          vaultId: anyNamed('vaultId'),
         ),
       ).called(1);
 

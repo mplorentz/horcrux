@@ -205,6 +205,12 @@ class VaultRepository {
   Future<void> clearAll() async {
     _backupConfigOverlay.clear();
     await _db.transaction(() async {
+      await _db.delete(_db.outboxRelays).go();
+      await _db.delete(_db.outbox).go();
+      await _db.delete(_db.recoveryResponses).go();
+      await _db.delete(_db.recoveryRequestParticipants).go();
+      await _db.delete(_db.recoveryRequests).go();
+      await _db.delete(_db.invitations).go();
       await _db.delete(_db.distributionShares).go();
       await _db.delete(_db.distributions).go();
       await _db.delete(_db.stewards).go();
@@ -495,20 +501,122 @@ class VaultRepository {
   Future<void> addRecoveryRequestToVault(
     String vaultId,
     RecoveryRequest request,
-  ) {
-    throw UnimplementedError(
-      'addRecoveryRequestToVault: recovery_requests is restored in Phase 3.',
-    );
+  ) async {
+    final vaultRow = await _db.vaultDao.getById(vaultId);
+    if (vaultRow == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    await _db.transaction(() async {
+      await _db.into(_db.recoveryRequests).insert(
+            RecoveryRequestsCompanion.insert(
+              id: request.id,
+              vaultId: vaultId,
+              requestEventId: Value(request.nostrEventId),
+              initiatorPubkey: request.initiatorPubkey,
+              startedAt: request.requestedAt.millisecondsSinceEpoch,
+              expiresAt: Value(request.expiresAt?.millisecondsSinceEpoch),
+              cancelledAt: const Value.absent(),
+              completedAt: const Value.absent(),
+              distributionVersionAtStart: vaultRow.currentDistributionVersion,
+              thresholdAtStart: request.threshold,
+              status: request.status.name,
+              isPractice: Value(request.isPractice),
+              errorMessage: Value(request.errorMessage),
+              eventCreationTimeMs: Value(request.eventCreationTime?.millisecondsSinceEpoch),
+            ),
+          );
+      await _db.batch((b) {
+        for (final pubkey in request.stewardResponses.keys) {
+          b.insert(
+            _db.recoveryRequestParticipants,
+            RecoveryRequestParticipantsCompanion.insert(
+              requestId: request.id,
+              pubkey: pubkey,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+        }
+      });
+    });
+    await _bumpVaultSync(vaultId);
   }
 
   Future<void> updateRecoveryRequestInVault(
     String vaultId,
     String requestId,
     RecoveryRequest updatedRequest,
-  ) {
-    throw UnimplementedError(
-      'updateRecoveryRequestInVault: recovery_requests is restored in Phase 3.',
-    );
+  ) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.transaction(() async {
+      await (_db.update(_db.recoveryRequests)..where((r) => r.id.equals(requestId))).write(
+        RecoveryRequestsCompanion(
+          requestEventId: Value(updatedRequest.nostrEventId),
+          status: Value(updatedRequest.status.name),
+          errorMessage: Value(updatedRequest.errorMessage),
+          expiresAt: Value(updatedRequest.expiresAt?.millisecondsSinceEpoch),
+          eventCreationTimeMs: Value(updatedRequest.eventCreationTime?.millisecondsSinceEpoch),
+          cancelledAt: updatedRequest.status == RecoveryRequestStatus.cancelled
+              ? Value(now)
+              : const Value.absent(),
+          completedAt: (updatedRequest.status == RecoveryRequestStatus.completed ||
+                  updatedRequest.status == RecoveryRequestStatus.archived)
+              ? Value(now)
+              : const Value.absent(),
+        ),
+      );
+
+      for (final e in updatedRequest.stewardResponses.entries) {
+        final resp = e.value;
+        if (!resp.status.isResolved && resp.errorMessage == null) {
+          continue;
+        }
+        final dist = resp.share?.distributionVersion ?? 0;
+        await _db.into(_db.recoveryResponses).insertOnConflictUpdate(
+              RecoveryResponsesCompanion.insert(
+                id: '${requestId}_${e.key}',
+                requestId: requestId,
+                stewardId: const Value.absent(),
+                responderPubkey: e.key,
+                sharePayload: resp.share != null ? jsonEncode(shareToJson(resp.share!)) : '',
+                shareDistributionVersion: dist,
+                receivedAt: resp.respondedAt?.millisecondsSinceEpoch ?? now,
+                nostrEventId: Value(resp.nostrEventId),
+                replyingToEventId: const Value.absent(),
+                approved: resp.approved,
+                respondedAtMs: Value(resp.respondedAt?.millisecondsSinceEpoch),
+                errorMessage: Value(resp.errorMessage),
+              ),
+            );
+      }
+    });
+    await _bumpVaultSync(vaultId);
+  }
+
+  /// Marks expired in-flight recovery sessions failed and prunes their responses.
+  Future<void> cleanupExpiredRecoverySessions() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final candidates = await _db.recoveryDao.requestsNeedingExpiryCheck();
+    var touched = false;
+    for (final r in candidates) {
+      if (r.expiresAt == null || r.expiresAt! >= now) {
+        continue;
+      }
+      await _db.transaction(() async {
+        await (_db.update(_db.recoveryRequests)..where((x) => x.id.equals(r.id))).write(
+          RecoveryRequestsCompanion(
+            status: const Value('failed'),
+            errorMessage: const Value('Recovery session expired'),
+            completedAt: Value(now),
+          ),
+        );
+        await _db.recoveryDao.deleteResponsesForRequest(r.id);
+      });
+      touched = true;
+    }
+    if (touched) {
+      await _db.walCheckpointTruncate();
+      await refresh();
+    }
   }
 
   Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
@@ -577,13 +685,19 @@ class VaultRepository {
       );
     }
 
+    final recoveryRows = await _db.recoveryDao.forVault(row.id);
+    final recoveryRequests = <RecoveryRequest>[];
+    for (final rr in recoveryRows) {
+      recoveryRequests.add(await _recoveryRequestFromRow(rr));
+    }
+
     return Vault(
       id: row.id,
       name: row.name,
       createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       ownerPubkey: row.ownerPubkey,
       ownerName: row.ownerName,
-      recoveryRequests: const [],
+      recoveryRequests: recoveryRequests,
       backupConfig: backupConfig,
       archivedAt:
           row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
@@ -632,6 +746,66 @@ class VaultRepository {
       // value; the in-memory copy held by callers between writes already
       // carries the precise status.
       status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+    );
+  }
+
+  Future<void> _bumpVaultSync(String vaultId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+      VaultsCompanion(lastSyncedAt: Value(now)),
+    );
+  }
+
+  Future<RecoveryRequest> _recoveryRequestFromRow(RecoveryRequestRow r) async {
+    final participants = await _db.recoveryDao.participantsFor(r.id);
+    final responses = await _db.recoveryDao.responsesFor(r.id);
+    final byPubkey = {
+      for (final row in responses) row.responderPubkey: _recoveryResponseFromRow(row),
+    };
+    final stewardResponses = <String, RecoveryResponse>{};
+    for (final p in participants) {
+      stewardResponses[p.pubkey] =
+          byPubkey[p.pubkey] ?? RecoveryResponse(pubkey: p.pubkey, approved: false);
+    }
+
+    return RecoveryRequest(
+      id: r.id,
+      vaultId: r.vaultId,
+      initiatorPubkey: r.initiatorPubkey,
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(r.startedAt),
+      status: RecoveryRequestStatus.values.firstWhere(
+        (e) => e.name == r.status,
+        orElse: () => RecoveryRequestStatus.pending,
+      ),
+      threshold: r.thresholdAtStart,
+      nostrEventId: r.requestEventId,
+      eventCreationTime: r.eventCreationTimeMs != null
+          ? DateTime.fromMillisecondsSinceEpoch(r.eventCreationTimeMs!)
+          : null,
+      expiresAt: r.expiresAt == null ? null : DateTime.fromMillisecondsSinceEpoch(r.expiresAt!),
+      stewardResponses: stewardResponses,
+      errorMessage: r.errorMessage,
+      isPractice: r.isPractice,
+    );
+  }
+
+  RecoveryResponse _recoveryResponseFromRow(RecoveryResponseRow r) {
+    Share? share;
+    if (r.sharePayload.isNotEmpty) {
+      try {
+        share = shareFromJson(json.decode(r.sharePayload) as Map<String, dynamic>);
+      } catch (_) {
+        share = null;
+      }
+    }
+    return RecoveryResponse(
+      pubkey: r.responderPubkey,
+      approved: r.approved,
+      respondedAt:
+          r.respondedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(r.respondedAtMs!),
+      share: share,
+      nostrEventId: r.nostrEventId,
+      errorMessage: r.errorMessage,
     );
   }
 

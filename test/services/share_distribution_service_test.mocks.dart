@@ -1003,6 +1003,16 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> cleanupExpiredRecoverySessions() => (super.noSuchMethod(
+        Invocation.method(
+          #cleanupExpiredRecoverySessions,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
   _i4.Future<List<_i12.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1406,6 +1416,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
     required List<String>? relays,
     List<List<String>>? tags,
     String? customPubkey,
+    String? vaultId,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1418,6 +1429,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
             #relays: relays,
             #tags: tags,
             #customPubkey: customPubkey,
+            #vaultId: vaultId,
           },
         ),
         returnValue: _i4.Future<_i2.Nip01Event?>.value(),
@@ -1431,6 +1443,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
     required List<String>? relays,
     List<List<String>>? tags,
     String? customPubkey,
+    String? vaultId,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1443,6 +1456,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
             #relays: relays,
             #tags: tags,
             #customPubkey: customPubkey,
+            #vaultId: vaultId,
           },
         ),
         returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),

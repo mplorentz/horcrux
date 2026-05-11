@@ -67,6 +67,11 @@ void main() {
       expect(find.byType(Switch), findsNWidgets(2));
 
       container.dispose();
+      // Drift schedules a short timer when stream query subscriptions cancel
+      // (e.g. [VaultDetailRepository.dispose]); flush it before the binding
+      // asserts no pending timers.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
 
     testWidgets('toggle starts disabled for new config', (tester) async {
@@ -93,6 +98,8 @@ void main() {
       expect(switchWidget.value, isFalse);
 
       container.dispose();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
 
     testWidgets('toggle enabled when config has owner steward', (tester) async {
@@ -129,6 +136,8 @@ void main() {
       expect(switchWidget.value, isTrue);
 
       container.dispose();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
   });
 }
