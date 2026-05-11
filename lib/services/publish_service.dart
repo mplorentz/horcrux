@@ -229,8 +229,7 @@ class PublishService {
       if (!completer.isCompleted) {
         completer.completeError(e, st);
       }
-      Log.error('enqueueEvent: failed to persist outbox for $id', e);
-      Log.debug('enqueueEvent stack', st);
+      Log.error('enqueueEvent: failed to persist outbox for $id', e, st);
       rethrow;
     }
 
@@ -303,8 +302,7 @@ class PublishService {
         await _processOneRelay(relayRow, nowMs: nowMs);
       }
     } catch (e, stackTrace) {
-      Log.error('Error processing publish outbox', e);
-      Log.debug('Publish outbox processing stack', stackTrace);
+      Log.error('Error processing publish outbox', e, stackTrace);
     } finally {
       _isProcessing = false;
     }
@@ -320,8 +318,7 @@ class PublishService {
     try {
       event = Nip01Event.fromJson(json.decode(out.eventJson) as Map<String, dynamic>);
     } catch (e, st) {
-      Log.error('Outbox ${out.id}: invalid event_json', e);
-      Log.debug('Outbox event_json stack', st);
+      Log.error('Outbox ${out.id}: invalid event_json', e, st);
       await _markRelayFailed(
         relayRow: relayRow,
         attempts: relayRow.attempts + 1,

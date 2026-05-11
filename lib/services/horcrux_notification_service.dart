@@ -568,6 +568,7 @@ class HorcruxNotificationService {
 
     final base = await getBaseUrl();
     final url = Uri.parse('$base$path');
+    final requestTarget = '$method $url';
 
     final authHeader = Nip98Auth.buildAuthorizationHeader(
       keyPair: keyPair,
@@ -588,7 +589,7 @@ class HorcruxNotificationService {
     } catch (e) {
       throw HorcruxNotifierException(
         statusCode: 0,
-        message: 'Notifier request failed: $e',
+        message: 'Notifier request failed ($requestTarget): $e',
         cause: e,
       );
     }
@@ -611,7 +612,7 @@ class HorcruxNotificationService {
 
     throw HorcruxNotifierException(
       statusCode: status,
-      message: _extractErrorMessage(response) ?? 'HTTP $status',
+      message: '${_extractErrorMessage(response) ?? 'HTTP $status'} ($requestTarget)',
     );
   }
 

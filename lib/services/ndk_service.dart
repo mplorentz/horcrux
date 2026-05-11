@@ -895,8 +895,7 @@ class NdkService {
 
       return giftWrap;
     } catch (e, stackTrace) {
-      Log.error('Error enqueuing encrypted event', e);
-      Log.debug('Encrypted event enqueue stack', stackTrace);
+      Log.error('Error enqueuing encrypted event', e, stackTrace);
       return null;
     }
   }
