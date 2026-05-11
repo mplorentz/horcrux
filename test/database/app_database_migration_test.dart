@@ -240,7 +240,7 @@ CREATE TABLE "held_shares" ("id" TEXT NOT NULL, "vault_id" TEXT NOT NULL REFEREN
 ''';
 
 const _legacyV3RecoveryRequestsDdl = '''
-CREATE TABLE "recovery_requests" ("id" TEXT NOT NULL, "vault_id" TEXT NOT NULL REFERENCES vaults (id) ON DELETE CASCADE, "request_event_id" TEXT NULL, "initiator_pubkey" TEXT NOT NULL, "started_at" INTEGER NOT NULL, "expires_at" INTEGER NULL, "cancelled_at" INTEGER NULL, "completed_at" INTEGER NULL, "distribution_version_at_start" INTEGER NOT NULL, "threshold_at_start" INTEGER NOT NULL, "status" TEXT NOT NULL, "is_practice" INTEGER NOT NULL DEFAULT 0 CHECK ("is_practice" IN (0, 1)), "event_creation_time_ms" INTEGER NULL, PRIMARY KEY ("id"))
+CREATE TABLE "recovery_requests" ("id" TEXT NOT NULL, "vault_id" TEXT NOT NULL REFERENCES vaults (id) ON DELETE CASCADE, "request_event_id" TEXT NULL, "initiator_pubkey" TEXT NOT NULL, "started_at" INTEGER NOT NULL, "expires_at" INTEGER NULL, "cancelled_at" INTEGER NULL, "completed_at" INTEGER NULL, "distribution_version_at_start" INTEGER NOT NULL, "threshold_at_start" INTEGER NOT NULL, "status" TEXT NOT NULL, "is_practice" INTEGER NOT NULL DEFAULT 0 CHECK ("is_practice" IN (0, 1)), "error_message" TEXT NULL, "event_creation_time_ms" INTEGER NULL, PRIMARY KEY ("id"))
 ''';
 
 const _legacyV3RecoveryRequestParticipantsDdl = '''
