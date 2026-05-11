@@ -43,17 +43,14 @@ void main() {
         TestHexPubkeys.charlie,
         TestHexPubkeys.diana,
       ];
-      final request = RecoveryRequest(
+      final request = RecoveryRequest.makeFromParticipants(
         id: 'req-add-1',
         vaultId: vault.vaultId,
         initiatorPubkey: TestHexPubkeys.alice,
         requestedAt: DateTime.now(),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {
-          for (final pubkey in participants)
-            pubkey: RecoveryResponse(pubkey: pubkey, approved: false),
-        },
+        stewardPubkeys: participants,
       );
 
       await repository.addRecoveryRequestToVault(vault.vaultId, request);
@@ -90,32 +87,37 @@ void main() {
         creatorPubkey: TestHexPubkeys.alice,
         vaultId: fixture.vaultId,
       );
-      final updatedRequest = RecoveryRequest(
+      final updatedRequest = RecoveryRequest.makeFromParticipants(
         id: fixture.requestId,
         vaultId: fixture.vaultId,
         initiatorPubkey: fixture.initiatorPubkey,
         requestedAt: DateTime.fromMillisecondsSinceEpoch(fixture.startedAtMs),
         status: RecoveryRequestStatus.inProgress,
         threshold: fixture.threshold,
-        stewardResponses: {
-          TestHexPubkeys.bob: RecoveryResponse(
+        stewardPubkeys: const [
+          TestHexPubkeys.bob,
+          TestHexPubkeys.charlie,
+          TestHexPubkeys.diana,
+        ],
+        responses: [
+          RecoveryResponse(
             pubkey: TestHexPubkeys.bob,
             approved: true,
             respondedAt: now,
             share: approvedShare,
             nostrEventId: 'resp_evt_bob',
           ),
-          TestHexPubkeys.charlie: RecoveryResponse(
+          RecoveryResponse(
             pubkey: TestHexPubkeys.charlie,
             approved: false,
             respondedAt: now,
             nostrEventId: 'resp_evt_charlie',
           ),
-          TestHexPubkeys.diana: const RecoveryResponse(
+          const RecoveryResponse(
             pubkey: TestHexPubkeys.diana,
             approved: false,
           ),
-        },
+        ],
       );
 
       await repository.updateRecoveryRequestInVault(

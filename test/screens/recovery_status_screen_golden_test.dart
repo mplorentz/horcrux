@@ -68,14 +68,16 @@ void main() {
     Map<String, RecoveryResponse>? responses,
     bool isPractice = false,
   }) {
-    return RecoveryRequest(
+    final responseMap = responses ?? <String, RecoveryResponse>{};
+    return RecoveryRequest.makeFromParticipants(
       id: id,
       vaultId: vaultId,
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
       status: status,
       threshold: threshold,
-      stewardResponses: responses ?? {},
+      stewardPubkeys: responseMap.keys,
+      responses: responseMap.values,
       isPractice: isPractice,
     );
   }

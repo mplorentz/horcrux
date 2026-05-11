@@ -66,14 +66,16 @@ void main() {
     RecoveryRequestStatus status = RecoveryRequestStatus.inProgress,
     Map<String, RecoveryResponse>? responses,
   }) {
-    return RecoveryRequest(
+    final responseMap = responses ?? <String, RecoveryResponse>{};
+    return RecoveryRequest.makeFromParticipants(
       id: 'recovery-$vaultId',
       vaultId: vaultId,
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
       status: status,
       threshold: 2,
-      stewardResponses: responses ?? {},
+      stewardPubkeys: responseMap.keys,
+      responses: responseMap.values,
     );
   }
 
@@ -575,14 +577,14 @@ void main() {
 
     testGoldens('recovery notification', (tester) async {
       // Create a recovery request initiated by someone else (not testPubkey)
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: 'recovery-1',
         vaultId: 'test-vault',
         initiatorPubkey: otherPubkey, // Different from testPubkey
         requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {},
+        stewardPubkeys: const [],
       );
 
       final ownedVault = Vault(

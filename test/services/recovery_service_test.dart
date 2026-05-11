@@ -305,13 +305,13 @@ void main() {
       // Verify request was created
       expect(recoveryRequest.vaultId, testVaultId);
       expect(recoveryRequest.initiatorPubkey, testCreatorPubkey);
-      expect(recoveryRequest.stewardResponses.length, 2);
+      expect(recoveryRequest.totalStewards, 2);
       expect(
-        recoveryRequest.stewardResponses.containsKey(testKeyHolder1),
+        recoveryRequest.responseForPubkey(testKeyHolder1) != null,
         true,
       );
       expect(
-        recoveryRequest.stewardResponses.containsKey(testKeyHolder2),
+        recoveryRequest.responseForPubkey(testKeyHolder2) != null,
         true,
       );
     });
@@ -449,13 +449,13 @@ void main() {
       );
 
       // Verify all stewards are in the request
-      expect(recoveryRequest.stewardResponses.length, 2);
+      expect(recoveryRequest.totalStewards, 2);
       expect(
-        recoveryRequest.stewardResponses[testKeyHolder1]?.status,
+        recoveryRequest.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.pending,
       );
       expect(
-        recoveryRequest.stewardResponses[testKeyHolder2]?.status,
+        recoveryRequest.responseForPubkey(testKeyHolder2)?.status,
         RecoveryResponseStatus.pending,
       );
 
@@ -526,15 +526,15 @@ void main() {
       );
       expect(updatedRequest, isNotNull);
       expect(
-        updatedRequest!.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest!.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.share,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.share?.payload,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share?.payload,
         'recovered_shard_AAA=',
       );
     });
@@ -561,11 +561,11 @@ void main() {
       );
       expect(updatedRequest, isNotNull);
       expect(
-        updatedRequest!.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest!.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.denied,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.share,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNull,
       );
     });
@@ -624,27 +624,27 @@ void main() {
       expect(updatedRequest, isNotNull);
       expect(updatedRequest!.approvedCount, 2);
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.status,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.share,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.share,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.share?.payload,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share?.payload,
         'shard_data_1_AAA=',
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.share?.payload,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.share?.payload,
         'shard_data_2_BBB=',
       );
 

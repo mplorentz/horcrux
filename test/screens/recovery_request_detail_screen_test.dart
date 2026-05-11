@@ -70,16 +70,15 @@ void main() {
   RecoveryRequest buildRecoveryRequest({
     required RecoveryResponse responseForCurrentSteward,
   }) {
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: 'request-1',
       vaultId: 'vault-1',
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: RecoveryRequestStatus.inProgress,
       threshold: 2,
-      stewardResponses: {
-        currentStewardPubkey: responseForCurrentSteward,
-      },
+      stewardPubkeys: [currentStewardPubkey],
+      responses: [responseForCurrentSteward],
     );
   }
 

@@ -173,7 +173,8 @@ class RecoveryRequest with _$RecoveryRequest {
     /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
     DateTime? eventCreationTime,
     DateTime? expiresAt,
-    @Default({}) Map<String, RecoveryResponse> stewardResponses, // pubkey -> response
+    @Default([]) List<String> stewardPubkeys,
+    @Default([]) List<RecoveryResponse> responses,
     String? errorMessage, // Error message if status is failed
     @Default(false) bool isPractice, // True for practice recovery sessions
   }) = _RecoveryRequest;
@@ -199,13 +200,27 @@ class RecoveryRequest with _$RecoveryRequest {
     String? errorMessage,
     bool isPractice = false,
   }) {
-    final byPubkey = <String, RecoveryResponse>{
-      for (final pubkey in stewardPubkeys)
-        pubkey: RecoveryResponse(pubkey: pubkey, approved: false),
-    };
-    for (final response in responses) {
-      byPubkey[response.pubkey] = response;
+    final orderedPubkeys = <String>[];
+    void addPubkey(String pubkey) {
+      if (!orderedPubkeys.contains(pubkey)) {
+        orderedPubkeys.add(pubkey);
+      }
     }
+
+    for (final pubkey in stewardPubkeys) {
+      addPubkey(pubkey);
+    }
+    for (final response in responses) {
+      addPubkey(response.pubkey);
+    }
+
+    final byPubkey = <String, RecoveryResponse>{
+      for (final response in responses) response.pubkey: response,
+    };
+    final orderedResponses = [
+      for (final pubkey in orderedPubkeys)
+        byPubkey[pubkey] ?? RecoveryResponse(pubkey: pubkey, approved: false),
+    ];
     return RecoveryRequest(
       id: id,
       vaultId: vaultId,
@@ -216,10 +231,22 @@ class RecoveryRequest with _$RecoveryRequest {
       nostrEventId: nostrEventId,
       eventCreationTime: eventCreationTime,
       expiresAt: expiresAt,
-      stewardResponses: byPubkey,
+      stewardPubkeys: orderedPubkeys,
+      responses: orderedResponses,
       errorMessage: errorMessage,
       isPractice: isPractice,
     );
+  }
+
+  /// Returns the response for a steward, if present.
+  RecoveryResponse? responseForPubkey(String? pubkey) {
+    if (pubkey == null) return null;
+    for (final response in responses) {
+      if (response.pubkey == pubkey) {
+        return response;
+      }
+    }
+    return null;
   }
 
   /// Validate the recovery request
@@ -256,33 +283,35 @@ class RecoveryRequest with _$RecoveryRequest {
 
   /// Get the count of responses by status
   int getResponseCount(RecoveryResponseStatus status) {
-    return stewardResponses.values.where((r) => r.status == status).length;
-  }
-
-  /// Canonical participant pubkeys for this recovery request.
-  Iterable<String> get stewardPubkeys => stewardResponses.keys;
-
-  /// All known responses keyed by [stewardPubkeys].
-  Iterable<RecoveryResponse> get responses => stewardResponses.values;
-
-  /// Returns the response for a steward, if present.
-  RecoveryResponse? responseForPubkey(String? pubkey) {
-    if (pubkey == null) return null;
-    return stewardResponses[pubkey];
+    return responses.where((r) => r.status == status).length;
   }
 
   /// Mutable copy keyed by responder pubkey for update flows.
-  Map<String, RecoveryResponse> copyResponsesByPubkey() =>
-      Map<String, RecoveryResponse>.from(stewardResponses);
+  Map<String, RecoveryResponse> copyResponsesByPubkey() => {
+        for (final response in responses) response.pubkey: response,
+      };
 
   /// Returns a copy with one response updated by responder pubkey.
   RecoveryRequest withUpsertedResponse({
     required RecoveryResponse response,
     RecoveryRequestStatus? status,
   }) {
-    final updated = copyResponsesByPubkey();
-    updated[response.pubkey] = response;
-    return copyWith(status: status ?? this.status, stewardResponses: updated);
+    final updatedByPubkey = copyResponsesByPubkey();
+    updatedByPubkey[response.pubkey] = response;
+
+    final updatedPubkeys = [...stewardPubkeys];
+    if (!updatedPubkeys.contains(response.pubkey)) {
+      updatedPubkeys.add(response.pubkey);
+    }
+
+    return copyWith(
+      status: status ?? this.status,
+      stewardPubkeys: updatedPubkeys,
+      responses: [
+        for (final pubkey in updatedPubkeys)
+          updatedByPubkey[pubkey] ?? RecoveryResponse(pubkey: pubkey, approved: false),
+      ],
+    );
   }
 
   /// Approved responses that include share material.
@@ -301,10 +330,10 @@ class RecoveryRequest with _$RecoveryRequest {
       approvedResponsesWithShare.map((r) => r.share!).toList();
 
   /// Get total number of stewards
-  int get totalStewards => stewardResponses.length;
+  int get totalStewards => stewardPubkeys.length;
 
   /// Get number of responses received
-  int get respondedCount => stewardResponses.values.where((r) => r.status.isResolved).length;
+  int get respondedCount => responses.where((r) => r.status.isResolved).length;
 
   /// Get number of approvals
   int get approvedCount => getResponseCount(RecoveryResponseStatus.approved);
@@ -324,9 +353,8 @@ class RecoveryRequest with _$RecoveryRequest {
       'nostrEventId': nostrEventId,
       'eventCreationTime': eventCreationTime?.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
-      'stewardResponses': stewardResponses.map(
-        (key, value) => MapEntry(key, value.toJson()),
-      ),
+      'stewardPubkeys': stewardPubkeys,
+      'responses': responses.map((response) => response.toJson()).toList(),
       'errorMessage': errorMessage,
       'isPractice': isPractice,
     };
@@ -334,16 +362,57 @@ class RecoveryRequest with _$RecoveryRequest {
 
   /// Create from JSON
   factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
-    final responsesJson = json['stewardResponses'] as Map<String, dynamic>?;
-    final responses = responsesJson?.map(
-          (key, value) => MapEntry(
-            key,
-            RecoveryResponse.fromJson(value as Map<String, dynamic>),
-          ),
-        ) ??
-        {};
+    final participants = <String>[];
+    void addParticipant(String pubkey) {
+      if (!participants.contains(pubkey)) {
+        participants.add(pubkey);
+      }
+    }
 
-    return RecoveryRequest(
+    final stewardPubkeysJson = json['stewardPubkeys'];
+    if (stewardPubkeysJson is List) {
+      for (final pubkey in stewardPubkeysJson) {
+        if (pubkey is String) {
+          addParticipant(pubkey);
+        }
+      }
+    }
+
+    final responses = <RecoveryResponse>[];
+    final responsesJson = json['responses'];
+    if (responsesJson is List) {
+      for (final response in responsesJson) {
+        if (response is Map<String, dynamic>) {
+          responses.add(RecoveryResponse.fromJson(response));
+        } else if (response is Map) {
+          responses.add(RecoveryResponse.fromJson(response.cast<String, dynamic>()));
+        }
+      }
+    }
+
+    final legacyResponsesJson = json['stewardResponses'] as Map<String, dynamic>?;
+    if (responses.isEmpty && legacyResponsesJson != null) {
+      for (final entry in legacyResponsesJson.entries) {
+        addParticipant(entry.key);
+        final value = entry.value;
+        if (value is Map<String, dynamic>) {
+          responses.add(RecoveryResponse.fromJson(value));
+        } else if (value is Map) {
+          responses.add(RecoveryResponse.fromJson(value.cast<String, dynamic>()));
+        }
+      }
+    } else {
+      for (final response in responses) {
+        addParticipant(response.pubkey);
+      }
+      if (legacyResponsesJson != null) {
+        for (final pubkey in legacyResponsesJson.keys) {
+          addParticipant(pubkey);
+        }
+      }
+    }
+
+    return RecoveryRequest.makeFromParticipants(
       id: json['id'] as String,
       vaultId: json['vaultId'] as String,
       initiatorPubkey: json['initiatorPubkey'] as String,
@@ -359,7 +428,8 @@ class RecoveryRequest with _$RecoveryRequest {
           ? DateTime.parse(json['eventCreationTime'] as String)
           : null,
       expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
-      stewardResponses: responses,
+      stewardPubkeys: participants,
+      responses: responses,
       errorMessage: json['errorMessage'] as String?,
       isPractice: json['isPractice'] as bool? ?? false,
     );

@@ -132,14 +132,14 @@ void main() {
     RecoveryRequestStatus status = RecoveryRequestStatus.inProgress,
     int threshold = 2,
   }) {
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: 'recovery-$vaultId',
       vaultId: vaultId,
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: status,
       threshold: threshold,
-      stewardResponses: {},
+      stewardPubkeys: const [],
     );
   }
 
