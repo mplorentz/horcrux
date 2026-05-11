@@ -175,7 +175,7 @@ void main() {
                 vault,
                 latestShare: createShare(
                   payload: 'shard',
-                  threshold: 3,
+                  threshold: 2,
                   shareIndex: 0,
                   totalShares: 3,
                   primeMod: 'pm',
