@@ -240,6 +240,10 @@ class AppDatabase extends _$AppDatabase {
                 await customStatement('DROP TABLE invitations_old');
               }
             }
+            // v3 invitation indexes can be dropped when the table is recreated
+            // during the v4 migration, so ensure both v3 and v4 invitation
+            // indexes exist after this block.
+            await _createPhase3Indexes();
             await _createPhase4InvitationIndexes();
           }
         },
