@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../app_navigator.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
@@ -23,9 +25,11 @@ import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
   final loginService = ref.watch(loginServiceProvider);
+  final appDatabase = ref.watch(appDatabaseProvider);
   final service = LocalNotificationService(
     vaultRepository: vaultRepository,
     loginService: loginService,
+    appDatabase: appDatabase,
     getRecoveryService: () => ref.read(recoveryServiceProvider),
   );
   ref.onDispose(() => service.dispose());
@@ -57,6 +61,7 @@ String recoveryRequestRouteName(String recoveryRequestId) => '/recovery_request/
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
   final LoginService _loginService;
+  final AppDatabase? _appDatabase;
   final RecoveryService Function() _getRecoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
@@ -69,9 +74,11 @@ class LocalNotificationService {
   LocalNotificationService({
     required VaultRepository vaultRepository,
     required LoginService loginService,
+    AppDatabase? appDatabase,
     required RecoveryService Function() getRecoveryService,
   })  : _vaultRepository = vaultRepository,
         _loginService = loginService,
+        _appDatabase = appDatabase,
         _getRecoveryService = getRecoveryService;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
@@ -202,7 +209,7 @@ class LocalNotificationService {
     required String label,
     required String id,
   }) async {
-    final firstOpen = await getFirstAppOpenUtc();
+    final firstOpen = await getFirstAppOpenUtc(database: _appDatabase);
     if (isEventRecent(eventUtc, firstOpen)) return true;
     Log.debug('Skipping $label notification $id: event predates first app open');
     return false;

@@ -115,6 +115,7 @@ void main() {
         ProcessedNostrEventStore(),
         mockLocalNotificationService,
         mockHorcruxNotificationService,
+        testDb,
       );
       await recoveryService.clearAll();
       await repository.clearAll();

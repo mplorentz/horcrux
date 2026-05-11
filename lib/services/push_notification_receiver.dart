@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../firebase_options.dart';
 import 'horcrux_notification_service.dart';
 import 'local_notification_service.dart';
@@ -19,10 +21,12 @@ final pushNotificationReceiverProvider = Provider<PushNotificationReceiver>((ref
   final localNotifications = ref.watch(localNotificationServiceProvider);
   final notifierService = ref.watch(horcruxNotificationServiceProvider);
   final ndkService = ref.watch(ndkServiceProvider);
+  final database = ref.watch(appDatabaseProvider);
   final receiver = PushNotificationReceiver(
     localNotifications: localNotifications,
     notifierService: notifierService,
     ndkService: ndkService,
+    database: database,
   );
   ref.onDispose(() => receiver.dispose());
   return receiver;
@@ -31,7 +35,7 @@ final pushNotificationReceiverProvider = Provider<PushNotificationReceiver>((ref
 /// Device-side FCM plumbing for receiving push notifications:
 ///
 /// - Requests notification permission on iOS/macOS (Android handled by [LocalNotificationService])
-/// - Fetches and caches the FCM device token in [SharedPreferences]
+/// - Fetches and caches the FCM device token in persistent app state
 /// - Listens for token refreshes
 /// - Wires foreground / background-tap / cold-start-tap handlers
 ///
@@ -53,6 +57,7 @@ class PushNotificationReceiver {
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
   final NdkService _ndkService;
+  final AppDatabase? _database;
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -74,9 +79,11 @@ class PushNotificationReceiver {
     required LocalNotificationService localNotifications,
     required HorcruxNotificationService notifierService,
     required NdkService ndkService,
+    AppDatabase? database,
   })  : _localNotifications = localNotifications,
         _notifierService = notifierService,
-        _ndkService = ndkService;
+        _ndkService = ndkService,
+        _database = database;
 
   /// Most recently known FCM device token, or `null` if one hasn't been obtained yet.
   String? get token => _cachedToken;
@@ -98,6 +105,9 @@ class PushNotificationReceiver {
 
   /// Returns whether the user has globally opted into push notifications.
   Future<bool> isOptedIn() async {
+    if (_database != null) {
+      return await _database.appStateDao.getBool(optInFlagKey) ?? false;
+    }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(optInFlagKey) ?? false;
   }
@@ -235,10 +245,14 @@ class PushNotificationReceiver {
 
   Future<void> _loadCachedToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _cachedToken = prefs.getString(_fcmTokenKey);
+      if (_database != null) {
+        _cachedToken = await _database.appStateDao.getString(_fcmTokenKey);
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        _cachedToken = prefs.getString(_fcmTokenKey);
+      }
       if (_cachedToken != null) {
-        Log.debug('Loaded cached FCM token from SharedPreferences');
+        Log.debug('Loaded cached FCM token from storage');
       }
     } catch (e, st) {
       Log.warning('Failed to load cached FCM token', e, st);
@@ -276,14 +290,22 @@ class PushNotificationReceiver {
     if (fcmToken == _cachedToken) return;
     _cachedToken = fcmToken;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_fcmTokenKey, fcmToken);
-      await prefs.setString(
-        _fcmTokenUpdatedAtKey,
-        DateTime.now().toIso8601String(),
-      );
+      if (_database != null) {
+        await _database.appStateDao.setString(key: _fcmTokenKey, value: fcmToken);
+        await _database.appStateDao.setString(
+          key: _fcmTokenUpdatedAtKey,
+          value: DateTime.now().toIso8601String(),
+        );
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_fcmTokenKey, fcmToken);
+        await prefs.setString(
+          _fcmTokenUpdatedAtKey,
+          DateTime.now().toIso8601String(),
+        );
+      }
     } catch (e, st) {
-      Log.warning('Failed to persist FCM token to SharedPreferences', e, st);
+      Log.warning('Failed to persist FCM token to storage', e, st);
     }
   }
 
@@ -329,15 +351,24 @@ class PushNotificationReceiver {
   }
 
   Future<void> _setOptInFlag(bool value) async {
+    if (_database != null) {
+      await _database.appStateDao.setBool(key: optInFlagKey, value: value);
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(optInFlagKey, value);
   }
 
   Future<void> _clearPersistedTokenState() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_fcmTokenKey);
-      await prefs.remove(_fcmTokenUpdatedAtKey);
+      if (_database != null) {
+        await _database.appStateDao.removeKey(_fcmTokenKey);
+        await _database.appStateDao.removeKey(_fcmTokenUpdatedAtKey);
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_fcmTokenKey);
+        await prefs.remove(_fcmTokenUpdatedAtKey);
+      }
     } catch (e, st) {
       Log.warning('Failed to clear persisted FCM token state', e, st);
     }

@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'database/app_database.dart';
 import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
@@ -60,13 +60,16 @@ Future<void> main() async {
 /// tap), and `getInitialMessage()` (cold-start tap) -- all wired from
 /// [PushNotificationReceiver].
 Future<void> _initializeFirebaseIfNecessary() async {
-  bool optedIn = false;
+  AppDatabase? database;
+  bool optedIn;
   try {
-    final prefs = await SharedPreferences.getInstance();
-    optedIn = prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
+    database = AppDatabase.openDefault();
+    optedIn = await database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
   } catch (e, st) {
-    Log.warning('Failed to read push opt-in flag; skipping Firebase init', e, st);
-    return;
+    Log.warning('Failed to read push opt-in flag from database; skipping Firebase init', e, st);
+    optedIn = false;
+  } finally {
+    await database?.close();
   }
 
   if (!optedIn) {
