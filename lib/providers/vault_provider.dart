@@ -435,17 +435,32 @@ class VaultRepository {
   /// Creates the `owned_vaults` row on first call; subsequent calls update it
   /// in-place. This is the only path that touches `owned_vaults.content` after
   /// Phase 2c (where [Vault.content] was removed).
+  ///
+  /// Bumps `vaults.last_synced_at` in the same transaction so that
+  /// [vaultDao.watchAll] / [vaultDao.watchById] re-emit *after* the
+  /// `owned_vaults` row is committed. Without this touch, callers that do
+  /// `addVault` then `saveOwnedVaultContent` (create-new-vault) or
+  /// `_persistVault` then `saveOwnedVaultContent` (updateVault) expose a race:
+  /// the first vaults-table write fires a re-emission that may hydrate
+  /// [OwnedVaultDetail] before the `owned_vaults` row exists, permanently
+  /// classifying the vault as [StewardedVaultDetail] until the next
+  /// unrelated vaults write.
   Future<void> saveOwnedVaultContent(String vaultId, String content) async {
-    final createdAtMs =
-        (await _db.vaultDao.getById(vaultId))?.createdAt ?? DateTime.now().millisecondsSinceEpoch;
-    await _db.into(_db.ownedVaults).insertOnConflictUpdate(
-          OwnedVaultsCompanion.insert(
-            vaultId: vaultId,
-            content: content,
-            contentHmac: _placeholderHmac(content),
-            createdBySelfAt: createdAtMs,
-          ),
-        );
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final createdAtMs = (await _db.vaultDao.getById(vaultId))?.createdAt ?? now;
+    await _db.transaction(() async {
+      await _db.into(_db.ownedVaults).insertOnConflictUpdate(
+            OwnedVaultsCompanion.insert(
+              vaultId: vaultId,
+              content: content,
+              contentHmac: _placeholderHmac(content),
+              createdBySelfAt: createdAtMs,
+            ),
+          );
+      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+        VaultsCompanion(lastSyncedAt: Value(now)),
+      );
+    });
     Log.info('saveOwnedVaultContent: wrote content for vault $vaultId');
   }
 
