@@ -42,7 +42,8 @@ if [[ "$semantic_change" != true ]]; then
   exit 0
 fi
 
-if git diff -U0 "$base...$head" -- lib/database/app_database.dart | grep -E '^[+-]' | grep -q 'schemaVersion'; then
+if git diff -U0 "$base...$head" -- lib/database/app_database.dart \
+  | grep -Eq '^[+-].*schemaVersion'; then
   echo "OK: drift_schemas/ changed semantically and app_database.dart touches schemaVersion."
   exit 0
 fi
