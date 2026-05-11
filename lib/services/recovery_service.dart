@@ -214,6 +214,46 @@ class RecoveryService {
     }).toList();
   }
 
+  /// When [share.payload] is empty (owner self-shard carve-out), load the shard
+  /// from the published gift-wrap identified by [share.nostrEventId].
+  Future<Share> _materializeSharePayloadFromNostrIfOmitted(
+    Share share,
+    String vaultId,
+  ) async {
+    if (share.payload.isNotEmpty) {
+      return share;
+    }
+    final eventId = share.nostrEventId;
+    if (eventId == null) {
+      return share;
+    }
+    final vault = await repository.getVault(vaultId);
+    final relays = vault?.backupConfig?.relays ?? share.relayUrls ?? const <String>[];
+    if (relays.isEmpty) {
+      return share;
+    }
+    try {
+      final wire = await _ndkService.loadShareDataFromPublishedDistributionGiftWrap(
+        giftWrapEventId: eventId,
+        relayHints: relays,
+      );
+      if (wire == null) {
+        return share;
+      }
+      return share.copyWith(
+        payload: wire.payload,
+        stewards: wire.stewards ?? share.stewards,
+        instructions: (wire.instructions != null && wire.instructions!.isNotEmpty)
+            ? wire.instructions
+            : share.instructions,
+        relayUrls: share.relayUrls ?? wire.relayUrls,
+      );
+    } catch (e, st) {
+      Log.warning('Hydrating held share from Nostr failed', e, st);
+      return share;
+    }
+  }
+
   /// Initiate recovery for a vault
   /// Returns the created recovery request
   /// Throws [StateError] if this user already has a manageable recovery on this vault
@@ -368,7 +408,13 @@ class RecoveryService {
         );
       }
 
-      final selectedShard = latestShare(shares)!;
+      var selectedShard = latestShare(shares)!;
+      selectedShard = await _materializeSharePayloadFromNostrIfOmitted(selectedShard, vaultId);
+      if (selectedShard.payload.isEmpty) {
+        throw StateError(
+          'Cannot recover: shard payload is missing locally and could not be loaded from Nostr.',
+        );
+      }
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
@@ -700,7 +746,14 @@ class RecoveryService {
       if (shares.isEmpty) {
         throw ArgumentError('No share data found for vault ${request.vaultId}');
       }
-      stewardShare = latestShare(shares)!;
+      var picked = latestShare(shares)!;
+      picked = await _materializeSharePayloadFromNostrIfOmitted(picked, request.vaultId);
+      if (picked.payload.isEmpty) {
+        throw ArgumentError(
+          'No share payload for vault ${request.vaultId} (local row empty and Nostr fetch failed)',
+        );
+      }
+      stewardShare = picked;
       Log.info(
         'Selected share with distributionVersion ${stewardShare.distributionVersion} for recovery request $recoveryRequestId',
       );
@@ -740,10 +793,14 @@ class RecoveryService {
               Log.info('Using relay URLs from backup config for recovery response');
             } else {
               // Fall back to relay URLs from steward-held share.
-              final share = latestShare(await repository.getSharesForVault(request.vaultId));
-              if (share != null && share.relayUrls != null && share.relayUrls!.isNotEmpty) {
-                relayUrls = share.relayUrls!;
-                Log.info('Using relay URLs from steward share data for recovery response');
+              final raw = latestShare(await repository.getSharesForVault(request.vaultId));
+              if (raw != null) {
+                final share =
+                    await _materializeSharePayloadFromNostrIfOmitted(raw, request.vaultId);
+                if (share.relayUrls != null && share.relayUrls!.isNotEmpty) {
+                  relayUrls = share.relayUrls!;
+                  Log.info('Using relay URLs from steward share data for recovery response');
+                }
               }
             }
           }

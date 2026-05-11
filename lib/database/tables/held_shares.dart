@@ -12,8 +12,9 @@ import 'vaults.dart';
 /// `(vault_id, distribution_version, nostr_event_id)`.
 ///
 /// The owner device's self-share (the owner-as-steward carve-out) also lives
-/// here. Its presence is what lets `Vault.shares` be non-empty for the owner
-/// when they hold their own shard.
+/// here. For that row, [sharePayload] may be intentionally empty: the shard
+/// material is only on Nostr; [RecoveryService] re-fetches it by
+/// [HeldShareRow.nostrEventId] when needed.
 ///
 /// `share_index` uses the same 0-based convention as [Share.shareIndex] in the
 /// Dart model and the wire format (`shard_index` JSON key). This differs from

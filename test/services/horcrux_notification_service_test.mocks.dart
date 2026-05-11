@@ -458,8 +458,9 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
   @override
   _i4.Future<void> addShareToVault(
     String? vaultId,
-    _i10.Share? share,
-  ) =>
+    _i10.Share? share, {
+    bool? omitSharePayload = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addShareToVault,
@@ -467,6 +468,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             vaultId,
             share,
           ],
+          {#omitSharePayload: omitSharePayload},
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

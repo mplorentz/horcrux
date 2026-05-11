@@ -352,6 +352,41 @@ class NdkService {
     }
   }
 
+  /// Loads the inner kind-1337 share payload from a published distribution
+  /// gift-wrap (kind 1059) by [giftWrapEventId].
+  ///
+  /// Used when the owner device stores a `held_shares` row with an empty
+  /// [sharePayload] (owner-as-steward carve-out) but still needs the shard
+  /// bytes for recovery responses.
+  Future<Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String giftWrapEventId,
+    required List<String> relayHints,
+  }) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+
+    final wrap = await fetchGiftWrapByIdForPush(
+      eventIdHex: giftWrapEventId,
+      relayHints: relayHints,
+    );
+    if (wrap == null) return null;
+
+    try {
+      final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: wrap);
+      if (inner.kind != NostrKind.shareData.value) {
+        Log.warning(
+          'loadShareDataFromPublishedDistributionGiftWrap: inner kind '
+          '${inner.kind} is not ${NostrKind.shareData.value} (shareData)',
+        );
+        return null;
+      }
+      return shareFromJson(json.decode(inner.content) as Map<String, dynamic>);
+    } catch (e, st) {
+      Log.warning('loadShareDataFromPublishedDistributionGiftWrap failed', e, st);
+      return null;
+    }
+  }
+
   /// Best-effort [Vault.id] for navigation after a push — unwraps once and reads
   /// inner JSON/tags. Returns `null` when unknown or unwrap fails.
   Future<String?> resolveVaultIdForGiftWrap(Nip01Event giftWrap) async {

@@ -5,12 +5,12 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:horcrux/models/nostr_kinds.dart' as _i5;
-import 'package:horcrux/models/recovery_request.dart' as _i7;
-import 'package:horcrux/models/share.dart' as _i8;
+import 'package:horcrux/models/nostr_kinds.dart' as _i6;
+import 'package:horcrux/models/recovery_request.dart' as _i8;
+import 'package:horcrux/models/share.dart' as _i5;
 import 'package:horcrux/models/vault.dart' as _i11;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i9;
-import 'package:horcrux/services/local_notification_service.dart' as _i6;
+import 'package:horcrux/services/local_notification_service.dart' as _i7;
 import 'package:horcrux/services/ndk_service.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i10;
@@ -117,6 +117,23 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<_i2.Nip01Event?>);
 
   @override
+  _i4.Future<_i5.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String? giftWrapEventId,
+    required List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadShareDataFromPublishedDistributionGiftWrap,
+          [],
+          {
+            #giftWrapEventId: giftWrapEventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i4.Future<_i5.Share?>.value(),
+      ) as _i4.Future<_i5.Share?>);
+
+  @override
   _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
@@ -126,15 +143,15 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<({_i5.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+  _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
           _i2.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i4.Future<({_i5.NostrKind kind, String recoveryRequestId})?>.value(),
-      ) as _i4.Future<({_i5.NostrKind kind, String recoveryRequestId})?>);
+        returnValue: _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i4.Future<String?> publishRecoveryRequest({
@@ -262,6 +279,15 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       );
 
   @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i4.Future<void> dispose() => (super.noSuchMethod(
         Invocation.method(
           #dispose,
@@ -275,7 +301,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
 /// A class which mocks [LocalNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotificationService {
+class MockLocalNotificationService extends _i1.Mock implements _i7.LocalNotificationService {
   MockLocalNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -291,7 +317,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotifica
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> notifyRecoveryRequestProcessed(_i7.RecoveryRequest? request) =>
+  _i4.Future<void> notifyRecoveryRequestProcessed(_i8.RecoveryRequest? request) =>
       (super.noSuchMethod(
         Invocation.method(
           #notifyRecoveryRequestProcessed,
@@ -315,7 +341,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotifica
   @override
   _i4.Future<void> notifyShareDataProcessed({
     required _i2.Nip01Event? event,
-    required _i8.Share? share,
+    required _i5.Share? share,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -388,7 +414,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i6.LocalNotifica
 
   @override
   _i4.Future<bool> navigateForKind(
-    _i5.NostrKind? kind,
+    _i6.NostrKind? kind,
     String? id, {
     String? vaultId,
   }) =>
@@ -553,7 +579,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i9.HorcruxNoti
   @override
   _i4.Future<void> tryPushForEvent({
     required _i2.Nip01Event? event,
-    required _i5.NostrKind? kind,
+    required _i6.NostrKind? kind,
     required _i11.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,

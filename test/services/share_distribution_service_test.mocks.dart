@@ -854,8 +854,9 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   @override
   _i4.Future<void> addShareToVault(
     String? vaultId,
-    _i11.Share? share,
-  ) =>
+    _i11.Share? share, {
+    bool? omitSharePayload = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addShareToVault,
@@ -863,6 +864,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
             vaultId,
             share,
           ],
+          {#omitSharePayload: omitSharePayload},
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
@@ -1343,6 +1345,23 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
       ) as _i4.Future<_i2.Nip01Event?>);
 
   @override
+  _i4.Future<_i11.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String? giftWrapEventId,
+    required List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadShareDataFromPublishedDistributionGiftWrap,
+          [],
+          {
+            #giftWrapEventId: giftWrapEventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i4.Future<_i11.Share?>.value(),
+      ) as _i4.Future<_i11.Share?>);
+
+  @override
   _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
@@ -1482,6 +1501,15 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
         Invocation.method(
           #setNdkForTesting,
           [ndk],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
         ),
         returnValueForMissingStub: null,
       );

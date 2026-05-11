@@ -7,21 +7,21 @@ import 'dart:async' as _i7;
 
 import 'package:horcrux/models/backup_config.dart' as _i6;
 import 'package:horcrux/models/backup_status.dart' as _i20;
-import 'package:horcrux/models/nostr_kinds.dart' as _i8;
+import 'package:horcrux/models/nostr_kinds.dart' as _i9;
 import 'package:horcrux/models/recovery_request.dart' as _i15;
 import 'package:horcrux/models/relay_configuration.dart' as _i17;
-import 'package:horcrux/models/share.dart' as _i14;
+import 'package:horcrux/models/share.dart' as _i8;
 import 'package:horcrux/models/steward.dart' as _i19;
-import 'package:horcrux/models/steward_status.dart' as _i13;
-import 'package:horcrux/models/vault.dart' as _i12;
-import 'package:horcrux/providers/vault_provider.dart' as _i11;
+import 'package:horcrux/models/steward_status.dart' as _i14;
+import 'package:horcrux/models/vault.dart' as _i13;
+import 'package:horcrux/providers/vault_provider.dart' as _i12;
 import 'package:horcrux/services/backup_service.dart' as _i18;
 import 'package:horcrux/services/invitation_sending_service.dart' as _i16;
-import 'package:horcrux/services/login_service.dart' as _i9;
+import 'package:horcrux/services/login_service.dart' as _i10;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
 import 'package:horcrux/services/relay_scan_service.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i10;
+import 'package:mockito/src/dummies.dart' as _i11;
 import 'package:ndk/ndk.dart' as _i2;
 import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i3;
 
@@ -166,6 +166,23 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<_i2.Nip01Event?>);
 
   @override
+  _i7.Future<_i8.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String? giftWrapEventId,
+    required List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadShareDataFromPublishedDistributionGiftWrap,
+          [],
+          {
+            #giftWrapEventId: giftWrapEventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i7.Future<_i8.Share?>.value(),
+      ) as _i7.Future<_i8.Share?>);
+
+  @override
   _i7.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
@@ -175,15 +192,15 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<String?>);
 
   @override
-  _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+  _i7.Future<({_i9.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
           _i2.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
-      ) as _i7.Future<({_i8.NostrKind kind, String recoveryRequestId})?>);
+        returnValue: _i7.Future<({_i9.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i7.Future<({_i9.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i7.Future<String?> publishRecoveryRequest({
@@ -311,6 +328,15 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       );
 
   @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i7.Future<void> dispose() => (super.noSuchMethod(
         Invocation.method(
           #dispose,
@@ -324,7 +350,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
 /// A class which mocks [LoginService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLoginService extends _i1.Mock implements _i9.LoginService {
+class MockLoginService extends _i1.Mock implements _i10.LoginService {
   MockLoginService() {
     _i1.throwOnMissingStub(this);
   }
@@ -432,7 +458,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
           #encryptText,
           [plaintext],
         ),
-        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i11.dummyValue<String>(
           this,
           Invocation.method(
             #encryptText,
@@ -447,7 +473,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
           #decryptText,
           [encryptedText],
         ),
-        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i11.dummyValue<String>(
           this,
           Invocation.method(
             #decryptText,
@@ -495,7 +521,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
             #recipientPubkey: recipientPubkey,
           },
         ),
-        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i11.dummyValue<String>(
           this,
           Invocation.method(
             #encryptForRecipient,
@@ -522,7 +548,7 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
             #senderPubkey: senderPubkey,
           },
         ),
-        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i11.dummyValue<String>(
           this,
           Invocation.method(
             #decryptFromSender,
@@ -539,16 +565,16 @@ class MockLoginService extends _i1.Mock implements _i9.LoginService {
 /// A class which mocks [VaultRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
+class MockVaultRepository extends _i1.Mock implements _i12.VaultRepository {
   MockVaultRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i7.Stream<List<_i12.Vault>> get vaultsStream => (super.noSuchMethod(
+  _i7.Stream<List<_i13.Vault>> get vaultsStream => (super.noSuchMethod(
         Invocation.getter(#vaultsStream),
-        returnValue: _i7.Stream<List<_i12.Vault>>.empty(),
-      ) as _i7.Stream<List<_i12.Vault>>);
+        returnValue: _i7.Stream<List<_i13.Vault>>.empty(),
+      ) as _i7.Stream<List<_i13.Vault>>);
 
   @override
   _i7.Future<void> initialize() => (super.noSuchMethod(
@@ -561,34 +587,34 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Stream<_i12.Vault?> watchVault(String? id) => (super.noSuchMethod(
+  _i7.Stream<_i13.Vault?> watchVault(String? id) => (super.noSuchMethod(
         Invocation.method(
           #watchVault,
           [id],
         ),
-        returnValue: _i7.Stream<_i12.Vault?>.empty(),
-      ) as _i7.Stream<_i12.Vault?>);
+        returnValue: _i7.Stream<_i13.Vault?>.empty(),
+      ) as _i7.Stream<_i13.Vault?>);
 
   @override
-  _i7.Future<List<_i12.Vault>> getAllVaults() => (super.noSuchMethod(
+  _i7.Future<List<_i13.Vault>> getAllVaults() => (super.noSuchMethod(
         Invocation.method(
           #getAllVaults,
           [],
         ),
-        returnValue: _i7.Future<List<_i12.Vault>>.value(<_i12.Vault>[]),
-      ) as _i7.Future<List<_i12.Vault>>);
+        returnValue: _i7.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
+      ) as _i7.Future<List<_i13.Vault>>);
 
   @override
-  _i7.Future<_i12.Vault?> getVault(String? id) => (super.noSuchMethod(
+  _i7.Future<_i13.Vault?> getVault(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getVault,
           [id],
         ),
-        returnValue: _i7.Future<_i12.Vault?>.value(),
-      ) as _i7.Future<_i12.Vault?>);
+        returnValue: _i7.Future<_i13.Vault?>.value(),
+      ) as _i7.Future<_i13.Vault?>);
 
   @override
-  _i7.Future<void> saveVault(_i12.Vault? vault) => (super.noSuchMethod(
+  _i7.Future<void> saveVault(_i13.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #saveVault,
           [vault],
@@ -598,7 +624,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> addVault(_i12.Vault? vault) => (super.noSuchMethod(
+  _i7.Future<void> addVault(_i13.Vault? vault) => (super.noSuchMethod(
         Invocation.method(
           #addVault,
           [vault],
@@ -703,7 +729,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   _i7.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i13.StewardStatus? status,
+    required _i14.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -739,8 +765,9 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   @override
   _i7.Future<void> addShareToVault(
     String? vaultId,
-    _i14.Share? share,
-  ) =>
+    _i8.Share? share, {
+    bool? omitSharePayload = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addShareToVault,
@@ -748,19 +775,20 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
             vaultId,
             share,
           ],
+          {#omitSharePayload: omitSharePayload},
         ),
         returnValue: _i7.Future<void>.value(),
         returnValueForMissingStub: _i7.Future<void>.value(),
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i14.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<List<_i8.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getSharesForVault,
           [vaultId],
         ),
-        returnValue: _i7.Future<List<_i14.Share>>.value(<_i14.Share>[]),
-      ) as _i7.Future<List<_i14.Share>>);
+        returnValue: _i7.Future<List<_i8.Share>>.value(<_i8.Share>[]),
+      ) as _i7.Future<List<_i8.Share>>);
 
   @override
   _i7.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
@@ -801,7 +829,7 @@ class MockVaultRepository extends _i1.Mock implements _i11.VaultRepository {
   @override
   _i7.Future<void> mergeVaultRowFromIncomingShare(
     String? vaultId,
-    _i14.Share? share,
+    _i8.Share? share,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1098,6 +1126,15 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i4.NdkService);
 
   @override
+  void disposeSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposeSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i7.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
@@ -1340,7 +1377,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i14.Share>> generateShamirShares({
+  _i7.Future<List<_i8.Share>> generateShamirShares({
     required String? content,
     required int? threshold,
     required int? totalShards,
@@ -1369,18 +1406,18 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
             #pushEnabled: pushEnabled,
           },
         ),
-        returnValue: _i7.Future<List<_i14.Share>>.value(<_i14.Share>[]),
-      ) as _i7.Future<List<_i14.Share>>);
+        returnValue: _i7.Future<List<_i8.Share>>.value(<_i8.Share>[]),
+      ) as _i7.Future<List<_i8.Share>>);
 
   @override
-  _i7.Future<String> reconstructFromShares({required List<_i14.Share>? shares}) =>
+  _i7.Future<String> reconstructFromShares({required List<_i8.Share>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,
           [],
           {#shares: shares},
         ),
-        returnValue: _i7.Future<String>.value(_i10.dummyValue<String>(
+        returnValue: _i7.Future<String>.value(_i11.dummyValue<String>(
           this,
           Invocation.method(
             #reconstructFromShares,
@@ -1411,7 +1448,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
   _i7.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i13.StewardStatus? status,
+    required _i14.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     String? giftWrapEventId,

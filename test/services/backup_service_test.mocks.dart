@@ -269,8 +269,9 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
   @override
   _i6.Future<void> addShareToVault(
     String? vaultId,
-    _i10.Share? share,
-  ) =>
+    _i10.Share? share, {
+    bool? omitSharePayload = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addShareToVault,
@@ -278,6 +279,7 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
             vaultId,
             share,
           ],
+          {#omitSharePayload: omitSharePayload},
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
@@ -819,6 +821,15 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
           Invocation.getter(#ndkService),
         ),
       ) as _i3.NdkService);
+
+  @override
+  void disposeSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposeSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i6.Future<void> initialize() => (super.noSuchMethod(

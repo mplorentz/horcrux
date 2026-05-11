@@ -744,6 +744,23 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
       ) as _i6.Future<_i3.Nip01Event?>);
 
   @override
+  _i6.Future<_i8.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String? giftWrapEventId,
+    required List<String>? relayHints,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadShareDataFromPublishedDistributionGiftWrap,
+          [],
+          {
+            #giftWrapEventId: giftWrapEventId,
+            #relayHints: relayHints,
+          },
+        ),
+        returnValue: _i6.Future<_i8.Share?>.value(),
+      ) as _i6.Future<_i8.Share?>);
+
+  @override
   _i6.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
@@ -883,6 +900,15 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
         Invocation.method(
           #setNdkForTesting,
           [ndk],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
         ),
         returnValueForMissingStub: null,
       );
