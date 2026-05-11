@@ -309,6 +309,7 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
     required int? shareIndex,
     String? pubkey,
     String? name,
+    String? contactInfo,
     bool? isOwner = false,
   }) =>
       (super.noSuchMethod(
@@ -321,6 +322,7 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
             #shareIndex: shareIndex,
             #pubkey: pubkey,
             #name: name,
+            #contactInfo: contactInfo,
             #isOwner: isOwner,
           },
         ),
@@ -412,6 +414,16 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
             requestId,
             updatedRequest,
           ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> cleanupExpiredRecoverySessions() => (super.noSuchMethod(
+        Invocation.method(
+          #cleanupExpiredRecoverySessions,
+          [],
         ),
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
@@ -809,6 +821,15 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
           Invocation.getter(#ndkService),
         ),
       ) as _i3.NdkService);
+
+  @override
+  void disposeSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposeSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i6.Future<void> initialize() => (super.noSuchMethod(

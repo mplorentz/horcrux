@@ -261,11 +261,18 @@ class StewardList extends ConsumerWidget {
     );
   }
 
-  /// Extract stewards from vault data.
+  /// Extract stewards from normalized vault metadata.
   List<StewardInfo> _extractStewards(VaultDetail vault, String? currentPubkey) {
-    // Use backupConfig stewards when available (populated from the normalized DB).
-    if (vault.backupConfig != null) {
-      final stewards = vault.backupConfig!.stewards.where((s) {
+    final normalizedStewards = (vault.backupConfig?.stewards.isNotEmpty == true)
+        ? vault.backupConfig!.stewards
+        : vault.stewards;
+
+    if (normalizedStewards.isNotEmpty) {
+      final stewards = normalizedStewards.where((s) {
+        // Show invited stewards (no pubkey yet) so owners can see pending invitees.
+        if (s.pubkey == null) {
+          return true;
+        }
         if (s.isOwner) {
           return s.status == StewardStatus.holdingKey;
         }
@@ -295,68 +302,7 @@ class StewardList extends ConsumerWidget {
       return stewards;
     }
 
-    // Fallback: steward perspective with no backupConfig.
-    final latestShare = switch (vault) {
-      StewardedVaultDetail(:final latestShare) => latestShare,
-      _ => null,
-    };
-    if (latestShare == null) {
-      return [];
-    }
-    final stewardMap = <String, StewardInfo>{};
-
-    void addSteward({
-      required String pubkey,
-      String? name,
-      String? contactInfo,
-      required bool isOwner,
-      StewardStatus status = StewardStatus.holdingKey,
-    }) {
-      final isCurrentUser = currentPubkey != null && pubkey == currentPubkey;
-      final newDisplayName = isCurrentUser && name != null ? 'You ($name)' : name;
-
-      // Merge if we already have this pubkey
-      final existing = stewardMap[pubkey];
-      final merged = StewardInfo(
-        pubkey: pubkey,
-        displayName: newDisplayName ?? existing?.displayName,
-        contactInfo: contactInfo ?? existing?.contactInfo,
-        isOwner: isOwner || (existing?.isOwner ?? false),
-        status: status,
-      );
-      stewardMap[pubkey] = merged;
-    }
-
-    // Add stewards from the share's embedded peer list.
-    // TODO(Phase 3): gate contactInfo on vault.hasActiveRecovery once
-    // VaultDetailRepository populates recoveryRequests from the DB.
-    if (latestShare.stewards != null) {
-      for (final steward in latestShare.stewards!) {
-        final stewardPubkey = steward['pubkey'];
-        final stewardName = steward['name'];
-        final stewardContactInfo = steward['contactInfo'];
-        if (stewardPubkey == null) continue;
-
-        final isOwner = stewardPubkey == vault.ownerPubkey;
-        addSteward(
-          pubkey: stewardPubkey,
-          name: stewardName,
-          contactInfo: stewardContactInfo,
-          isOwner: isOwner,
-        );
-      }
-    }
-
-    final stewards = stewardMap.values.toList();
-
-    // Sort: owner first, then others
-    stewards.sort((a, b) {
-      if (a.isOwner && !b.isOwner) return -1;
-      if (!a.isOwner && b.isOwner) return 1;
-      return 0;
-    });
-
-    return stewards;
+    return [];
   }
 }
 

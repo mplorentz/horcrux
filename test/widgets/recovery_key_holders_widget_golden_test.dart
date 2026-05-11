@@ -22,14 +22,15 @@ void main() {
     required String id,
     required Map<String, RecoveryResponse> responses,
   }) {
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: id,
       vaultId: 'test-vault',
       initiatorPubkey: testPubkey1,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: RecoveryRequestStatus.inProgress,
       threshold: 2,
-      stewardResponses: responses,
+      stewardPubkeys: responses.keys,
+      responses: responses.values,
     );
   }
 

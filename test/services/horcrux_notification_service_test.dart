@@ -194,7 +194,8 @@ void main() {
       } on HorcruxNotifierException catch (e) {
         expect(e.statusCode, 429);
         expect(e.isRateLimited, isTrue);
-        expect(e.message, 'rate limited');
+        expect(e.message, contains('rate limited'));
+        expect(e.message, contains('POST https://dev-notifier.horcruxbackup.com/register'));
       }
       harness.service.dispose();
     });
@@ -280,7 +281,8 @@ void main() {
         fail('expected HorcruxNotifierException');
       } on HorcruxNotifierException catch (e) {
         expect(e.isUnauthorized, isTrue);
-        expect(e.message, 'bad signature');
+        expect(e.message, contains('bad signature'));
+        expect(e.message, contains('DELETE https://dev-notifier.horcruxbackup.com/register'));
       }
       harness.service.dispose();
     });

@@ -29,12 +29,36 @@ void main() {
     required String ownerPubkey,
     String? content,
     Share? latestShare,
-    List<Share>? shares, // ignored (Phase 2c removed Vault.shares)
+    List<Share>? shares,
     BackupConfig? backupConfig,
     List<RecoveryRequest>? recoveryRequests,
   }) {
     final theContent = content ?? '';
-    // OwnedVaultDetail when content is non-empty or no share provided.
+    final stewardLatestShare =
+        latestShare ?? (shares != null && shares.isNotEmpty ? shares.first : null);
+
+    // Explicitly construct steward fixtures when `shares` or `latestShare`
+    // are provided so awaiting/ready scenarios stay role-correct.
+    if (latestShare != null || shares != null) {
+      return StewardedVaultDetail(
+        id: id,
+        name: 'Test Vault',
+        ownerPubkey: ownerPubkey,
+        ownerName: null,
+        threshold: backupConfig?.threshold ?? stewardLatestShare?.threshold ?? 0,
+        totalShares: backupConfig?.totalKeys ?? stewardLatestShare?.totalShares ?? 0,
+        stewards: const [],
+        recoveryRequests: recoveryRequests ?? const [],
+        pushEnabled: false,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        latestShare: stewardLatestShare,
+      );
+    }
+
+    // OwnedVaultDetail when content is non-empty.
     if (latestShare == null && content != null && content.isNotEmpty) {
       return OwnedVaultDetail(
         id: id,
@@ -54,24 +78,7 @@ void main() {
         selfHeldShare: null,
       );
     }
-    if (latestShare != null) {
-      return StewardedVaultDetail(
-        id: id,
-        name: 'Test Vault',
-        ownerPubkey: ownerPubkey,
-        ownerName: null,
-        threshold: backupConfig?.threshold ?? 0,
-        totalShares: backupConfig?.totalKeys ?? 0,
-        stewards: const [],
-        recoveryRequests: recoveryRequests ?? const [],
-        pushEnabled: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        archivedAt: null,
-        archivedReason: null,
-        backupConfig: backupConfig,
-        latestShare: latestShare,
-      );
-    }
+
     // Default: OwnedVaultDetail with empty content.
     return OwnedVaultDetail(
       id: id,
@@ -132,14 +139,14 @@ void main() {
     RecoveryRequestStatus status = RecoveryRequestStatus.inProgress,
     int threshold = 2,
   }) {
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: 'recovery-$vaultId',
       vaultId: vaultId,
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: status,
       threshold: threshold,
-      stewardResponses: {},
+      stewardPubkeys: const [],
     );
   }
 
@@ -156,7 +163,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -172,10 +181,7 @@ void main() {
           useScaffold: true,
         );
 
-        await screenMatchesGolden(
-          tester,
-          'vault_status_banner_owner_no_plan',
-        );
+        await screenMatchesGolden(tester, 'vault_status_banner_owner_no_plan');
 
         await harness.dispose();
       });
@@ -202,7 +208,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -252,7 +260,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -276,7 +286,9 @@ void main() {
         await harness.dispose();
       });
 
-      testGoldens('waiting for stewards to join - pending invitations', (tester) async {
+      testGoldens('waiting for stewards to join - pending invitations', (
+        tester,
+      ) async {
         final config = createTestBackupConfig(
           vaultId: 'test-vault',
           threshold: 2,
@@ -308,7 +320,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -355,7 +369,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -416,7 +432,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -475,7 +493,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -491,10 +511,7 @@ void main() {
           useScaffold: true,
         );
 
-        await screenMatchesGolden(
-          tester,
-          'vault_status_banner_owner_ready',
-        );
+        await screenMatchesGolden(tester, 'vault_status_banner_owner_ready');
 
         await harness.dispose();
       });
@@ -516,7 +533,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(ownerPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => AsyncValue.data(
                 RecoveryStatus(
@@ -553,7 +572,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(stewardPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(stewardPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -606,7 +627,9 @@ void main() {
           tester,
           VaultStatusBanner(vault: vault),
           overrides: [
-            currentPublicKeyProvider.overrideWith((ref) => Future.value(stewardPubkey)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(stewardPubkey),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -622,10 +645,7 @@ void main() {
           useScaffold: true,
         );
 
-        await screenMatchesGolden(
-          tester,
-          'vault_status_banner_steward_ready',
-        );
+        await screenMatchesGolden(tester, 'vault_status_banner_steward_ready');
 
         await harness.dispose();
       });
@@ -636,6 +656,10 @@ void main() {
         final vault = createTestVault(
           id: 'test-vault',
           ownerPubkey: ownerPubkey,
+          // Keep this legacy golden slot mapped to the "steward awaiting key"
+          // visual until macOS golden refresh can split it into a dedicated
+          // unknown-state snapshot.
+          shares: const [],
         );
 
         final harness = await pumpGoldenWidget(
@@ -643,7 +667,9 @@ void main() {
           VaultStatusBanner(vault: vault),
           overrides: [
             // Current user is neither owner nor steward (different pubkey)
-            currentPublicKeyProvider.overrideWith((ref) => Future.value('x' * 64)),
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value('x' * 64),
+            ),
             recoveryStatusProvider('test-vault').overrideWith(
               (ref) => const AsyncValue.data(
                 RecoveryStatus(
@@ -659,10 +685,7 @@ void main() {
           useScaffold: true,
         );
 
-        await screenMatchesGolden(
-          tester,
-          'vault_status_banner_unknown',
-        );
+        await screenMatchesGolden(tester, 'vault_status_banner_unknown');
 
         await harness.dispose();
       });

@@ -63,6 +63,7 @@ class RecoveryService {
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
+  Timer? _expirySweepTimer;
 
   /// Per-(vault, initiator) mutex serializing [initiateRecovery] calls. The
   /// check-then-act against `getRecoveryRequestsForVault` is async, so without
@@ -99,6 +100,8 @@ class RecoveryService {
 
   /// Dispose resources
   void dispose() {
+    _expirySweepTimer?.cancel();
+    _expirySweepTimer = null;
     _notificationController.close();
     _recoveryRequestController.close();
   }
@@ -126,6 +129,11 @@ class RecoveryService {
 
     // Emit existing recovery requests to the notification stream
     await _emitNotificationUpdate();
+
+    await repository.cleanupExpiredRecoverySessions();
+    _expirySweepTimer ??= Timer.periodic(const Duration(minutes: 5), (_) {
+      unawaited(repository.cleanupExpiredRecoverySessions());
+    });
   }
 
   /// Load viewed notification IDs from storage
@@ -189,11 +197,9 @@ class RecoveryService {
     final allRequests = await repository.getAllRecoveryRequests();
 
     return allRequests.where((req) {
-      if (currentPubkey != null) {
-        final userResponse = req.stewardResponses[currentPubkey];
-        if (userResponse != null && userResponse.status.isResolved) {
-          return false;
-        }
+      final userResponse = req.responseForPubkey(currentPubkey);
+      if (userResponse != null && userResponse.status.isResolved) {
+        return false;
       }
       if (!RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
         req,
@@ -252,24 +258,15 @@ class RecoveryService {
       // Generate cryptographically secure request ID
       final requestId = '${generateSecureID()}_$vaultId';
 
-      // Initialize steward responses
-      final stewardResponses = <String, RecoveryResponse>{};
-      for (final pubkey in stewardPubkeys) {
-        stewardResponses[pubkey] = RecoveryResponse(
-          pubkey: pubkey,
-          approved: false,
-        );
-      }
-
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: requestId,
         vaultId: vaultId,
         initiatorPubkey: initiatorPubkey,
         requestedAt: DateTime.now(),
         status: RecoveryRequestStatus.pending,
         threshold: threshold,
+        stewardPubkeys: stewardPubkeys,
         expiresAt: null,
-        stewardResponses: stewardResponses,
         isPractice: isPractice,
       );
 
@@ -366,28 +363,33 @@ class RecoveryService {
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
       );
 
-      // Use stewards list for recovery (includes owner if they have a shard)
-      stewardPubkeys = <String>[];
-      if (selectedShard.stewards != null) {
-        for (final steward in selectedShard.stewards!) {
-          final pubkey = steward['pubkey'];
-          if (pubkey != null) {
-            stewardPubkeys.add(pubkey);
-          }
-        }
+      final backupConfig = vault.backupConfig;
+      if (backupConfig == null) {
+        throw StateError(
+          'No steward metadata available for recovery. '
+          'Please refresh share metadata from a recent distribution.',
+        );
       }
+
+      // Use normalized stewards from the DB-backed backup config.
+      stewardPubkeys = backupConfig.stewards
+          .where((s) => s.pubkey != null && s.status != StewardStatus.invited)
+          .map((s) => s.pubkey!)
+          .toSet()
+          .toList();
 
       if (stewardPubkeys.isEmpty) {
         throw StateError('No stewards available for recovery');
       }
 
-      threshold = selectedShard.threshold;
+      threshold = backupConfig.threshold;
 
-      // Get relays from shard data (if available) or backup config
-      if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
+      // Use normalized relay configuration first; fall back to legacy shard
+      // relay hints for older vault rows.
+      if (backupConfig.relays.isNotEmpty) {
+        relayUrls = backupConfig.relays;
+      } else if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
         relayUrls = selectedShard.relayUrls!;
-      } else if (vault.backupConfig != null && vault.backupConfig!.relays.isNotEmpty) {
-        relayUrls = vault.backupConfig!.relays;
       } else {
         throw StateError(
           'No relays configured for recovery. Please configure relays in the recovery plan.',
@@ -528,8 +530,7 @@ class RecoveryService {
     if (request == null) return null;
 
     // Count responses that have shard data (approved responses)
-    final collectedShareIds = request.stewardResponses.values
-        .where((r) => r.share != null)
+    final collectedShareIds = request.approvedResponsesWithShare
         .map((r) => r.pubkey) // Use pubkey as identifier
         .toList();
 
@@ -576,7 +577,7 @@ class RecoveryService {
     }
 
     // Check if response already exists for this pubkey
-    final existingResponse = request.stewardResponses[responderPubkey];
+    final existingResponse = request.responseForPubkey(responderPubkey);
     if (existingResponse != null) {
       // Check if this is a duplicate by comparing nostrEventId if provided
       if (nostrEventId != null && existingResponse.nostrEventId == nostrEventId) {
@@ -595,16 +596,15 @@ class RecoveryService {
     }
 
     // Update the response
-    final updatedResponses = Map<String, RecoveryResponse>.from(
-      request.stewardResponses,
-    );
-    updatedResponses[responderPubkey] = RecoveryResponse(
+    final newResponse = RecoveryResponse(
       pubkey: responderPubkey,
       approved: approved,
       respondedAt: DateTime.now(),
       share: share,
       nostrEventId: nostrEventId,
     );
+    final updatedResponses = request.copyResponsesByPubkey();
+    updatedResponses[responderPubkey] = newResponse;
 
     // Update request status
     var newStatus = request.status;
@@ -621,9 +621,9 @@ class RecoveryService {
     }
 
     // Update the request
-    final updatedRequest = request.copyWith(
+    final updatedRequest = request.withUpsertedResponse(
       status: newStatus,
-      stewardResponses: updatedResponses,
+      response: newResponse,
     );
 
     // Update in vault (single source of truth)
@@ -739,10 +739,6 @@ class RecoveryService {
               }
             }
           }
-        }
-
-        if (relayUrls.isEmpty) {
-          Log.warning('No relay URLs available for sending recovery response');
         }
 
         if (relayUrls.isNotEmpty) {
@@ -882,10 +878,7 @@ class RecoveryService {
     }
 
     // Collect shards from approved responses
-    final shares = request.stewardResponses.values
-        .where((r) => r.approved && r.share != null)
-        .map((r) => r.share!)
-        .toList();
+    final shares = request.approvedSharesWithPayload;
 
     if (shares.isEmpty) {
       throw Exception('No recovery shares found');
@@ -938,7 +931,7 @@ class RecoveryService {
     final request = await getRecoveryRequest(recoveryRequestId);
     if (request == null) return [];
 
-    return request.stewardResponses.values.toList();
+    return request.responses.toList();
   }
 
   /// Update recovery request status (for Nostr event tracking)
@@ -988,9 +981,7 @@ class RecoveryService {
         throw Exception('Unable to get current user keys for signing');
       }
 
-      Log.info(
-        'Sending recovery request ${request.id} to ${request.stewardResponses.length} stewards',
-      );
+      Log.info('Sending recovery request ${request.id} to ${request.totalStewards} stewards');
 
       // Prepare recovery request data
       final requestData = {
@@ -1009,7 +1000,7 @@ class RecoveryService {
       // Send gift wrap to each steward using NdkService. The signed events
       // come back positionally aligned with the recipient list so we can
       // pipe each one into [tryPushForEvent] without rebuilding it.
-      final recipients = request.stewardResponses.keys.toList();
+      final recipients = request.stewardPubkeys.toList();
       final publishedEvents = await _ndkService.publishEncryptedEventToMultiple(
         content: requestJson,
         kind: NostrKind.recoveryRequest.value,
@@ -1021,6 +1012,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
         ],
         customPubkey: currentPubkey,
+        vaultId: request.vaultId,
       );
 
       final eventIds = [
@@ -1112,6 +1104,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
           ['approved', approved.toString()],
         ],
+        vaultId: request.vaultId,
       );
 
       if (publishedEvent == null) {

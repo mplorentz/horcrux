@@ -53,7 +53,7 @@ class VaultStatusBanner extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (currentPubkey) {
         final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-        final isSteward = currentPubkey != null && !vault.isVaultOwner(currentPubkey);
+        final isSteward = currentPubkey != null && vault is StewardedVaultDetail;
 
         // Show "Recovery in progress" only when the CURRENT user has their own
         // manageable recovery on this vault. Per-user exclusivity allows other
@@ -92,7 +92,12 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, VaultDetail vault) {
+  Widget _buildNormalStatus(
+    BuildContext context,
+    bool isOwner,
+    bool isSteward,
+    VaultDetail vault,
+  ) {
     if (isOwner) {
       return _buildOwnerStatus(context, vault);
     } else if (isSteward) {
@@ -296,11 +301,11 @@ class VaultStatusBanner extends ConsumerWidget {
     return _buildBanner(
       context,
       const _StatusData(
-        headline: 'Uknown status',
-        subtext: 'This is a bug.',
-        icon: Icons.key,
+        headline: 'Steward status unavailable',
+        subtext: 'Unable to determine your key status for this vault.',
+        icon: Icons.info_outline,
         accentColor: Color(0xFF676F62), // Secondary text color
-        variant: _StatusVariant.stewardReady,
+        variant: _StatusVariant.unknown,
       ),
       false,
       true,
@@ -332,7 +337,11 @@ class VaultStatusBanner extends ConsumerWidget {
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(statusData.icon, size: 20, color: colorScheme.onSurface),
+            child: Icon(
+              statusData.icon,
+              size: 20,
+              color: colorScheme.onSurface,
+            ),
           ),
           const SizedBox(width: 12),
           // Text content

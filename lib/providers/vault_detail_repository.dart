@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
 import '../database/app_database.dart';
@@ -99,8 +100,22 @@ class VaultDetailRepository {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
     final heldShareRows = await _db.heldShareDao.forVault(row.id);
+    final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
+      vaultId: row.id,
+      distributionVersion: row.currentDistributionVersion,
+    );
+    final inviteCodeByStewardId = await _inviteCodesByStewardId(row.id);
 
-    final stewards = stewardRows.map(_stewardFromRow).toList();
+    final stewards = stewardRows
+        .map(
+          (s) => _stewardFromRow(
+            s,
+            currentDistributionVersion: row.currentDistributionVersion,
+            distributionShareRow: distributionSharesByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id],
+          ),
+        )
+        .toList();
 
     final backupConfig = stewards.isNotEmpty || row.threshold > 0
         ? BackupConfig(
@@ -181,14 +196,75 @@ class VaultDetailRepository {
     );
   }
 
-  Steward _stewardFromRow(StewardRow row) {
+  Future<Map<String, DistributionShareRow>> _distributionSharesByStewardForVersion({
+    required String vaultId,
+    required int distributionVersion,
+  }) async {
+    if (distributionVersion < 0) {
+      return const {};
+    }
+
+    final distributionId = _distributionId(vaultId, distributionVersion);
+    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+        .getSingleOrNull();
+    final distribution = byId ??
+        await (_db.select(_db.distributions)
+              ..where((d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion)))
+            .getSingleOrNull();
+    if (distribution == null) {
+      return const {};
+    }
+
+    final shareRows = await _db.distributionDao.sharesFor(distribution.id);
+    return {for (final row in shareRows) row.stewardId: row};
+  }
+
+  Future<Map<String, String>> _inviteCodesByStewardId(String vaultId) async {
+    final rows = await _db.invitationDao.forVault(vaultId);
+    return {
+      for (final r in rows)
+        if (r.stewardId != null && r.revokedAt == null) r.stewardId!: r.code,
+    };
+  }
+
+  Steward _stewardFromRow(
+    StewardRow row, {
+    required int currentDistributionVersion,
+    DistributionShareRow? distributionShareRow,
+    String? inviteCode,
+  }) {
+    final isInvited = row.pubkey == null;
+    final acknowledgedAtMs = distributionShareRow?.acknowledgedAt;
+    final acknowledgedAt =
+        acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
+    final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
+    final isCurrentAck =
+        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
+
+    final status = isInvited
+        ? StewardStatus.invited
+        : isCurrentAck
+            ? StewardStatus.holdingKey
+            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
+                ? StewardStatus.awaitingNewKey
+                : StewardStatus.awaitingKey;
+    final giftWrapEventId = distributionShareRow?.giftWrapEventId;
+
     return Steward(
       id: row.id,
       pubkey: row.pubkey,
       name: row.name,
       contactInfo: row.contactInfo,
       isOwner: row.isOwner,
-      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+      inviteCode: inviteCode,
+      status: status,
+      giftWrapEventId:
+          (giftWrapEventId == null || giftWrapEventId.isEmpty) ? null : giftWrapEventId,
+      acknowledgedAt: acknowledgedAt,
+      acknowledgmentEventId: distributionShareRow?.acknowledgmentEventId,
+      acknowledgedDistributionVersion: acknowledgedVersion,
     );
   }
+
+  String _distributionId(String vaultId, int version) => '${vaultId}_v$version';
 }

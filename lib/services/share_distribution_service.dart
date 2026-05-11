@@ -123,7 +123,7 @@ class ShareDistributionService {
                 recipientPubkey: ownerPubkey,
               );
 
-              // Store share locally
+              // Store share locally (same persistence model as steward-held keys).
               await _repository.addShareToVault(
                 config.vaultId,
                 shareWithEventId,

@@ -14,10 +14,11 @@ import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
 import '../fixtures/test_keys.dart';
-import '../helpers/shared_preferences_mock.dart';
+import '../helpers/test_database.dart';
 import 'invitation_service_test.mocks.dart';
 
 @GenerateMocks([
@@ -31,16 +32,6 @@ import 'invitation_service_test.mocks.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
-
   group('InvitationService - Adding Steward to Backup Config', () {
     late MockNdkService mockNdkService;
     late MockLoginService mockLoginService;
@@ -49,11 +40,13 @@ void main() {
     late MockRelayScanService mockRelayScanService;
     late MockBackupService mockBackupService;
     late InvitationService invitationService;
+    late AppDatabase testDb;
 
     setUp(() async {
       mockNdkService = MockNdkService();
       mockLoginService = MockLoginService();
-      realRepository = VaultRepository(mockLoginService);
+      testDb = newTestDatabase();
+      realRepository = VaultRepository(mockLoginService, db: testDb);
       mockInvitationSendingService = MockInvitationSendingService();
       mockRelayScanService = MockRelayScanService();
       mockBackupService = MockBackupService();
@@ -65,9 +58,12 @@ void main() {
         () => mockNdkService,
         mockRelayScanService,
         mockBackupService,
+        testDb,
       );
+    });
 
-      sharedPreferencesMock.clear();
+    tearDown(() async {
+      await testDb.close();
     });
 
     test(

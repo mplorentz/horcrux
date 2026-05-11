@@ -85,14 +85,15 @@ void main() {
         required RecoveryRequestStatus status,
         required Map<String, RecoveryResponse> responses,
       }) {
-        return RecoveryRequest(
+        return RecoveryRequest.makeFromParticipants(
           id: 'r1',
           vaultId: 'v1',
           initiatorPubkey: initiator,
           requestedAt: DateTime.utc(2026, 4, 1),
           status: status,
           threshold: 2,
-          stewardResponses: responses,
+          stewardPubkeys: responses.keys,
+          responses: responses.values,
         );
       }
 

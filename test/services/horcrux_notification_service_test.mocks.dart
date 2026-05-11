@@ -498,6 +498,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
     required int? shareIndex,
     String? pubkey,
     String? name,
+    String? contactInfo,
     bool? isOwner = false,
   }) =>
       (super.noSuchMethod(
@@ -510,6 +511,7 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             #shareIndex: shareIndex,
             #pubkey: pubkey,
             #name: name,
+            #contactInfo: contactInfo,
             #isOwner: isOwner,
           },
         ),
@@ -601,6 +603,16 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
             requestId,
             updatedRequest,
           ],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> cleanupExpiredRecoverySessions() => (super.noSuchMethod(
+        Invocation.method(
+          #cleanupExpiredRecoverySessions,
+          [],
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),

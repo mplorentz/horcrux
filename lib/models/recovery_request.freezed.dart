@@ -282,8 +282,8 @@ mixin _$RecoveryRequest {
   /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
   DateTime? get eventCreationTime => throw _privateConstructorUsedError;
   DateTime? get expiresAt => throw _privateConstructorUsedError;
-  Map<String, RecoveryResponse> get stewardResponses =>
-      throw _privateConstructorUsedError; // pubkey -> response
+  List<String> get stewardPubkeys => throw _privateConstructorUsedError;
+  List<RecoveryResponse> get responses => throw _privateConstructorUsedError;
   String? get errorMessage =>
       throw _privateConstructorUsedError; // Error message if status is failed
   bool get isPractice => throw _privateConstructorUsedError;
@@ -309,7 +309,8 @@ abstract class $RecoveryRequestCopyWith<$Res> {
       String? nostrEventId,
       DateTime? eventCreationTime,
       DateTime? expiresAt,
-      Map<String, RecoveryResponse> stewardResponses,
+      List<String> stewardPubkeys,
+      List<RecoveryResponse> responses,
       String? errorMessage,
       bool isPractice});
 }
@@ -338,7 +339,8 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
     Object? nostrEventId = freezed,
     Object? eventCreationTime = freezed,
     Object? expiresAt = freezed,
-    Object? stewardResponses = null,
+    Object? stewardPubkeys = null,
+    Object? responses = null,
     Object? errorMessage = freezed,
     Object? isPractice = null,
   }) {
@@ -379,10 +381,14 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
           ? _value.expiresAt
           : expiresAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      stewardResponses: null == stewardResponses
-          ? _value.stewardResponses
-          : stewardResponses // ignore: cast_nullable_to_non_nullable
-              as Map<String, RecoveryResponse>,
+      stewardPubkeys: null == stewardPubkeys
+          ? _value.stewardPubkeys
+          : stewardPubkeys // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      responses: null == responses
+          ? _value.responses
+          : responses // ignore: cast_nullable_to_non_nullable
+              as List<RecoveryResponse>,
       errorMessage: freezed == errorMessage
           ? _value.errorMessage
           : errorMessage // ignore: cast_nullable_to_non_nullable
@@ -412,7 +418,8 @@ abstract class _$$RecoveryRequestImplCopyWith<$Res> implements $RecoveryRequestC
       String? nostrEventId,
       DateTime? eventCreationTime,
       DateTime? expiresAt,
-      Map<String, RecoveryResponse> stewardResponses,
+      List<String> stewardPubkeys,
+      List<RecoveryResponse> responses,
       String? errorMessage,
       bool isPractice});
 }
@@ -439,7 +446,8 @@ class __$$RecoveryRequestImplCopyWithImpl<$Res>
     Object? nostrEventId = freezed,
     Object? eventCreationTime = freezed,
     Object? expiresAt = freezed,
-    Object? stewardResponses = null,
+    Object? stewardPubkeys = null,
+    Object? responses = null,
     Object? errorMessage = freezed,
     Object? isPractice = null,
   }) {
@@ -480,10 +488,14 @@ class __$$RecoveryRequestImplCopyWithImpl<$Res>
           ? _value.expiresAt
           : expiresAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
-      stewardResponses: null == stewardResponses
-          ? _value._stewardResponses
-          : stewardResponses // ignore: cast_nullable_to_non_nullable
-              as Map<String, RecoveryResponse>,
+      stewardPubkeys: null == stewardPubkeys
+          ? _value._stewardPubkeys
+          : stewardPubkeys // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      responses: null == responses
+          ? _value._responses
+          : responses // ignore: cast_nullable_to_non_nullable
+              as List<RecoveryResponse>,
       errorMessage: freezed == errorMessage
           ? _value.errorMessage
           : errorMessage // ignore: cast_nullable_to_non_nullable
@@ -509,10 +521,12 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
       this.nostrEventId,
       this.eventCreationTime,
       this.expiresAt,
-      final Map<String, RecoveryResponse> stewardResponses = const {},
+      final List<String> stewardPubkeys = const [],
+      final List<RecoveryResponse> responses = const [],
       this.errorMessage,
       this.isPractice = false})
-      : _stewardResponses = stewardResponses,
+      : _stewardPubkeys = stewardPubkeys,
+        _responses = responses,
         super._();
 
   @override
@@ -537,16 +551,24 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
   final DateTime? eventCreationTime;
   @override
   final DateTime? expiresAt;
-  final Map<String, RecoveryResponse> _stewardResponses;
+  final List<String> _stewardPubkeys;
   @override
   @JsonKey()
-  Map<String, RecoveryResponse> get stewardResponses {
-    if (_stewardResponses is EqualUnmodifiableMapView) return _stewardResponses;
+  List<String> get stewardPubkeys {
+    if (_stewardPubkeys is EqualUnmodifiableListView) return _stewardPubkeys;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_stewardResponses);
+    return EqualUnmodifiableListView(_stewardPubkeys);
   }
 
-// pubkey -> response
+  final List<RecoveryResponse> _responses;
+  @override
+  @JsonKey()
+  List<RecoveryResponse> get responses {
+    if (_responses is EqualUnmodifiableListView) return _responses;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_responses);
+  }
+
   @override
   final String? errorMessage;
 // Error message if status is failed
@@ -570,7 +592,8 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
             (identical(other.eventCreationTime, eventCreationTime) ||
                 other.eventCreationTime == eventCreationTime) &&
             (identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt) &&
-            const DeepCollectionEquality().equals(other._stewardResponses, _stewardResponses) &&
+            const DeepCollectionEquality().equals(other._stewardPubkeys, _stewardPubkeys) &&
+            const DeepCollectionEquality().equals(other._responses, _responses) &&
             (identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage) &&
             (identical(other.isPractice, isPractice) || other.isPractice == isPractice));
   }
@@ -587,7 +610,8 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
       nostrEventId,
       eventCreationTime,
       expiresAt,
-      const DeepCollectionEquality().hash(_stewardResponses),
+      const DeepCollectionEquality().hash(_stewardPubkeys),
+      const DeepCollectionEquality().hash(_responses),
       errorMessage,
       isPractice);
 
@@ -611,7 +635,8 @@ abstract class _RecoveryRequest extends RecoveryRequest {
       final String? nostrEventId,
       final DateTime? eventCreationTime,
       final DateTime? expiresAt,
-      final Map<String, RecoveryResponse> stewardResponses,
+      final List<String> stewardPubkeys,
+      final List<RecoveryResponse> responses,
       final String? errorMessage,
       final bool isPractice}) = _$RecoveryRequestImpl;
   const _RecoveryRequest._() : super._();
@@ -637,7 +662,9 @@ abstract class _RecoveryRequest extends RecoveryRequest {
   @override
   DateTime? get expiresAt;
   @override
-  Map<String, RecoveryResponse> get stewardResponses; // pubkey -> response
+  List<String> get stewardPubkeys;
+  @override
+  List<RecoveryResponse> get responses;
   @override
   String? get errorMessage; // Error message if status is failed
   @override

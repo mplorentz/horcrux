@@ -173,12 +173,71 @@ class RecoveryRequest with _$RecoveryRequest {
     /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
     DateTime? eventCreationTime,
     DateTime? expiresAt,
-    @Default({}) Map<String, RecoveryResponse> stewardResponses, // pubkey -> response
+    @Default([]) List<String> stewardPubkeys,
+    @Default([]) List<RecoveryResponse> responses,
     String? errorMessage, // Error message if status is failed
     @Default(false) bool isPractice, // True for practice recovery sessions
   }) = _RecoveryRequest;
 
   const RecoveryRequest._();
+
+  /// Creates a request from normalized participant and response collections.
+  ///
+  /// Responses are keyed by `pubkey`, and any missing participant defaults to a
+  /// pending response placeholder.
+  static RecoveryRequest makeFromParticipants({
+    required String id,
+    required String vaultId,
+    required String initiatorPubkey,
+    required DateTime requestedAt,
+    required RecoveryRequestStatus status,
+    required int threshold,
+    required Iterable<String> stewardPubkeys,
+    Iterable<RecoveryResponse> responses = const [],
+    String? nostrEventId,
+    DateTime? eventCreationTime,
+    DateTime? expiresAt,
+    String? errorMessage,
+    bool isPractice = false,
+  }) {
+    final orderedPubkeys = <String>{}
+      ..addAll(stewardPubkeys)
+      ..addAll(responses.map((r) => r.pubkey));
+
+    final byPubkey = <String, RecoveryResponse>{
+      for (final response in responses) response.pubkey: response,
+    };
+    final orderedResponses = [
+      for (final pubkey in orderedPubkeys)
+        byPubkey[pubkey] ?? RecoveryResponse(pubkey: pubkey, approved: false),
+    ];
+    return RecoveryRequest(
+      id: id,
+      vaultId: vaultId,
+      initiatorPubkey: initiatorPubkey,
+      requestedAt: requestedAt,
+      status: status,
+      threshold: threshold,
+      nostrEventId: nostrEventId,
+      eventCreationTime: eventCreationTime,
+      expiresAt: expiresAt,
+      stewardPubkeys: orderedPubkeys.toList(),
+      responses: orderedResponses,
+      errorMessage: errorMessage,
+      isPractice: isPractice,
+    );
+  }
+
+  /// Returns the response for a steward, if present.
+  RecoveryResponse? responseForPubkey(String? pubkey) {
+    if (pubkey == null) return null;
+    for (final response in responses) {
+      if (response.pubkey == pubkey) {
+        return response;
+      }
+    }
+    return null;
+  }
 
   /// Validate the recovery request
   bool get isValid {
@@ -214,14 +273,57 @@ class RecoveryRequest with _$RecoveryRequest {
 
   /// Get the count of responses by status
   int getResponseCount(RecoveryResponseStatus status) {
-    return stewardResponses.values.where((r) => r.status == status).length;
+    return responses.where((r) => r.status == status).length;
   }
 
+  /// Mutable copy keyed by responder pubkey for update flows.
+  Map<String, RecoveryResponse> copyResponsesByPubkey() => {
+        for (final response in responses) response.pubkey: response,
+      };
+
+  /// Returns a copy with one response updated by responder pubkey.
+  RecoveryRequest withUpsertedResponse({
+    required RecoveryResponse response,
+    RecoveryRequestStatus? status,
+  }) {
+    final updatedByPubkey = copyResponsesByPubkey();
+    updatedByPubkey[response.pubkey] = response;
+
+    final updatedPubkeys = [...stewardPubkeys];
+    if (!updatedPubkeys.contains(response.pubkey)) {
+      updatedPubkeys.add(response.pubkey);
+    }
+
+    return copyWith(
+      status: status ?? this.status,
+      stewardPubkeys: updatedPubkeys,
+      responses: [
+        for (final pubkey in updatedPubkeys)
+          updatedByPubkey[pubkey] ?? RecoveryResponse(pubkey: pubkey, approved: false),
+      ],
+    );
+  }
+
+  /// Approved responses that include share material.
+  Iterable<RecoveryResponse> get approvedResponsesWithShare => responses.where(
+        (r) => r.status == RecoveryResponseStatus.approved && r.share != null,
+      );
+
+  /// Pubkeys for stewards who approved this request.
+  List<String> get approvedResponderPubkeys => responses
+      .where((r) => r.status == RecoveryResponseStatus.approved)
+      .map((r) => r.pubkey)
+      .toList();
+
+  /// Share fragments collected from approved responses.
+  List<Share> get approvedSharesWithPayload =>
+      approvedResponsesWithShare.map((r) => r.share!).toList();
+
   /// Get total number of stewards
-  int get totalStewards => stewardResponses.length;
+  int get totalStewards => stewardPubkeys.length;
 
   /// Get number of responses received
-  int get respondedCount => stewardResponses.values.where((r) => r.status.isResolved).length;
+  int get respondedCount => responses.where((r) => r.status.isResolved).length;
 
   /// Get number of approvals
   int get approvedCount => getResponseCount(RecoveryResponseStatus.approved);
@@ -241,9 +343,8 @@ class RecoveryRequest with _$RecoveryRequest {
       'nostrEventId': nostrEventId,
       'eventCreationTime': eventCreationTime?.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
-      'stewardResponses': stewardResponses.map(
-        (key, value) => MapEntry(key, value.toJson()),
-      ),
+      'stewardPubkeys': stewardPubkeys,
+      'responses': responses.map((response) => response.toJson()).toList(),
       'errorMessage': errorMessage,
       'isPractice': isPractice,
     };
@@ -251,16 +352,34 @@ class RecoveryRequest with _$RecoveryRequest {
 
   /// Create from JSON
   factory RecoveryRequest.fromJson(Map<String, dynamic> json) {
-    final responsesJson = json['stewardResponses'] as Map<String, dynamic>?;
-    final responses = responsesJson?.map(
-          (key, value) => MapEntry(
-            key,
-            RecoveryResponse.fromJson(value as Map<String, dynamic>),
-          ),
-        ) ??
-        {};
+    final participants = <String>{};
 
-    return RecoveryRequest(
+    final stewardPubkeysJson = json['stewardPubkeys'];
+    if (stewardPubkeysJson is List) {
+      for (final pubkey in stewardPubkeysJson) {
+        if (pubkey is String) {
+          participants.add(pubkey);
+        }
+      }
+    }
+
+    final responses = <RecoveryResponse>[];
+    final responsesJson = json['responses'];
+    if (responsesJson is List) {
+      for (final response in responsesJson) {
+        if (response is Map<String, dynamic>) {
+          responses.add(RecoveryResponse.fromJson(response));
+        } else if (response is Map) {
+          responses.add(RecoveryResponse.fromJson(response.cast<String, dynamic>()));
+        }
+      }
+    }
+
+    for (final response in responses) {
+      participants.add(response.pubkey);
+    }
+
+    return RecoveryRequest.makeFromParticipants(
       id: json['id'] as String,
       vaultId: json['vaultId'] as String,
       initiatorPubkey: json['initiatorPubkey'] as String,
@@ -276,7 +395,8 @@ class RecoveryRequest with _$RecoveryRequest {
           ? DateTime.parse(json['eventCreationTime'] as String)
           : null,
       expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
-      stewardResponses: responses,
+      stewardPubkeys: participants,
+      responses: responses,
       errorMessage: json['errorMessage'] as String?,
       isPractice: json['isPractice'] as bool? ?? false,
     );

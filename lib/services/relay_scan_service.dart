@@ -11,7 +11,9 @@ import 'logger.dart';
 // Provider for RelayScanService
 final relayScanServiceProvider = Provider<RelayScanService>((ref) {
   final ndkService = ref.watch(ndkServiceProvider);
-  return RelayScanService(ndkService: ndkService);
+  final service = RelayScanService(ndkService: ndkService);
+  ref.onDispose(service.disposeSync);
+  return service;
 });
 
 /// Scanning status data class
@@ -72,6 +74,13 @@ class RelayScanService {
   ScanningStatus? _scanningStatus;
 
   RelayScanService({required this.ndkService});
+
+  /// Cancels the periodic scan timer immediately (see [ndkServiceProvider] dispose notes).
+  void disposeSync() {
+    _scanTimer?.cancel();
+    _scanTimer = null;
+    _isScanning = false;
+  }
 
   /// Initialize the service
   Future<void> initialize() async {

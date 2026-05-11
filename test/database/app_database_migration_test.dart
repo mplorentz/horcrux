@@ -6,7 +6,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 /// Verifies [AppDatabase] migration from schema v1 files that predate the
 /// Phase 2a `held_shares` table (same `user_version`, expanded drift schema).
 void main() {
-  test('upgrade from v1 without held_shares creates held_shares at v2', () async {
+  test('upgrade from v1 without held_shares reaches schema v3', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
 
@@ -26,12 +26,19 @@ void main() {
     expect(held, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 2);
+    expect(versionRow.first.columnAt(0), 4);
+
+    final phase3 = await db
+        .customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'outbox'",
+        )
+        .get();
+    expect(phase3, isNotEmpty);
 
     await db.close();
   });
 
-  test('upgrade to v2 skips createTable when held_shares already exists', () async {
+  test('upgrade from v1 with held_shares already present reaches schema v3', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
 
@@ -52,7 +59,33 @@ void main() {
     expect(held.first.data['c'], 0);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 2);
+    expect(versionRow.first.columnAt(0), 4);
+
+    await db.close();
+  });
+
+  test('upgrade from v2 snapshot adds Phase 3 tables', () async {
+    final raw = sqlite.sqlite3.openInMemory();
+    raw.execute('PRAGMA foreign_keys = ON');
+
+    for (final statement in _legacyV1Ddl) {
+      raw.execute(statement);
+    }
+    raw.execute(_legacyV1HeldSharesDdl);
+    raw.execute('PRAGMA user_version = 2');
+
+    final db = AppDatabase(NativeDatabase.opened(raw));
+    await db.customSelect('SELECT 1').get();
+
+    final invitations = await db
+        .customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'invitations'",
+        )
+        .get();
+    expect(invitations, isNotEmpty);
+
+    final versionRow = raw.select('PRAGMA user_version');
+    expect(versionRow.first.columnAt(0), 4);
 
     await db.close();
   });

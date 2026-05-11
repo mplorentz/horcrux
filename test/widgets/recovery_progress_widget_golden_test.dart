@@ -88,20 +88,21 @@ void main() {
     });
 
     testGoldens('low progress without button', (tester) async {
-      final request = RecoveryRequest(
+      final request = RecoveryRequest.makeFromParticipants(
         id: 'test-request',
         vaultId: 'test-vault',
         initiatorPubkey: testPubkey1,
         requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {
-          testPubkey2: RecoveryResponse(
+        stewardPubkeys: [testPubkey2],
+        responses: [
+          RecoveryResponse(
             pubkey: testPubkey2,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 30)),
           ),
-        },
+        ],
       );
 
       final vault = createTestVault(
@@ -137,25 +138,26 @@ void main() {
     });
 
     testGoldens('threshold met with button', (tester) async {
-      final request = RecoveryRequest(
+      final request = RecoveryRequest.makeFromParticipants(
         id: 'test-request',
         vaultId: 'test-vault',
         initiatorPubkey: testPubkey1,
         requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {
-          testPubkey2: RecoveryResponse(
+        stewardPubkeys: [testPubkey2, testPubkey3],
+        responses: [
+          RecoveryResponse(
             pubkey: testPubkey2,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 30)),
           ),
-          testPubkey3: RecoveryResponse(
+          RecoveryResponse(
             pubkey: testPubkey3,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 15)),
           ),
-        },
+        ],
       );
 
       final vault = createTestVault(
@@ -191,25 +193,26 @@ void main() {
     });
 
     testGoldens('completed state', (tester) async {
-      final request = RecoveryRequest(
+      final request = RecoveryRequest.makeFromParticipants(
         id: 'test-request',
         vaultId: 'test-vault',
         initiatorPubkey: testPubkey1,
         requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {
-          testPubkey2: RecoveryResponse(
+        stewardPubkeys: [testPubkey2, testPubkey3],
+        responses: [
+          RecoveryResponse(
             pubkey: testPubkey2,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(hours: 2)),
           ),
-          testPubkey3: RecoveryResponse(
+          RecoveryResponse(
             pubkey: testPubkey3,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 30)),
           ),
-        },
+        ],
       );
 
       final vault = createTestVault(

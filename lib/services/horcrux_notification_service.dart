@@ -279,11 +279,8 @@ class HorcruxNotificationService {
   /// - the vault owner (unless that's us), and
   /// - every co-steward of the vault (excluding us).
   ///
-  /// On the owner's side co-stewards come from `backupConfig.stewards`. On
-  /// the steward's side the local vault stub usually doesn't carry a
-  /// backup config, so we fall back to the `stewards` list that the owner
-  /// piggybacks onto each shard payload (see [Share.stewards], which
-  /// already excludes the creator).
+  /// Co-stewards come from the normalized `stewards` table (hydrated into
+  /// `backupConfig.stewards`) on both owner and steward devices.
   ///
   /// This is symmetric on purpose: any steward -- not just the owner --
   /// can originate a recovery request, so every co-steward of a shared
@@ -571,6 +568,7 @@ class HorcruxNotificationService {
 
     final base = await getBaseUrl();
     final url = Uri.parse('$base$path');
+    final requestTarget = '$method $url';
 
     final authHeader = Nip98Auth.buildAuthorizationHeader(
       keyPair: keyPair,
@@ -591,7 +589,7 @@ class HorcruxNotificationService {
     } catch (e) {
       throw HorcruxNotifierException(
         statusCode: 0,
-        message: 'Notifier request failed: $e',
+        message: 'Notifier request failed ($requestTarget): $e',
         cause: e,
       );
     }
@@ -614,7 +612,7 @@ class HorcruxNotificationService {
 
     throw HorcruxNotifierException(
       statusCode: status,
-      message: _extractErrorMessage(response) ?? 'HTTP $status',
+      message: '${_extractErrorMessage(response) ?? 'HTTP $status'} ($requestTarget)',
     );
   }
 

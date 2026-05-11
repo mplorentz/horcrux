@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/open.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +28,13 @@ Future<void> main() async {
     MarionetteBinding.ensureInitialized();
   } else {
     WidgetsFlutterBinding.ensureInitialized();
+  }
+
+  // Drift uses package:sqlite3, which defaults to libsqlite3.so on Android.
+  // sqlcipher_flutter_libs ships libsqlcipher.so — override before any DB open.
+  if (Platform.isAndroid) {
+    await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
   }
 
   await _initializeFirebaseIfNecessary();

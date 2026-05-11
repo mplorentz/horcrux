@@ -514,4 +514,100 @@ void main() {
       ).called(1);
     });
   });
+
+  group('BackupService - createAndDistributeBackup', () {
+    late BackupService backupService;
+    late MockVaultRepository mockRepository;
+    late _MockVaultDetailRepository mockDetailRepository;
+    late MockShareDistributionService mockShareDistributionService;
+    late MockLoginService mockLoginService;
+    late MockRelayScanService mockRelayScanService;
+
+    setUp(() {
+      mockRepository = MockVaultRepository();
+      mockDetailRepository = _MockVaultDetailRepository();
+      mockShareDistributionService = MockShareDistributionService();
+      mockLoginService = MockLoginService();
+      mockRelayScanService = MockRelayScanService();
+      backupService = BackupService(
+        mockRepository,
+        mockDetailRepository,
+        mockShareDistributionService,
+        mockLoginService,
+        mockRelayScanService,
+      );
+    });
+
+    const testVaultId = 'vault-create-dist';
+    const testSecret = 'create and distribute secret';
+
+    test(
+      'first distribution initializes version 1 before shard publish',
+      () async {
+        final keyPair = Bip340.generatePrivateKey();
+        final ownerPubkey = keyPair.publicKey;
+
+        final configAt0 = createBackupConfig(
+          vaultId: testVaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createTestSteward(pubkey: ownerPubkey, name: 'Owner', isOwner: true),
+            createTestSteward(
+              pubkey: 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
+              name: 'Peer',
+            ),
+          ],
+          relays: const ['wss://relay.example.com'],
+        );
+        expect(configAt0.distributionVersion, 0);
+
+        late BackupConfig currentConfig;
+        currentConfig = configAt0;
+        when(mockRepository.getBackupConfig(testVaultId)).thenAnswer((_) async => currentConfig);
+        when(mockRepository.updateBackupConfig(any, any)).thenAnswer((invocation) async {
+          currentConfig = invocation.positionalArguments[1] as BackupConfig;
+        });
+        when(mockLoginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
+        when(mockDetailRepository.getVaultDetail(testVaultId)).thenAnswer(
+          (_) async => OwnedVaultDetail(
+            id: testVaultId,
+            name: 'Vault',
+            ownerPubkey: ownerPubkey,
+            ownerName: null,
+            threshold: 2,
+            totalShares: 2,
+            stewards: const [],
+            recoveryRequests: const [],
+            pushEnabled: false,
+            createdAt: DateTime.now().toUtc(),
+            archivedAt: null,
+            archivedReason: null,
+            backupConfig: configAt0,
+            content: testSecret,
+            selfHeldShare: null,
+          ),
+        );
+
+        BackupConfig? distributedWithConfig;
+        when(
+          mockShareDistributionService.distributeShares(
+            ownerPubkey: anyNamed('ownerPubkey'),
+            config: anyNamed('config'),
+            shares: anyNamed('shares'),
+          ),
+        ).thenAnswer((invocation) async {
+          distributedWithConfig = invocation.namedArguments[#config] as BackupConfig;
+          return [];
+        });
+
+        await backupService.createAndDistributeBackup(vaultId: testVaultId);
+
+        expect(distributedWithConfig, isNotNull);
+        expect(distributedWithConfig!.distributionVersion, 1);
+        expect(currentConfig.distributionVersion, 1);
+        expect(currentConfig.hasBeenDistributed, isTrue);
+      },
+    );
+  });
 }

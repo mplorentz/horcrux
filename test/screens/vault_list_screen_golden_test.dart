@@ -298,14 +298,14 @@ void main() {
 
     testGoldens('recovery notification', (tester) async {
       // Create a recovery request initiated by someone else (not testPubkey)
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: 'recovery-1',
         vaultId: 'vault-1',
         initiatorPubkey: otherPubkey, // Different from testPubkey
         requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {},
+        stewardPubkeys: const [],
       );
 
       final harness = await pumpGoldenWidget(

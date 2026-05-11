@@ -16,14 +16,14 @@ void main() {
   final testPubkey3 = 'c' * 64;
 
   testWidgets('shows Awaiting Response when stewards have not responded', (tester) async {
-    final request = RecoveryRequest(
+    final request = RecoveryRequest.makeFromParticipants(
       id: 'test-request',
       vaultId: 'test-vault',
       initiatorPubkey: testPubkey1,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: RecoveryRequestStatus.inProgress,
       threshold: 2,
-      stewardResponses: {},
+      stewardPubkeys: const [],
     );
 
     final vault = Vault(

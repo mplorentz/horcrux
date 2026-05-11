@@ -205,6 +205,12 @@ class VaultRepository {
   Future<void> clearAll() async {
     _backupConfigOverlay.clear();
     await _db.transaction(() async {
+      await _db.delete(_db.outboxRelays).go();
+      await _db.delete(_db.outbox).go();
+      await _db.delete(_db.recoveryResponses).go();
+      await _db.delete(_db.recoveryRequestParticipants).go();
+      await _db.delete(_db.recoveryRequests).go();
+      await _db.delete(_db.invitations).go();
       await _db.delete(_db.distributionShares).go();
       await _db.delete(_db.distributions).go();
       await _db.delete(_db.stewards).go();
@@ -275,6 +281,17 @@ class VaultRepository {
     );
     final updated = config.copyWith(stewards: updatedStewards);
     await updateBackupConfig(vaultId, updated);
+    await _upsertDistributionShareState(
+      vaultId: vaultId,
+      stewardId: prior.id,
+      stewardGiftWrapEventId: prior.giftWrapEventId,
+      status: status,
+      giftWrapEventId: giftWrapEventId,
+      acknowledgedAt: acknowledgedAt,
+      acknowledgmentEventId: acknowledgmentEventId,
+      acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+      currentDistributionVersion: updated.distributionVersion,
+    );
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
   }
 
@@ -288,8 +305,7 @@ class VaultRepository {
 
   /// Write [share] into the `held_shares` table and prune old versions.
   ///
-  /// Also bumps `vaults.last_synced_at` so the reactive vault stream
-  /// re-emits and callers see the updated [Vault.shares].
+  /// Also bumps `vaults.last_synced_at` so the reactive vault stream re-emits.
   Future<void> addShareToVault(String vaultId, Share share) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final id = '${vaultId}_${share.shareIndex}_${share.distributionVersion ?? 0}_$now';
@@ -349,26 +365,51 @@ class VaultRepository {
   /// self-steward entry for a received share. The `left_at` column is cleared
   /// so a previously soft-retired self-steward becomes active again on
   /// redistribution.
+  ///
+  /// The partial unique index `stewards_vault_position_active` enforces one
+  /// active row per `(vault_id, share_index)`. If an active row with a
+  /// *different* id already occupies this position (e.g. an old invited-steward
+  /// UUID from the owner's config), it is soft-retired before the new row is
+  /// inserted so the constraint is never violated.
   Future<void> upsertStewardRow({
     required String id,
     required String vaultId,
     required int shareIndex,
     String? pubkey,
     String? name,
+    String? contactInfo,
     bool isOwner = false,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await _db.stewardDao.upsert(
-      StewardsCompanion.insert(
-        id: id,
-        vaultId: vaultId,
-        shareIndex: shareIndex,
-        pubkey: Value(pubkey),
-        name: Value(name),
-        isOwner: Value(isOwner),
-        joinedAt: now,
-      ).copyWith(leftAt: const Value(null)),
-    );
+    await _db.transaction(() async {
+      // Retire any incumbent active steward at this position whose id differs.
+      final incumbents = await (_db.select(_db.stewards)
+            ..where(
+              (s) =>
+                  s.vaultId.equals(vaultId) &
+                  s.shareIndex.equals(shareIndex) &
+                  s.leftAt.isNull() &
+                  s.id.isNotValue(id),
+            ))
+          .get();
+      for (final row in incumbents) {
+        await (_db.update(_db.stewards)..where((s) => s.id.equals(row.id)))
+            .write(StewardsCompanion(leftAt: Value(now)));
+      }
+
+      await _db.stewardDao.upsert(
+        StewardsCompanion.insert(
+          id: id,
+          vaultId: vaultId,
+          shareIndex: shareIndex,
+          pubkey: Value(pubkey),
+          name: Value(name),
+          contactInfo: Value(contactInfo),
+          isOwner: Value(isOwner),
+          joinedAt: now,
+        ).copyWith(leftAt: const Value(null)),
+      );
+    });
   }
 
   /// Copies Shamir parameters and relay hints from [share] onto the `vaults`
@@ -495,20 +536,121 @@ class VaultRepository {
   Future<void> addRecoveryRequestToVault(
     String vaultId,
     RecoveryRequest request,
-  ) {
-    throw UnimplementedError(
-      'addRecoveryRequestToVault: recovery_requests is restored in Phase 3.',
-    );
+  ) async {
+    final vaultRow = await _db.vaultDao.getById(vaultId);
+    if (vaultRow == null) {
+      throw ArgumentError('Vault not found: $vaultId');
+    }
+    await _db.transaction(() async {
+      await _db.into(_db.recoveryRequests).insert(
+            RecoveryRequestsCompanion.insert(
+              id: request.id,
+              vaultId: vaultId,
+              requestEventId: Value(request.nostrEventId),
+              initiatorPubkey: request.initiatorPubkey,
+              startedAt: request.requestedAt.millisecondsSinceEpoch,
+              expiresAt: Value(request.expiresAt?.millisecondsSinceEpoch),
+              cancelledAt: const Value.absent(),
+              completedAt: const Value.absent(),
+              distributionVersionAtStart: vaultRow.currentDistributionVersion,
+              thresholdAtStart: request.threshold,
+              status: request.status.name,
+              isPractice: Value(request.isPractice),
+              errorMessage: Value(request.errorMessage),
+              eventCreationTimeMs: Value(request.eventCreationTime?.millisecondsSinceEpoch),
+            ),
+          );
+      await _db.batch((b) {
+        for (final pubkey in request.stewardPubkeys) {
+          b.insert(
+            _db.recoveryRequestParticipants,
+            RecoveryRequestParticipantsCompanion.insert(
+              requestId: request.id,
+              pubkey: pubkey,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+        }
+      });
+    });
+    await _bumpVaultSync(vaultId);
   }
 
   Future<void> updateRecoveryRequestInVault(
     String vaultId,
     String requestId,
     RecoveryRequest updatedRequest,
-  ) {
-    throw UnimplementedError(
-      'updateRecoveryRequestInVault: recovery_requests is restored in Phase 3.',
-    );
+  ) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await _db.transaction(() async {
+      await (_db.update(_db.recoveryRequests)..where((r) => r.id.equals(requestId))).write(
+        RecoveryRequestsCompanion(
+          requestEventId: Value(updatedRequest.nostrEventId),
+          status: Value(updatedRequest.status.name),
+          errorMessage: Value(updatedRequest.errorMessage),
+          expiresAt: Value(updatedRequest.expiresAt?.millisecondsSinceEpoch),
+          eventCreationTimeMs: Value(updatedRequest.eventCreationTime?.millisecondsSinceEpoch),
+          cancelledAt: updatedRequest.status == RecoveryRequestStatus.cancelled
+              ? Value(now)
+              : const Value.absent(),
+          completedAt: (updatedRequest.status == RecoveryRequestStatus.completed ||
+                  updatedRequest.status == RecoveryRequestStatus.archived)
+              ? Value(now)
+              : const Value.absent(),
+        ),
+      );
+
+      for (final resp in updatedRequest.responses) {
+        if (!resp.status.isResolved && resp.errorMessage == null) {
+          continue;
+        }
+        final dist = resp.share?.distributionVersion ?? 0;
+        await _db.into(_db.recoveryResponses).insertOnConflictUpdate(
+              RecoveryResponsesCompanion.insert(
+                id: '${requestId}_${resp.pubkey}',
+                requestId: requestId,
+                stewardId: const Value.absent(),
+                responderPubkey: resp.pubkey,
+                sharePayload: resp.share != null ? jsonEncode(shareToJson(resp.share!)) : '',
+                shareDistributionVersion: dist,
+                receivedAt: resp.respondedAt?.millisecondsSinceEpoch ?? now,
+                nostrEventId: Value(resp.nostrEventId),
+                replyingToEventId: const Value.absent(),
+                approved: resp.approved,
+                respondedAtMs: Value(resp.respondedAt?.millisecondsSinceEpoch),
+                errorMessage: Value(resp.errorMessage),
+              ),
+            );
+      }
+    });
+    await _bumpVaultSync(vaultId);
+  }
+
+  /// Marks expired in-flight recovery sessions failed and prunes their responses.
+  Future<void> cleanupExpiredRecoverySessions() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final candidates = await _db.recoveryDao.requestsNeedingExpiryCheck();
+    var touched = false;
+    for (final r in candidates) {
+      if (r.expiresAt == null || r.expiresAt! >= now) {
+        continue;
+      }
+      await _db.transaction(() async {
+        await (_db.update(_db.recoveryRequests)..where((x) => x.id.equals(r.id))).write(
+          RecoveryRequestsCompanion(
+            status: const Value('failed'),
+            errorMessage: const Value('Recovery session expired'),
+            completedAt: Value(now),
+          ),
+        );
+        await _db.recoveryDao.deleteResponsesForRequest(r.id);
+      });
+      touched = true;
+    }
+    if (touched) {
+      await _db.walCheckpointTruncate();
+      await refresh();
+    }
   }
 
   Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
@@ -552,8 +694,22 @@ class VaultRepository {
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
+      vaultId: row.id,
+      distributionVersion: row.currentDistributionVersion,
+    );
+    final inviteCodeByStewardId = await _inviteCodesByStewardId(row.id);
 
-    final dbStewards = stewardRows.map(_stewardFromRow).toList();
+    final dbStewards = stewardRows
+        .map(
+          (s) => _stewardFromRow(
+            s,
+            currentDistributionVersion: row.currentDistributionVersion,
+            distributionShareRow: distributionSharesByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id],
+          ),
+        )
+        .toList();
     BackupConfig? backupConfig;
     if (dbStewards.isNotEmpty || row.threshold > 0) {
       final overlay = _backupConfigOverlay[row.id];
@@ -561,10 +717,24 @@ class VaultRepository {
           ? dbStewards
           : [
               for (final s in dbStewards)
-                overlay.stewards.firstWhere(
-                  (cached) => cached.id == s.id,
-                  orElse: () => s,
-                ),
+                overlay.stewards
+                    .firstWhere(
+                      (cached) => cached.id == s.id,
+                      orElse: () => s,
+                    )
+                    // Prefer the DB-sourced inviteCode (from invitations table) so it
+                    // survives restarts. Fall back to whatever the overlay has so that
+                    // in-memory-only invite codes (e.g. created via BackupConfig
+                    // directly without a DB invitation row) are also preserved.
+                    .copyWith(
+                      inviteCode: s.inviteCode ??
+                          overlay.stewards
+                              .firstWhere(
+                                (cached) => cached.id == s.id,
+                                orElse: () => s,
+                              )
+                              .inviteCode,
+                    ),
             ];
       backupConfig = BackupConfig(
         vaultId: row.id,
@@ -577,13 +747,19 @@ class VaultRepository {
       );
     }
 
+    final recoveryRows = await _db.recoveryDao.forVault(row.id);
+    final recoveryRequests = <RecoveryRequest>[];
+    for (final rr in recoveryRows) {
+      recoveryRequests.add(await _recoveryRequestFromRow(rr));
+    }
+
     return Vault(
       id: row.id,
       name: row.name,
       createdAt: DateTime.fromMillisecondsSinceEpoch(row.createdAt),
       ownerPubkey: row.ownerPubkey,
       ownerName: row.ownerName,
-      recoveryRequests: const [],
+      recoveryRequests: recoveryRequests,
       backupConfig: backupConfig,
       archivedAt:
           row.archivedAt == null ? null : DateTime.fromMillisecondsSinceEpoch(row.archivedAt!),
@@ -620,18 +796,194 @@ class VaultRepository {
     );
   }
 
-  Steward _stewardFromRow(StewardRow row) {
+  /// Returns a map of steward id → invite code for all active (unredeemed)
+  /// invitations for [vaultId]. Used so [_stewardFromRow] can populate
+  /// [Steward.inviteCode] from the DB rather than relying on the in-memory
+  /// overlay (which is lost on restart).
+  Future<Map<String, String>> _inviteCodesByStewardId(String vaultId) async {
+    final rows = await _db.invitationDao.forVault(vaultId);
+    return {
+      for (final r in rows)
+        if (r.stewardId != null && r.revokedAt == null) r.stewardId!: r.code,
+    };
+  }
+
+  Steward _stewardFromRow(
+    StewardRow row, {
+    required int currentDistributionVersion,
+    DistributionShareRow? distributionShareRow,
+    String? inviteCode,
+  }) {
+    final isInvited = row.pubkey == null;
+    final acknowledgedAtMs = distributionShareRow?.acknowledgedAt;
+    final acknowledgedAt =
+        acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
+    final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
+    final isCurrentAck =
+        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
+
+    final status = isInvited
+        ? StewardStatus.invited
+        : isCurrentAck
+            ? StewardStatus.holdingKey
+            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
+                ? StewardStatus.awaitingNewKey
+                : StewardStatus.awaitingKey;
+
+    final giftWrapEventId = distributionShareRow?.giftWrapEventId;
     return Steward(
       id: row.id,
       pubkey: row.pubkey,
       name: row.name,
       contactInfo: row.contactInfo,
       isOwner: row.isOwner,
-      // Phase 1 placeholder: status is not stored yet (lands in Phase 2/3
-      // alongside `distribution_shares` ack timestamps). Default to a safe
-      // value; the in-memory copy held by callers between writes already
-      // carries the precise status.
-      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+      inviteCode: inviteCode,
+      status: status,
+      giftWrapEventId:
+          (giftWrapEventId == null || giftWrapEventId.isEmpty) ? null : giftWrapEventId,
+      acknowledgedAt: acknowledgedAt,
+      acknowledgmentEventId: distributionShareRow?.acknowledgmentEventId,
+      acknowledgedDistributionVersion: acknowledgedVersion,
+    );
+  }
+
+  Future<Map<String, DistributionShareRow>> _distributionSharesByStewardForVersion({
+    required String vaultId,
+    required int distributionVersion,
+  }) async {
+    if (distributionVersion < 0) {
+      return const {};
+    }
+
+    final distributionId = _distributionId(vaultId, distributionVersion);
+    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+        .getSingleOrNull();
+    final distribution = byId ??
+        await (_db.select(_db.distributions)
+              ..where((d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion)))
+            .getSingleOrNull();
+    if (distribution == null) {
+      return const {};
+    }
+
+    final shareRows = await _db.distributionDao.sharesFor(distribution.id);
+    return {for (final row in shareRows) row.stewardId: row};
+  }
+
+  Future<void> _upsertDistributionShareState({
+    required String vaultId,
+    required String stewardId,
+    required String? stewardGiftWrapEventId,
+    required StewardStatus status,
+    required String? giftWrapEventId,
+    required DateTime? acknowledgedAt,
+    required String? acknowledgmentEventId,
+    required int? acknowledgedDistributionVersion,
+    required int currentDistributionVersion,
+  }) async {
+    final distributionVersion = acknowledgedDistributionVersion ?? currentDistributionVersion;
+    final distributionId = _distributionId(vaultId, distributionVersion);
+    final shareId = '${distributionId}_$stewardId';
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+    await _db.into(_db.distributions).insertOnConflictUpdate(
+          DistributionsCompanion.insert(
+            id: distributionId,
+            vaultId: vaultId,
+            version: distributionVersion,
+            createdAt: nowMs,
+            contentHmac: _placeholderHmac('$vaultId:$distributionVersion'),
+          ),
+        );
+
+    final existing = await (_db.select(_db.distributionShares)..where((s) => s.id.equals(shareId)))
+        .getSingleOrNull();
+    final persistedGiftWrapEventId = giftWrapEventId ??
+        existing?.giftWrapEventId ??
+        stewardGiftWrapEventId ??
+        acknowledgmentEventId;
+    if (persistedGiftWrapEventId == null || persistedGiftWrapEventId.isEmpty) {
+      return;
+    }
+
+    final sentAtMs =
+        giftWrapEventId != null && giftWrapEventId.isNotEmpty ? nowMs : existing?.sentAt;
+    final acknowledgedAtMs = status == StewardStatus.holdingKey
+        ? (acknowledgedAt ?? DateTime.now()).millisecondsSinceEpoch
+        : existing?.acknowledgedAt;
+    final ackEvent = status == StewardStatus.holdingKey
+        ? (acknowledgmentEventId ?? existing?.acknowledgmentEventId)
+        : existing?.acknowledgmentEventId;
+    final ackVersion = status == StewardStatus.holdingKey
+        ? (acknowledgedDistributionVersion ?? distributionVersion)
+        : existing?.acknowledgmentDistributionVersion;
+
+    await _db.into(_db.distributionShares).insertOnConflictUpdate(
+          DistributionSharesCompanion(
+            id: Value(shareId),
+            distributionId: Value(distributionId),
+            stewardId: Value(stewardId),
+            giftWrapEventId: Value(persistedGiftWrapEventId),
+            sentAt: Value(sentAtMs),
+            acknowledgedAt: Value(acknowledgedAtMs),
+            acknowledgmentEventId: Value(ackEvent),
+            acknowledgmentDistributionVersion: Value(ackVersion),
+            acknowledgmentCreatedAt: Value(existing?.acknowledgmentCreatedAt),
+          ),
+        );
+  }
+
+  String _distributionId(String vaultId, int version) => '${vaultId}_v$version';
+
+  Future<void> _bumpVaultSync(String vaultId) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
+      VaultsCompanion(lastSyncedAt: Value(now)),
+    );
+  }
+
+  Future<RecoveryRequest> _recoveryRequestFromRow(RecoveryRequestRow r) async {
+    final participants = await _db.recoveryDao.participantsFor(r.id);
+    final responses = await _db.recoveryDao.responsesFor(r.id);
+    return RecoveryRequest.makeFromParticipants(
+      id: r.id,
+      vaultId: r.vaultId,
+      initiatorPubkey: r.initiatorPubkey,
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(r.startedAt),
+      status: RecoveryRequestStatus.values.firstWhere(
+        (e) => e.name == r.status,
+        orElse: () => RecoveryRequestStatus.pending,
+      ),
+      threshold: r.thresholdAtStart,
+      nostrEventId: r.requestEventId,
+      eventCreationTime: r.eventCreationTimeMs != null
+          ? DateTime.fromMillisecondsSinceEpoch(r.eventCreationTimeMs!)
+          : null,
+      expiresAt: r.expiresAt == null ? null : DateTime.fromMillisecondsSinceEpoch(r.expiresAt!),
+      stewardPubkeys: participants.map((p) => p.pubkey),
+      responses: responses.map(_recoveryResponseFromRow),
+      errorMessage: r.errorMessage,
+      isPractice: r.isPractice,
+    );
+  }
+
+  RecoveryResponse _recoveryResponseFromRow(RecoveryResponseRow r) {
+    Share? share;
+    if (r.sharePayload.isNotEmpty) {
+      try {
+        share = shareFromJson(json.decode(r.sharePayload) as Map<String, dynamic>);
+      } catch (_) {
+        share = null;
+      }
+    }
+    return RecoveryResponse(
+      pubkey: r.responderPubkey,
+      approved: r.approved,
+      respondedAt:
+          r.respondedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(r.respondedAtMs!),
+      share: share,
+      nostrEventId: r.nostrEventId,
+      errorMessage: r.errorMessage,
     );
   }
 
@@ -665,27 +1017,32 @@ class VaultRepository {
             ),
           );
 
-      // Reconcile stewards from the in-memory backupConfig. Phase 1 writes
-      // active stewards out as plain rows; the append-on-replace history
-      // bookkeeping lands in later phases. We replace-by-id for now: insert
-      // any new ids, leave existing rows in place, and soft-retire ones
-      // missing from the config.
+      // Reconcile stewards from the in-memory backupConfig. Retire all
+      // currently active stewards first, then reinsert the authoritative set.
+      // Retiring up-front avoids UNIQUE-constraint violations on the partial
+      // index (vault_id, share_index) WHERE left_at IS NULL when stewards are
+      // reassigned to different positions (e.g. owner added at index 1 while
+      // an existing steward also held index 1).
       if (config != null) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
         final keptIds = config.stewards.map((s) => s.id).toSet();
         final existing = await (_db.select(
           _db.stewards,
         )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
             .get();
         for (final existingRow in existing) {
-          if (!keptIds.contains(existingRow.id)) {
+          // Retire rows removed from the config permanently, and rows that ARE
+          // being kept but need a clean re-insert (to avoid position conflicts).
+          // Kept rows are immediately re-activated below with left_at = null.
+          final willReinsert = keptIds.contains(existingRow.id);
+          final conflictsOnPosition = willReinsert &&
+              config.stewards.indexWhere((s) => s.id == existingRow.id) + 1 !=
+                  existingRow.shareIndex;
+          if (!willReinsert || conflictsOnPosition) {
             await (_db.update(
               _db.stewards,
             )..where((s) => s.id.equals(existingRow.id)))
-                .write(
-              StewardsCompanion(
-                leftAt: Value(DateTime.now().millisecondsSinceEpoch),
-              ),
-            );
+                .write(StewardsCompanion(leftAt: Value(nowMs)));
           }
         }
 

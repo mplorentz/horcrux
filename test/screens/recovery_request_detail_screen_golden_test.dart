@@ -26,14 +26,16 @@ void main() {
     RecoveryRequestStatus status = RecoveryRequestStatus.inProgress,
     Map<String, RecoveryResponse>? responses,
   }) {
-    return RecoveryRequest(
+    final responseMap = responses ?? <String, RecoveryResponse>{};
+    return RecoveryRequest.makeFromParticipants(
       id: 'recovery-$vaultId',
       vaultId: vaultId,
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
       status: status,
       threshold: 2,
-      stewardResponses: responses ?? {},
+      stewardPubkeys: responseMap.keys,
+      responses: responseMap.values,
     );
   }
 
@@ -385,20 +387,18 @@ void main() {
     });
 
     testGoldens('practice recovery request - pending', (tester) async {
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: 'recovery-practice',
         vaultId: 'test-vault',
         initiatorPubkey: initiatorPubkey,
         requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
         status: RecoveryRequestStatus.pending,
         threshold: 2,
-        stewardResponses: {
-          testPubkey: RecoveryResponse(pubkey: testPubkey, approved: false),
-          otherStewardPubkey: RecoveryResponse(
-            pubkey: otherStewardPubkey,
-            approved: false,
-          ),
-        },
+        stewardPubkeys: [testPubkey, otherStewardPubkey],
+        responses: [
+          RecoveryResponse(pubkey: testPubkey, approved: false),
+          RecoveryResponse(pubkey: otherStewardPubkey, approved: false),
+        ],
         isPractice: true, // Practice recovery
       );
 
@@ -441,21 +441,22 @@ void main() {
     testGoldens('practice recovery request - in progress with responses', (
       tester,
     ) async {
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: 'recovery-practice',
         vaultId: 'test-vault',
         initiatorPubkey: initiatorPubkey,
         requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
         status: RecoveryRequestStatus.inProgress,
         threshold: 2,
-        stewardResponses: {
-          testPubkey: RecoveryResponse(pubkey: testPubkey, approved: false),
-          otherStewardPubkey: RecoveryResponse(
+        stewardPubkeys: [testPubkey, otherStewardPubkey],
+        responses: [
+          RecoveryResponse(pubkey: testPubkey, approved: false),
+          RecoveryResponse(
             pubkey: otherStewardPubkey,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 30)),
           ),
-        },
+        ],
         isPractice: true, // Practice recovery
       );
 
@@ -496,25 +497,26 @@ void main() {
     });
 
     testGoldens('practice recovery request - completed', (tester) async {
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: 'recovery-practice',
         vaultId: 'test-vault',
         initiatorPubkey: initiatorPubkey,
         requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
         status: RecoveryRequestStatus.completed,
         threshold: 2,
-        stewardResponses: {
-          testPubkey: RecoveryResponse(
+        stewardPubkeys: [testPubkey, otherStewardPubkey],
+        responses: [
+          RecoveryResponse(
             pubkey: testPubkey,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 45)),
           ),
-          otherStewardPubkey: RecoveryResponse(
+          RecoveryResponse(
             pubkey: otherStewardPubkey,
             approved: true,
             respondedAt: DateTime.now().subtract(const Duration(minutes: 30)),
           ),
-        },
+        ],
         isPractice: true, // Practice recovery
       );
 

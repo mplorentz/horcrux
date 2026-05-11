@@ -222,19 +222,139 @@ class HeldShareFixture {
   }
 }
 
-/// Placeholder for a recovery-session fixture. Recovery tables (`recovery_requests`,
-/// `recovery_responses`) land in Phase 3, at which point this fixture grows a
-/// real `inProgress(...)` constructor. Kept here so Phase 1+ tests can import
-/// the same module and add session-state seeding without ripping helpers later.
 class RecoverySessionFixture {
-  RecoverySessionFixture._();
+  RecoverySessionFixture._({
+    required this.db,
+    required this.vaultId,
+    required this.requestId,
+    required this.initiatorPubkey,
+    required this.participantPubkeys,
+    required this.threshold,
+    required this.startedAtMs,
+    required this.expiresAtMs,
+  });
 
-  /// Reserved for Phase 3.
-  static Future<RecoverySessionFixture> inProgress(AppDatabase db) async {
-    throw UnimplementedError(
-      'RecoverySessionFixture.inProgress lands in Phase 3 with the '
-      'recovery_requests / recovery_responses tables.',
+  final AppDatabase db;
+  final String vaultId;
+  final String requestId;
+  final String initiatorPubkey;
+  final List<String> participantPubkeys;
+  final int threshold;
+  final int startedAtMs;
+  final int expiresAtMs;
+
+  /// Seed a recovery request in `inProgress` state plus participant rows.
+  ///
+  /// If [vaultId] does not already exist, this helper creates a minimal vault
+  /// row first so foreign keys are satisfied.
+  static Future<RecoverySessionFixture> inProgress(
+    AppDatabase db, {
+    String? vaultId,
+    String? requestId,
+    String ownerPubkey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    String initiatorPubkey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    List<String>? participantPubkeys,
+    int threshold = 2,
+    int? startedAtMs,
+    int? expiresAtMs,
+    int distributionVersionAtStart = 1,
+    bool isPractice = false,
+  }) async {
+    final resolvedVaultId = vaultId ?? _uuid('vault');
+    final now = startedAtMs ?? DateTime.now().millisecondsSinceEpoch;
+    final expires = expiresAtMs ?? now + const Duration(hours: 1).inMilliseconds;
+    final participants = participantPubkeys ??
+        <String>[
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        ];
+    final resolvedRequestId = requestId ?? _uuid('recovery');
+
+    final existingVault = await db.vaultDao.getById(resolvedVaultId);
+    if (existingVault == null) {
+      await db.into(db.vaults).insert(
+            VaultsCompanion.insert(
+              id: resolvedVaultId,
+              name: 'Recovery Fixture Vault',
+              ownerPubkey: ownerPubkey,
+              threshold: threshold,
+              totalShares: participants.length,
+              createdAt: now,
+            ),
+          );
+    }
+
+    await db.transaction(() async {
+      await db.into(db.recoveryRequests).insert(
+            RecoveryRequestsCompanion.insert(
+              id: resolvedRequestId,
+              vaultId: resolvedVaultId,
+              requestEventId: Value('req_evt_$resolvedRequestId'),
+              initiatorPubkey: initiatorPubkey,
+              startedAt: now,
+              expiresAt: Value(expires),
+              distributionVersionAtStart: distributionVersionAtStart,
+              thresholdAtStart: threshold,
+              status: 'inProgress',
+              isPractice: Value(isPractice),
+              eventCreationTimeMs: Value(now),
+            ),
+          );
+      await db.batch((b) {
+        for (final pubkey in participants) {
+          b.insert(
+            db.recoveryRequestParticipants,
+            RecoveryRequestParticipantsCompanion.insert(
+              requestId: resolvedRequestId,
+              pubkey: pubkey,
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+        }
+      });
+    });
+
+    return RecoverySessionFixture._(
+      db: db,
+      vaultId: resolvedVaultId,
+      requestId: resolvedRequestId,
+      initiatorPubkey: initiatorPubkey,
+      participantPubkeys: participants,
+      threshold: threshold,
+      startedAtMs: now,
+      expiresAtMs: expires,
     );
+  }
+
+  /// Insert or replace a response row for this recovery request.
+  Future<void> withResponse({
+    required String responderPubkey,
+    required bool approved,
+    String sharePayload = '',
+    int shareDistributionVersion = 1,
+    int? receivedAtMs,
+    int? respondedAtMs,
+    String? nostrEventId,
+    String? errorMessage,
+  }) async {
+    final now = receivedAtMs ?? DateTime.now().millisecondsSinceEpoch;
+    await db.into(db.recoveryResponses).insertOnConflictUpdate(
+          RecoveryResponsesCompanion.insert(
+            id: '${requestId}_$responderPubkey',
+            requestId: requestId,
+            stewardId: const Value.absent(),
+            responderPubkey: responderPubkey,
+            sharePayload: sharePayload,
+            shareDistributionVersion: shareDistributionVersion,
+            receivedAt: now,
+            nostrEventId: Value(nostrEventId),
+            replyingToEventId: const Value.absent(),
+            approved: approved,
+            respondedAtMs: Value(respondedAtMs ?? now),
+            errorMessage: Value(errorMessage),
+          ),
+        );
   }
 }
 
