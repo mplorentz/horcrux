@@ -160,8 +160,7 @@ class RecoveryService {
 
     try {
       await _database.appStateDao.replaceViewedNotificationIds(_viewedNotificationIds!);
-      final jsonList = _viewedNotificationIds!.toList();
-      Log.info('Saved ${jsonList.length} viewed notification IDs to storage');
+      Log.info('Saved ${_viewedNotificationIds!.length} viewed notification IDs to storage');
     } catch (e) {
       Log.error('Error saving viewed notification IDs', e);
       throw Exception('Failed to save viewed notification IDs: $e');
