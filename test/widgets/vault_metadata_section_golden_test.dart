@@ -15,10 +15,7 @@ void main() {
   final otherPubkey = 'b' * 64;
 
   // Helper to create vault
-  Vault createTestVault({
-    required String id,
-    required String ownerPubkey,
-  }) {
+  Vault createTestVault({required String id, required String ownerPubkey}) {
     return Vault(
       id: id,
       name: 'Test Vault',
@@ -33,7 +30,9 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+          vaultDetailProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -73,18 +72,13 @@ void main() {
     });
 
     testGoldens('owner state', (tester) async {
-      final vault = createTestVault(
-        id: 'test-vault',
-        ownerPubkey: testPubkey,
-      );
+      final vault = createTestVault(id: 'test-vault', ownerPubkey: testPubkey);
 
       final harness = await pumpGoldenWidget(
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultDetailProvider(
-            'test-vault',
-          ).overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -108,15 +102,13 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultDetailProvider(
-            'test-vault',
-          ).overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(
               stewardedVaultDetailFromVault(
                 vault,
                 latestShare: createShare(
                   payload: 'shard',
-                  threshold: 2,
+                  threshold: 3,
                   shareIndex: 0,
                   totalShares: 3,
                   primeMod: 'pm',
@@ -151,9 +143,7 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultDetailProvider(
-            'test-vault',
-          ).overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(
               stewardedVaultDetailFromVault(vault, latestShare: null),
             ),
@@ -173,24 +163,19 @@ void main() {
     });
 
     testGoldens('current user key loading', (tester) async {
-      final vault = createTestVault(
-        id: 'test-vault',
-        ownerPubkey: otherPubkey,
-      );
+      final vault = createTestVault(id: 'test-vault', ownerPubkey: otherPubkey);
 
       final harness = await pumpGoldenWidget(
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultDetailProvider(
-            'test-vault',
-          ).overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(
               stewardedVaultDetailFromVault(
                 vault,
                 latestShare: createShare(
                   payload: 'shard',
-                  threshold: 2,
+                  threshold: 3,
                   shareIndex: 0,
                   totalShares: 3,
                   primeMod: 'pm',
