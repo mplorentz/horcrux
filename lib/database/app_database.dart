@@ -298,11 +298,10 @@ class AppDatabase extends _$AppDatabase {
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
-          await _migrateLegacySharedPreferencesAppStateIfNeeded();
         },
       );
 
-  Future<void> _migrateLegacySharedPreferencesAppStateIfNeeded() async {
+  Future<void> migrateLegacySharedPreferencesAppStateIfNeeded() async {
     final alreadyMigrated = await appStateDao.getBool(_legacyPrefsMigrationCompleteKey) ?? false;
     if (alreadyMigrated) {
       return;

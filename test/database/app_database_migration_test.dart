@@ -141,7 +141,7 @@ void main() {
     await db.close();
   });
 
-  test('migrates legacy SharedPreferences app-state into Drift on open', () async {
+  test('migrates legacy SharedPreferences app-state into Drift', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'push_notifications_opted_in': true,
       'fcm_device_token': 'legacy-token',
@@ -175,6 +175,7 @@ void main() {
 
     final db = AppDatabase(NativeDatabase.opened(raw));
     await db.customSelect('SELECT 1').get();
+    await db.migrateLegacySharedPreferencesAppStateIfNeeded();
 
     expect(
       await db.appStateDao.getBool('push_notifications_opted_in'),
