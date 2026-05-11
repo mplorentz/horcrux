@@ -77,7 +77,7 @@ class VaultListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () => ref.refresh(vaultListProvider),
+                            onPressed: () => ref.refresh(vaultDetailListProvider),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(
                                 context,
