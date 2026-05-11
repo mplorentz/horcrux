@@ -281,6 +281,17 @@ class VaultRepository {
     );
     final updated = config.copyWith(stewards: updatedStewards);
     await updateBackupConfig(vaultId, updated);
+    await _upsertDistributionShareState(
+      vaultId: vaultId,
+      stewardId: prior.id,
+      stewardGiftWrapEventId: prior.giftWrapEventId,
+      status: status,
+      giftWrapEventId: giftWrapEventId,
+      acknowledgedAt: acknowledgedAt,
+      acknowledgmentEventId: acknowledgmentEventId,
+      acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+      currentDistributionVersion: updated.distributionVersion,
+    );
     Log.info('Updated steward $pubkey status to $status in vault $vaultId');
   }
 
@@ -660,8 +671,20 @@ class VaultRepository {
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
+      vaultId: row.id,
+      distributionVersion: row.currentDistributionVersion,
+    );
 
-    final dbStewards = stewardRows.map(_stewardFromRow).toList();
+    final dbStewards = stewardRows
+        .map(
+          (s) => _stewardFromRow(
+            s,
+            currentDistributionVersion: row.currentDistributionVersion,
+            distributionShareRow: distributionSharesByStewardId[s.id],
+          ),
+        )
+        .toList();
     BackupConfig? backupConfig;
     if (dbStewards.isNotEmpty || row.threshold > 0) {
       final overlay = _backupConfigOverlay[row.id];
@@ -734,20 +757,130 @@ class VaultRepository {
     );
   }
 
-  Steward _stewardFromRow(StewardRow row) {
+  Steward _stewardFromRow(
+    StewardRow row, {
+    required int currentDistributionVersion,
+    DistributionShareRow? distributionShareRow,
+  }) {
+    final isInvited = row.pubkey == null;
+    final acknowledgedAtMs = distributionShareRow?.acknowledgedAt;
+    final acknowledgedAt =
+        acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
+    final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
+    final isCurrentAck =
+        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
+
+    final status = isInvited
+        ? StewardStatus.invited
+        : isCurrentAck
+            ? StewardStatus.holdingKey
+            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
+                ? StewardStatus.awaitingNewKey
+                : StewardStatus.awaitingKey;
+
+    final giftWrapEventId = distributionShareRow?.giftWrapEventId;
     return Steward(
       id: row.id,
       pubkey: row.pubkey,
       name: row.name,
       contactInfo: row.contactInfo,
       isOwner: row.isOwner,
-      // Phase 1 placeholder: status is not stored yet (lands in Phase 2/3
-      // alongside `distribution_shares` ack timestamps). Default to a safe
-      // value; the in-memory copy held by callers between writes already
-      // carries the precise status.
-      status: row.pubkey == null ? StewardStatus.invited : StewardStatus.awaitingKey,
+      status: status,
+      giftWrapEventId:
+          (giftWrapEventId == null || giftWrapEventId.isEmpty) ? null : giftWrapEventId,
+      acknowledgedAt: acknowledgedAt,
+      acknowledgmentEventId: distributionShareRow?.acknowledgmentEventId,
+      acknowledgedDistributionVersion: acknowledgedVersion,
     );
   }
+
+  Future<Map<String, DistributionShareRow>> _distributionSharesByStewardForVersion({
+    required String vaultId,
+    required int distributionVersion,
+  }) async {
+    if (distributionVersion < 0) {
+      return const {};
+    }
+
+    final distributionId = _distributionId(vaultId, distributionVersion);
+    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+        .getSingleOrNull();
+    final distribution = byId ??
+        await (_db.select(_db.distributions)
+              ..where((d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion)))
+            .getSingleOrNull();
+    if (distribution == null) {
+      return const {};
+    }
+
+    final shareRows = await _db.distributionDao.sharesFor(distribution.id);
+    return {for (final row in shareRows) row.stewardId: row};
+  }
+
+  Future<void> _upsertDistributionShareState({
+    required String vaultId,
+    required String stewardId,
+    required String? stewardGiftWrapEventId,
+    required StewardStatus status,
+    required String? giftWrapEventId,
+    required DateTime? acknowledgedAt,
+    required String? acknowledgmentEventId,
+    required int? acknowledgedDistributionVersion,
+    required int currentDistributionVersion,
+  }) async {
+    final distributionVersion = acknowledgedDistributionVersion ?? currentDistributionVersion;
+    final distributionId = _distributionId(vaultId, distributionVersion);
+    final shareId = '${distributionId}_$stewardId';
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+    await _db.into(_db.distributions).insertOnConflictUpdate(
+          DistributionsCompanion.insert(
+            id: distributionId,
+            vaultId: vaultId,
+            version: distributionVersion,
+            createdAt: nowMs,
+            contentHmac: _placeholderHmac('$vaultId:$distributionVersion'),
+          ),
+        );
+
+    final existing = await (_db.select(_db.distributionShares)..where((s) => s.id.equals(shareId)))
+        .getSingleOrNull();
+    final persistedGiftWrapEventId = giftWrapEventId ??
+        existing?.giftWrapEventId ??
+        stewardGiftWrapEventId ??
+        acknowledgmentEventId;
+    if (persistedGiftWrapEventId == null || persistedGiftWrapEventId.isEmpty) {
+      return;
+    }
+
+    final sentAtMs =
+        giftWrapEventId != null && giftWrapEventId.isNotEmpty ? nowMs : existing?.sentAt;
+    final acknowledgedAtMs = status == StewardStatus.holdingKey
+        ? (acknowledgedAt ?? DateTime.now()).millisecondsSinceEpoch
+        : existing?.acknowledgedAt;
+    final ackEvent = status == StewardStatus.holdingKey
+        ? (acknowledgmentEventId ?? existing?.acknowledgmentEventId)
+        : existing?.acknowledgmentEventId;
+    final ackVersion = status == StewardStatus.holdingKey
+        ? (acknowledgedDistributionVersion ?? distributionVersion)
+        : existing?.acknowledgmentDistributionVersion;
+
+    await _db.into(_db.distributionShares).insertOnConflictUpdate(
+          DistributionSharesCompanion(
+            id: Value(shareId),
+            distributionId: Value(distributionId),
+            stewardId: Value(stewardId),
+            giftWrapEventId: Value(persistedGiftWrapEventId),
+            sentAt: Value(sentAtMs),
+            acknowledgedAt: Value(acknowledgedAtMs),
+            acknowledgmentEventId: Value(ackEvent),
+            acknowledgmentDistributionVersion: Value(ackVersion),
+            acknowledgmentCreatedAt: Value(existing?.acknowledgmentCreatedAt),
+          ),
+        );
+  }
+
+  String _distributionId(String vaultId, int version) => '${vaultId}_v$version';
 
   Future<void> _bumpVaultSync(String vaultId) async {
     final now = DateTime.now().millisecondsSinceEpoch;

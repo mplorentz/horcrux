@@ -681,6 +681,14 @@ class BackupService {
         throw Exception('No stewards configured in backup configuration');
       }
       Log.info('Loaded backup configuration');
+      var configToDistribute = config;
+      if (!config.hasBeenDistributed) {
+        configToDistribute = _backupConfigWithBumpedDistribution(config);
+        await _repository.updateBackupConfig(vaultId, configToDistribute);
+        Log.info(
+          'Initialized first distribution version to ${configToDistribute.distributionVersion} for vault $vaultId',
+        );
+      }
 
       // Step 3: Get creator's Nostr key pair
       final creatorKeyPair = await _loginService.getStoredNostrKey();
@@ -692,13 +700,13 @@ class BackupService {
       Log.info('Retrieved creator key pair');
 
       // Step 4: Validate all stewards are ready for distribution
-      if (!config.canDistribute) {
-        final names = config.stewards
+      if (!configToDistribute.canDistribute) {
+        final names = configToDistribute.stewards
             .where((kh) => kh.pubkey == null)
             .map((kh) => kh.name ?? kh.id)
             .join(', ');
         throw StateError(
-          'Cannot distribute: ${config.pendingInvitationsCount} steward(s) '
+          'Cannot distribute: ${configToDistribute.pendingInvitationsCount} steward(s) '
           'haven\'t accepted invitations yet: $names',
         );
       }
@@ -706,7 +714,7 @@ class BackupService {
       // Step 5: Generate Shamir shares
       // Build stewards list with name, pubkey, and contactInfo maps
       // Include all stewards with pubkeys (including owner if they have a shard)
-      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((
+      final stewards = configToDistribute.stewards.where((kh) => kh.pubkey != null).map((
         kh,
       ) {
         final stewardMap = <String, String>{
@@ -721,14 +729,14 @@ class BackupService {
 
       final shards = await generateShamirShares(
         content: content,
-        threshold: config.threshold,
-        totalShards: config.totalKeys,
+        threshold: configToDistribute.threshold,
+        totalShards: configToDistribute.totalKeys,
         creatorPubkey: creatorPubkey,
         vaultId: vaultDetail.id,
         vaultName: vaultDetail.name,
         stewards: stewards,
         ownerName: vaultDetail.ownerName,
-        instructions: config.instructions,
+        instructions: configToDistribute.instructions,
         // Advertise the owner's current push preference so stewards learn
         // (or re-learn, on redistribution) whether this vault uses push.
         pushEnabled: vaultDetail.pushEnabled,
@@ -738,7 +746,7 @@ class BackupService {
       // Step 6: Distribute shards using injected service
       await _shareDistributionService.distributeShares(
         ownerPubkey: creatorPubkey,
-        config: config,
+        config: configToDistribute,
         shares: shards,
       );
       Log.info('Successfully distributed all shards');
