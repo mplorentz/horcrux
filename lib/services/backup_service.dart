@@ -712,12 +712,15 @@ class BackupService {
       }
 
       // Step 5: Generate Shamir shares
-      // Build stewards list with name, pubkey, and contactInfo maps
-      // Include all stewards with pubkeys (including owner if they have a shard)
+      // Build stewards list with id, name, pubkey, and contactInfo maps.
+      // Including the steward id lets the receiving device use the owner's
+      // authoritative steward UUID instead of a synthetic positional one,
+      // which avoids UNIQUE-constraint collisions on the stewards table.
       final stewards = configToDistribute.stewards.where((kh) => kh.pubkey != null).map((
         kh,
       ) {
         final stewardMap = <String, String>{
+          'id': kh.id,
           'name': kh.name ?? 'Unknown',
           'pubkey': kh.pubkey!,
         };

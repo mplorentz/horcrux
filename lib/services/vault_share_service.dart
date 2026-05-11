@@ -460,16 +460,19 @@ class VaultShareService {
 
     // Upsert every steward advertised by the wire payload into normalized
     // `stewards` rows so UI/read paths no longer depend on Share.stewards.
+    // The owner embeds the authoritative steward UUIDs in the payload so both
+    // sides use the same id and there are no UNIQUE-constraint collisions.
     final embeddedStewards = share.stewards;
     if (embeddedStewards != null && embeddedStewards.isNotEmpty) {
       for (var i = 0; i < embeddedStewards.length; i++) {
         final steward = embeddedStewards[i];
         final pubkey = steward['pubkey'];
-        if (pubkey == null || pubkey.isEmpty) {
+        final stewardId = steward['id'];
+        if (pubkey == null || pubkey.isEmpty || stewardId == null || stewardId.isEmpty) {
           continue;
         }
         await repository.upsertStewardRow(
-          id: '${vaultId}_steward_${i + 1}',
+          id: stewardId,
           vaultId: vaultId,
           shareIndex: i + 1, // 1-based in DB
           pubkey: pubkey,
@@ -480,28 +483,30 @@ class VaultShareService {
       }
     }
 
-    // Ensure the recipient's own steward row exists even if older/legacy share
-    // payloads did not carry the full stewards list.
+    // Ensure the recipient's own steward row exists.
     var selfShareIndex = share.shareIndex + 1; // 1-based in DB
     String? selfName;
+    String? selfId;
     if (currentPubkey != null && embeddedStewards != null) {
       for (var i = 0; i < embeddedStewards.length; i++) {
         if (embeddedStewards[i]['pubkey'] == currentPubkey) {
           selfShareIndex = i + 1;
           selfName = embeddedStewards[i]['name'];
+          selfId = embeddedStewards[i]['id'];
           break;
         }
       }
     }
-    final selfStewardId = '${vaultId}_steward_$selfShareIndex';
-    await repository.upsertStewardRow(
-      id: selfStewardId,
-      vaultId: vaultId,
-      shareIndex: selfShareIndex,
-      pubkey: currentPubkey,
-      name: selfName,
-      isOwner: currentPubkey != null && currentPubkey == share.creatorPubkey,
-    );
+    if (selfId != null && selfId.isNotEmpty) {
+      await repository.upsertStewardRow(
+        id: selfId,
+        vaultId: vaultId,
+        shareIndex: selfShareIndex,
+        pubkey: currentPubkey,
+        name: selfName,
+        isOwner: currentPubkey != null && currentPubkey == share.creatorPubkey,
+      );
+    }
     Log.debug(
       '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
       'shareIndex=$selfShareIndex',

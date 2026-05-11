@@ -365,6 +365,12 @@ class VaultRepository {
   /// self-steward entry for a received share. The `left_at` column is cleared
   /// so a previously soft-retired self-steward becomes active again on
   /// redistribution.
+  ///
+  /// The partial unique index `stewards_vault_position_active` enforces one
+  /// active row per `(vault_id, share_index)`. If an active row with a
+  /// *different* id already occupies this position (e.g. an old invited-steward
+  /// UUID from the owner's config), it is soft-retired before the new row is
+  /// inserted so the constraint is never violated.
   Future<void> upsertStewardRow({
     required String id,
     required String vaultId,
@@ -375,18 +381,35 @@ class VaultRepository {
     bool isOwner = false,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await _db.stewardDao.upsert(
-      StewardsCompanion.insert(
-        id: id,
-        vaultId: vaultId,
-        shareIndex: shareIndex,
-        pubkey: Value(pubkey),
-        name: Value(name),
-        contactInfo: Value(contactInfo),
-        isOwner: Value(isOwner),
-        joinedAt: now,
-      ).copyWith(leftAt: const Value(null)),
-    );
+    await _db.transaction(() async {
+      // Retire any incumbent active steward at this position whose id differs.
+      final incumbents = await (_db.select(_db.stewards)
+            ..where(
+              (s) =>
+                  s.vaultId.equals(vaultId) &
+                  s.shareIndex.equals(shareIndex) &
+                  s.leftAt.isNull() &
+                  s.id.isNotValue(id),
+            ))
+          .get();
+      for (final row in incumbents) {
+        await (_db.update(_db.stewards)..where((s) => s.id.equals(row.id)))
+            .write(StewardsCompanion(leftAt: Value(now)));
+      }
+
+      await _db.stewardDao.upsert(
+        StewardsCompanion.insert(
+          id: id,
+          vaultId: vaultId,
+          shareIndex: shareIndex,
+          pubkey: Value(pubkey),
+          name: Value(name),
+          contactInfo: Value(contactInfo),
+          isOwner: Value(isOwner),
+          joinedAt: now,
+        ).copyWith(leftAt: const Value(null)),
+      );
+    });
   }
 
   /// Copies Shamir parameters and relay hints from [share] onto the `vaults`
@@ -675,6 +698,7 @@ class VaultRepository {
       vaultId: row.id,
       distributionVersion: row.currentDistributionVersion,
     );
+    final inviteCodeByStewardId = await _inviteCodesByStewardId(row.id);
 
     final dbStewards = stewardRows
         .map(
@@ -682,6 +706,7 @@ class VaultRepository {
             s,
             currentDistributionVersion: row.currentDistributionVersion,
             distributionShareRow: distributionSharesByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id],
           ),
         )
         .toList();
@@ -692,10 +717,14 @@ class VaultRepository {
           ? dbStewards
           : [
               for (final s in dbStewards)
-                overlay.stewards.firstWhere(
-                  (cached) => cached.id == s.id,
-                  orElse: () => s,
-                ),
+                overlay.stewards
+                    .firstWhere(
+                      (cached) => cached.id == s.id,
+                      orElse: () => s,
+                    )
+                    // Ensure the DB-sourced inviteCode (from invitations table) is
+                    // always present. The overlay may be stale or absent after restart.
+                    .copyWith(inviteCode: s.inviteCode),
             ];
       backupConfig = BackupConfig(
         vaultId: row.id,
@@ -757,10 +786,24 @@ class VaultRepository {
     );
   }
 
+  /// Returns a map of steward id → invite code for all active (unredeemed)
+  /// invitations for [vaultId]. Used so [_stewardFromRow] can populate
+  /// [Steward.inviteCode] from the DB rather than relying on the in-memory
+  /// overlay (which is lost on restart).
+  Future<Map<String, String>> _inviteCodesByStewardId(String vaultId) async {
+    final rows = await _db.invitationDao.forVault(vaultId);
+    return {
+      for (final r in rows)
+        if (r.stewardId != null && r.acceptedAt == null && r.revokedAt == null)
+          r.stewardId!: r.code,
+    };
+  }
+
   Steward _stewardFromRow(
     StewardRow row, {
     required int currentDistributionVersion,
     DistributionShareRow? distributionShareRow,
+    String? inviteCode,
   }) {
     final isInvited = row.pubkey == null;
     final acknowledgedAtMs = distributionShareRow?.acknowledgedAt;
@@ -785,6 +828,7 @@ class VaultRepository {
       name: row.name,
       contactInfo: row.contactInfo,
       isOwner: row.isOwner,
+      inviteCode: inviteCode,
       status: status,
       giftWrapEventId:
           (giftWrapEventId == null || giftWrapEventId.isEmpty) ? null : giftWrapEventId,

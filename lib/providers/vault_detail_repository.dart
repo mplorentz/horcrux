@@ -104,6 +104,7 @@ class VaultDetailRepository {
       vaultId: row.id,
       distributionVersion: row.currentDistributionVersion,
     );
+    final inviteCodeByStewardId = await _inviteCodesByStewardId(row.id);
 
     final stewards = stewardRows
         .map(
@@ -111,6 +112,7 @@ class VaultDetailRepository {
             s,
             currentDistributionVersion: row.currentDistributionVersion,
             distributionShareRow: distributionSharesByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id],
           ),
         )
         .toList();
@@ -217,10 +219,20 @@ class VaultDetailRepository {
     return {for (final row in shareRows) row.stewardId: row};
   }
 
+  Future<Map<String, String>> _inviteCodesByStewardId(String vaultId) async {
+    final rows = await _db.invitationDao.forVault(vaultId);
+    return {
+      for (final r in rows)
+        if (r.stewardId != null && r.acceptedAt == null && r.revokedAt == null)
+          r.stewardId!: r.code,
+    };
+  }
+
   Steward _stewardFromRow(
     StewardRow row, {
     required int currentDistributionVersion,
     DistributionShareRow? distributionShareRow,
+    String? inviteCode,
   }) {
     final isInvited = row.pubkey == null;
     final acknowledgedAtMs = distributionShareRow?.acknowledgedAt;
@@ -245,6 +257,7 @@ class VaultDetailRepository {
       name: row.name,
       contactInfo: row.contactInfo,
       isOwner: row.isOwner,
+      inviteCode: inviteCode,
       status: status,
       giftWrapEventId:
           (giftWrapEventId == null || giftWrapEventId.isEmpty) ? null : giftWrapEventId,
