@@ -18,10 +18,15 @@ import 'tables/vaults.dart';
 
 part 'app_database.g.dart';
 
-/// Schema version 1 — corresponds to `drift_schemas/drift_schema_v1.json`.
-/// Any change to any [Table] in this database that affects the SQL schema MUST
-/// bump [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a
-/// new `drift_schemas/drift_schema_v<n>.json`, and add a migration test. The
+/// Schema version 2 — corresponds to `drift_schemas/drift_schema_v2.json`.
+///
+/// **v2**: Adds `held_shares` (and indexes) on upgrade for databases that were
+/// created at v1 before the Phase 2a table landed; those files kept
+/// `user_version = 1` without the new table, so `onCreate` never re-ran.
+///
+/// Any further change to any [Table] that affects the SQL schema MUST bump
+/// [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a new
+/// `drift_schemas/drift_schema_v<n>.json`, and add a migration test. The
 /// `schema_parity_test.dart` CI gate enforces that the dumped schema matches
 /// what the code generates.
 @DriftDatabase(
@@ -53,7 +58,24 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  Future<void> _createHeldSharesIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS held_shares_vault '
+      'ON held_shares(vault_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS held_shares_vault_version '
+      'ON held_shares(vault_id, distribution_version DESC)',
+    );
+    // Dedup: same share event for the same (vault, version) is a no-op.
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS held_shares_vault_version_event '
+      'ON held_shares(vault_id, distribution_version, nostr_event_id) '
+      'WHERE nostr_event_id IS NOT NULL',
+    );
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -89,20 +111,18 @@ class AppDatabase extends _$AppDatabase {
             'CREATE INDEX IF NOT EXISTS distribution_shares_steward '
             'ON distribution_shares(steward_id)',
           );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS held_shares_vault '
-            'ON held_shares(vault_id)',
-          );
-          await customStatement(
-            'CREATE INDEX IF NOT EXISTS held_shares_vault_version '
-            'ON held_shares(vault_id, distribution_version DESC)',
-          );
-          // Dedup: same share event for the same (vault, version) is a no-op.
-          await customStatement(
-            'CREATE UNIQUE INDEX IF NOT EXISTS held_shares_vault_version_event '
-            'ON held_shares(vault_id, distribution_version, nostr_event_id) '
-            'WHERE nostr_event_id IS NOT NULL',
-          );
+          await _createHeldSharesIndexes();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            final heldSharesExists = await customSelect(
+              "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'held_shares' LIMIT 1",
+            ).get();
+            if (heldSharesExists.isEmpty) {
+              await m.createTable(heldShares);
+            }
+            await _createHeldSharesIndexes();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
