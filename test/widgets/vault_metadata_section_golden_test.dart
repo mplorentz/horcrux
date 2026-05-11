@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/vault_metadata_section.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   // Sample test data
@@ -31,7 +33,7 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -54,7 +56,7 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith(
@@ -80,9 +82,11 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 200),
@@ -104,9 +108,28 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                vault,
+                latestShare: createShare(
+                  payload: 'shard',
+                  threshold: 2,
+                  shareIndex: 0,
+                  totalShares: 3,
+                  primeMod: 'pm',
+                  creatorPubkey: otherPubkey,
+                  vaultId: 'test-vault',
+                  vaultName: 'Test Vault',
+                  recipientPubkey: testPubkey,
+                  isReceived: true,
+                  receivedAt: DateTime.now().subtract(const Duration(days: 1)),
+                ),
+              ),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 250),
@@ -128,9 +151,13 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(vault, latestShare: null),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 200),
@@ -155,9 +182,28 @@ void main() {
         tester,
         const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                vault,
+                latestShare: createShare(
+                  payload: 'shard',
+                  threshold: 2,
+                  shareIndex: 0,
+                  totalShares: 3,
+                  primeMod: 'pm',
+                  creatorPubkey: otherPubkey,
+                  vaultId: 'test-vault',
+                  vaultName: 'Test Vault',
+                  recipientPubkey: testPubkey,
+                  isReceived: true,
+                  receivedAt: DateTime.now().subtract(const Duration(days: 1)),
+                ),
+              ),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future<String?>.delayed(
               const Duration(seconds: 10),

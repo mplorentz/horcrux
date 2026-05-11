@@ -12,6 +12,7 @@ import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/widgets/steward_list.dart';
 import 'dart:async';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   // Sample test data
@@ -69,7 +70,7 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
@@ -92,7 +93,7 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith(
@@ -119,9 +120,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 300),
@@ -154,9 +157,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 300),
@@ -190,9 +195,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 400),
@@ -225,9 +232,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 350),
@@ -260,9 +269,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 350),
@@ -294,9 +305,11 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => completer.future),
         ],
         surfaceSize: const Size(375, 200),
@@ -359,7 +372,9 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
         ],
         surfaceSize: const Size(375, 400),
@@ -416,7 +431,9 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
         ],
         surfaceSize: const Size(375, 350),
@@ -444,14 +461,6 @@ void main() {
         ],
       );
 
-      final vault = Vault(
-        id: 'test-vault',
-        name: 'Test Vault',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        ownerPubkey: ownerPubkey,
-        ownerName: 'Device A',
-      );
-
       final vaultDetail = StewardedVaultDetail(
         id: 'test-vault',
         name: 'Test Vault',
@@ -473,8 +482,9 @@ void main() {
         tester,
         const StewardList(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(vaultDetail)),
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(vaultDetail),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => stewardPubkeyC),
         ],
         surfaceSize: const Size(375, 400),

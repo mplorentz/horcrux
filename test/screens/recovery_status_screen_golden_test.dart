@@ -11,6 +11,7 @@ import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/recovery_status_screen.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 import '../helpers/steward_test_helpers.dart';
 
 void main() {
@@ -208,9 +209,11 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -273,9 +276,11 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -335,9 +340,11 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -393,9 +400,11 @@ void main() {
           recoveryRequestByIdProvider(
             'recovery-123',
           ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+          ),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -448,9 +457,11 @@ void main() {
         recoveryRequestByIdProvider(
           'recovery-123',
         ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-        vaultProvider(
+        vaultDetailProvider(
           'test-vault',
-        ).overrideWith((ref) => Stream.value(vault)),
+        ).overrideWith(
+          (ref) => Stream.value(ownedVaultDetailFromVault(vault)),
+        ),
         currentPublicKeyProvider.overrideWith(
           (ref) => Future.value(testPubkey),
         ),

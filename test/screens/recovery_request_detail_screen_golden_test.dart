@@ -8,7 +8,9 @@ import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/recovery_request_detail_screen.dart';
+import 'package:horcrux/services/login_service.dart';
 import '../helpers/golden_test_helpers.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   // Sample test data
@@ -91,8 +93,11 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
           // Mock the vault provider to return loading state
-          vaultProvider('test-vault').overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(null).asyncMap((_) async {
               await Future.delayed(
                 const Duration(seconds: 10),
@@ -125,8 +130,11 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
           // Mock provider to throw an error
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
@@ -174,9 +182,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1200),
@@ -214,9 +225,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1000),
@@ -253,9 +267,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1000),
@@ -298,9 +315,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1000),
@@ -330,9 +350,12 @@ void main() {
       );
 
       final harness = GoldenTestHarness.withOverrides([
-        vaultProvider(
+        loginServiceProvider.overrideWithValue(
+          _GoldenFakeLoginService(testPubkey),
+        ),
+        vaultDetailProvider(
           'test-vault',
-        ).overrideWith((ref) => Stream.value(vault)),
+        ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
         currentPublicKeyProvider.overrideWith((ref) => testPubkey),
       ]);
 
@@ -396,9 +419,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1200),
@@ -450,9 +476,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1200),
@@ -506,9 +535,12 @@ void main() {
         tester,
         RecoveryRequestDetailScreen(recoveryRequest: recoveryRequest),
         overrides: [
-          vaultProvider(
+          loginServiceProvider.overrideWithValue(
+            _GoldenFakeLoginService(testPubkey),
+          ),
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
+          ).overrideWith((ref) => Stream.value(ownedVaultDetailFromVault(vault))),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
         surfaceSize: const Size(375, 1200),
@@ -522,4 +554,13 @@ void main() {
       await harness.dispose();
     });
   });
+}
+
+class _GoldenFakeLoginService extends LoginService {
+  _GoldenFakeLoginService(this._pubkey);
+
+  final String _pubkey;
+
+  @override
+  Future<String?> getCurrentPublicKey() async => _pubkey;
 }

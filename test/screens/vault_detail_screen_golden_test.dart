@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
+import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -12,6 +14,7 @@ import 'package:horcrux/screens/vault_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/shared_preferences_mock.dart';
+import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -106,7 +109,7 @@ void main() {
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
           // Mock the vault provider to return loading state
-          vaultProvider('test-vault').overrideWith(
+          vaultDetailProvider('test-vault').overrideWith(
             (ref) => Stream.value(null).asyncMap((_) async {
               await Future.delayed(
                 const Duration(seconds: 10),
@@ -134,7 +137,7 @@ void main() {
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
           // Mock provider to throw an error
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
         ],
@@ -156,7 +159,7 @@ void main() {
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
           // Mock provider to return null (vault not found)
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+          vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(null)),
         ],
 
         surfaceSize: const Size(
@@ -183,9 +186,11 @@ void main() {
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(ownedVault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(ownedVault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
 
@@ -207,15 +212,28 @@ void main() {
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
         recoveryRequests: [], // No active recovery
+        backupConfig: createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createSteward(pubkey: testPubkey, name: 'You', isOwner: true),
+            createSteward(pubkey: otherPubkey, name: 'Bob'),
+            createSteward(pubkey: thirdPubkey, name: 'Charlie'),
+          ],
+          relays: const ['wss://relay.example.com'],
+        ),
       );
 
       final harness = await pumpGoldenWidget(
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(ownedVault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(ownedVault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock recovery status to show no active recovery
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -267,15 +285,28 @@ void main() {
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
         recoveryRequests: [recoveryRequest],
+        backupConfig: createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createSteward(pubkey: testPubkey, name: 'You', isOwner: true),
+            createSteward(pubkey: otherPubkey, name: 'Bob'),
+            createSteward(pubkey: thirdPubkey, name: 'Charlie'),
+          ],
+          relays: const ['wss://relay.example.com'],
+        ),
       );
 
       final harness = await pumpGoldenWidget(
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(ownedVault)),
+          ).overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(ownedVault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock recovery status to show active recovery
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -317,9 +348,20 @@ void main() {
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(shardHolderVault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                shardHolderVault,
+                latestShare: createTestShard(
+                  shardIndex: 0,
+                  recipientPubkey: testPubkey,
+                  vaultId: 'test-vault',
+                ),
+              ),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock recovery status to show no active recovery
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -377,9 +419,20 @@ void main() {
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(shardHolderVault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                shardHolderVault,
+                latestShare: createTestShard(
+                  shardIndex: 0,
+                  recipientPubkey: testPubkey,
+                  vaultId: 'test-vault',
+                ),
+              ),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock recovery status to show active recovery
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -423,9 +476,16 @@ void main() {
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider(
+          vaultDetailProvider(
             'test-vault',
-          ).overrideWith((ref) => Stream.value(awaitingKeyVault)),
+          ).overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                awaitingKeyVault,
+                latestShare: null,
+              ),
+            ),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           // Mock recovery status to show no active recovery
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -458,12 +518,25 @@ void main() {
         createdAt: DateTime(2024, 10, 1, 10, 30),
         ownerPubkey: testPubkey,
         recoveryRequests: [],
+        backupConfig: createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createSteward(pubkey: testPubkey, name: 'You', isOwner: true),
+            createSteward(pubkey: otherPubkey, name: 'Bob'),
+            createSteward(pubkey: thirdPubkey, name: 'Charlie'),
+          ],
+          relays: const ['wss://relay.example.com'],
+        ),
       );
 
       final harness = GoldenTestHarness.withOverrides([
-        vaultProvider(
+        vaultDetailProvider(
           'test-vault',
-        ).overrideWith((ref) => Stream.value(ownedVault)),
+        ).overrideWith(
+          (ref) => Stream.value(ownedVaultDetailFromVault(ownedVault)),
+        ),
         currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         // Mock recovery status to show no active recovery
         recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -524,7 +597,9 @@ void main() {
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
         overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(ownedVault)),
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(ownedVault)),
+          ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           recoveryStatusProvider.overrideWith((ref, vaultId) {
             return const AsyncValue.data(
