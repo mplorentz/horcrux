@@ -159,6 +159,28 @@ class Share with _$Share {
   }
 }
 
+/// Returns the most-recently-distributed share from [shares], or null when the
+/// list is empty.
+///
+/// Selection order:
+/// 1. Higher [Share.distributionVersion] wins (null treated as -1 so that
+///    unversioned/legacy shares sort before any explicitly-versioned share).
+/// 2. Higher [Share.createdAt] (Unix seconds) breaks ties within the same
+///    version.
+///
+/// This is the single authoritative implementation of the "pick most recent
+/// share" policy.  All call sites in [VaultShareService] and [RecoveryService]
+/// delegate here rather than re-implementing the reduce inline.
+Share? latestShare(List<Share> shares) {
+  if (shares.isEmpty) return null;
+  return shares.reduce((current, next) {
+    final cv = current.distributionVersion ?? -1;
+    final nv = next.distributionVersion ?? -1;
+    if (cv != nv) return nv > cv ? next : current;
+    return next.createdAt > current.createdAt ? next : current;
+  });
+}
+
 /// Helper to validate hex strings
 bool _isHexString(String str) {
   return RegExp(r'^[0-9a-fA-F]+$').hasMatch(str);

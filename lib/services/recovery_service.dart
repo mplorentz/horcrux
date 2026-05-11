@@ -360,14 +360,7 @@ class RecoveryService {
         );
       }
 
-      final selectedShard = shares.reduce((current, next) {
-        final currentVersion = current.distributionVersion ?? -1;
-        final nextVersion = next.distributionVersion ?? -1;
-        if (currentVersion != nextVersion) {
-          return nextVersion > currentVersion ? next : current;
-        }
-        return next.createdAt > current.createdAt ? next : current;
-      });
+      final selectedShard = latestShare(shares)!;
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
@@ -699,14 +692,7 @@ class RecoveryService {
       if (shares.isEmpty) {
         throw ArgumentError('No share data found for vault ${request.vaultId}');
       }
-      stewardShare = shares.reduce((current, next) {
-        final currentVersion = current.distributionVersion ?? -1;
-        final nextVersion = next.distributionVersion ?? -1;
-        if (currentVersion != nextVersion) {
-          return nextVersion > currentVersion ? next : current;
-        }
-        return next.createdAt > current.createdAt ? next : current;
-      });
+      stewardShare = latestShare(shares)!;
       Log.info(
         'Selected share with distributionVersion ${stewardShare.distributionVersion} for recovery request $recoveryRequestId',
       );
@@ -746,17 +732,10 @@ class RecoveryService {
               Log.info('Using relay URLs from backup config for recovery response');
             } else {
               // Fall back to relay URLs from steward-held share.
-              final shares = await repository.getSharesForVault(request.vaultId);
-              if (shares.isNotEmpty) {
-                final latestShare = shares.reduce((current, next) {
-                  final cv = current.distributionVersion ?? -1;
-                  final nv = next.distributionVersion ?? -1;
-                  return nv > cv ? next : current;
-                });
-                if (latestShare.relayUrls != null && latestShare.relayUrls!.isNotEmpty) {
-                  relayUrls = latestShare.relayUrls!;
-                  Log.info('Using relay URLs from steward share data for recovery response');
-                }
+              final share = latestShare(await repository.getSharesForVault(request.vaultId));
+              if (share != null && share.relayUrls != null && share.relayUrls!.isNotEmpty) {
+                relayUrls = share.relayUrls!;
+                Log.info('Using relay URLs from steward share data for recovery response');
               }
             }
           }
