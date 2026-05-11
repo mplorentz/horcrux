@@ -94,7 +94,9 @@ void main() {
 
   group('RecoveryStatusScreen Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -103,12 +105,6 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 1200),
         waitForSettle: false,
       );
@@ -118,11 +114,13 @@ void main() {
         'recovery_status_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider('recovery-123').overrideWith(
             (ref) => const AsyncValue.error(
@@ -134,22 +132,18 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('recovery request not found', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -158,18 +152,12 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_not_found');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery - pending with no responses', (
@@ -213,7 +201,9 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -225,18 +215,12 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_practice_pending');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery - in progress with partial responses', (
@@ -282,7 +266,9 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -294,18 +280,12 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_practice_in_progress');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('practice recovery - completed', (tester) async {
@@ -348,7 +328,9 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -360,18 +342,12 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_practice_completed');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('real recovery - in progress', (tester) async {
@@ -410,7 +386,9 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
         overrides: [
           recoveryRequestByIdProvider(
             'recovery-123',
@@ -422,18 +400,12 @@ void main() {
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryStatusScreen(recoveryRequestId: 'recovery-123'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_real_in_progress');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes - practice', (tester) async {
@@ -472,19 +444,17 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          recoveryRequestByIdProvider(
-            'recovery-123',
-          ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith(
-            (ref) => Future.value(testPubkey),
-          ),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        recoveryRequestByIdProvider(
+          'recovery-123',
+        ).overrideWith((ref) => AsyncValue.data(recoveryRequest)),
+        vaultProvider(
+          'test-vault',
+        ).overrideWith((ref) => Stream.value(vault)),
+        currentPublicKeyProvider.overrideWith(
+          (ref) => Future.value(testPubkey),
+        ),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -499,17 +469,17 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'recovery_status_multiple_devices');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('vault recovered export dialog', (tester) async {
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         AlertDialog(
           title: const Text('Vault Recovered!'),
@@ -527,6 +497,8 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'recovery_status_recovered_dialog');
+
+      await harness.dispose();
     });
   });
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -24,7 +23,9 @@ void main() {
 
       final fakeLoginService = _FakeLoginService(keyPair);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const AccountManagementScreen(),
         overrides: [
           loginServiceProvider.overrideWithValue(fakeLoginService),
           logoutServiceProvider.overrideWithValue(_FakeLogoutService()),
@@ -36,18 +37,12 @@ void main() {
           ),
           isLoggedInProvider.overrideWith((ref) async => true),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const AccountManagementScreen(),
-        container: container,
         surfaceSize: const Size(375, 667),
       );
 
       await screenMatchesGolden(tester, 'account_management_screen_default');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

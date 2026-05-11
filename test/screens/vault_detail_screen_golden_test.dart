@@ -101,8 +101,10 @@ void main() {
     });
 
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           // Mock the vault provider to return loading state
           vaultProvider('test-vault').overrideWith(
             (ref) => Stream.value(null).asyncMap((_) async {
@@ -112,13 +114,8 @@ void main() {
               return null;
             }),
           ),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1200,
@@ -128,23 +125,20 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_detail_screen_loading');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           // Mock provider to throw an error
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -153,21 +147,18 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_detail_screen_error');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('vault not found', (tester) async {
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
-          // Mock provider to return null (vault not found)
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
-        ]),
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
+        overrides: [
+          // Mock provider to return null (vault not found)
+          vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
+        ],
+
         surfaceSize: const Size(
           375,
           1000,
@@ -176,7 +167,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_detail_screen_not_found');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('owner - no backup configured', (tester) async {
@@ -188,19 +179,16 @@ void main() {
         recoveryRequests: [],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(ownedVault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -209,7 +197,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_detail_screen_owner_no_backup');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('owner - backup configured, not in recovery', (tester) async {
@@ -221,8 +209,10 @@ void main() {
         recoveryRequests: [], // No active recovery
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(ownedVault)),
@@ -238,13 +228,8 @@ void main() {
               ),
             );
           }),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -256,7 +241,7 @@ void main() {
         'vault_detail_screen_owner_backup_no_recovery',
       );
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('owner - in recovery', (tester) async {
@@ -284,8 +269,10 @@ void main() {
         recoveryRequests: [recoveryRequest],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(ownedVault)),
@@ -301,13 +288,8 @@ void main() {
               ),
             );
           }),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -319,7 +301,7 @@ void main() {
         'vault_detail_screen_owner_in_recovery',
       );
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('shard holder - not in recovery', (tester) async {
@@ -331,8 +313,10 @@ void main() {
         recoveryRequests: [], // No active recovery
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(shardHolderVault)),
@@ -348,13 +332,8 @@ void main() {
               ),
             );
           }),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -366,7 +345,7 @@ void main() {
         'vault_detail_screen_shard_holder_no_recovery',
       );
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('shard holder - in recovery', (tester) async {
@@ -394,8 +373,10 @@ void main() {
         recoveryRequests: [recoveryRequest],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(shardHolderVault)),
@@ -411,13 +392,8 @@ void main() {
               ),
             );
           }),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -429,7 +405,7 @@ void main() {
         'vault_detail_screen_shard_holder_in_recovery',
       );
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('awaiting key state - invitee waiting for shard', (
@@ -443,8 +419,10 @@ void main() {
         recoveryRequests: [],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(awaitingKeyVault)),
@@ -460,13 +438,8 @@ void main() {
               ),
             );
           }),
-        ]),
-      );
+        ],
 
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(
           375,
           1000,
@@ -475,7 +448,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_detail_screen_awaiting_key');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
@@ -487,25 +460,23 @@ void main() {
         recoveryRequests: [],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(ownedVault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-          // Mock recovery status to show no active recovery
-          recoveryStatusProvider.overrideWith((ref, vaultId) {
-            return const AsyncValue.data(
-              RecoveryStatus(
-                hasActiveRecovery: false,
-                canRecover: false,
-                activeRecoveryRequest: null,
-                isInitiator: false,
-              ),
-            );
-          }),
-        ]),
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        vaultProvider(
+          'test-vault',
+        ).overrideWith((ref) => Stream.value(ownedVault)),
+        currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        // Mock recovery status to show no active recovery
+        recoveryStatusProvider.overrideWith((ref, vaultId) {
+          return const AsyncValue.data(
+            RecoveryStatus(
+              hasActiveRecovery: false,
+              canRecover: false,
+              activeRecoveryRequest: null,
+              isInitiator: false,
+            ),
+          );
+        }),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -520,13 +491,13 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'vault_detail_screen_multiple_devices');
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
 
     testGoldens('recovery notification', (tester) async {
@@ -549,8 +520,10 @@ void main() {
         recoveryRequests: [],
       );
 
-      final container = ProviderContainer(
-        overrides: goldenOverrides([
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
           vaultProvider('test-vault').overrideWith((ref) => Stream.value(ownedVault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
           recoveryStatusProvider.overrideWith((ref, vaultId) {
@@ -567,13 +540,7 @@ void main() {
           pendingRecoveryRequestsProvider.overrideWith(
             (ref) => Stream.value([recoveryRequest]),
           ),
-        ]),
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultDetailScreen(vaultId: 'test-vault'),
-        container: container,
+        ],
         surfaceSize: const Size(375, 1000),
       );
 
@@ -582,7 +549,7 @@ void main() {
         'vault_detail_screen_with_banner',
       );
 
-      await disposeGoldenContainer(tester, container);
+      await harness.dispose();
     });
   });
 }

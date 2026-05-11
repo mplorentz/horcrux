@@ -29,48 +29,40 @@ void main() {
   group('PushNotificationSettingsScreen golden tests', () {
     testGoldens('default: push off', (tester) async {
       final mockPush = MockPushNotificationReceiver();
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PushNotificationSettingsScreen(),
         overrides: buildOverrides(
           mockPush: mockPush,
           optedIn: false,
         ),
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PushNotificationSettingsScreen(),
-        container: container,
         surfaceSize: surface,
       );
 
       await screenMatchesGolden(tester, 'push_notification_settings_screen_default');
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('opted in: global push on', (tester) async {
       final mockPush = MockPushNotificationReceiver();
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PushNotificationSettingsScreen(),
         overrides: buildOverrides(
           mockPush: mockPush,
           optedIn: true,
         ),
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PushNotificationSettingsScreen(),
-        container: container,
         surfaceSize: surface,
       );
 
       await screenMatchesGolden(tester, 'push_notification_settings_screen_opted_in');
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes (default state)', (tester) async {
       final mockPush = MockPushNotificationReceiver();
-      final container = ProviderContainer(
-        overrides: buildOverrides(
+      final harness = GoldenTestHarness.withOverrides(
+        buildOverrides(
           mockPush: mockPush,
           optedIn: false,
         ),
@@ -89,7 +81,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -97,7 +89,7 @@ void main() {
         tester,
         'push_notification_settings_screen_multiple_devices',
       );
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
@@ -28,19 +27,15 @@ void main() {
 
   group('VaultMetadataSection Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value('test-pubkey'),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
         waitForSettle: false,
@@ -51,11 +46,13 @@ void main() {
         'vault_metadata_section_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
@@ -64,19 +61,13 @@ void main() {
             (ref) => Future.value('test-pubkey'),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'vault_metadata_section_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('owner state', (tester) async {
@@ -85,26 +76,22 @@ void main() {
         ownerPubkey: testPubkey,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'vault_metadata_section_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('steward state', (tester) async {
@@ -113,26 +100,22 @@ void main() {
         ownerPubkey: otherPubkey, // Different owner
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 250),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'vault_metadata_section_key_holder');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('steward state with no shards', (tester) async {
@@ -141,19 +124,15 @@ void main() {
         ownerPubkey: otherPubkey, // Different owner // No shards
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
       );
@@ -163,7 +142,7 @@ void main() {
         'vault_metadata_section_key_holder_no_shards',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('current user key loading', (tester) async {
@@ -172,7 +151,9 @@ void main() {
         ownerPubkey: otherPubkey,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultMetadataSection(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
@@ -184,12 +165,6 @@ void main() {
             ),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const VaultMetadataSection(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
         waitForSettle: false,
@@ -197,7 +172,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'vault_metadata_section_user_loading');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

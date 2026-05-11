@@ -32,18 +32,14 @@ void main() {
 
   group('RecoveryMetadataWidget Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => const AsyncValue.loading()),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
         waitForSettle: false,
@@ -54,11 +50,13 @@ void main() {
         'recovery_metadata_widget_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider('test-request').overrideWith(
             (ref) => const AsyncValue.error(
@@ -67,19 +65,13 @@ void main() {
             ),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 200),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_metadata_widget_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('pending status', (tester) async {
@@ -88,25 +80,21 @@ void main() {
         status: RecoveryRequestStatus.pending,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => AsyncValue.data(request)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 250),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_metadata_widget_pending');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('in-progress status', (tester) async {
@@ -115,25 +103,21 @@ void main() {
         status: RecoveryRequestStatus.inProgress,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => AsyncValue.data(request)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 250),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_metadata_widget_in_progress');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('completed status', (tester) async {
@@ -142,25 +126,21 @@ void main() {
         status: RecoveryRequestStatus.completed,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => AsyncValue.data(request)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 250),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_metadata_widget_completed');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('expired warning', (tester) async {
@@ -170,25 +150,21 @@ void main() {
         expiresAt: DateTime.now().subtract(const Duration(hours: 1)), // Expired
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => AsyncValue.data(request)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryMetadataWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 250),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_metadata_widget_expired');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

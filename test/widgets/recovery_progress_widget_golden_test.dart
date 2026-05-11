@@ -45,18 +45,14 @@ void main() {
 
   group('RecoveryProgressWidget Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
           ).overrideWith((ref) => const AsyncValue.loading()),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 300),
         useScaffold: true,
         waitForSettle: false,
@@ -67,11 +63,13 @@ void main() {
         'recovery_progress_widget_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider('test-request').overrideWith(
             (ref) => const AsyncValue.error(
@@ -80,19 +78,13 @@ void main() {
             ),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 300),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_progress_widget_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('low progress without button', (tester) async {
@@ -121,7 +113,9 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
@@ -130,12 +124,6 @@ void main() {
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 400),
         useScaffold: true,
       );
@@ -145,7 +133,7 @@ void main() {
         'recovery_progress_widget_low_progress',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('threshold met with button', (tester) async {
@@ -179,7 +167,9 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
@@ -188,12 +178,6 @@ void main() {
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 500),
         useScaffold: true,
       );
@@ -203,7 +187,7 @@ void main() {
         'recovery_progress_widget_threshold_met',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('completed state', (tester) async {
@@ -237,7 +221,9 @@ void main() {
         ],
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
         overrides: [
           recoveryRequestByIdProvider(
             'test-request',
@@ -246,19 +232,13 @@ void main() {
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const RecoveryProgressWidget(recoveryRequestId: 'test-request'),
-        container: container,
         surfaceSize: const Size(375, 500),
         useScaffold: true,
       );
 
       await screenMatchesGolden(tester, 'recovery_progress_widget_completed');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

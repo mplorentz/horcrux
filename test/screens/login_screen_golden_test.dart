@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -33,20 +32,16 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const LoginScreen(),
-        container: container,
+        overrides: [loginServiceProvider.overrideWithValue(loginService)],
         surfaceSize: const Size(375, 667), // iPhone SE size
       );
 
       await screenMatchesGolden(tester, 'login_screen_empty');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('login screen - with error text', (tester) async {
@@ -54,14 +49,10 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const LoginScreen(),
-        container: container,
+        overrides: [loginServiceProvider.overrideWithValue(loginService)],
         surfaceSize: const Size(375, 667), // iPhone SE size
       );
 
@@ -71,7 +62,7 @@ void main() {
 
       await screenMatchesGolden(tester, 'login_screen_with_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('login screen - multiple device sizes', (tester) async {
@@ -79,9 +70,9 @@ void main() {
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
 
-      final container = ProviderContainer(
-        overrides: [loginServiceProvider.overrideWithValue(loginService)],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        loginServiceProvider.overrideWithValue(loginService),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -93,13 +84,13 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'login_screen_multiple_devices');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
@@ -62,25 +61,21 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_ready');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error when vault has no recovery plan', (tester) async {
@@ -92,25 +87,21 @@ void main() {
         backupConfig: null, // No recovery plan
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_no_plan');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error when recovery plan is not ready', (tester) async {
@@ -136,25 +127,21 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_not_ready');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error for non-owner', (tester) async {
@@ -182,25 +169,21 @@ void main() {
       // User is not the owner
       const nonOwnerPubkey = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(nonOwnerPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_non_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows practice recovery with different threshold (3 of 5)', (
@@ -266,25 +249,21 @@ void main() {
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_3_of_5');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

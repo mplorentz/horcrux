@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/screens/add_steward_screen.dart';
@@ -13,115 +12,102 @@ void main() {
 
   group('AddStewardScreen Golden Tests', () {
     testGoldens('add steward - empty state', (tester) async {
-      final container = ProviderContainer();
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const AddStewardScreen(
           relays: ['wss://relay.example.com'],
         ),
-        container: container,
         useScaffold: true, // Modal bottom sheet needs Scaffold context
         surfaceSize: const Size(375, 800), // Taller for modal bottom sheet
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_empty');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('add steward - no relays warning', (tester) async {
-      final container = ProviderContainer();
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const AddStewardScreen(
           relays: [], // No relays
         ),
-        container: container,
         useScaffold: true,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_no_relays');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('edit steward - with name only', (tester) async {
-      final container = ProviderContainer();
       final steward = createTestSteward(
         pubkey: testPubkey,
         name: 'Alice',
         contactInfo: null,
       );
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         AddStewardScreen(
           steward: steward,
           relays: const ['wss://relay.example.com'],
         ),
-        container: container,
         useScaffold: true,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_edit_name_only');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('edit steward - with name and contact info', (tester) async {
-      final container = ProviderContainer();
       final steward = createTestSteward(
         pubkey: testPubkey,
         name: 'Alice',
         contactInfo: 'alice@example.com',
       );
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         AddStewardScreen(
           steward: steward,
           relays: const ['wss://relay.example.com'],
         ),
-        container: container,
         useScaffold: true,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_edit');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('edit steward - long contact info', (tester) async {
-      final container = ProviderContainer();
       final steward = createTestSteward(
         pubkey: testPubkey,
         name: 'Bob',
         contactInfo: 'bob@example.com\nPhone: +1-555-123-4567\nSignal: bob_signal',
       );
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         AddStewardScreen(
           steward: steward,
           relays: const ['wss://relay.example.com'],
         ),
-        container: container,
         useScaffold: true,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_edit_long_contact');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('edit steward - contact info near limit', (tester) async {
-      final container = ProviderContainer();
       // Create contact info close to the 500 character limit (but not exceeding)
       final longContactInfo = 'email: verylongemail@example.com\n'
           'phone: +1-555-123-4567\n'
@@ -135,20 +121,19 @@ void main() {
         contactInfo: longContactInfo,
       );
 
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         AddStewardScreen(
           steward: steward,
           relays: const ['wss://relay.example.com'],
         ),
-        container: container,
         useScaffold: true,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'add_steward_screen_edit_long_contact_limit');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }
