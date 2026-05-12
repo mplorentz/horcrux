@@ -16,16 +16,20 @@ import 'share_distribution_service.dart';
 import 'relay_scan_service.dart';
 import '../services/logger.dart';
 
-/// Provider for BackupService
+/// Provider for BackupService.
+///
+/// Watches the repositories and downstream services so that an
+/// [appDatabaseProvider] invalidation rebuilds BackupService against the
+/// fresh repositories instead of holding the previous (closed) database.
 final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
   ref,
 ) {
   return BackupService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(vaultDetailRepositoryProvider),
-    ref.read(shareDistributionServiceProvider),
-    ref.read(loginServiceProvider),
-    ref.read(relayScanServiceProvider),
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(vaultDetailRepositoryProvider),
+    ref.watch(shareDistributionServiceProvider),
+    ref.watch(loginServiceProvider),
+    ref.watch(relayScanServiceProvider),
   );
 });
 

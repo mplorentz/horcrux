@@ -33,20 +33,27 @@ final vaultProvider = StreamProvider.family<Vault?, String>((ref, vaultId) {
 });
 
 /// Provider for vault repository operations.
+///
+/// Uses `ref.watch(appDatabaseProvider)` so that invalidating the database
+/// (e.g. on logout) automatically rebuilds this repository against the new
+/// [AppDatabase]. Holding the DB via `ref.read` would leak the closed
+/// instance into the next session and crash subsequent reads.
 final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   final repository = VaultRepository(
-    ref.read(loginServiceProvider),
-    db: ref.read(appDatabaseProvider),
+    ref.watch(loginServiceProvider),
+    db: ref.watch(appDatabaseProvider),
   );
   ref.onDispose(repository.dispose);
   return repository;
 });
 
 /// Provider for [VaultDetailRepository].
+///
+/// See [vaultRepositoryProvider] for why the database dependency is watched.
 final vaultDetailRepositoryProvider = Provider<VaultDetailRepository>((ref) {
   final repository = VaultDetailRepository(
-    db: ref.read(appDatabaseProvider),
-    loginService: ref.read(loginServiceProvider),
+    db: ref.watch(appDatabaseProvider),
+    loginService: ref.watch(loginServiceProvider),
   );
   ref.onDispose(repository.dispose);
   return repository;

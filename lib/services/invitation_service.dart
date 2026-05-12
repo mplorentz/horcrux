@@ -24,16 +24,21 @@ import 'ndk_service.dart';
 import 'relay_scan_service.dart';
 import 'backup_service.dart';
 
-/// Provider for InvitationService
+/// Provider for InvitationService.
+///
+/// Watches the providers that hold long-lived DB references so that
+/// invalidating [appDatabaseProvider] (e.g. on logout) rebuilds this service
+/// with the fresh database. The NDK lookup stays lazy via a callback so the
+/// circular dependency between invitations and NDK is preserved.
 final invitationServiceProvider = Provider<InvitationService>((ref) {
   final service = InvitationService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(invitationSendingServiceProvider),
-    ref.read(loginServiceProvider),
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(invitationSendingServiceProvider),
+    ref.watch(loginServiceProvider),
     () => ref.read(ndkServiceProvider),
-    ref.read(relayScanServiceProvider),
-    ref.read(backupServiceProvider),
-    ref.read(appDatabaseProvider),
+    ref.watch(relayScanServiceProvider),
+    ref.watch(backupServiceProvider),
+    ref.watch(appDatabaseProvider),
   );
 
   // Properly clean up when the provider is disposed

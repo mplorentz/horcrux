@@ -18,11 +18,14 @@ import 'logger.dart';
 /// Provider for [ShareDistributionService]
 final Provider<ShareDistributionService> shareDistributionServiceProvider =
     Provider<ShareDistributionService>((ref) {
+  // Watching the repository and NDK providers ensures that invalidating
+  // [appDatabaseProvider] (logout) cascades through and rebuilds this service
+  // against the fresh database.
   return ShareDistributionService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(loginServiceProvider),
-    ref.read(ndkServiceProvider),
-    ref.read(horcruxNotificationServiceProvider),
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(loginServiceProvider),
+    ref.watch(ndkServiceProvider),
+    ref.watch(horcruxNotificationServiceProvider),
   );
 });
 

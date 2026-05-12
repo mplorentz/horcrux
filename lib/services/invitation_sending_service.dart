@@ -4,11 +4,15 @@ import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../models/nostr_kinds.dart';
 
-/// Provider for InvitationSendingService
+/// Provider for InvitationSendingService.
+///
+/// Watches [ndkServiceProvider] so a logout-driven NDK rebuild propagates
+/// here and we don't keep publishing through the previous session's NDK
+/// instance.
 final invitationSendingServiceProvider = Provider<InvitationSendingService>((
   ref,
 ) {
-  return InvitationSendingService(ref.read(ndkServiceProvider));
+  return InvitationSendingService(ref.watch(ndkServiceProvider));
 });
 
 /// Stateless utility service for creating and publishing outgoing invitation-related Nostr events

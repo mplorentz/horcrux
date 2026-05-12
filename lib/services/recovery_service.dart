@@ -21,17 +21,22 @@ import 'vault_share_service.dart';
 import 'logger.dart';
 
 /// Provider for RecoveryService
-/// This service depends on VaultRepository for recovery operations
+/// This service depends on VaultRepository for recovery operations.
+///
+/// Watches every provider that holds a long-lived DB-backed reference so
+/// that invalidating [appDatabaseProvider] on logout cascades through and
+/// rebuilds this service against the fresh database. NdkService stays read
+/// (not watched) to avoid a circular dependency between the two.
 final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryService>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
-  final backupService = ref.read(backupServiceProvider);
+  final backupService = ref.watch(backupServiceProvider);
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
-  final vaultShareService = ref.read(vaultShareServiceProvider);
-  final processedStore = ref.read(processedNostrEventStoreProvider);
-  final localNotifications = ref.read(localNotificationServiceProvider);
-  final notificationService = ref.read(horcruxNotificationServiceProvider);
-  final database = ref.read(appDatabaseProvider);
+  final vaultShareService = ref.watch(vaultShareServiceProvider);
+  final processedStore = ref.watch(processedNostrEventStoreProvider);
+  final localNotifications = ref.watch(localNotificationServiceProvider);
+  final notificationService = ref.watch(horcruxNotificationServiceProvider);
+  final database = ref.watch(appDatabaseProvider);
   final service = RecoveryService(
     repository,
     backupService,
