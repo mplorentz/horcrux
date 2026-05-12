@@ -7,8 +7,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../firebase_options.dart';
@@ -57,7 +55,7 @@ class PushNotificationReceiver {
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notifierService;
   final NdkService _ndkService;
-  final AppDatabase? _database;
+  final AppDatabase _database;
 
   FirebaseMessaging? _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
@@ -79,7 +77,7 @@ class PushNotificationReceiver {
     required LocalNotificationService localNotifications,
     required HorcruxNotificationService notifierService,
     required NdkService ndkService,
-    AppDatabase? database,
+    required AppDatabase database,
   })  : _localNotifications = localNotifications,
         _notifierService = notifierService,
         _ndkService = ndkService,
@@ -105,11 +103,7 @@ class PushNotificationReceiver {
 
   /// Returns whether the user has globally opted into push notifications.
   Future<bool> isOptedIn() async {
-    if (_database != null) {
-      return await _database.appStateDao.getBool(optInFlagKey) ?? false;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(optInFlagKey) ?? false;
+    return await _database.appStateDao.getBool(optInFlagKey) ?? false;
   }
 
   /// Global push opt-in flow.
@@ -245,12 +239,7 @@ class PushNotificationReceiver {
 
   Future<void> _loadCachedToken() async {
     try {
-      if (_database != null) {
-        _cachedToken = await _database.appStateDao.getString(_fcmTokenKey);
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        _cachedToken = prefs.getString(_fcmTokenKey);
-      }
+      _cachedToken = await _database.appStateDao.getString(_fcmTokenKey);
       if (_cachedToken != null) {
         Log.debug('Loaded cached FCM token from storage');
       }
@@ -290,20 +279,11 @@ class PushNotificationReceiver {
     if (fcmToken == _cachedToken) return;
     _cachedToken = fcmToken;
     try {
-      if (_database != null) {
-        await _database.appStateDao.setString(key: _fcmTokenKey, value: fcmToken);
-        await _database.appStateDao.setString(
-          key: _fcmTokenUpdatedAtKey,
-          value: DateTime.now().toIso8601String(),
-        );
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_fcmTokenKey, fcmToken);
-        await prefs.setString(
-          _fcmTokenUpdatedAtKey,
-          DateTime.now().toIso8601String(),
-        );
-      }
+      await _database.appStateDao.setString(key: _fcmTokenKey, value: fcmToken);
+      await _database.appStateDao.setString(
+        key: _fcmTokenUpdatedAtKey,
+        value: DateTime.now().toIso8601String(),
+      );
     } catch (e, st) {
       Log.warning('Failed to persist FCM token to storage', e, st);
     }
@@ -351,24 +331,13 @@ class PushNotificationReceiver {
   }
 
   Future<void> _setOptInFlag(bool value) async {
-    if (_database != null) {
-      await _database.appStateDao.setBool(key: optInFlagKey, value: value);
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(optInFlagKey, value);
+    await _database.appStateDao.setBool(key: optInFlagKey, value: value);
   }
 
   Future<void> _clearPersistedTokenState() async {
     try {
-      if (_database != null) {
-        await _database.appStateDao.removeKey(_fcmTokenKey);
-        await _database.appStateDao.removeKey(_fcmTokenUpdatedAtKey);
-      } else {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(_fcmTokenKey);
-        await prefs.remove(_fcmTokenUpdatedAtKey);
-      }
+      await _database.appStateDao.removeKey(_fcmTokenKey);
+      await _database.appStateDao.removeKey(_fcmTokenUpdatedAtKey);
     } catch (e, st) {
       Log.warning('Failed to clear persisted FCM token state', e, st);
     }

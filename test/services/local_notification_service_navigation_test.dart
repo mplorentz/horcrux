@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
 import 'package:mockito/annotations.dart';
 
 import 'package:horcrux/app_navigator.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/providers/vault_provider.dart';
@@ -86,6 +88,7 @@ void main() {
     service = LocalNotificationService(
       vaultRepository: vaultRepository,
       loginService: _FakeLoginService(),
+      appDatabase: AppDatabase(NativeDatabase.memory()),
       getRecoveryService: () => recoveryService,
     );
   });

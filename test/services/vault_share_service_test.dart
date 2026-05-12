@@ -18,7 +18,6 @@ import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/push_notification_receiver.dart';
 import 'package:horcrux/services/vault_share_service.dart';
 import '../fixtures/test_keys.dart';
-import '../helpers/shared_preferences_mock.dart';
 import '../helpers/test_database.dart';
 import 'vault_share_service_test.mocks.dart';
 
@@ -30,16 +29,6 @@ import 'vault_share_service_test.mocks.dart';
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
 
   group('VaultShareService.addVaultShare pushEnabled propagation', () {
     const ownerPubkey = TestHexPubkeys.alice;
@@ -53,7 +42,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      sharedPreferencesMock.clear();
       // Reset SharedPreferences' internal singleton so each test starts with
       // an empty store (the method-channel mock alone is not enough - the
       // plugin caches values in-process across getInstance() calls).
@@ -265,7 +253,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      sharedPreferencesMock.clear();
       SharedPreferences.setMockInitialValues({});
       db = newTestDatabase();
       mockLoginService = MockLoginService();
@@ -612,7 +599,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      sharedPreferencesMock.clear();
       SharedPreferences.setMockInitialValues({});
       db = newTestDatabase();
       mockLoginService = MockLoginService();

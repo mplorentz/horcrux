@@ -64,7 +64,6 @@ Future<void> _initializeFirebaseIfNecessary() async {
   bool optedIn;
   try {
     database = AppDatabase.openDefault();
-    await database.migrateLegacySharedPreferencesAppStateIfNeeded();
     optedIn = await database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
   } catch (e, st) {
     Log.warning('Failed to read push opt-in flag from database; skipping Firebase init', e, st);

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -9,8 +10,8 @@ import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
@@ -23,29 +24,28 @@ import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/push_notification_receiver.dart';
 
 import '../fixtures/test_keys.dart';
-import '../helpers/shared_preferences_mock.dart';
 import 'horcrux_notification_service_test.mocks.dart';
 
 @GenerateMocks([LoginService, VaultRepository])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(sharedPreferencesMock.setUpAll);
-  tearDownAll(sharedPreferencesMock.tearDownAll);
-
   late MockLoginService loginService;
   late MockVaultRepository vaultRepository;
   late KeyPair keyPair;
+  late AppDatabase testDatabase;
 
   setUp(() {
-    sharedPreferencesMock.clear();
     loginService = MockLoginService();
     vaultRepository = MockVaultRepository();
     keyPair = Bip340.generatePrivateKey();
+    testDatabase = AppDatabase(NativeDatabase.memory());
     when(loginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
     when(vaultRepository.vaultsStream).thenAnswer((_) => const Stream<List<Vault>>.empty());
+  });
+
+  tearDown(() async {
+    await testDatabase.close();
   });
 
   /// Decodes the `Authorization: Nostr <base64>` header back into its
@@ -78,6 +78,7 @@ void main() {
     final service = HorcruxNotificationService(
       loginService: loginService,
       vaultRepository: vaultRepository,
+      database: testDatabase,
       httpClient: client,
     );
     return (service: service, received: received);
@@ -88,15 +89,17 @@ void main() {
       final svc = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
       );
       expect(await svc.getBaseUrl(), HorcruxNotificationService.defaultBaseUrl);
       svc.dispose();
     });
 
-    test('honors override from SharedPreferences (trailing slash trimmed)', () async {
+    test('honors override from database (trailing slash trimmed)', () async {
       final svc = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
       );
       await svc.setBaseUrl('https://notify.example.com/');
       expect(await svc.getBaseUrl(), 'https://notify.example.com');
@@ -107,6 +110,7 @@ void main() {
       final svc = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
       );
       await svc.setBaseUrl('https://custom.example.com');
       await svc.setBaseUrl(null);
@@ -118,6 +122,7 @@ void main() {
       final svc = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
       );
       await svc.setBaseUrl('   ');
       expect(await svc.getBaseUrl(), HorcruxNotificationService.defaultBaseUrl);
@@ -444,6 +449,7 @@ void main() {
       return HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
         httpClient: client,
       );
     }
@@ -742,14 +748,11 @@ void main() {
   });
 
   group('syncConsentList', () {
-    // The service reads opt-in state and the last-synced snapshot through
-    // `SharedPreferences.getInstance()`, a process-wide singleton with its
-    // own cache. Re-seeding via `setMockInitialValues` in every test is
-    // the only way to guarantee a clean read.
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-      });
+    setUp(() async {
+      await testDatabase.appStateDao.setBool(
+        key: PushNotificationReceiver.optInFlagKey,
+        value: true,
+      );
     });
 
     /// Collects every request the service issues so we can assert on
@@ -766,6 +769,7 @@ void main() {
       final service = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
         httpClient: client,
       );
       return (service: service, received: received);
@@ -797,9 +801,10 @@ void main() {
     }
 
     test('no-ops and makes no network calls when push is not opted in', () async {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: false,
-      });
+      await testDatabase.appStateDao.setBool(
+        key: PushNotificationReceiver.optInFlagKey,
+        value: false,
+      );
       when(loginService.getCurrentPublicKey()).thenAnswer((_) async => TestHexPubkeys.alice);
       when(vaultRepository.getAllVaults()).thenAnswer((_) async => const <Vault>[]);
 
@@ -844,20 +849,14 @@ void main() {
       expect(req.url.path, '/consent');
       expect(json.decode(req.body), {'authorized_senders': expected});
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        prefs.getStringList('horcrux_notifier_last_synced_consents'),
-        equals(expected),
-      );
+      final syncedIds = await testDatabase.appStateDao.syncedConsentIds();
+      expect(syncedIds, equals(expected));
       harness.service.dispose();
     });
 
     test('skips PUT when the derived list matches the last-synced snapshot', () async {
       final expected = [TestHexPubkeys.bob, TestHexPubkeys.charlie]..sort();
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-        'horcrux_notifier_last_synced_consents': expected,
-      });
+      await testDatabase.appStateDao.replaceSyncedConsentIds(expected);
       primeOptedInAlice();
 
       final harness = buildSyncService(
@@ -869,11 +868,9 @@ void main() {
     });
 
     test('PUTs again when the derived list has diverged from the snapshot', () async {
-      // Snapshot is stale: it still has Diana who is no longer a steward.
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-        'horcrux_notifier_last_synced_consents': [TestHexPubkeys.bob, TestHexPubkeys.diana]..sort(),
-      });
+      await testDatabase.appStateDao.replaceSyncedConsentIds(
+        [TestHexPubkeys.bob, TestHexPubkeys.diana]..sort(),
+      );
       primeOptedInAlice();
 
       final harness = buildSyncService(
@@ -887,22 +884,13 @@ void main() {
         json.decode(harness.received.single.body),
         {'authorized_senders': expected},
       );
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        prefs.getStringList('horcrux_notifier_last_synced_consents'),
-        equals(expected),
-      );
+      final syncedIds = await testDatabase.appStateDao.syncedConsentIds();
+      expect(syncedIds, equals(expected));
       harness.service.dispose();
     });
 
     test('PUTs an empty allowlist when the user no longer has any relationships', () async {
-      // If the owner removes everyone / archives their last vault we still
-      // want the notifier to see an empty list so it stops trusting old
-      // senders. The snapshot compare guards against resending on every tick.
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-        'horcrux_notifier_last_synced_consents': [TestHexPubkeys.bob],
-      });
+      await testDatabase.appStateDao.replaceSyncedConsentIds([TestHexPubkeys.bob]);
       when(loginService.getCurrentPublicKey()).thenAnswer((_) async => TestHexPubkeys.alice);
       when(vaultRepository.getAllVaults()).thenAnswer((_) async => const <Vault>[]);
 
@@ -913,11 +901,8 @@ void main() {
 
       expect(harness.received, hasLength(1));
       expect(json.decode(harness.received.single.body), {'authorized_senders': <String>[]});
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        prefs.getStringList('horcrux_notifier_last_synced_consents'),
-        equals(<String>[]),
-      );
+      final syncedIds = await testDatabase.appStateDao.syncedConsentIds();
+      expect(syncedIds, isEmpty);
       harness.service.dispose();
     });
   });
@@ -927,14 +912,16 @@ void main() {
       loginServiceOf: () => loginService,
       vaultRepositoryOf: () => vaultRepository,
       keyPairOf: () => keyPair,
+      testDatabaseOf: () => testDatabase,
     );
   });
 
   group('vault stream triggers debounced sync', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-      });
+    setUp(() async {
+      await testDatabase.appStateDao.setBool(
+        key: PushNotificationReceiver.optInFlagKey,
+        value: true,
+      );
     });
 
     test('emissions on the vault stream schedule a single debounced sync', () async {
@@ -968,6 +955,7 @@ void main() {
       final service = HorcruxNotificationService(
         loginService: loginService,
         vaultRepository: vaultRepository,
+        database: testDatabase,
         httpClient: client,
       );
       addTearDown(service.dispose);
@@ -1001,6 +989,7 @@ void _tryPushForEventTests({
   required MockLoginService Function() loginServiceOf,
   required MockVaultRepository Function() vaultRepositoryOf,
   required KeyPair Function() keyPairOf,
+  required AppDatabase Function() testDatabaseOf,
 }) {
   // These tests exercise HorcruxNotificationService.tryPushForEvent, the
   // high-level entry point that every gift-wrap publish site calls.
@@ -1025,6 +1014,7 @@ void _tryPushForEventTests({
     final service = HorcruxNotificationService(
       loginService: loginServiceOf(),
       vaultRepository: vaultRepositoryOf(),
+      database: testDatabaseOf(),
       httpClient: client,
     );
     return (service: service, received: received, responders: responders);
@@ -1059,9 +1049,6 @@ void _tryPushForEventTests({
   }
 
   test('skips push when vault.pushEnabled is false', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: true,
-    });
     final harness = buildPushService();
     addTearDown(harness.service.dispose);
     when(
@@ -1080,9 +1067,6 @@ void _tryPushForEventTests({
   test(
     'still POSTs /push when vault.pushEnabled even if sender is not globally opted in',
     () async {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: false,
-      });
       final harness = buildPushService();
       addTearDown(harness.service.dispose);
       when(
@@ -1102,9 +1086,6 @@ void _tryPushForEventTests({
   );
 
   test('skips push when there is no current pubkey', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: true,
-    });
     final harness = buildPushService();
     addTearDown(harness.service.dispose);
     when(loginServiceOf().getCurrentPublicKey()).thenAnswer((_) async => null);
@@ -1119,9 +1100,6 @@ void _tryPushForEventTests({
   });
 
   test('skips push when recipient is the current user (self)', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: true,
-    });
     final harness = buildPushService();
     addTearDown(harness.service.dispose);
     final selfPubkey = keyPairOf().publicKey;
@@ -1141,9 +1119,6 @@ void _tryPushForEventTests({
   test(
     'embeds event JSON inline when payload is under the size threshold',
     () async {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-      });
       final harness = buildPushService();
       addTearDown(harness.service.dispose);
       when(
@@ -1175,9 +1150,6 @@ void _tryPushForEventTests({
   test(
     'falls back to event_id + relay hints when payload exceeds the size threshold',
     () async {
-      SharedPreferences.setMockInitialValues({
-        PushNotificationReceiver.optInFlagKey: true,
-      });
       final harness = buildPushService();
       addTearDown(harness.service.dispose);
       when(
@@ -1204,9 +1176,6 @@ void _tryPushForEventTests({
   );
 
   test('swallows notifier errors (best-effort semantics)', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: true,
-    });
     final harness = buildPushService();
     addTearDown(harness.service.dispose);
     harness.responders.add(
@@ -1231,9 +1200,6 @@ void _tryPushForEventTests({
   });
 
   test('passes recoveryApproved to text composition for recoveryResponse', () async {
-    SharedPreferences.setMockInitialValues({
-      PushNotificationReceiver.optInFlagKey: true,
-    });
     final harness = buildPushService();
     addTearDown(harness.service.dispose);
     when(
