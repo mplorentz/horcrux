@@ -852,6 +852,15 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<bool>);
 
   @override
+  _i4.Future<bool> isOwnedVaultForCurrentUser(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isOwnedVaultForCurrentUser,
+          [vaultId],
+        ),
+        returnValue: _i4.Future<bool>.value(false),
+      ) as _i4.Future<bool>);
+
+  @override
   _i4.Future<void> addShareToVault(
     String? vaultId,
     _i11.Share? share,
