@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../providers/key_provider.dart';
 import '../screens/vault_detail_screen.dart';
@@ -36,21 +35,18 @@ class VaultCard extends ConsumerWidget {
     );
     final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
 
-    // [VaultState.holdingShare]: stewards see a key; the vault owner without local
-    // plaintext (e.g. deleted content on this device) sees a closed lock.
-    IconData stateIcon;
+    // Stewards holding a share see a key icon; the vault owner who has deleted
+    // their local content (travel mode) sees a closed lock instead of lock_open.
+    final IconData stateIcon;
     Color? iconColor;
 
-    switch (vault.state) {
-      case VaultState.unlocked:
+    switch (vault) {
+      case OwnedVaultDetail():
         stateIcon = Icons.lock_open;
-        break;
-      case VaultState.holdingShare:
+      case StewardedVaultDetail(:final latestShare) when latestShare != null:
         stateIcon = isVaultOwner ? Icons.lock : Icons.key;
-        break;
-      case VaultState.awaitingShare:
+      case StewardedVaultDetail():
         stateIcon = Icons.hourglass_empty;
-        break;
     }
     final ownerDisplayName = _getOwnerDisplayName(currentPubkey);
     final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
