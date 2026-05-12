@@ -135,7 +135,9 @@ class ShareDistributionService {
                 pubkey: ownerPubkey,
                 status: StewardStatus.holdingKey,
                 acknowledgedAt: DateTime.now(),
-                acknowledgmentEventId: eventId, // Use share event ID as acknowledgment
+                // Owner self-steward: provenance is distribution version + outbound
+                // wrap id only — no separate ack event id (stewards infer the same).
+                acknowledgmentEventId: null,
                 acknowledgedDistributionVersion: config.distributionVersion,
                 giftWrapEventId: eventId,
               );

@@ -8,7 +8,9 @@ import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/event_status.dart';
+import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
@@ -359,5 +361,173 @@ void main() {
         ),
       ).called(2);
     });
+  });
+
+  group('ShareDistributionService owner self-steward acknowledgment', () {
+    const vaultId = 'vault-owner-self-steward-dist';
+
+    late MockVaultRepository mockRepository;
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
+    late ShareDistributionService service;
+    late String alicePubHex;
+    late String bobPubHex;
+    late List<Nip01Event> publishedWraps;
+
+    setUp(() {
+      mockRepository = MockVaultRepository();
+      mockLoginService = MockLoginService();
+      mockNdkService = MockNdkService();
+      mockNotificationService = MockHorcruxNotificationService();
+
+      publishedWraps = [];
+      when(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+          customPubkey: anyNamed('customPubkey'),
+        ),
+      ).thenAnswer((_) async {
+        final ev = Nip01Event(
+          kind: 1059,
+          pubKey: 'a' * 64,
+          tags: const [],
+          createdAt: publishedWraps.length + 1,
+          content: '',
+        );
+        publishedWraps.add(ev);
+        return ev;
+      });
+
+      when(
+        mockNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final alicePrivHex = Helpers.decodeBech32(TestNsecKeys.alice)[0];
+      alicePubHex = Bip340.getPublicKey(alicePrivHex);
+      final bobPrivHex = Helpers.decodeBech32(TestNsecKeys.bob)[0];
+      bobPubHex = Bip340.getPublicKey(bobPrivHex);
+
+      final backupConfig = createBackupConfig(
+        vaultId: vaultId,
+        threshold: 2,
+        totalKeys: 2,
+        stewards: [
+          createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+          createSteward(pubkey: bobPubHex, name: 'Bob'),
+        ],
+        relays: TestBackupConfigs.simple2of2Relays,
+      ).copyWith(distributionVersion: 42);
+
+      when(mockRepository.getVault(vaultId)).thenAnswer(
+        (_) async => Vault(
+          id: vaultId,
+          name: 'Vault',
+          createdAt: DateTime.now(),
+          ownerPubkey: alicePubHex,
+          backupConfig: backupConfig,
+        ),
+      );
+
+      when(mockRepository.addShareToVault(any, any)).thenAnswer((_) async {});
+
+      when(
+        mockRepository.updateStewardStatus(
+          vaultId: anyNamed('vaultId'),
+          pubkey: anyNamed('pubkey'),
+          status: anyNamed('status'),
+          acknowledgedAt: anyNamed('acknowledgedAt'),
+          acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+          acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+          giftWrapEventId: anyNamed('giftWrapEventId'),
+        ),
+      ).thenAnswer((_) async {});
+
+      service = ShareDistributionService(
+        mockRepository,
+        mockLoginService,
+        mockNdkService,
+        mockNotificationService,
+      );
+    });
+
+    test(
+      'stores owner shard locally with null acknowledgmentEventId and ack distribution version',
+      () async {
+        final cfg = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 42);
+
+        final shards = [
+          createShare(
+            payload: 's0',
+            threshold: 2,
+            shareIndex: 0,
+            totalShares: 2,
+            primeMod: TestShare.testPrimeMod,
+            creatorPubkey: TestHexPubkeys.alice,
+          ),
+          createShare(
+            payload: 's1',
+            threshold: 2,
+            shareIndex: 1,
+            totalShares: 2,
+            primeMod: TestShare.testPrimeMod,
+            creatorPubkey: TestHexPubkeys.alice,
+          ),
+        ];
+
+        await service.distributeShares(
+          ownerPubkey: alicePubHex,
+          config: cfg,
+          shares: shards,
+        );
+
+        expect(publishedWraps, hasLength(2));
+
+        verify(mockRepository.addShareToVault(vaultId, any)).called(1);
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: vaultId,
+            pubkey: alicePubHex,
+            status: StewardStatus.holdingKey,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: null,
+            acknowledgedDistributionVersion: 42,
+            giftWrapEventId: publishedWraps.first.id,
+          ),
+        ).called(1);
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: vaultId,
+            pubkey: bobPubHex,
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: publishedWraps[1].id,
+          ),
+        ).called(1);
+      },
+    );
   });
 }

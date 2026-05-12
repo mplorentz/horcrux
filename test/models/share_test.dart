@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
 
+import '../fixtures/test_keys.dart';
+
 void main() {
   group('Share JSON Serialization', () {
     late Map<String, dynamic> validJsonFixture;
@@ -65,6 +67,38 @@ void main() {
       expect(shardData.isReceived, isNull);
       expect(shardData.receivedAt, isNull);
       expect(shardData.nostrEventId, isNull);
+    });
+
+    test('shareFromJson normalizes embedded stewards from loose wire JSON', () {
+      final json = {
+        ...validJsonFixture,
+        'shard_index': 1,
+        'total_shards': 3,
+        'threshold': 2,
+        'vault_id': 'vault-wire-stewards',
+        'stewards': [
+          {
+            'name': 'Alice',
+            'pubKey': TestHexPubkeys.alice,
+            'shard_index': 0,
+            'contact_info': 'alice@example.test',
+          },
+          {
+            'name': 'Bob',
+            'pubkey': TestHexPubkeys.bob,
+            'shardIndex': 2,
+          },
+        ],
+      };
+
+      final shardData = shareFromJson(json);
+
+      expect(shardData.stewards, hasLength(2));
+      expect(shardData.stewards![0]['pubkey'], TestHexPubkeys.alice);
+      expect(shardData.stewards![0]['shard_index'], '0');
+      expect(shardData.stewards![0]['contactInfo'], 'alice@example.test');
+      expect(shardData.stewards![1]['shard_index'], '2');
+      expect(shardData.isValid, isTrue);
     });
 
     test(

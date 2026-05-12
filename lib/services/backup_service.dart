@@ -716,19 +716,24 @@ class BackupService {
       // Including the steward id lets the receiving device use the owner's
       // authoritative steward UUID instead of a synthetic positional one,
       // which avoids UNIQUE-constraint collisions on the stewards table.
-      final stewards = configToDistribute.stewards.where((kh) => kh.pubkey != null).map((
-        kh,
-      ) {
+      // Including shard_index (0-based Shamir slot in BackupConfig.steward order)
+      // ensures steward-side upserts match distributeShares indexing even when
+      // invitees without pubkeys are omitted from this list.
+      final stewards = <Map<String, String>>[];
+      for (var idx = 0; idx < configToDistribute.stewards.length; idx++) {
+        final kh = configToDistribute.stewards[idx];
+        if (kh.pubkey == null) continue;
         final stewardMap = <String, String>{
           'id': kh.id,
           'name': kh.name ?? 'Unknown',
           'pubkey': kh.pubkey!,
+          'shard_index': '$idx',
         };
         if (kh.contactInfo != null && kh.contactInfo!.isNotEmpty) {
           stewardMap['contactInfo'] = kh.contactInfo!;
         }
-        return stewardMap;
-      }).toList();
+        stewards.add(stewardMap);
+      }
 
       final shards = await generateShamirShares(
         content: content,

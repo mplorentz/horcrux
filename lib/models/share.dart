@@ -132,6 +132,16 @@ class Share with _$Share {
             );
             return false;
           }
+          final shardSlot = steward['shard_index'];
+          if (shardSlot != null && shardSlot.isNotEmpty) {
+            final parsed = int.tryParse(shardSlot);
+            if (parsed == null || parsed < 0) {
+              Log.error(
+                'Share validation failed: steward shard_index must be a non-negative int string',
+              );
+              return false;
+            }
+          }
         }
       }
 
@@ -257,6 +267,13 @@ Share createShare({
           'Steward contactInfo exceeds maximum length of 500 characters',
         );
       }
+      final shardSlot = steward['shard_index'];
+      if (shardSlot != null && shardSlot.isNotEmpty) {
+        final parsed = int.tryParse(shardSlot);
+        if (parsed == null || parsed < 0) {
+          throw ArgumentError('steward shard_index must be a non-negative int string');
+        }
+      }
     }
   }
 
@@ -326,6 +343,46 @@ bool? _readBoolNullable(Object? value) {
   throw TypeError();
 }
 
+/// Normalizes embedded steward objects from wire JSON (mixed snake_case /
+/// camelCase keys; numeric fields; optional ids) into [Share.stewards] maps.
+///
+/// Entries missing a non-empty name or pubkey are skipped (same practical
+/// requirement as [Share.isValid]).
+List<Map<String, String>>? _embeddedStewardMapsFromWire(Object? stewardsData) {
+  if (stewardsData == null) return null;
+  if (stewardsData is! List) return null;
+
+  String? pickStr(Map<String, dynamic> map, List<String> keys) {
+    for (final k in keys) {
+      final v = map[k];
+      if (v == null) continue;
+      final s = v.toString();
+      if (s.isEmpty) continue;
+      return s;
+    }
+    return null;
+  }
+
+  final out = <Map<String, String>>[];
+  for (final item in stewardsData) {
+    if (item is! Map) continue;
+    final m = Map<String, dynamic>.from(item);
+    final name = pickStr(m, ['name']);
+    final pubkey = pickStr(m, ['pubkey', 'pubKey']);
+    if (name == null || pubkey == null) continue;
+
+    final row = <String, String>{'name': name, 'pubkey': pubkey};
+    final id = pickStr(m, ['id']);
+    if (id != null) row['id'] = id;
+    final contactInfo = pickStr(m, ['contact_info', 'contactInfo', 'contact']);
+    if (contactInfo != null) row['contactInfo'] = contactInfo;
+    final shardSlot = pickStr(m, ['shard_index', 'shardIndex']);
+    if (shardSlot != null) row['shard_index'] = shardSlot;
+    out.add(row);
+  }
+  return out.isEmpty ? null : out;
+}
+
 /// Create from JSON (Nostr / wire format: snake_case keys per project conventions).
 Share shareFromJson(Map<String, dynamic> json) {
   final stewardsData = json['stewards'];
@@ -346,9 +403,7 @@ Share shareFromJson(Map<String, dynamic> json) {
     createdAt: createdAt,
     vaultId: json['vault_id'] as String?,
     vaultName: json['vault_name'] as String?,
-    stewards: stewardsData != null
-        ? (stewardsData as List).map((e) => Map<String, String>.from(e as Map)).toList()
-        : null,
+    stewards: _embeddedStewardMapsFromWire(stewardsData),
     ownerName: json['owner_name'] as String?,
     instructions: json['instructions'] as String?,
     recipientPubkey: json['recipient_pubkey'] as String?,

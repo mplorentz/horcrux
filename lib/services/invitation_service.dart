@@ -627,13 +627,14 @@ class InvitationService {
       return; // Silently ignore if invitation not found
     }
 
-    // Update invitation status to redeemed
+    // Persist redemption only after backup stewards are updated: marking acceptedAt first makes
+    // later hydration treat the invitation as redeemed mid-flight and [_addKeyHolderToBackupConfig]
+    // could not match the invited placeholder (duplicate steward appended instead).
     final redeemedInvitation = invitation.updateStatus(
       InvitationStatus.redeemed,
       redeemedBy: inviteePubkey,
       redeemedAt: DateTime.now(),
     );
-    await _saveInvitation(redeemedInvitation);
 
     // Add invitee to backup config if not already present
     // This will update invited stewards or add new ones
@@ -683,6 +684,8 @@ class InvitationService {
       Log.warning('Error updating steward status after invitation acceptance: $e');
       // Don't fail invitation acceptance processing if status update fails
     }
+
+    await _saveInvitation(redeemedInvitation);
 
     // Check if we should auto-distribute keys now that all stewards have accepted
     // This handles the case where user adds stewards via invite, saves recovery plan,

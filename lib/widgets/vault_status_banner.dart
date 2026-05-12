@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
-import '../debug/agent_ndjson_log.dart';
 import '../providers/key_provider.dart';
 import '../screens/recovery_status_screen.dart';
 
@@ -54,24 +53,6 @@ class VaultStatusBanner extends ConsumerWidget {
       data: (currentPubkey) {
         final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
         final isSteward = currentPubkey != null && vault is StewardedVaultDetail;
-
-        // #region agent log
-        agentNdjsonLog(
-          location: 'vault_status_banner.dart:build',
-          message: 'banner_role_gate',
-          hypothesisId: 'H1',
-          data: {
-            'vaultId': vault.id,
-            'detailKind': vault.runtimeType.toString(),
-            'ownerSnippet': pubkeySnippet(vault.ownerPubkey),
-            'currentSnippet': pubkeySnippet(currentPubkey),
-            'ownerMatchesCurrent': currentPubkey != null && vault.ownerPubkey == currentPubkey,
-            'isOwner': isOwner,
-            'isSteward': isSteward,
-            'willShowUnavailable': !isOwner && !isSteward,
-          },
-        );
-        // #endregion
 
         // Show "Recovery in progress" only when the CURRENT user has their own
         // manageable recovery on this vault. Per-user exclusivity allows other
