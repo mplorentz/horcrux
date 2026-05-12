@@ -14,15 +14,20 @@ import 'secure_storage_corruption.dart';
 import 'vault_share_service.dart';
 
 /// Service responsible for performing logout cleanup across data stores.
+///
+/// Every dependency is watched so that an [appDatabaseProvider] invalidation
+/// rebuilds this service against the new DB-backed services. Otherwise the
+/// next logout in the same session would still hold the previous database's
+/// repositories and either crash on access or wipe the wrong instance.
 final logoutServiceProvider = Provider<LogoutService>((ref) {
   return LogoutService(
-    vaultRepository: ref.read(vaultRepositoryProvider),
-    vaultShareService: ref.read(vaultShareServiceProvider),
-    recoveryService: ref.read(recoveryServiceProvider),
-    relayScanService: ref.read(relayScanServiceProvider),
-    loginService: ref.read(loginServiceProvider),
-    processedNostrEventStore: ref.read(processedNostrEventStoreProvider),
-    appDatabase: ref.read(appDatabaseProvider),
+    vaultRepository: ref.watch(vaultRepositoryProvider),
+    vaultShareService: ref.watch(vaultShareServiceProvider),
+    recoveryService: ref.watch(recoveryServiceProvider),
+    relayScanService: ref.watch(relayScanServiceProvider),
+    loginService: ref.watch(loginServiceProvider),
+    processedNostrEventStore: ref.watch(processedNostrEventStoreProvider),
+    appDatabase: ref.watch(appDatabaseProvider),
   );
 });
 

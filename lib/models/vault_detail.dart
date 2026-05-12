@@ -2,7 +2,6 @@ import 'backup_config.dart';
 import 'recovery_request.dart';
 import 'share.dart';
 import 'steward.dart';
-import 'vault.dart';
 
 /// Role-typed read model for a vault entry on the current device.
 ///
@@ -15,14 +14,9 @@ import 'vault.dart';
 ///
 /// Both types expose the shared core (name, owner identity, threshold,
 /// active [stewards]) so widgets can render common UI without switching on
-/// role.
+/// role. Pattern-match on the concrete type to route role-specific behaviour.
 ///
-/// **VaultState compatibility**: [state] derives [VaultState] from the
-/// concrete type so existing code can migrate incrementally. [VaultState] will
-/// be dropped in Phase 6 once all UI sites pattern-match on the sealed type
-/// directly.
-///
-/// See `docs/data_layer_refactor_plan.md` Phase 2b for the authoritative
+/// See `docs/data_layer_refactor_plan.md` Phase 6 for the authoritative
 /// description.
 sealed class VaultDetail {
   const VaultDetail();
@@ -59,9 +53,6 @@ sealed class VaultDetail {
   bool isVaultOwner(String hexPubkey) => ownerPubkey == hexPubkey;
 
   /// Returns the most recent manageable [RecoveryRequest] for [pubkey].
-  ///
-  /// Mirrors [Vault.manageableRecoveryFor]; see that method for selection
-  /// semantics.
   RecoveryRequest? manageableRecoveryFor(String? pubkey, {bool? isPractice}) {
     if (pubkey == null) return null;
     if (isPractice != null) {
@@ -94,11 +85,6 @@ sealed class VaultDetail {
     manageable.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
     return manageable.first;
   }
-
-  /// Derives [VaultState] from the concrete type.
-  ///
-  /// Kept for incremental migration; Phase 6 drops [VaultState] entirely.
-  VaultState get state;
 }
 
 /// Vault detail for the device that owns the vault.
@@ -159,9 +145,6 @@ final class OwnedVaultDetail extends VaultDetail {
   /// Owner's own Shamir share when the owner is also their own steward.
   /// Null until keys have been distributed for the first time.
   final Share? selfHeldShare;
-
-  @override
-  VaultState get state => VaultState.unlocked;
 }
 
 /// Vault detail for a steward device (does not own the vault).
@@ -215,9 +198,6 @@ final class StewardedVaultDetail extends VaultDetail {
   final BackupConfig? backupConfig;
 
   /// Most recently received share for this vault. Null when the steward has
-  /// accepted an invite but not yet received a share event (awaitingShare).
+  /// accepted an invite but not yet received a share event (awaiting-share state).
   final Share? latestShare;
-
-  @override
-  VaultState get state => latestShare != null ? VaultState.holdingShare : VaultState.awaitingShare;
 }

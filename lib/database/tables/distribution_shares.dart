@@ -9,6 +9,10 @@ import 'stewards.dart';
 /// time (it is not later-reproducible because the NIP-59 wrap is signed by
 /// an ephemeral key with randomized `created_at` jitter).
 ///
+/// **Synthetic gift-wrap ids:** steward-side ingest may persist
+/// `owner-self-steward-inferred:<vaultId>:v<version>` when the embedded roster
+/// lists the owner as holding a shard but no steward-visible wrap id exists.
+///
 /// The `steward_id` FK is RESTRICTed: distribution_shares retain a pointer
 /// to the historical steward row, which is why steward rows are never
 /// deleted directly — only soft-retired via `leftAt`.

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/vault_provider.dart';
@@ -262,9 +261,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   );
                 }
 
-                // Recovery buttons - only show for stewards (not owners, since owners already have contents)
-                // Don't show recovery buttons when steward is waiting for their shard
-                if (!isVaultOwner && !isOwnerSteward && vault.state != VaultState.awaitingShare) {
+                // Recovery buttons for pure stewards who hold a share (not awaiting one).
+                // Owners have their own content and handle recovery through the owner block above.
+                if (!isVaultOwner &&
+                    !isOwnerSteward &&
+                    vault is StewardedVaultDetail &&
+                    vault.latestShare != null) {
                   if (showManageRealRecovery) {
                     final myRecoveryId = myActiveRealRecovery.id;
                     buttons.add(

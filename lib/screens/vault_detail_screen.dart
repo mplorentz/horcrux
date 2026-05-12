@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
-import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -176,10 +175,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Determine background color based on vault state
-          // We are doing some stupidly complex background color logic here to make the screen
-          // look nice in all the various states.
-          final backgroundColor = vault.state == VaultState.awaitingShare
+          // When a steward is awaiting their share the screen uses the scaffold
+          // background (lighter) so the status banner stands out; all other
+          // states use surfaceContainer.
+          final isAwaitingShare = vault is StewardedVaultDetail && vault.latestShare == null;
+          final backgroundColor = isAwaitingShare
               ? Theme.of(context).scaffoldBackgroundColor
               : Theme.of(context).colorScheme.surfaceContainer;
 
@@ -193,13 +193,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                   child: SingleChildScrollView(
                     child: LayoutBuilder(
                       builder: (context, _) {
-                        // For awaitingShard state, fill remaining space with darker background
-                        final isAwaitingShard = vault.state == VaultState.awaitingShare;
                         final viewportHeight = constraints.maxHeight;
 
                         return ConstrainedBox(
                           constraints: BoxConstraints(
-                            minHeight: isAwaitingShard ? viewportHeight : 0,
+                            minHeight: isAwaitingShare ? viewportHeight : 0,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

@@ -63,9 +63,16 @@ Future<void> deleteSqlCipherDatabaseFiles({Directory? supportDirectory}) async {
 /// - `cipher_use_hmac = ON` (default)
 /// - `cipher_memory_security = ON` where supported
 /// - `secure_delete = ON` so deleted share-material pages are zeroed
-LazyDatabase openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
+///
+/// The connection sets `closeStreamsSynchronously: true` so drift cleans up
+/// query streams in the same microtask the subscription is cancelled. That
+/// matters at logout: when [appDatabaseProvider] is invalidated, Riverpod
+/// disposes the dependent repositories first; without synchronous stream
+/// cleanup, drift would leave a `Timer.zero` pending past the database
+/// close and produce "pending timers" failures in widget tests.
+DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   final derivation = keyDerivation ?? DbKeyDerivation();
-  return LazyDatabase(() async {
+  final lazy = LazyDatabase(() async {
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
 
     final dbPath = await resolveSqlCipherDatabasePath();
@@ -85,6 +92,7 @@ LazyDatabase openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
       },
     );
   });
+  return DatabaseConnection(lazy, closeStreamsSynchronously: true);
 }
 
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
