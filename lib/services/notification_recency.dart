@@ -1,6 +1,7 @@
+import '../database/app_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// [SharedPreferences] key used to persist the first app-open UTC timestamp.
+/// Storage key used to persist the first app-open UTC timestamp.
 ///
 /// All callers that need to decide "is this Nostr event recent, or relay
 /// backfill from before the user installed the app?" anchor their decision on
@@ -13,12 +14,25 @@ const String firstAppOpenUtcKey = 'horcrux_first_open_utc_ms';
 const Duration eventRecencySlack = Duration(hours: 1);
 
 /// Reads (and lazily initializes on first call) the first app-open timestamp
-/// from [SharedPreferences].
+/// from persistent app state.
 ///
 /// Returns the persisted UTC instant, or writes `DateTime.now().toUtc()` to
 /// disk and returns that. Callers compare incoming Nostr event times against
 /// this value via [isEventRecent] to decide whether to show a notification.
-Future<DateTime> getFirstAppOpenUtc() async {
+Future<DateTime> getFirstAppOpenUtc({AppDatabase? database}) async {
+  if (database != null) {
+    final ms = await database.appStateDao.getInt(firstAppOpenUtcKey);
+    if (ms != null) {
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+    }
+    final now = DateTime.now().toUtc();
+    await database.appStateDao.setInt(
+      key: firstAppOpenUtcKey,
+      value: now.millisecondsSinceEpoch,
+    );
+    return now;
+  }
+
   final prefs = await SharedPreferences.getInstance();
   final ms = prefs.getInt(firstAppOpenUtcKey);
   if (ms != null) {

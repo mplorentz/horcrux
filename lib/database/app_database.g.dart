@@ -5701,6 +5701,594 @@ class OutboxRelaysCompanion extends UpdateCompanion<OutboxRelayRow> {
   }
 }
 
+class $KvTable extends Kv with TableInfo<$KvTable, KvRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KvTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>('key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>('value', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'kv';
+  @override
+  VerificationContext validateIntegrity(Insertable<KvRow> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(_keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(_valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  KvRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KvRow(
+      key: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value:
+          attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}value'])!,
+    );
+  }
+
+  @override
+  $KvTable createAlias(String alias) {
+    return $KvTable(attachedDatabase, alias);
+  }
+}
+
+class KvRow extends DataClass implements Insertable<KvRow> {
+  final String key;
+  final String value;
+  const KvRow({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  KvCompanion toCompanion(bool nullToAbsent) {
+    return KvCompanion(
+      key: Value(key),
+      value: Value(value),
+    );
+  }
+
+  factory KvRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KvRow(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  KvRow copyWith({String? key, String? value}) => KvRow(
+        key: key ?? this.key,
+        value: value ?? this.value,
+      );
+  KvRow copyWithCompanion(KvCompanion data) {
+    return KvRow(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KvRow(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KvRow && other.key == this.key && other.value == this.value);
+}
+
+class KvCompanion extends UpdateCompanion<KvRow> {
+  final Value<String> key;
+  final Value<String> value;
+  final Value<int> rowid;
+  const KvCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  KvCompanion.insert({
+    required String key,
+    required String value,
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<KvRow> custom({
+    Expression<String>? key,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  KvCompanion copyWith({Value<String>? key, Value<String>? value, Value<int>? rowid}) {
+    return KvCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KvCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ViewedNotificationsTable extends ViewedNotifications
+    with TableInfo<$ViewedNotificationsTable, ViewedNotificationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ViewedNotificationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta('notificationId');
+  @override
+  late final GeneratedColumn<String> notificationId = GeneratedColumn<String>(
+      'notification_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _viewedAtMeta = const VerificationMeta('viewedAt');
+  @override
+  late final GeneratedColumn<int> viewedAt = GeneratedColumn<int>('viewed_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [notificationId, viewedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'viewed_notifications';
+  @override
+  VerificationContext validateIntegrity(Insertable<ViewedNotificationRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('notification_id')) {
+      context.handle(_notificationIdMeta,
+          notificationId.isAcceptableOrUnknown(data['notification_id']!, _notificationIdMeta));
+    } else if (isInserting) {
+      context.missing(_notificationIdMeta);
+    }
+    if (data.containsKey('viewed_at')) {
+      context.handle(
+          _viewedAtMeta, viewedAt.isAcceptableOrUnknown(data['viewed_at']!, _viewedAtMeta));
+    } else if (isInserting) {
+      context.missing(_viewedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {notificationId};
+  @override
+  ViewedNotificationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ViewedNotificationRow(
+      notificationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notification_id'])!,
+      viewedAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}viewed_at'])!,
+    );
+  }
+
+  @override
+  $ViewedNotificationsTable createAlias(String alias) {
+    return $ViewedNotificationsTable(attachedDatabase, alias);
+  }
+}
+
+class ViewedNotificationRow extends DataClass implements Insertable<ViewedNotificationRow> {
+  final String notificationId;
+  final int viewedAt;
+  const ViewedNotificationRow({required this.notificationId, required this.viewedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['notification_id'] = Variable<String>(notificationId);
+    map['viewed_at'] = Variable<int>(viewedAt);
+    return map;
+  }
+
+  ViewedNotificationsCompanion toCompanion(bool nullToAbsent) {
+    return ViewedNotificationsCompanion(
+      notificationId: Value(notificationId),
+      viewedAt: Value(viewedAt),
+    );
+  }
+
+  factory ViewedNotificationRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ViewedNotificationRow(
+      notificationId: serializer.fromJson<String>(json['notificationId']),
+      viewedAt: serializer.fromJson<int>(json['viewedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'notificationId': serializer.toJson<String>(notificationId),
+      'viewedAt': serializer.toJson<int>(viewedAt),
+    };
+  }
+
+  ViewedNotificationRow copyWith({String? notificationId, int? viewedAt}) => ViewedNotificationRow(
+        notificationId: notificationId ?? this.notificationId,
+        viewedAt: viewedAt ?? this.viewedAt,
+      );
+  ViewedNotificationRow copyWithCompanion(ViewedNotificationsCompanion data) {
+    return ViewedNotificationRow(
+      notificationId: data.notificationId.present ? data.notificationId.value : this.notificationId,
+      viewedAt: data.viewedAt.present ? data.viewedAt.value : this.viewedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ViewedNotificationRow(')
+          ..write('notificationId: $notificationId, ')
+          ..write('viewedAt: $viewedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(notificationId, viewedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ViewedNotificationRow &&
+          other.notificationId == this.notificationId &&
+          other.viewedAt == this.viewedAt);
+}
+
+class ViewedNotificationsCompanion extends UpdateCompanion<ViewedNotificationRow> {
+  final Value<String> notificationId;
+  final Value<int> viewedAt;
+  final Value<int> rowid;
+  const ViewedNotificationsCompanion({
+    this.notificationId = const Value.absent(),
+    this.viewedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ViewedNotificationsCompanion.insert({
+    required String notificationId,
+    required int viewedAt,
+    this.rowid = const Value.absent(),
+  })  : notificationId = Value(notificationId),
+        viewedAt = Value(viewedAt);
+  static Insertable<ViewedNotificationRow> custom({
+    Expression<String>? notificationId,
+    Expression<int>? viewedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (notificationId != null) 'notification_id': notificationId,
+      if (viewedAt != null) 'viewed_at': viewedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ViewedNotificationsCompanion copyWith(
+      {Value<String>? notificationId, Value<int>? viewedAt, Value<int>? rowid}) {
+    return ViewedNotificationsCompanion(
+      notificationId: notificationId ?? this.notificationId,
+      viewedAt: viewedAt ?? this.viewedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (notificationId.present) {
+      map['notification_id'] = Variable<String>(notificationId.value);
+    }
+    if (viewedAt.present) {
+      map['viewed_at'] = Variable<int>(viewedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ViewedNotificationsCompanion(')
+          ..write('notificationId: $notificationId, ')
+          ..write('viewedAt: $viewedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncedConsentsTable extends SyncedConsents
+    with TableInfo<$SyncedConsentsTable, SyncedConsentRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncedConsentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _consentIdMeta = const VerificationMeta('consentId');
+  @override
+  late final GeneratedColumn<String> consentId = GeneratedColumn<String>(
+      'consent_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _payloadMeta = const VerificationMeta('payload');
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+      'payload', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta('syncedAt');
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>('synced_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [consentId, payload, syncedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'synced_consents';
+  @override
+  VerificationContext validateIntegrity(Insertable<SyncedConsentRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('consent_id')) {
+      context.handle(
+          _consentIdMeta, consentId.isAcceptableOrUnknown(data['consent_id']!, _consentIdMeta));
+    } else if (isInserting) {
+      context.missing(_consentIdMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(_payloadMeta, payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta));
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+          _syncedAtMeta, syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta));
+    } else if (isInserting) {
+      context.missing(_syncedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {consentId};
+  @override
+  SyncedConsentRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncedConsentRow(
+      consentId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}consent_id'])!,
+      payload: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}payload'])!,
+      syncedAt:
+          attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}synced_at'])!,
+    );
+  }
+
+  @override
+  $SyncedConsentsTable createAlias(String alias) {
+    return $SyncedConsentsTable(attachedDatabase, alias);
+  }
+}
+
+class SyncedConsentRow extends DataClass implements Insertable<SyncedConsentRow> {
+  final String consentId;
+  final String payload;
+  final int syncedAt;
+  const SyncedConsentRow({required this.consentId, required this.payload, required this.syncedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['consent_id'] = Variable<String>(consentId);
+    map['payload'] = Variable<String>(payload);
+    map['synced_at'] = Variable<int>(syncedAt);
+    return map;
+  }
+
+  SyncedConsentsCompanion toCompanion(bool nullToAbsent) {
+    return SyncedConsentsCompanion(
+      consentId: Value(consentId),
+      payload: Value(payload),
+      syncedAt: Value(syncedAt),
+    );
+  }
+
+  factory SyncedConsentRow.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncedConsentRow(
+      consentId: serializer.fromJson<String>(json['consentId']),
+      payload: serializer.fromJson<String>(json['payload']),
+      syncedAt: serializer.fromJson<int>(json['syncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'consentId': serializer.toJson<String>(consentId),
+      'payload': serializer.toJson<String>(payload),
+      'syncedAt': serializer.toJson<int>(syncedAt),
+    };
+  }
+
+  SyncedConsentRow copyWith({String? consentId, String? payload, int? syncedAt}) =>
+      SyncedConsentRow(
+        consentId: consentId ?? this.consentId,
+        payload: payload ?? this.payload,
+        syncedAt: syncedAt ?? this.syncedAt,
+      );
+  SyncedConsentRow copyWithCompanion(SyncedConsentsCompanion data) {
+    return SyncedConsentRow(
+      consentId: data.consentId.present ? data.consentId.value : this.consentId,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncedConsentRow(')
+          ..write('consentId: $consentId, ')
+          ..write('payload: $payload, ')
+          ..write('syncedAt: $syncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(consentId, payload, syncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncedConsentRow &&
+          other.consentId == this.consentId &&
+          other.payload == this.payload &&
+          other.syncedAt == this.syncedAt);
+}
+
+class SyncedConsentsCompanion extends UpdateCompanion<SyncedConsentRow> {
+  final Value<String> consentId;
+  final Value<String> payload;
+  final Value<int> syncedAt;
+  final Value<int> rowid;
+  const SyncedConsentsCompanion({
+    this.consentId = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncedConsentsCompanion.insert({
+    required String consentId,
+    required String payload,
+    required int syncedAt,
+    this.rowid = const Value.absent(),
+  })  : consentId = Value(consentId),
+        payload = Value(payload),
+        syncedAt = Value(syncedAt);
+  static Insertable<SyncedConsentRow> custom({
+    Expression<String>? consentId,
+    Expression<String>? payload,
+    Expression<int>? syncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (consentId != null) 'consent_id': consentId,
+      if (payload != null) 'payload': payload,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncedConsentsCompanion copyWith(
+      {Value<String>? consentId, Value<String>? payload, Value<int>? syncedAt, Value<int>? rowid}) {
+    return SyncedConsentsCompanion(
+      consentId: consentId ?? this.consentId,
+      payload: payload ?? this.payload,
+      syncedAt: syncedAt ?? this.syncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (consentId.present) {
+      map['consent_id'] = Variable<String>(consentId.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncedConsentsCompanion(')
+          ..write('consentId: $consentId, ')
+          ..write('payload: $payload, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5718,6 +6306,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecoveryResponsesTable recoveryResponses = $RecoveryResponsesTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $OutboxRelaysTable outboxRelays = $OutboxRelaysTable(this);
+  late final $KvTable kv = $KvTable(this);
+  late final $ViewedNotificationsTable viewedNotifications = $ViewedNotificationsTable(this);
+  late final $SyncedConsentsTable syncedConsents = $SyncedConsentsTable(this);
   late final VaultDao vaultDao = VaultDao(this as AppDatabase);
   late final VaultRelayDao vaultRelayDao = VaultRelayDao(this as AppDatabase);
   late final OwnedVaultDao ownedVaultDao = OwnedVaultDao(this as AppDatabase);
@@ -5727,6 +6318,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final HeldShareDao heldShareDao = HeldShareDao(this as AppDatabase);
   late final RecoveryDao recoveryDao = RecoveryDao(this as AppDatabase);
   late final OutboxDao outboxDao = OutboxDao(this as AppDatabase);
+  late final AppStateDao appStateDao = AppStateDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5744,7 +6336,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         recoveryRequestParticipants,
         recoveryResponses,
         outbox,
-        outboxRelays
+        outboxRelays,
+        kv,
+        viewedNotifications,
+        syncedConsents
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -10789,6 +11384,376 @@ typedef $$OutboxRelaysTableProcessedTableManager = ProcessedTableManager<
     (OutboxRelayRow, $$OutboxRelaysTableReferences),
     OutboxRelayRow,
     PrefetchHooks Function({bool outboxId})>;
+typedef $$KvTableCreateCompanionBuilder = KvCompanion Function({
+  required String key,
+  required String value,
+  Value<int> rowid,
+});
+typedef $$KvTableUpdateCompanionBuilder = KvCompanion Function({
+  Value<String> key,
+  Value<String> value,
+  Value<int> rowid,
+});
+
+class $$KvTableFilterComposer extends Composer<_$AppDatabase, $KvTable> {
+  $$KvTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => ColumnFilters(column));
+}
+
+class $$KvTableOrderingComposer extends Composer<_$AppDatabase, $KvTable> {
+  $$KvTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => ColumnOrderings(column));
+}
+
+class $$KvTableAnnotationComposer extends Composer<_$AppDatabase, $KvTable> {
+  $$KvTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$KvTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $KvTable,
+    KvRow,
+    $$KvTableFilterComposer,
+    $$KvTableOrderingComposer,
+    $$KvTableAnnotationComposer,
+    $$KvTableCreateCompanionBuilder,
+    $$KvTableUpdateCompanionBuilder,
+    (KvRow, BaseReferences<_$AppDatabase, $KvTable, KvRow>),
+    KvRow,
+    PrefetchHooks Function()> {
+  $$KvTableTableManager(_$AppDatabase db, $KvTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$KvTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$KvTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$KvTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              KvCompanion(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String key,
+            required String value,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              KvCompanion.insert(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable(table), BaseReferences(db, table, e))).toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$KvTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $KvTable,
+    KvRow,
+    $$KvTableFilterComposer,
+    $$KvTableOrderingComposer,
+    $$KvTableAnnotationComposer,
+    $$KvTableCreateCompanionBuilder,
+    $$KvTableUpdateCompanionBuilder,
+    (KvRow, BaseReferences<_$AppDatabase, $KvTable, KvRow>),
+    KvRow,
+    PrefetchHooks Function()>;
+typedef $$ViewedNotificationsTableCreateCompanionBuilder = ViewedNotificationsCompanion Function({
+  required String notificationId,
+  required int viewedAt,
+  Value<int> rowid,
+});
+typedef $$ViewedNotificationsTableUpdateCompanionBuilder = ViewedNotificationsCompanion Function({
+  Value<String> notificationId,
+  Value<int> viewedAt,
+  Value<int> rowid,
+});
+
+class $$ViewedNotificationsTableFilterComposer
+    extends Composer<_$AppDatabase, $ViewedNotificationsTable> {
+  $$ViewedNotificationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get notificationId =>
+      $composableBuilder(column: $table.notificationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get viewedAt =>
+      $composableBuilder(column: $table.viewedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$ViewedNotificationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ViewedNotificationsTable> {
+  $$ViewedNotificationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get notificationId => $composableBuilder(
+      column: $table.notificationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get viewedAt =>
+      $composableBuilder(column: $table.viewedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ViewedNotificationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ViewedNotificationsTable> {
+  $$ViewedNotificationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get notificationId =>
+      $composableBuilder(column: $table.notificationId, builder: (column) => column);
+
+  GeneratedColumn<int> get viewedAt =>
+      $composableBuilder(column: $table.viewedAt, builder: (column) => column);
+}
+
+class $$ViewedNotificationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ViewedNotificationsTable,
+    ViewedNotificationRow,
+    $$ViewedNotificationsTableFilterComposer,
+    $$ViewedNotificationsTableOrderingComposer,
+    $$ViewedNotificationsTableAnnotationComposer,
+    $$ViewedNotificationsTableCreateCompanionBuilder,
+    $$ViewedNotificationsTableUpdateCompanionBuilder,
+    (
+      ViewedNotificationRow,
+      BaseReferences<_$AppDatabase, $ViewedNotificationsTable, ViewedNotificationRow>
+    ),
+    ViewedNotificationRow,
+    PrefetchHooks Function()> {
+  $$ViewedNotificationsTableTableManager(_$AppDatabase db, $ViewedNotificationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ViewedNotificationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ViewedNotificationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ViewedNotificationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> notificationId = const Value.absent(),
+            Value<int> viewedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ViewedNotificationsCompanion(
+            notificationId: notificationId,
+            viewedAt: viewedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String notificationId,
+            required int viewedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ViewedNotificationsCompanion.insert(
+            notificationId: notificationId,
+            viewedAt: viewedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable(table), BaseReferences(db, table, e))).toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$ViewedNotificationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ViewedNotificationsTable,
+    ViewedNotificationRow,
+    $$ViewedNotificationsTableFilterComposer,
+    $$ViewedNotificationsTableOrderingComposer,
+    $$ViewedNotificationsTableAnnotationComposer,
+    $$ViewedNotificationsTableCreateCompanionBuilder,
+    $$ViewedNotificationsTableUpdateCompanionBuilder,
+    (
+      ViewedNotificationRow,
+      BaseReferences<_$AppDatabase, $ViewedNotificationsTable, ViewedNotificationRow>
+    ),
+    ViewedNotificationRow,
+    PrefetchHooks Function()>;
+typedef $$SyncedConsentsTableCreateCompanionBuilder = SyncedConsentsCompanion Function({
+  required String consentId,
+  required String payload,
+  required int syncedAt,
+  Value<int> rowid,
+});
+typedef $$SyncedConsentsTableUpdateCompanionBuilder = SyncedConsentsCompanion Function({
+  Value<String> consentId,
+  Value<String> payload,
+  Value<int> syncedAt,
+  Value<int> rowid,
+});
+
+class $$SyncedConsentsTableFilterComposer extends Composer<_$AppDatabase, $SyncedConsentsTable> {
+  $$SyncedConsentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get consentId =>
+      $composableBuilder(column: $table.consentId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$SyncedConsentsTableOrderingComposer extends Composer<_$AppDatabase, $SyncedConsentsTable> {
+  $$SyncedConsentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get consentId =>
+      $composableBuilder(column: $table.consentId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SyncedConsentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncedConsentsTable> {
+  $$SyncedConsentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get consentId =>
+      $composableBuilder(column: $table.consentId, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+}
+
+class $$SyncedConsentsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SyncedConsentsTable,
+    SyncedConsentRow,
+    $$SyncedConsentsTableFilterComposer,
+    $$SyncedConsentsTableOrderingComposer,
+    $$SyncedConsentsTableAnnotationComposer,
+    $$SyncedConsentsTableCreateCompanionBuilder,
+    $$SyncedConsentsTableUpdateCompanionBuilder,
+    (SyncedConsentRow, BaseReferences<_$AppDatabase, $SyncedConsentsTable, SyncedConsentRow>),
+    SyncedConsentRow,
+    PrefetchHooks Function()> {
+  $$SyncedConsentsTableTableManager(_$AppDatabase db, $SyncedConsentsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncedConsentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncedConsentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncedConsentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> consentId = const Value.absent(),
+            Value<String> payload = const Value.absent(),
+            Value<int> syncedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SyncedConsentsCompanion(
+            consentId: consentId,
+            payload: payload,
+            syncedAt: syncedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String consentId,
+            required String payload,
+            required int syncedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SyncedConsentsCompanion.insert(
+            consentId: consentId,
+            payload: payload,
+            syncedAt: syncedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable(table), BaseReferences(db, table, e))).toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SyncedConsentsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SyncedConsentsTable,
+    SyncedConsentRow,
+    $$SyncedConsentsTableFilterComposer,
+    $$SyncedConsentsTableOrderingComposer,
+    $$SyncedConsentsTableAnnotationComposer,
+    $$SyncedConsentsTableCreateCompanionBuilder,
+    $$SyncedConsentsTableUpdateCompanionBuilder,
+    (SyncedConsentRow, BaseReferences<_$AppDatabase, $SyncedConsentsTable, SyncedConsentRow>),
+    SyncedConsentRow,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10816,4 +11781,9 @@ class $AppDatabaseManager {
   $$OutboxTableTableManager get outbox => $$OutboxTableTableManager(_db, _db.outbox);
   $$OutboxRelaysTableTableManager get outboxRelays =>
       $$OutboxRelaysTableTableManager(_db, _db.outboxRelays);
+  $$KvTableTableManager get kv => $$KvTableTableManager(_db, _db.kv);
+  $$ViewedNotificationsTableTableManager get viewedNotifications =>
+      $$ViewedNotificationsTableTableManager(_db, _db.viewedNotifications);
+  $$SyncedConsentsTableTableManager get syncedConsents =>
+      $$SyncedConsentsTableTableManager(_db, _db.syncedConsents);
 }

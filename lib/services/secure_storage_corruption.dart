@@ -2,8 +2,23 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../database/connection.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
+
+const FlutterSecureStorage _wipeStorage = FlutterSecureStorage(
+  aOptions: AndroidOptions(resetOnError: true),
+);
+
+/// Deletes all secure-storage entries for the active app identity.
+///
+/// Used by both explicit logout and corruption-recovery wipe paths.
+Future<void> clearSecureStorageForWipe({
+  FlutterSecureStorage? storage,
+}) async {
+  final target = storage ?? _wipeStorage;
+  await target.deleteAll();
+}
 
 /// Wipes durable on-disk caches that reference the active Nostr identity.
 ///
@@ -24,6 +39,8 @@ import 'processed_nostr_event_store.dart';
 /// cycle with `key_provider.dart`.
 Future<void> wipeLocalDataForCorruptedSecureStorage({
   required ProcessedNostrEventStore processedNostrEventStore,
+  Future<void> Function()? deleteDatabaseFiles,
+  Future<void> Function()? clearSecureStorage,
 }) async {
   Log.warning('Wiping local caches due to corrupted secure storage');
 
@@ -41,12 +58,13 @@ Future<void> wipeLocalDataForCorruptedSecureStorage({
   }
 
   try {
-    // Match the LoginService secure-storage configuration so resetOnError lines
-    // up with the storage instance that holds the corrupted ciphertext.
-    const storage = FlutterSecureStorage(
-      aOptions: AndroidOptions(resetOnError: true),
-    );
-    await storage.deleteAll();
+    await (deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles)();
+  } catch (e, st) {
+    Log.error('Failed to delete SQLCipher files during corruption wipe', e, st);
+  }
+
+  try {
+    await (clearSecureStorage ?? clearSecureStorageForWipe)();
   } catch (e, st) {
     Log.error('Failed to deleteAll secure storage during corruption wipe', e, st);
   }
