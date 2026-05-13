@@ -17,7 +17,6 @@ import 'local_notification_service.dart';
 import 'ndk_service.dart';
 import 'notification_recency.dart';
 import 'processed_nostr_event_store.dart';
-import 'vault_share_service.dart';
 import 'logger.dart';
 
 /// Provider for RecoveryService
@@ -32,7 +31,6 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
   final backupService = ref.watch(backupServiceProvider);
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
-  final vaultShareService = ref.watch(vaultShareServiceProvider);
   final processedStore = ref.watch(processedNostrEventStoreProvider);
   final localNotifications = ref.watch(localNotificationServiceProvider);
   final notificationService = ref.watch(horcruxNotificationServiceProvider);
@@ -41,7 +39,6 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
     repository,
     backupService,
     ndkService,
-    vaultShareService,
     processedStore,
     localNotifications,
     notificationService,
@@ -62,7 +59,6 @@ class RecoveryService {
   final VaultRepository repository;
   final BackupService backupService;
   final NdkService _ndkService;
-  final VaultShareService _vaultShareService;
   final ProcessedNostrEventStore _processedStore;
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notificationService;
@@ -97,7 +93,6 @@ class RecoveryService {
     this.repository,
     this.backupService,
     this._ndkService,
-    this._vaultShareService,
     this._processedStore,
     this._localNotifications,
     this._notificationService,
@@ -785,18 +780,22 @@ class RecoveryService {
 
   /// Cancel a recovery request
   Future<void> cancelRecoveryRequest(String recoveryRequestId) async {
+    final request = await getRecoveryRequest(recoveryRequestId);
+    if (request == null) {
+      throw ArgumentError('Recovery request not found: $recoveryRequestId');
+    }
+
     await _updateRecoveryRequestStatus(
       recoveryRequestId,
       RecoveryRequestStatus.cancelled,
     );
 
-    // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShare (keyed by vaultId)
-    // and won't be affected by removeRecoveryShards() which only deletes recovery shards
-    // (keyed by recoveryRequestId)
-    await _vaultShareService.removeRecoveryShards(recoveryRequestId);
+    await repository.deleteRecoveryResponseSharesForRequest(
+      vaultId: request.vaultId,
+      requestId: recoveryRequestId,
+    );
     Log.info(
-      'Deleted recovery shards for cancelled recovery request $recoveryRequestId',
+      'Cleared recovery share payloads for cancelled recovery request $recoveryRequestId',
     );
   }
 
@@ -827,12 +826,11 @@ class RecoveryService {
       Log.info('Deleted recovered content from vault ${request.vaultId}');
     }
 
-    // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShare (keyed by vaultId)
-    // and won't be affected by removeRecoveryShards() which only deletes recovery shards
-    // (keyed by recoveryRequestId)
-    await _vaultShareService.removeRecoveryShards(recoveryRequestId);
-    Log.info('Deleted recovery shards for recovery request $recoveryRequestId');
+    await repository.deleteRecoveryResponsesForRequest(
+      vaultId: request.vaultId,
+      requestId: recoveryRequestId,
+    );
+    Log.info('Deleted recovery response rows for recovery request $recoveryRequestId');
 
     Log.info('Exited recovery mode for recovery request $recoveryRequestId');
   }

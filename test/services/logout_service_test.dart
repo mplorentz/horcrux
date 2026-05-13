@@ -6,7 +6,6 @@ import 'package:horcrux/services/logout_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
 import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
-import 'package:horcrux/services/vault_share_service.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
@@ -15,7 +14,6 @@ import 'logout_service_test.mocks.dart';
 
 @GenerateNiceMocks([
   MockSpec<VaultRepository>(),
-  MockSpec<VaultShareService>(),
   MockSpec<RecoveryService>(),
   MockSpec<RelayScanService>(),
   MockSpec<LoginService>(),
@@ -24,7 +22,6 @@ import 'logout_service_test.mocks.dart';
 void main() {
   group('LogoutService', () {
     late MockVaultRepository vaultRepository;
-    late MockVaultShareService vaultShareService;
     late MockRecoveryService recoveryService;
     late MockRelayScanService relayScanService;
     late MockLoginService loginService;
@@ -33,7 +30,6 @@ void main() {
 
     setUp(() {
       vaultRepository = MockVaultRepository();
-      vaultShareService = MockVaultShareService();
       recoveryService = MockRecoveryService();
       relayScanService = MockRelayScanService();
       loginService = MockLoginService();
@@ -42,7 +38,6 @@ void main() {
 
       when(relayScanService.stopRelayScanning()).thenAnswer((_) async {});
       when(vaultRepository.clearAll()).thenAnswer((_) async {});
-      when(vaultShareService.clearAll()).thenAnswer((_) async {});
       when(recoveryService.clearAll()).thenAnswer((_) async {});
       when(relayScanService.clearAll()).thenAnswer((_) async {});
       when(processedStore.clearAll()).thenAnswer((_) async {});
@@ -59,7 +54,6 @@ void main() {
       var clearedSecureStorage = false;
       final service = LogoutService(
         vaultRepository: vaultRepository,
-        vaultShareService: vaultShareService,
         recoveryService: recoveryService,
         relayScanService: relayScanService,
         loginService: loginService,
@@ -80,7 +74,6 @@ void main() {
 
       verify(relayScanService.stopRelayScanning()).called(1);
       verify(vaultRepository.clearAll()).called(1);
-      verify(vaultShareService.clearAll()).called(1);
       verify(recoveryService.clearAll()).called(1);
       verify(relayScanService.clearAll()).called(1);
       verify(processedStore.clearAll()).called(1);
@@ -97,7 +90,6 @@ void main() {
       var clearedSecureStorage = false;
       final service = LogoutService(
         vaultRepository: vaultRepository,
-        vaultShareService: vaultShareService,
         recoveryService: recoveryService,
         relayScanService: relayScanService,
         loginService: loginService,
