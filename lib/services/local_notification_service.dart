@@ -22,6 +22,17 @@ import 'ndk_service.dart' show RecoveryResponseEvent;
 import 'notification_recency.dart';
 import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 
+/// True when the app is in [AppLifecycleState.resumed] (foreground).
+///
+/// Used by [LocalNotificationService] to suppress informational shard
+/// notifications (kinds 1337 / 1342) while the user already has the app open.
+/// [WidgetsBinding.instance.lifecycleState] may be null during early startup;
+/// that is treated as not resumed so notifications are not dropped.
+bool defaultLocalNotificationIsForegrounded() {
+  final state = WidgetsBinding.instance.lifecycleState;
+  return state == AppLifecycleState.resumed;
+}
+
 final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) {
   final vaultRepository = ref.watch(vaultRepositoryProvider);
   final loginService = ref.watch(loginServiceProvider);
@@ -63,6 +74,7 @@ class LocalNotificationService {
   final LoginService _loginService;
   final AppDatabase _appDatabase;
   final RecoveryService Function() _getRecoveryService;
+  final bool Function() _isForegrounded;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'horcrux_notifications';
@@ -76,10 +88,12 @@ class LocalNotificationService {
     required LoginService loginService,
     required AppDatabase appDatabase,
     required RecoveryService Function() getRecoveryService,
+    bool Function()? isForegrounded,
   })  : _vaultRepository = vaultRepository,
         _loginService = loginService,
         _appDatabase = appDatabase,
-        _getRecoveryService = getRecoveryService;
+        _getRecoveryService = getRecoveryService,
+        _isForegrounded = isForegrounded ?? defaultLocalNotificationIsForegrounded;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -350,6 +364,13 @@ class LocalNotificationService {
       isUtc: true,
     );
     if (!await _isRecentForNotification(eventUtc, label: kind.name, id: event.id)) {
+      return;
+    }
+
+    if ((kind == NostrKind.shareData || kind == NostrKind.shareConfirmation) && _isForegrounded()) {
+      Log.debug(
+        'Skipping ${kind.name} notification ${event.id}: app is in foreground',
+      );
       return;
     }
 
