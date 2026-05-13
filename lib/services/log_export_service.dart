@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'app_log_file_setup.dart';
 import 'logger.dart';
+import 'share_export_temp_file_support.dart';
 
 /// Outcome of [LogExportService.shareLogs] for UI feedback.
 enum LogExportOutcome {
@@ -27,17 +28,16 @@ final logExportServiceProvider = Provider<LogExportService>((ref) {
 /// Subdirectory under the OS temp dir for one-off log shares (swept on launch).
 const _logExportSubdirName = 'log_exports';
 
-const _appleCleanupDelay = Duration(milliseconds: 900);
-
 class LogExportService {
   LogExportService({
     SharePlus? sharePlus,
     Future<Directory> Function()? temporaryDirectory,
     Future<File> Function()? resolvePersistedLogFile,
     this.synchronousExportCleanupForTesting = false,
-  })  : _sharePlus = sharePlus ?? SharePlus.instance,
-        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-        _resolvePersistedLogFile = resolvePersistedLogFile ?? resolvedPersistedLogFile;
+  }) : _sharePlus = sharePlus ?? SharePlus.instance,
+       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
+       _resolvePersistedLogFile =
+           resolvePersistedLogFile ?? resolvedPersistedLogFile;
 
   final SharePlus _sharePlus;
   final Future<Directory> Function() _temporaryDirectory;
@@ -60,9 +60,9 @@ class LogExportService {
 
     final dir = await _exportDirectory();
     final stamp = DateTime.now().toUtc().toIso8601String().replaceAll(
-          RegExp(r'[:.]'),
-          '-',
-        );
+      RegExp(r'[:.]'),
+      '-',
+    );
     final fileName = 'horcrux-log-$stamp.txt';
     final dest = File('${dir.path}/$fileName');
 
@@ -72,14 +72,16 @@ class LogExportService {
 
       await _sharePlus.share(
         ShareParams(
-          files: [
-            XFile(dest.path, mimeType: 'text/plain', name: fileName),
-          ],
+          files: [XFile(dest.path, mimeType: 'text/plain', name: fileName)],
           subject: 'Horcrux debug logs',
           sharePositionOrigin: sharePositionOrigin,
         ),
       );
-      await _scheduleExportFileCleanup(dest);
+      await scheduleShareExportedFileCleanup(
+        dest,
+        synchronousForTesting: synchronousExportCleanupForTesting,
+        deletingLogLabel: 'log export file',
+      );
       return LogExportOutcome.shared;
     } catch (e, st) {
       Log.warning('Log export failed', e, st);
@@ -94,47 +96,17 @@ class LogExportService {
 
   /// Deletes every file under the log export subdirectory.
   Future<void> clearLogExportDirectory() async {
-    try {
-      final dir = await _exportDirectory();
-      if (!await dir.exists()) return;
-      await for (final entity in dir.list()) {
-        try {
-          if (entity is File) {
-            Log.info('Sweeping stale log export file: ${entity.path}');
-            await entity.delete();
-          }
-        } catch (_) {}
-      }
-    } catch (e, st) {
-      Log.warning('Log export directory sweep failed', e, st);
-    }
+    await sweepTemporaryExportSubdirectoryFiles(
+      resolveExportDirectory: _exportDirectory,
+      staleFileLogLabel: 'log export file',
+      sweepFailureMessage: 'Log export directory sweep failed',
+    );
   }
 
   Future<Directory> _exportDirectory() async {
-    final temp = await _temporaryDirectory();
-    final dir = Directory('${temp.path}/$_logExportSubdirName');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
-  }
-
-  Future<void> _scheduleExportFileCleanup(File file) async {
-    Future<void> deleteIfPresent() async {
-      try {
-        if (await file.exists()) {
-          Log.info('Deleting log export file: ${file.path}');
-          await file.delete();
-        }
-      } catch (_) {}
-    }
-
-    if (synchronousExportCleanupForTesting) {
-      await deleteIfPresent();
-      return;
-    }
-
-    final delay = (Platform.isMacOS || Platform.isIOS) ? _appleCleanupDelay : Duration.zero;
-    Future<void>.delayed(delay, deleteIfPresent);
+    return ensureTemporaryExportSubdirectory(
+      temporaryDirectory: _temporaryDirectory,
+      subdirectoryName: _logExportSubdirName,
+    );
   }
 }
