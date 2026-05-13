@@ -911,5 +911,46 @@ void main() {
         'Captured real recovery response (with shard data): $capturedContent',
       );
     });
+
+    test(
+      'exitRecoveryMode deletes owner content when ending a REAL recovery '
+      '(bug: owned_vaults row removed, vault re-hydrates as '
+      'StewardedVaultDetail)',
+      () async {
+        // Arrange: Set up owned vault content (simulating vault content that
+        // exists either before recovery or was restored via performRecovery)
+        await repository.saveOwnedVaultContent(testVaultId, 'ciphertext-AAA');
+
+        // Initiate a REAL recovery (isPractice: false)
+        final request = await recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+          isPractice: false, // REAL recovery
+        );
+
+        // Sanity-check: content exists before exitRecoveryMode
+        var ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
+        expect(ownedRow, isNotNull,
+            reason: 'owned_vaults row must exist before exitRecoveryMode');
+        expect(ownedRow!.content, 'ciphertext-AAA');
+
+        // Act: Exit real recovery mode
+        await recoveryService.exitRecoveryMode(request.id);
+
+        // Assert: Vault content was DELETED (the bug — !request.isPractice is
+        // true, so deleteVaultContent fires even for a completed recovery)
+        ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
+        expect(
+          ownedRow,
+          isNull,
+          reason: 'exitRecoveryMode deletes owned_vaults for real recoveries '
+              'because !request.isPractice is true, causing the vault to '
+              're-hydrate as StewardedVaultDetail with "Initiate Recovery" '
+              'instead of the expected content view',
+        );
+      },
+    );
   });
 }
