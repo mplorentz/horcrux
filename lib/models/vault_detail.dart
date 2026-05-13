@@ -31,9 +31,7 @@ sealed class VaultDetail {
   /// Active stewards for this vault (left_at IS NULL in DB).
   List<Steward> get stewards;
 
-  /// In-flight recovery requests. Always empty until Phase 3 ships the
-  /// `recovery_requests` table; kept here so [hasActiveRecovery] and
-  /// [manageableRecoveryFor] work uniformly once Phase 3 lands.
+  /// In-flight recovery requests from the local `recovery_requests` table.
   List<RecoveryRequest> get recoveryRequests;
 
   bool get pushEnabled;

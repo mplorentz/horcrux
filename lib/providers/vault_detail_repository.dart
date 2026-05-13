@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
 import '../database/app_database.dart';
 import '../models/backup_config.dart';
+import '../models/recovery_request.dart';
 import '../models/share.dart';
 import '../models/steward.dart';
 import '../models/steward_status.dart';
@@ -20,9 +22,8 @@ import '../services/login_service.dart';
 /// row is ignored and [StewardedVaultDetail] is used so UI role gates stay
 /// consistent with [VaultDetail.isVaultOwner].
 ///
-/// **Phase 3 note**: [recoveryRequests] is always empty until the
-/// `recovery_requests` table lands. At that point this repository's hydration
-/// will include those rows.
+/// Recovery rows are read from `recovery_requests` (participants and
+/// responses included) when building each [VaultDetail].
 class VaultDetailRepository {
   final AppDatabase _db;
   final LoginService? _loginService;
@@ -72,10 +73,10 @@ class VaultDetailRepository {
   /// Reactive stream for a single vault. Emits null when the vault is not
   /// found or has been deleted.
   Stream<VaultDetail?> watchVaultDetail(String vaultId) {
-    // Re-hydrate when the vault row changes and when steward / held_share rows
-    // change — otherwise opening vault detail can stay stale until an unrelated
-    // `vaults` write (share ingest mostly bumps `last_synced_at`, but steward-
-    // only fixes must still repaint).
+    // Re-hydrate when the vault row changes, when steward / held_share rows
+    // change, and when recovery request rows change — otherwise the detail
+    // screen can show a stale "Initiate Recovery" vs "Manage Recovery" label
+    // until an unrelated write.
     return Stream<VaultDetail?>.multi((controller) {
       var closed = false;
 
@@ -94,6 +95,7 @@ class VaultDetailRepository {
         _db.vaultDao.watchById(vaultId).listen((_) => emit()),
         _db.stewardDao.watchActiveForVault(vaultId).listen((_) => emit()),
         _db.heldShareDao.watchForVault(vaultId).listen((_) => emit()),
+        _db.recoveryDao.watchForVault(vaultId).listen((_) => emit()),
       ];
 
       controller.onCancel = () {
@@ -157,6 +159,11 @@ class VaultDetailRepository {
       distributionVersion: row.currentDistributionVersion,
     );
     final inviteCodeByStewardId = await _inviteCodesByStewardId(row.id);
+    final recoveryRows = await _db.recoveryDao.forVault(row.id);
+    final recoveryRequests = <RecoveryRequest>[];
+    for (final rr in recoveryRows) {
+      recoveryRequests.add(await _recoveryRequestFromRow(rr));
+    }
 
     final stewards = stewardRows
         .map(
@@ -181,8 +188,10 @@ class VaultDetailRepository {
           )
         : null;
 
-    final deviceIsVaultOwner =
-        await _deviceTreatsOwnedRowAsVaultOwner(row: row, ownedRow: ownedRow);
+    final deviceIsVaultOwner = await _deviceTreatsOwnedRowAsVaultOwner(
+      row: row,
+      ownedRow: ownedRow,
+    );
 
     final createdAt = DateTime.fromMillisecondsSinceEpoch(row.createdAt);
     final archivedAt =
@@ -202,7 +211,7 @@ class VaultDetailRepository {
         threshold: row.threshold,
         totalShares: row.totalShares,
         stewards: stewards,
-        recoveryRequests: const [],
+        recoveryRequests: recoveryRequests,
         pushEnabled: row.pushEnabled,
         createdAt: createdAt,
         archivedAt: archivedAt,
@@ -223,7 +232,7 @@ class VaultDetailRepository {
       threshold: row.threshold,
       totalShares: row.totalShares,
       stewards: stewards,
-      recoveryRequests: const [],
+      recoveryRequests: recoveryRequests,
       pushEnabled: row.pushEnabled,
       createdAt: createdAt,
       archivedAt: archivedAt,
@@ -260,11 +269,15 @@ class VaultDetailRepository {
     }
 
     final distributionId = _distributionId(vaultId, distributionVersion);
-    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+    final byId = await (_db.select(
+      _db.distributions,
+    )..where((d) => d.id.equals(distributionId)))
         .getSingleOrNull();
     final distribution = byId ??
         await (_db.select(_db.distributions)
-              ..where((d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion)))
+              ..where(
+                (d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion),
+              ))
             .getSingleOrNull();
     if (distribution == null) {
       return const {};
@@ -318,6 +331,53 @@ class VaultDetailRepository {
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: distributionShareRow?.acknowledgmentEventId,
       acknowledgedDistributionVersion: acknowledgedVersion,
+    );
+  }
+
+  Future<RecoveryRequest> _recoveryRequestFromRow(RecoveryRequestRow r) async {
+    final participants = await _db.recoveryDao.participantsFor(r.id);
+    final responses = await _db.recoveryDao.responsesFor(r.id);
+    return RecoveryRequest.makeFromParticipants(
+      id: r.id,
+      vaultId: r.vaultId,
+      initiatorPubkey: r.initiatorPubkey,
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(r.startedAt),
+      status: RecoveryRequestStatus.values.firstWhere(
+        (e) => e.name == r.status,
+        orElse: () => RecoveryRequestStatus.pending,
+      ),
+      threshold: r.thresholdAtStart,
+      nostrEventId: r.requestEventId,
+      eventCreationTime: r.eventCreationTimeMs != null
+          ? DateTime.fromMillisecondsSinceEpoch(r.eventCreationTimeMs!)
+          : null,
+      expiresAt: r.expiresAt == null ? null : DateTime.fromMillisecondsSinceEpoch(r.expiresAt!),
+      stewardPubkeys: participants.map((p) => p.pubkey),
+      responses: responses.map(_recoveryResponseFromRow),
+      errorMessage: r.errorMessage,
+      isPractice: r.isPractice,
+    );
+  }
+
+  RecoveryResponse _recoveryResponseFromRow(RecoveryResponseRow r) {
+    Share? share;
+    if (r.sharePayload.isNotEmpty) {
+      try {
+        share = shareFromJson(
+          json.decode(r.sharePayload) as Map<String, dynamic>,
+        );
+      } catch (_) {
+        share = null;
+      }
+    }
+    return RecoveryResponse(
+      pubkey: r.responderPubkey,
+      approved: r.approved,
+      respondedAt:
+          r.respondedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(r.respondedAtMs!),
+      share: share,
+      nostrEventId: r.nostrEventId,
+      errorMessage: r.errorMessage,
     );
   }
 
