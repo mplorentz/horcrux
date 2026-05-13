@@ -49,9 +49,7 @@ Future<void> scheduleShareExportedFileCleanup(
     return;
   }
 
-  final delay = (Platform.isMacOS || Platform.isIOS)
-      ? appleShareExportCleanupDelay
-      : Duration.zero;
+  final delay = (Platform.isMacOS || Platform.isIOS) ? appleShareExportCleanupDelay : Duration.zero;
   Future<void>.delayed(delay, deleteIfPresent);
 }
 

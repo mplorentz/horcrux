@@ -34,10 +34,9 @@ class LogExportService {
     Future<Directory> Function()? temporaryDirectory,
     Future<File> Function()? resolvePersistedLogFile,
     this.synchronousExportCleanupForTesting = false,
-  }) : _sharePlus = sharePlus ?? SharePlus.instance,
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _resolvePersistedLogFile =
-           resolvePersistedLogFile ?? resolvedPersistedLogFile;
+  })  : _sharePlus = sharePlus ?? SharePlus.instance,
+        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
+        _resolvePersistedLogFile = resolvePersistedLogFile ?? resolvedPersistedLogFile;
 
   final SharePlus _sharePlus;
   final Future<Directory> Function() _temporaryDirectory;
@@ -60,9 +59,9 @@ class LogExportService {
 
     final dir = await _exportDirectory();
     final stamp = DateTime.now().toUtc().toIso8601String().replaceAll(
-      RegExp(r'[:.]'),
-      '-',
-    );
+          RegExp(r'[:.]'),
+          '-',
+        );
     final fileName = 'horcrux-log-$stamp.txt';
     final dest = File('${dir.path}/$fileName');
 

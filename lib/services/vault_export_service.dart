@@ -28,8 +28,8 @@ class VaultExportService {
     SharePlus? sharePlus,
     Future<Directory> Function()? temporaryDirectory,
     this.synchronousExportCleanupForTesting = false,
-  }) : _sharePlus = sharePlus ?? SharePlus.instance,
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+  })  : _sharePlus = sharePlus ?? SharePlus.instance,
+        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   final SharePlus _sharePlus;
   final Future<Directory> Function() _temporaryDirectory;
