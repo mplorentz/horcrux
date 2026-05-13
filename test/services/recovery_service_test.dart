@@ -947,8 +947,9 @@ void main() {
         // Assert: Distribution state is unchanged
         final vault = await repository.getVault(testVaultId);
         expect(vault, isNotNull);
-        expect(vault!.threshold, 1);
-        expect(vault.stewards.isNotEmpty, isTrue);
+        expect(vault!.backupConfig, isNotNull);
+        expect(vault.backupConfig!.threshold, 1);
+        expect(vault.backupConfig!.stewards.isNotEmpty, isTrue);
       },
     );
   });
