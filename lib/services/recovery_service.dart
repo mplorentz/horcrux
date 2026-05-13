@@ -821,9 +821,7 @@ class RecoveryService {
     // Skip for practice recoveries and completed real recoveries — the
     // content restored by performRecovery should be preserved.
     final vaultExists = await repository.getVault(request.vaultId) != null;
-    if (vaultExists &&
-        !request.isPractice &&
-        request.status != RecoveryRequestStatus.completed) {
+    if (vaultExists && !request.isPractice && request.status != RecoveryRequestStatus.completed) {
       await repository.deleteVaultContent(request.vaultId);
       Log.info('Deleted recovered content from vault ${request.vaultId}');
     }
