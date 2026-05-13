@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
+import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';
@@ -70,6 +71,10 @@ Future<void> initializeAppServices(
 /// This is a convenience function that combines service initialization with
 /// provider invalidation, commonly used after account creation or login.
 ///
+/// Also invalidates [appDatabaseProvider] so a post-logout failed open (no key
+/// in secure storage while SQLCipher was touched) cannot leave a cached error
+/// on the provider after the user imports a key.
+///
 /// Parameters:
 /// - [ref] - WidgetRef to access providers
 Future<void> initializeAppAndRefreshKeys(WidgetRef ref) async {
@@ -79,4 +84,5 @@ Future<void> initializeAppAndRefreshKeys(WidgetRef ref) async {
   ref.invalidate(currentPublicKeyProvider);
   ref.invalidate(currentPublicKeyBech32Provider);
   ref.invalidate(isLoggedInProvider);
+  ref.invalidate(appDatabaseProvider);
 }
