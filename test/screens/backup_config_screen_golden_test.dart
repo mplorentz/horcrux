@@ -10,24 +10,12 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
 import 'package:horcrux/services/login_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/steward_test_helpers.dart';
-import '../helpers/shared_preferences_mock.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
 
   // Use test fixtures for consistent test data
   const steward1Pubkey = TestHexPubkeys.bob;
@@ -50,10 +38,7 @@ void main() {
   }
 
   group('BackupConfigScreen Golden Tests', () {
-    setUp(() async {
-      sharedPreferencesMock.clear();
-      SharedPreferences.setMockInitialValues({});
-    });
+    setUp(() async {});
 
     testGoldens('loading state', (tester) async {
       // Create a repository that never completes loading

@@ -8,30 +8,23 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
 import 'package:horcrux/services/login_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/secure_storage_mock.dart';
-import '../helpers/shared_preferences_mock.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final secureStorageMock = SecureStorageMock();
-  final sharedPreferencesMock = SharedPreferencesMock();
 
   setUpAll(() {
     secureStorageMock.setUpAll();
-    sharedPreferencesMock.setUpAll();
   });
 
   tearDownAll(() {
     secureStorageMock.tearDownAll();
-    sharedPreferencesMock.tearDownAll();
   });
 
   setUp(() async {
-    sharedPreferencesMock.clear();
     secureStorageMock.clear();
-    SharedPreferences.setMockInitialValues({});
   });
 
   // T029: Widget test for self-shard toggle in backup config

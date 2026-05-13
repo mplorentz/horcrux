@@ -65,6 +65,7 @@ class LogoutService {
         _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
         _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe;
 
+  // TODO(hvc-2em): Remove once VaultShareService recovery_shard_data is migrated to drift.
   static Future<void> _clearAllSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

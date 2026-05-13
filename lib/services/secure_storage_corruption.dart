@@ -50,6 +50,7 @@ Future<void> wipeLocalDataForCorruptedSecureStorage({
     Log.error('Failed to clear processed Nostr event store during corruption wipe', e, st);
   }
 
+  // TODO(hvc-2em): Remove once VaultShareService recovery_shard_data is migrated to drift.
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

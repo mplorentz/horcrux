@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:drift/drift.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'connection.dart';
 import 'daos/app_state_dao.dart';
@@ -89,19 +86,6 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  static const String _legacyPrefsMigrationCompleteKey = '__app_state_legacy_prefs_migrated_v5';
-
-  // Legacy SharedPreferences keys migrated to Drift app-state tables.
-  static const String _legacyPushOptInKey = 'push_notifications_opted_in';
-  static const String _legacyFcmTokenKey = 'fcm_device_token';
-  static const String _legacyFcmTokenUpdatedAtKey = 'fcm_device_token_updated_at';
-  static const String _legacyNotifierBaseUrlKey = 'horcrux_notifier_base_url';
-  static const String _legacyRelayConfigsKey = 'relay_configurations';
-  static const String _legacyScanningStatusKey = 'scanning_status';
-  static const String _legacyFirstOpenUtcMsKey = 'horcrux_first_open_utc_ms';
-  static const String _legacyViewedNotificationIdsKey = 'viewed_recovery_notification_ids';
-  static const String _legacySyncedConsentsKey = 'horcrux_notifier_last_synced_consents';
-
   AppDatabase(super.e);
 
   /// Production constructor. Opens the SQLCipher-encrypted file at
@@ -302,121 +286,6 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
-
-  Future<void> migrateLegacySharedPreferencesAppStateIfNeeded() async {
-    final alreadyMigrated = await appStateDao.getBool(_legacyPrefsMigrationCompleteKey) ?? false;
-    if (alreadyMigrated) {
-      return;
-    }
-
-    SharedPreferences prefs;
-    try {
-      prefs = await SharedPreferences.getInstance();
-    } catch (_) {
-      // SharedPreferences may be unavailable in some non-Flutter test hosts.
-      return;
-    }
-
-    Future<void> migrateBool(String key) async {
-      final existing = await appStateDao.getBool(key);
-      if (existing != null || !prefs.containsKey(key)) {
-        return;
-      }
-      final value = prefs.getBool(key);
-      if (value != null) {
-        await appStateDao.setBool(key: key, value: value);
-      }
-    }
-
-    Future<void> migrateString(String key) async {
-      final existing = await appStateDao.getString(key);
-      if (existing != null) {
-        return;
-      }
-      final value = prefs.getString(key);
-      if (value != null && value.isNotEmpty) {
-        await appStateDao.setString(key: key, value: value);
-      }
-    }
-
-    Future<void> migrateInt(String key) async {
-      final existing = await appStateDao.getInt(key);
-      if (existing != null || !prefs.containsKey(key)) {
-        return;
-      }
-      final value = prefs.getInt(key);
-      if (value != null) {
-        await appStateDao.setInt(key: key, value: value);
-      }
-    }
-
-    await migrateBool(_legacyPushOptInKey);
-    await migrateString(_legacyFcmTokenKey);
-    await migrateString(_legacyFcmTokenUpdatedAtKey);
-    await migrateString(_legacyNotifierBaseUrlKey);
-    await migrateString(_legacyRelayConfigsKey);
-    await migrateString(_legacyScanningStatusKey);
-    await migrateInt(_legacyFirstOpenUtcMsKey);
-
-    List<String> readLegacyStringList(String key) {
-      try {
-        final direct = prefs.getStringList(key);
-        if (direct != null) {
-          return direct;
-        }
-      } catch (_) {
-        // Key exists but was stored as a different prefs type.
-      }
-      final encoded = prefs.getString(key);
-      if (encoded == null || encoded.isEmpty) {
-        return const <String>[];
-      }
-      try {
-        final decoded = jsonDecode(encoded);
-        if (decoded is List) {
-          return decoded.map((e) => e.toString()).toList();
-        }
-      } catch (_) {
-        return const <String>[];
-      }
-      return const <String>[];
-    }
-
-    final viewedIds = await appStateDao.viewedNotificationIds();
-    if (viewedIds.isEmpty) {
-      final legacyViewed = readLegacyStringList(_legacyViewedNotificationIdsKey);
-      if (legacyViewed.isNotEmpty) {
-        await appStateDao.replaceViewedNotificationIds(legacyViewed);
-      }
-    }
-
-    final syncedConsentIds = await appStateDao.syncedConsentIds();
-    if (syncedConsentIds.isEmpty) {
-      final legacySyncedConsents = readLegacyStringList(_legacySyncedConsentsKey);
-      if (legacySyncedConsents.isNotEmpty) {
-        await appStateDao.replaceSyncedConsentIds(legacySyncedConsents);
-      }
-    }
-
-    await appStateDao.setBool(
-      key: _legacyPrefsMigrationCompleteKey,
-      value: true,
-    );
-
-    for (final key in const <String>[
-      _legacyPushOptInKey,
-      _legacyFcmTokenKey,
-      _legacyFcmTokenUpdatedAtKey,
-      _legacyNotifierBaseUrlKey,
-      _legacyRelayConfigsKey,
-      _legacyScanningStatusKey,
-      _legacyFirstOpenUtcMsKey,
-      _legacyViewedNotificationIdsKey,
-      _legacySyncedConsentsKey,
-    ]) {
-      await prefs.remove(key);
-    }
-  }
 
   /// Best-effort WAL truncation after large recovery-session deletes.
   Future<void> walCheckpointTruncate() async {

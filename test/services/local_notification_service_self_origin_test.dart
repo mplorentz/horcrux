@@ -1,7 +1,8 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
@@ -97,11 +98,6 @@ void main() {
 
   setUp(() {
     // The shard-data and shard-confirmation paths consult `getFirstAppOpenUtc`
-    // (backed by SharedPreferences) for recency gating once the self-filter
-    // has passed. Stub it with empty values so the gating reaches the same
-    // "first open is now" branch every test, instead of throwing
-    // `MissingPluginException`.
-    SharedPreferences.setMockInitialValues({});
     vaultRepository = _SpyingVaultRepository();
     recoveryService = _FakeRecoveryService();
   });
@@ -110,6 +106,7 @@ void main() {
     return LocalNotificationService(
       vaultRepository: vaultRepository,
       loginService: _FakeLoginService(currentPubkey),
+      appDatabase: AppDatabase(NativeDatabase.memory()),
       getRecoveryService: () => recoveryService,
     );
   }

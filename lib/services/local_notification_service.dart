@@ -61,7 +61,7 @@ String recoveryRequestRouteName(String recoveryRequestId) => '/recovery_request/
 class LocalNotificationService {
   final VaultRepository _vaultRepository;
   final LoginService _loginService;
-  final AppDatabase? _appDatabase;
+  final AppDatabase _appDatabase;
   final RecoveryService Function() _getRecoveryService;
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
@@ -74,7 +74,7 @@ class LocalNotificationService {
   LocalNotificationService({
     required VaultRepository vaultRepository,
     required LoginService loginService,
-    AppDatabase? appDatabase,
+    required AppDatabase appDatabase,
     required RecoveryService Function() getRecoveryService,
   })  : _vaultRepository = vaultRepository,
         _loginService = loginService,

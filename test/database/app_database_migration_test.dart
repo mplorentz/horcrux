@@ -1,16 +1,11 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/database/app_database.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 /// Verifies [AppDatabase] migration from schema v1 files that predate the
 /// Phase 2a `held_shares` table (same `user_version`, expanded drift schema).
 void main() {
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-  });
-
   test('upgrade from v1 without held_shares reaches schema v5', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
@@ -137,76 +132,6 @@ void main() {
 
     final versionRow = raw.select('PRAGMA user_version');
     expect(versionRow.first.columnAt(0), 5);
-
-    await db.close();
-  });
-
-  test('migrates legacy SharedPreferences app-state into Drift', () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'push_notifications_opted_in': true,
-      'fcm_device_token': 'legacy-token',
-      'fcm_device_token_updated_at': '2026-05-11T21:59:00.000Z',
-      'horcrux_notifier_base_url': 'https://legacy-notifier.example.com',
-      'relay_configurations': '[{"id":"relay-1","url":"wss://relay.example.com"}]',
-      'scanning_status': '{"isActive":true}',
-      'horcrux_first_open_utc_ms': 1715000000000,
-      'viewed_recovery_notification_ids': '["req-b","req-a","req-b"]',
-      'horcrux_notifier_last_synced_consents': <String>[
-        'B',
-        'a',
-        'B',
-      ],
-    });
-
-    final raw = sqlite.sqlite3.openInMemory();
-    raw.execute('PRAGMA foreign_keys = ON');
-
-    for (final statement in _legacyV1Ddl) {
-      raw.execute(statement);
-    }
-    raw.execute(_legacyV1HeldSharesDdl);
-    raw.execute(_legacyV4InvitationsTableDdl);
-    raw.execute(_legacyV3RecoveryRequestsDdl);
-    raw.execute(_legacyV3RecoveryRequestParticipantsDdl);
-    raw.execute(_legacyV3RecoveryResponsesDdl);
-    raw.execute(_legacyV3OutboxDdl);
-    raw.execute(_legacyV3OutboxRelaysDdl);
-    raw.execute('PRAGMA user_version = 4');
-
-    final db = AppDatabase(NativeDatabase.opened(raw));
-    await db.customSelect('SELECT 1').get();
-    await db.migrateLegacySharedPreferencesAppStateIfNeeded();
-
-    expect(
-      await db.appStateDao.getBool('push_notifications_opted_in'),
-      isTrue,
-    );
-    expect(await db.appStateDao.getString('fcm_device_token'), 'legacy-token');
-    expect(
-      await db.appStateDao.getString('fcm_device_token_updated_at'),
-      '2026-05-11T21:59:00.000Z',
-    );
-    expect(
-      await db.appStateDao.getString('horcrux_notifier_base_url'),
-      'https://legacy-notifier.example.com',
-    );
-    expect(
-      await db.appStateDao.getString('relay_configurations'),
-      '[{"id":"relay-1","url":"wss://relay.example.com"}]',
-    );
-    expect(await db.appStateDao.getString('scanning_status'), '{"isActive":true}');
-    expect(await db.appStateDao.getInt('horcrux_first_open_utc_ms'), 1715000000000);
-
-    expect(
-      await db.appStateDao.viewedNotificationIds(),
-      <String>['req-a', 'req-b'],
-    );
-    expect(await db.appStateDao.syncedConsentIds(), <String>['a', 'b']);
-
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.containsKey('push_notifications_opted_in'), isFalse);
-    expect(prefs.containsKey('viewed_recovery_notification_ids'), isFalse);
-    expect(prefs.containsKey('horcrux_notifier_last_synced_consents'), isFalse);
 
     await db.close();
   });

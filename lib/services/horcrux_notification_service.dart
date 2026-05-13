@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
@@ -117,17 +116,16 @@ class HorcruxNotifierException implements Exception {
 ///   consent sync, not here. [push] is the raw HTTP layer.
 ///
 /// The server URL defaults to [defaultBaseUrl] and can be overridden
-/// in [SharedPreferences] under [baseUrlPrefsKey] (e.g. for tests or
+/// in the drift `kv` table under [baseUrlPrefsKey] (e.g. for tests or
 /// development). Each HTTP method is small and explicit so future tests
 /// can mock individual endpoints.
 class HorcruxNotificationService {
   /// Default production notifier URL.
   static const String defaultBaseUrl = 'https://dev-notifier.horcruxbackup.com';
 
-  /// [SharedPreferences] key for a user-overridden base URL. When present,
+  /// Drift `kv` key for a user-overridden base URL. When present,
   /// overrides [defaultBaseUrl]; when absent or empty, the default is used.
   static const String baseUrlPrefsKey = 'horcrux_notifier_base_url';
-  static const String _consentSnapshotPrefsKey = 'horcrux_notifier_last_synced_consents';
   static const Duration _consentDebounce = Duration(milliseconds: 700);
 
   static const Duration _requestTimeout = Duration(seconds: 15);
@@ -141,7 +139,7 @@ class HorcruxNotificationService {
 
   final LoginService _loginService;
   final VaultRepository _vaultRepository;
-  final AppDatabase? _database;
+  final AppDatabase _database;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   StreamSubscription<List<Vault>>? _vaultsSubscription;
@@ -152,7 +150,7 @@ class HorcruxNotificationService {
   HorcruxNotificationService({
     required LoginService loginService,
     required VaultRepository vaultRepository,
-    AppDatabase? database,
+    required AppDatabase database,
     http.Client? httpClient,
   })  : _loginService = loginService,
         _vaultRepository = vaultRepository,
@@ -166,27 +164,10 @@ class HorcruxNotificationService {
   /// when set, otherwise falls back to [defaultBaseUrl]. Trailing slashes
   /// are trimmed so [Uri.parse] composition is predictable.
   Future<String> getBaseUrl() async {
-    if (_database != null) {
-      final override = await _database.appStateDao.getString(baseUrlPrefsKey);
-      final trimmed = override?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        return _stripTrailingSlash(trimmed);
-      }
-      return _stripTrailingSlash(defaultBaseUrl);
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final override = prefs.getString(baseUrlPrefsKey)?.trim();
-      if (override != null && override.isNotEmpty) {
-        return _stripTrailingSlash(override);
-      }
-    } catch (e, st) {
-      Log.warning(
-        'HorcruxNotificationService: failed to read baseUrl override, '
-        'falling back to default',
-        e,
-        st,
-      );
+    final override = await _database.appStateDao.getString(baseUrlPrefsKey);
+    final trimmed = override?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return _stripTrailingSlash(trimmed);
     }
     return _stripTrailingSlash(defaultBaseUrl);
   }
@@ -197,24 +178,14 @@ class HorcruxNotificationService {
   /// [defaultBaseUrl]). The value is not validated beyond stripping
   /// whitespace; callers should verify it parses as a URL before saving.
   Future<void> setBaseUrl(String? override) async {
-    if (_database != null) {
-      final value = override?.trim();
-      if (value == null || value.isEmpty) {
-        await _database.appStateDao.removeKey(baseUrlPrefsKey);
-      } else {
-        await _database.appStateDao.setString(
-          key: baseUrlPrefsKey,
-          value: value,
-        );
-      }
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
     final value = override?.trim();
     if (value == null || value.isEmpty) {
-      await prefs.remove(baseUrlPrefsKey);
+      await _database.appStateDao.removeKey(baseUrlPrefsKey);
     } else {
-      await prefs.setString(baseUrlPrefsKey, value);
+      await _database.appStateDao.setString(
+        key: baseUrlPrefsKey,
+        value: value,
+      );
     }
   }
 
@@ -707,61 +678,33 @@ class HorcruxNotificationService {
   }
 
   Future<bool> _isPushOptedIn() async {
-    if (_database != null) {
-      return await _database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
-    } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed to read push opt-in flag', e, st);
-      return false;
-    }
+    return await _database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
   }
 
   Future<List<String>> _loadLastSyncedConsentSnapshot() async {
-    if (_database != null) {
-      try {
-        final raw = await _database.appStateDao.syncedConsentIds();
-        return _normalizeConsentIds(raw);
-      } catch (e, st) {
-        Log.warning(
-          'HorcruxNotificationService: failed reading synced_consents snapshot',
-          e,
-          st,
-        );
-        return const <String>[];
-      }
-    }
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getStringList(_consentSnapshotPrefsKey) ?? const <String>[];
+      final raw = await _database.appStateDao.syncedConsentIds();
       return _normalizeConsentIds(raw);
     } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed reading consent snapshot', e, st);
+      Log.warning(
+        'HorcruxNotificationService: failed reading synced_consents snapshot',
+        e,
+        st,
+      );
       return const <String>[];
     }
   }
 
   Future<void> _storeLastSyncedConsentSnapshot(List<String> senders) async {
     final normalized = _normalizeConsentIds(senders);
-    if (_database != null) {
-      try {
-        await _database.appStateDao.replaceSyncedConsentIds(normalized);
-      } catch (e, st) {
-        Log.warning(
-          'HorcruxNotificationService: failed persisting synced_consents snapshot',
-          e,
-          st,
-        );
-      }
-      return;
-    }
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_consentSnapshotPrefsKey, normalized);
+      await _database.appStateDao.replaceSyncedConsentIds(normalized);
     } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed persisting consent snapshot', e, st);
+      Log.warning(
+        'HorcruxNotificationService: failed persisting synced_consents snapshot',
+        e,
+        st,
+      );
     }
   }
 

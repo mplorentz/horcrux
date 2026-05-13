@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../models/relay_configuration.dart';
@@ -69,7 +68,7 @@ class ScanningStatus {
 /// Service for managing Nostr relay scanning and configuration
 class RelayScanService {
   final NdkService ndkService;
-  final AppDatabase? _database;
+  final AppDatabase _database;
 
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
@@ -81,7 +80,7 @@ class RelayScanService {
 
   RelayScanService({
     required this.ndkService,
-    AppDatabase? database,
+    required AppDatabase database,
   }) : _database = database;
 
   /// Cancels the periodic scan timer immediately (see [ndkServiceProvider] dispose notes).
@@ -256,29 +255,15 @@ class RelayScanService {
   }
 
   Future<String?> _loadStateString(String key) async {
-    if (_database != null) {
-      return _database.appStateDao.getString(key);
-    }
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(key);
+    return _database.appStateDao.getString(key);
   }
 
   Future<void> _saveStateString(String key, String value) async {
-    if (_database != null) {
-      await _database.appStateDao.setString(key: key, value: value);
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
+    await _database.appStateDao.setString(key: key, value: value);
   }
 
   Future<void> _removeStateKey(String key) async {
-    if (_database != null) {
-      await _database.appStateDao.removeKey(key);
-      return;
-    }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(key);
+    await _database.appStateDao.removeKey(key);
   }
 
   /// Get all configured relays
