@@ -128,11 +128,6 @@ class NdkService {
     unawaited(_publishService.initialize());
   }
 
-  /// Same dependency edge as [_handleShareConfirmation]; exposed for tests.
-  @visibleForTesting
-  ShareDistributionService debugReadShareDistributionServiceForTesting() =>
-      _ref.read(shareDistributionServiceProvider);
-
   /// Initialize NDK with current user's key and set up subscriptions
   Future<void> initialize() async {
     if (_isInitialized) {

@@ -18,18 +18,13 @@ import 'logger.dart';
 /// Provider for [ShareDistributionService]
 final Provider<ShareDistributionService> shareDistributionServiceProvider =
     Provider<ShareDistributionService>((ref) {
-  // Watching the repository (and notification service) ensures that invalidating
+  // Watching the repository and NDK providers ensures that invalidating
   // [appDatabaseProvider] (logout) cascades through and rebuilds this service
-  // against the fresh database. NdkService stays on [ref.read] to avoid a
-  // circular dependency when [NdkService] handles share confirmations.
+  // against the fresh database.
   return ShareDistributionService(
     ref.watch(vaultRepositoryProvider),
     ref.watch(loginServiceProvider),
-    // Use ref.read() to break circular dependency with NdkService
-    // (_handleShareConfirmation reads shareDistributionServiceProvider; if we
-    // ref.watch ndkServiceProvider here, Riverpod throws CircularDependencyError
-    // during that read.)
-    ref.read(ndkServiceProvider),
+    ref.watch(ndkServiceProvider),
     ref.watch(horcruxNotificationServiceProvider),
   );
 });
