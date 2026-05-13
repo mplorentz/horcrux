@@ -18,21 +18,17 @@ import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
-import 'package:horcrux/services/vault_share_service.dart';
 import 'package:horcrux/services/local_notification_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'recovery_service_test.mocks.dart';
 import '../helpers/secure_storage_mock.dart';
 import '../helpers/test_database.dart';
+import 'recovery_service_test.mocks.dart';
 
 @GenerateMocks([
   BackupService,
   LocalNotificationService,
   ShareDistributionService,
   NdkService,
-  VaultShareService,
   HorcruxNotificationService,
   Nip01Event,
 ])
@@ -55,7 +51,6 @@ void main() {
     late VaultRepository repository;
     late BackupService backupService;
     late NdkService ndkService;
-    late VaultShareService vaultShareService;
     late MockLocalNotificationService mockLocalNotificationService;
     late RecoveryService recoveryService;
     late AppDatabase testDb;
@@ -65,8 +60,6 @@ void main() {
 
     setUp(() async {
       secureStorageMock.clear();
-      SharedPreferences.setMockInitialValues({});
-
       loginService = LoginService();
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
@@ -81,7 +74,6 @@ void main() {
       // Create mocks for circular dependency
       final mockBackupService = MockBackupService();
       final mockNdkService = MockNdkService();
-      final mockVaultShareService = MockVaultShareService();
       mockLocalNotificationService = MockLocalNotificationService();
       when(
         mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
@@ -96,7 +88,6 @@ void main() {
 
       backupService = mockBackupService;
       ndkService = mockNdkService;
-      vaultShareService = mockVaultShareService;
       final mockHorcruxNotificationService = MockHorcruxNotificationService();
       when(
         mockHorcruxNotificationService.tryPushForEvent(
@@ -111,7 +102,6 @@ void main() {
         repository,
         backupService,
         ndkService,
-        vaultShareService,
         ProcessedNostrEventStore(),
         mockLocalNotificationService,
         mockHorcruxNotificationService,
@@ -538,6 +528,10 @@ void main() {
         updatedRequest.responseForPubkey(testKeyHolder1)?.share?.payload,
         'recovered_shard_AAA=',
       );
+
+      final daoRows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(daoRows, hasLength(1));
+      expect(daoRows.single.sharePayload, contains('recovered_shard_AAA'));
     });
 
     test('recovery response denial does not include shard data', () async {
@@ -569,6 +563,74 @@ void main() {
         updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNull,
       );
+    });
+
+    test('cancelRecoveryRequest clears share_payload in recovery_responses', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final shardData = createShare(
+        payload: 'cancel_test_payload=',
+        threshold: 1,
+        shareIndex: 0,
+        totalShares: 1,
+        primeMod: 'test_prime=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: shardData,
+      );
+
+      var rows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(rows, isNotEmpty);
+      expect(rows.every((r) => r.sharePayload.isNotEmpty), isTrue);
+
+      await recoveryService.cancelRecoveryRequest(recoveryRequest.id);
+
+      rows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(rows, isNotEmpty);
+      expect(rows.every((r) => r.sharePayload.isEmpty), isTrue);
+    });
+
+    test('exitRecoveryMode deletes recovery_responses rows for the request', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final shardData = createShare(
+        payload: 'exit_mode_payload=',
+        threshold: 1,
+        shareIndex: 0,
+        totalShares: 1,
+        primeMod: 'test_prime=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: shardData,
+      );
+
+      expect(await testDb.recoveryDao.responsesFor(recoveryRequest.id), isNotEmpty);
+
+      await recoveryService.exitRecoveryMode(recoveryRequest.id);
+
+      expect(await testDb.recoveryDao.responsesFor(recoveryRequest.id), isEmpty);
     });
 
     test('multiple recovery responses accumulate correctly', () async {
