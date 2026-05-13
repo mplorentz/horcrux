@@ -644,11 +644,9 @@ class NdkService {
       final shardDataJson = shardPayload as Map<String, dynamic>;
       shardData = shareFromJson(shardDataJson);
 
-      final vaultShareService = _ref.read(vaultShareServiceProvider);
-      await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
-
       Log.info(
-        'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',
+        'Decoded recovery shard from $senderPubkey for recovery request $recoveryRequestId '
+        '(persists via RecoveryService)',
       );
     }
 

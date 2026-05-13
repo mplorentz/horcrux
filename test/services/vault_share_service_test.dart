@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'dart:typed_data';
 
@@ -42,11 +41,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      // Reset SharedPreferences' internal singleton so each test starts with
-      // an empty store (the method-channel mock alone is not enough - the
-      // plugin caches values in-process across getInstance() calls).
-      SharedPreferences.setMockInitialValues({});
-
       mockLoginService = MockLoginService();
       when(mockLoginService.encryptText(any))
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
@@ -253,7 +247,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      SharedPreferences.setMockInitialValues({});
       db = newTestDatabase();
       mockLoginService = MockLoginService();
       when(mockLoginService.encryptText(any))
@@ -599,7 +592,6 @@ void main() {
     late VaultShareService service;
 
     setUp(() {
-      SharedPreferences.setMockInitialValues({});
       db = newTestDatabase();
       mockLoginService = MockLoginService();
       when(mockLoginService.encryptText(any))
