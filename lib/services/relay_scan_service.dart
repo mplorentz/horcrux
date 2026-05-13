@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/relay_configuration.dart';
 import '../utils/invite_code_utils.dart';
 import 'ndk_service.dart';
@@ -11,7 +12,10 @@ import 'logger.dart';
 // Provider for RelayScanService
 final relayScanServiceProvider = Provider<RelayScanService>((ref) {
   final ndkService = ref.watch(ndkServiceProvider);
-  final service = RelayScanService(ndkService: ndkService);
+  final service = RelayScanService(
+    ndkService: ndkService,
+    database: ref.watch(appDatabaseProvider),
+  );
   ref.onDispose(service.disposeSync);
   return service;
 });
@@ -64,6 +68,7 @@ class ScanningStatus {
 /// Service for managing Nostr relay scanning and configuration
 class RelayScanService {
   final NdkService ndkService;
+  final AppDatabase _database;
 
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
@@ -73,7 +78,10 @@ class RelayScanService {
   Timer? _scanTimer;
   ScanningStatus? _scanningStatus;
 
-  RelayScanService({required this.ndkService});
+  RelayScanService({
+    required this.ndkService,
+    required AppDatabase database,
+  }) : _database = database;
 
   /// Cancels the periodic scan timer immediately (see [ndkServiceProvider] dispose notes).
   void disposeSync() {
@@ -163,8 +171,7 @@ class RelayScanService {
 
   /// Load relay configurations from storage
   Future<void> _loadRelayConfigurations() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_relayConfigsKey);
+    final jsonData = await _loadStateString(_relayConfigsKey);
 
     if (jsonData == null || jsonData.isEmpty) {
       _cachedRelays = [];
@@ -195,8 +202,7 @@ class RelayScanService {
       final jsonList = _cachedRelays!.map((relay) => relay.toJson()).toList();
       final jsonString = json.encode(jsonList);
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_relayConfigsKey, jsonString);
+      await _saveStateString(_relayConfigsKey, jsonString);
       Log.info('Saved ${jsonList.length} relay configurations to storage');
     } catch (e) {
       Log.error('Error saving relay configurations', e);
@@ -206,8 +212,7 @@ class RelayScanService {
 
   /// Load scanning status from storage
   Future<void> _loadScanningStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_scanningStatusKey);
+    final jsonData = await _loadStateString(_scanningStatusKey);
 
     if (jsonData == null || jsonData.isEmpty) {
       _scanningStatus = const ScanningStatus(
@@ -242,12 +247,23 @@ class RelayScanService {
 
     try {
       final jsonString = json.encode(_scanningStatus!.toJson());
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_scanningStatusKey, jsonString);
+      await _saveStateString(_scanningStatusKey, jsonString);
       Log.info('Saved scanning status to storage');
     } catch (e) {
       Log.error('Error saving scanning status', e);
     }
+  }
+
+  Future<String?> _loadStateString(String key) async {
+    return _database.appStateDao.getString(key);
+  }
+
+  Future<void> _saveStateString(String key, String value) async {
+    await _database.appStateDao.setString(key: key, value: value);
+  }
+
+  Future<void> _removeStateKey(String key) async {
+    await _database.appStateDao.removeKey(key);
   }
 
   /// Get all configured relays
@@ -558,9 +574,8 @@ class RelayScanService {
     _scanTimer?.cancel();
     _scanTimer = null;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_relayConfigsKey);
-    await prefs.remove(_scanningStatusKey);
+    await _removeStateKey(_relayConfigsKey);
+    await _removeStateKey(_scanningStatusKey);
     _isInitialized = false;
 
     Log.info('Cleared all relay configurations and scanning status');

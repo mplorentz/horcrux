@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/key_provider.dart';
@@ -261,55 +260,48 @@ class VaultStatusBanner extends ConsumerWidget {
   }
 
   Widget _buildStewardStatus(BuildContext context, VaultDetail vault) {
-    // Awaiting key
-    if (vault.state == VaultState.awaitingShare) {
-      return _buildBanner(
-        context,
-        const _StatusData(
-          headline: 'Waiting for your key',
-          subtext:
-              'You\'ve accepted an invitation to this vault. Waiting on the owner to send you your vault key.',
-          icon: Icons.hourglass_empty,
-          accentColor: Color(0xFF7A4A2F), // Umber
-          variant: _StatusVariant.stewardWaitingKey,
-        ),
-        false,
-        true,
-      );
-    }
-
-    // Key holder - stewards have received a shard
     // Note: We don't check backupConfig.status because stewards can't read it
-    // (it's encrypted to the owner). If a steward has shards, they're ready to help.
-    if (vault.state == VaultState.holdingShare) {
-      return _buildBanner(
-        context,
-        const _StatusData(
-          headline: 'You\'re ready to help',
-          subtext:
-              'You hold a recovery key for this vault. If recovery is requested, you\'ll be asked to approve.',
-          icon: Icons.check_circle,
-          accentColor: Color(0xFF2E7D32), // Deep green for success
-          variant: _StatusVariant.stewardReady,
+    // (it's encrypted to the owner).
+    return switch (vault) {
+      StewardedVaultDetail(:final latestShare) when latestShare == null => _buildBanner(
+          context,
+          const _StatusData(
+            headline: 'Waiting for your key',
+            subtext:
+                "You've accepted an invitation to this vault. Waiting on the owner to send you your vault key.",
+            icon: Icons.hourglass_empty,
+            accentColor: Color(0xFF7A4A2F), // Umber
+            variant: _StatusVariant.stewardWaitingKey,
+          ),
+          false,
+          true,
         ),
-        false,
-        true,
-      );
-    }
-
-    // Fallback for steward (shouldn't normally reach here)
-    return _buildBanner(
-      context,
-      const _StatusData(
-        headline: 'Steward status unavailable',
-        subtext: 'Unable to determine your key status for this vault.',
-        icon: Icons.info_outline,
-        accentColor: Color(0xFF676F62), // Secondary text color
-        variant: _StatusVariant.unknown,
-      ),
-      false,
-      true,
-    );
+      StewardedVaultDetail() => _buildBanner(
+          context,
+          const _StatusData(
+            headline: "You're ready to help",
+            subtext:
+                "You hold a recovery key for this vault. If recovery is requested, you'll be asked to approve.",
+            icon: Icons.check_circle,
+            accentColor: Color(0xFF2E7D32), // Deep green for success
+            variant: _StatusVariant.stewardReady,
+          ),
+          false,
+          true,
+        ),
+      OwnedVaultDetail() => _buildBanner(
+          context,
+          const _StatusData(
+            headline: 'Steward status unavailable',
+            subtext: 'Unable to determine your key status for this vault.',
+            icon: Icons.info_outline,
+            accentColor: Color(0xFF676F62),
+            variant: _StatusVariant.unknown,
+          ),
+          false,
+          true,
+        ),
+    };
   }
 
   Widget _buildBanner(

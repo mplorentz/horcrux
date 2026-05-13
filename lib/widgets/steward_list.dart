@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
@@ -77,11 +76,10 @@ class StewardList extends ConsumerWidget {
             ),
           ),
           data: (currentPubkey) {
-            // Hide steward list when vault is awaiting a shard and current user is a steward
-            // (not the owner) — stewards waiting for their shard shouldn't see an empty steward list
+            // Hide steward list for non-owner stewards waiting for their share —
+            // an empty steward list is misleading before the share event arrives.
             final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-            if (vault.state == VaultState.awaitingShare && !isOwner) {
-              // Return empty widget - background fill handled at screen level
+            if (vault is StewardedVaultDetail && vault.latestShare == null && !isOwner) {
               return const SizedBox.shrink();
             }
             return _buildKeyHolderContent(context, ref, vault, currentPubkey);

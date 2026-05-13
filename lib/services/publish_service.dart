@@ -4,111 +4,11 @@ import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/app_database.dart';
 import 'logger.dart';
 
 typedef NdkSupplier = Future<Ndk> Function();
-
-enum PublishRelayStatus { pending, success, failed }
-
-class PublishRelayState {
-  final PublishRelayStatus status;
-  final int attempts;
-  final DateTime? nextAttemptAt;
-  final String? lastError;
-
-  const PublishRelayState({
-    required this.status,
-    required this.attempts,
-    this.nextAttemptAt,
-    this.lastError,
-  });
-
-  PublishRelayState copyWith({
-    PublishRelayStatus? status,
-    int? attempts,
-    DateTime? nextAttemptAt,
-    String? lastError,
-  }) {
-    return PublishRelayState(
-      status: status ?? this.status,
-      attempts: attempts ?? this.attempts,
-      nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
-      lastError: lastError ?? this.lastError,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'status': status.name,
-      'attempts': attempts,
-      'nextAttemptAt': nextAttemptAt?.toIso8601String(),
-      'lastError': lastError,
-    };
-  }
-
-  factory PublishRelayState.fromJson(Map<String, dynamic> json) {
-    return PublishRelayState(
-      status: PublishRelayStatus.values.firstWhere(
-        (value) => value.name == (json['status'] as String? ?? 'pending'),
-        orElse: () => PublishRelayStatus.pending,
-      ),
-      attempts: json['attempts'] as int? ?? 0,
-      nextAttemptAt:
-          json['nextAttemptAt'] != null ? DateTime.tryParse(json['nextAttemptAt'] as String) : null,
-      lastError: json['lastError'] as String?,
-    );
-  }
-}
-
-class PublishQueueItem {
-  final String id;
-  final Nip01Event event;
-  final List<String> relays;
-  final DateTime createdAt;
-  final Map<String, PublishRelayState> relayStates;
-
-  const PublishQueueItem({
-    required this.id,
-    required this.event,
-    required this.relays,
-    required this.createdAt,
-    required this.relayStates,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'event': event.toJson(),
-      'relays': relays,
-      'createdAt': createdAt.toIso8601String(),
-      'relayStates': relayStates.map((key, value) => MapEntry(key, value.toJson())),
-    };
-  }
-
-  factory PublishQueueItem.fromJson(Map<String, dynamic> json) {
-    final relayStatesJson = json['relayStates'] as Map<String, dynamic>? ?? {};
-    final relayStates = relayStatesJson.map(
-      (key, value) => MapEntry(
-        key,
-        PublishRelayState.fromJson(value as Map<String, dynamic>),
-      ),
-    );
-
-    final eventJson = json['event'] as Map<String, dynamic>;
-    final event = Nip01Event.fromJson(eventJson);
-
-    return PublishQueueItem(
-      id: json['id'] as String,
-      event: event,
-      relays: (json['relays'] as List<dynamic>? ?? []).cast<String>(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      relayStates: relayStates,
-    );
-  }
-}
 
 class PublishQueueResult {
   final String? eventId;
@@ -133,7 +33,6 @@ class PublishService {
   })  : _getNdk = getNdk,
         _db = database;
 
-  static const _legacyPrefsKey = 'publish_queue_items_v2';
   static const _maxAttemptsPerRelay = 15;
   static const _baseBackoffSeconds = 2;
   static const _maxBackoff = Duration(days: 1);
@@ -152,10 +51,6 @@ class PublishService {
       return;
     }
 
-    await _migrateLegacyPrefsQueueIfNeeded();
-    if (_disposed) {
-      return;
-    }
     _startWorker();
     _isInitialized = true;
 
@@ -482,67 +377,6 @@ class PublishService {
     final delay = Duration(seconds: seconds.toInt());
     if (delay > _maxBackoff) return _maxBackoff;
     return delay;
-  }
-
-  Future<void> _migrateLegacyPrefsQueueIfNeeded() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final data = prefs.getString(_legacyPrefsKey);
-      if (data == null || data.isEmpty) {
-        return;
-      }
-
-      final decoded = json.decode(data) as List<dynamic>;
-      var migrated = 0;
-      for (final entry in decoded) {
-        final item = PublishQueueItem.fromJson(entry as Map<String, dynamic>);
-        final existing = await _db.outboxDao.getById(item.id);
-        if (existing != null) {
-          continue;
-        }
-        final createdMs = item.createdAt.millisecondsSinceEpoch;
-        final jsonStr = json.encode(item.event.toJson());
-        await _db.transaction(() async {
-          await _db.into(_db.outbox).insert(
-                OutboxCompanion.insert(
-                  id: item.id,
-                  kind: item.event.kind,
-                  eventId: item.event.id,
-                  createdAt: createdMs,
-                  eventJson: jsonStr,
-                ),
-              );
-          final relayUrls = {...item.relays, ...item.relayStates.keys};
-          for (final relay in relayUrls) {
-            final st = item.relayStates[relay] ??
-                const PublishRelayState(status: PublishRelayStatus.pending, attempts: 0);
-            final statusName = switch (st.status) {
-              PublishRelayStatus.success => 'success',
-              PublishRelayStatus.failed => 'failed',
-              PublishRelayStatus.pending => 'pending',
-            };
-            await _db.into(_db.outboxRelays).insert(
-                  OutboxRelaysCompanion.insert(
-                    outboxId: item.id,
-                    relayUrl: relay,
-                    status: statusName,
-                    attempts: Value(st.attempts),
-                    nextAttemptAt: Value(st.nextAttemptAt?.millisecondsSinceEpoch),
-                    lastError: Value(st.lastError),
-                  ),
-                );
-          }
-        });
-        migrated++;
-      }
-
-      await prefs.remove(_legacyPrefsKey);
-      if (migrated > 0) {
-        Log.info('Migrated $migrated publish queue item(s) from SharedPreferences to outbox');
-      }
-    } catch (e, st) {
-      Log.warning('Legacy publish queue migration skipped/failed', e, st);
-    }
   }
 }
 

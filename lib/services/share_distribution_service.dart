@@ -18,11 +18,14 @@ import 'logger.dart';
 /// Provider for [ShareDistributionService]
 final Provider<ShareDistributionService> shareDistributionServiceProvider =
     Provider<ShareDistributionService>((ref) {
+  // Watching the repository and NDK providers ensures that invalidating
+  // [appDatabaseProvider] (logout) cascades through and rebuilds this service
+  // against the fresh database.
   return ShareDistributionService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(loginServiceProvider),
-    ref.read(ndkServiceProvider),
-    ref.read(horcruxNotificationServiceProvider),
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(loginServiceProvider),
+    ref.watch(ndkServiceProvider),
+    ref.watch(horcruxNotificationServiceProvider),
   );
 });
 
@@ -135,7 +138,9 @@ class ShareDistributionService {
                 pubkey: ownerPubkey,
                 status: StewardStatus.holdingKey,
                 acknowledgedAt: DateTime.now(),
-                acknowledgmentEventId: eventId, // Use share event ID as acknowledgment
+                // Owner self-steward: provenance is distribution version + outbound
+                // wrap id only — no separate ack event id (stewards infer the same).
+                acknowledgmentEventId: null,
                 acknowledgedDistributionVersion: config.distributionVersion,
                 giftWrapEventId: eventId,
               );

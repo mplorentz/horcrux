@@ -20,23 +20,6 @@ class VaultBackupConstraints {
   static const int defaultTotalKeys = 3;
 }
 
-/// Local vault material state for the current device (not who owns the vault).
-///
-/// **Phase 6 note**: This enum will be dropped when all UI sites migrate to
-/// pattern-matching on [VaultDetail]. Until then, [VaultDetail.state] exposes
-/// it for incremental migration.
-///
-/// - [unlocked]: this device owns the vault (OwnedVaultDetail).
-/// - [holdingShare]: this device holds a steward share (StewardedVaultDetail
-///   with a non-null latestShare).
-/// - [awaitingShare]: invite accepted but share not yet received
-///   (StewardedVaultDetail with latestShare == null).
-enum VaultState {
-  unlocked,
-  holdingShare,
-  awaitingShare,
-}
-
 /// Shared data model for a vault entry on the current device.
 ///
 /// **Phase 2c**: [content] and [shares] have been removed. Role-specific data

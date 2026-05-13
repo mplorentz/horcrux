@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
+import '../database/recovery_request_hydration.dart';
 import '../models/backup_config.dart';
 import '../models/recovery_request.dart';
 import '../models/share.dart';
@@ -33,18 +34,28 @@ final vaultProvider = StreamProvider.family<Vault?, String>((ref, vaultId) {
 });
 
 /// Provider for vault repository operations.
+///
+/// Uses `ref.watch(appDatabaseProvider)` so that invalidating the database
+/// (e.g. on logout) automatically rebuilds this repository against the new
+/// [AppDatabase]. Holding the DB via `ref.read` would leak the closed
+/// instance into the next session and crash subsequent reads.
 final vaultRepositoryProvider = Provider<VaultRepository>((ref) {
   final repository = VaultRepository(
-    ref.read(loginServiceProvider),
-    db: ref.read(appDatabaseProvider),
+    ref.watch(loginServiceProvider),
+    db: ref.watch(appDatabaseProvider),
   );
   ref.onDispose(repository.dispose);
   return repository;
 });
 
 /// Provider for [VaultDetailRepository].
+///
+/// See [vaultRepositoryProvider] for why the database dependency is watched.
 final vaultDetailRepositoryProvider = Provider<VaultDetailRepository>((ref) {
-  final repository = VaultDetailRepository(db: ref.read(appDatabaseProvider));
+  final repository = VaultDetailRepository(
+    db: ref.watch(appDatabaseProvider),
+    loginService: ref.watch(loginServiceProvider),
+  );
   ref.onDispose(repository.dispose);
   return repository;
 });
@@ -301,6 +312,30 @@ class VaultRepository {
   Future<bool> isOwnedVault(String vaultId) async {
     final row = await _db.ownedVaultDao.getByVaultId(vaultId);
     return row != null;
+  }
+
+  /// True when share ingestion should use **owner** precedence (skip steward-side
+  /// vault/steward normalization from wire shares).
+  ///
+  /// Matches [VaultDetailRepository] role logic: an `owned_vaults` row alone is
+  /// not sufficient — when a logged-in pubkey exists it must match
+  /// [VaultsRow.ownerPubkey], otherwise the row is stale and steward ingest runs.
+  Future<bool> isOwnedVaultForCurrentUser(String vaultId) async {
+    final ownedRow = await _db.ownedVaultDao.getByVaultId(vaultId);
+    if (ownedRow == null) return false;
+
+    final vaultRow = await _db.vaultDao.getById(vaultId);
+    if (vaultRow == null) return false;
+
+    final localPubkey = await _loginService.getCurrentPublicKey();
+    if (localPubkey != null && localPubkey != vaultRow.ownerPubkey) {
+      Log.warning(
+        'Stale owned_vaults row for vault $vaultId during share ingest: '
+        'logged-in pubkey does not match vault owner pubkey.',
+      );
+      return false;
+    }
+    return true;
   }
 
   /// Write [share] into the `held_shares` table and prune old versions.
@@ -691,6 +726,18 @@ class VaultRepository {
     return result;
   }
 
+  Steward _mergeDbStewardWithBackupOverlay(Steward dbSteward, BackupConfig overlay) {
+    final cached = overlay.stewards.firstWhere(
+      (c) => c.id == dbSteward.id,
+      orElse: () => dbSteward,
+    );
+    // Prefer invite code from the invitations table when present; otherwise keep the overlay
+    // value (e.g. stewards not yet written through InvitationService).
+    return cached.copyWith(
+      inviteCode: dbSteward.inviteCode ?? cached.inviteCode,
+    );
+  }
+
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
     final relayRows = await _db.vaultRelayDao.forVault(row.id);
@@ -716,25 +763,7 @@ class VaultRepository {
       final stewards = overlay == null
           ? dbStewards
           : [
-              for (final s in dbStewards)
-                overlay.stewards
-                    .firstWhere(
-                      (cached) => cached.id == s.id,
-                      orElse: () => s,
-                    )
-                    // Prefer the DB-sourced inviteCode (from invitations table) so it
-                    // survives restarts. Fall back to whatever the overlay has so that
-                    // in-memory-only invite codes (e.g. created via BackupConfig
-                    // directly without a DB invitation row) are also preserved.
-                    .copyWith(
-                      inviteCode: s.inviteCode ??
-                          overlay.stewards
-                              .firstWhere(
-                                (cached) => cached.id == s.id,
-                                orElse: () => s,
-                              )
-                              .inviteCode,
-                    ),
+              for (final s in dbStewards) _mergeDbStewardWithBackupOverlay(s, overlay),
             ];
       backupConfig = BackupConfig(
         vaultId: row.id,
@@ -750,7 +779,7 @@ class VaultRepository {
     final recoveryRows = await _db.recoveryDao.forVault(row.id);
     final recoveryRequests = <RecoveryRequest>[];
     for (final rr in recoveryRows) {
-      recoveryRequests.add(await _recoveryRequestFromRow(rr));
+      recoveryRequests.add(await recoveryRequestFromRow(_db, rr));
     }
 
     return Vault(
@@ -796,10 +825,10 @@ class VaultRepository {
     );
   }
 
-  /// Returns a map of steward id → invite code for all active (unredeemed)
-  /// invitations for [vaultId]. Used so [_stewardFromRow] can populate
-  /// [Steward.inviteCode] from the DB rather than relying on the in-memory
-  /// overlay (which is lost on restart).
+  /// Returns a map of steward id → invite code for non-revoked invitations on [vaultId].
+  ///
+  /// Includes redeemed invitations so hydrates still expose [Steward.inviteCode] after
+  /// acceptance (matching persisted backup-config semantics).
   Future<Map<String, String>> _inviteCodesByStewardId(String vaultId) async {
     final rows = await _db.invitationDao.forVault(vaultId);
     return {
@@ -942,51 +971,6 @@ class VaultRepository {
     );
   }
 
-  Future<RecoveryRequest> _recoveryRequestFromRow(RecoveryRequestRow r) async {
-    final participants = await _db.recoveryDao.participantsFor(r.id);
-    final responses = await _db.recoveryDao.responsesFor(r.id);
-    return RecoveryRequest.makeFromParticipants(
-      id: r.id,
-      vaultId: r.vaultId,
-      initiatorPubkey: r.initiatorPubkey,
-      requestedAt: DateTime.fromMillisecondsSinceEpoch(r.startedAt),
-      status: RecoveryRequestStatus.values.firstWhere(
-        (e) => e.name == r.status,
-        orElse: () => RecoveryRequestStatus.pending,
-      ),
-      threshold: r.thresholdAtStart,
-      nostrEventId: r.requestEventId,
-      eventCreationTime: r.eventCreationTimeMs != null
-          ? DateTime.fromMillisecondsSinceEpoch(r.eventCreationTimeMs!)
-          : null,
-      expiresAt: r.expiresAt == null ? null : DateTime.fromMillisecondsSinceEpoch(r.expiresAt!),
-      stewardPubkeys: participants.map((p) => p.pubkey),
-      responses: responses.map(_recoveryResponseFromRow),
-      errorMessage: r.errorMessage,
-      isPractice: r.isPractice,
-    );
-  }
-
-  RecoveryResponse _recoveryResponseFromRow(RecoveryResponseRow r) {
-    Share? share;
-    if (r.sharePayload.isNotEmpty) {
-      try {
-        share = shareFromJson(json.decode(r.sharePayload) as Map<String, dynamic>);
-      } catch (_) {
-        share = null;
-      }
-    }
-    return RecoveryResponse(
-      pubkey: r.responderPubkey,
-      approved: r.approved,
-      respondedAt:
-          r.respondedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(r.respondedAtMs!),
-      share: share,
-      nostrEventId: r.nostrEventId,
-      errorMessage: r.errorMessage,
-    );
-  }
-
   Future<void> _persistVault(Vault vault) async {
     final createdAtMs = vault.createdAt.millisecondsSinceEpoch;
     final config = vault.backupConfig;
@@ -1030,14 +1014,32 @@ class VaultRepository {
           _db.stewards,
         )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
             .get();
+        final shareIndexByStewardId = {
+          for (final row in existing) row.id: row.shareIndex,
+        };
+        final incomingStewardIds = config.stewards.map((s) => s.id).toSet();
+        // Preserve historical Shamir slots for stable ingest-side writes when the
+        // steward set is unchanged (ack/metadata-only paths). When the backed-up
+        // roster introduces any steward id the DB has never seen, treat backup
+        // config ordering as authoritative and assign contiguous indices again so
+        // owners can insert rows ahead of existing stewards.
+        final hasNewStewardId =
+            incomingStewardIds.any((id) => !shareIndexByStewardId.containsKey(id));
+
         for (final existingRow in existing) {
           // Retire rows removed from the config permanently, and rows that ARE
           // being kept but need a clean re-insert (to avoid position conflicts).
           // Kept rows are immediately re-activated below with left_at = null.
           final willReinsert = keptIds.contains(existingRow.id);
-          final conflictsOnPosition = willReinsert &&
-              config.stewards.indexWhere((s) => s.id == existingRow.id) + 1 !=
-                  existingRow.shareIndex;
+          final idxInConfig = config.stewards.indexWhere((s) => s.id == existingRow.id);
+          final int targetShareIndex;
+          if (hasNewStewardId) {
+            targetShareIndex = idxInConfig >= 0 ? idxInConfig + 1 : existingRow.shareIndex;
+          } else {
+            targetShareIndex = shareIndexByStewardId[existingRow.id] ??
+                (idxInConfig >= 0 ? idxInConfig + 1 : existingRow.shareIndex);
+          }
+          final conflictsOnPosition = willReinsert && targetShareIndex != existingRow.shareIndex;
           if (!willReinsert || conflictsOnPosition) {
             await (_db.update(
               _db.stewards,
@@ -1048,11 +1050,12 @@ class VaultRepository {
 
         for (var i = 0; i < config.stewards.length; i++) {
           final s = config.stewards[i];
+          final shareIndex = hasNewStewardId ? (i + 1) : (shareIndexByStewardId[s.id] ?? (i + 1));
           await _db.into(_db.stewards).insertOnConflictUpdate(
                 StewardsCompanion.insert(
                   id: s.id,
                   vaultId: vault.id,
-                  shareIndex: i + 1,
+                  shareIndex: shareIndex,
                   pubkey: Value(s.pubkey),
                   name: Value(s.name),
                   contactInfo: Value(s.contactInfo),

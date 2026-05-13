@@ -11,23 +11,11 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/screens/vault_detail_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/golden_test_helpers.dart';
-import '../helpers/shared_preferences_mock.dart';
 import '../helpers/vault_detail_golden_fixtures.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
   // Sample test data
   final testPubkey = 'a' * 64; // 64-char hex pubkey
   final otherPubkey = 'b' * 64;
@@ -100,10 +88,7 @@ void main() {
   }
 
   group('VaultDetailScreen Golden Tests', () {
-    setUp(() async {
-      sharedPreferencesMock.clear();
-      SharedPreferences.setMockInitialValues({});
-    });
+    setUp(() async {});
 
     testGoldens('loading state', (tester) async {
       final harness = await pumpGoldenWidget(

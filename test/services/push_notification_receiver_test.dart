@@ -1,11 +1,13 @@
 import 'dart:convert';
 
+import 'package:drift/native.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/local_notification_service.dart';
@@ -135,6 +137,7 @@ void main() {
         localNotifications: localNotifications,
         notifierService: notifierService,
         ndkService: ndkService,
+        database: AppDatabase(NativeDatabase.memory()),
       );
     });
 

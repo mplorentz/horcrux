@@ -1,9 +1,11 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
+import '../models/steward_status.dart';
 import '../models/vault.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
@@ -11,6 +13,42 @@ import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
 import 'push_notification_receiver.dart';
+
+/// Resolves the Shamir slot (0-based) for an embedded steward entry.
+///
+/// Prefer explicit [shard_index] from the owner payload (matches
+/// [BackupConfig.stewards] ordering used at distribution). Legacy payloads
+/// without it fall back to this device's [Share.shareIndex] when the entry is
+/// for the recipient, then to [filteredEnumerationIndex] (enumerating only
+/// pubkey-known stewards in wire order).
+int _shardSlotZeroBasedFromEmbedded({
+  required Map<String, String> steward,
+  required int filteredEnumerationIndex,
+  required Share share,
+  required String? recipientPubkeyHex,
+}) {
+  final raw = steward['shard_index'];
+  if (raw != null && raw.isNotEmpty) {
+    final parsed = int.tryParse(raw);
+    if (parsed != null && parsed >= 0) return parsed;
+  }
+  final pk = steward['pubkey'];
+  if (recipientPubkeyHex != null && pk == recipientPubkeyHex) {
+    return share.shareIndex;
+  }
+  return filteredEnumerationIndex;
+}
+
+String _resolvedEmbeddedStewardRowId({
+  required String vaultId,
+  required Map<String, String> steward,
+  required int slotZeroBased,
+}) {
+  final id = steward['id'];
+  if (id != null && id.isNotEmpty) return id;
+  final pubkey = steward['pubkey'] ?? '';
+  return 'wire_${vaultId}_${slotZeroBased}_$pubkey';
+}
 
 /// Provider for VaultShareService
 final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
@@ -109,14 +147,14 @@ class VaultShareService {
   ///
   /// Writes to the `held_shares` drift table via [VaultRepository].
   /// Also upserts the `vaults` row and self-steward row on the steward side
-  /// (subject to the precedence rules: owner-side vaults skip vault/steward
-  /// upsert; version-gate applies otherwise).
+  /// when [VaultRepository.isOwnedVaultForCurrentUser] is false (subject to the
+  /// version gate inside [_upsertStewardVaultAndSelf]).
   Future<void> addVaultShare(String vaultId, Share share) async {
     if (!share.isValid) throw ArgumentError('Invalid shard data');
 
-    final owned = await repository.isOwnedVault(vaultId);
+    final ownedByThisDevice = await repository.isOwnedVaultForCurrentUser(vaultId);
 
-    if (!owned) {
+    if (!ownedByThisDevice) {
       // Steward-side: upsert vault and self-steward (version-gated).
       await _upsertStewardVaultAndSelf(vaultId, share);
     }
@@ -460,23 +498,34 @@ class VaultShareService {
 
     // Upsert every steward advertised by the wire payload into normalized
     // `stewards` rows so UI/read paths no longer depend on Share.stewards.
-    // The owner embeds the authoritative steward UUIDs in the payload so both
-    // sides use the same id and there are no UNIQUE-constraint collisions.
+    // Prefer embedded UUID `id` when present; otherwise derive a deterministic
+    // `wire_<vaultId>_<slot>_<pubkey>` row id so peers are not silently skipped.
     final embeddedStewards = share.stewards;
     if (embeddedStewards != null && embeddedStewards.isNotEmpty) {
       for (var i = 0; i < embeddedStewards.length; i++) {
         final steward = embeddedStewards[i];
         final pubkey = steward['pubkey'];
-        final stewardId = steward['id'];
-        if (pubkey == null || pubkey.isEmpty || stewardId == null || stewardId.isEmpty) {
+        final name = steward['name'];
+        if (pubkey == null || pubkey.isEmpty || name == null || name.isEmpty) {
           continue;
         }
-        await repository.upsertStewardRow(
-          id: stewardId,
+        final slotZeroBased = _shardSlotZeroBasedFromEmbedded(
+          steward: steward,
+          filteredEnumerationIndex: i,
+          share: share,
+          recipientPubkeyHex: currentPubkey,
+        );
+        final stewardRowId = _resolvedEmbeddedStewardRowId(
           vaultId: vaultId,
-          shareIndex: i + 1, // 1-based in DB
+          steward: steward,
+          slotZeroBased: slotZeroBased,
+        );
+        await repository.upsertStewardRow(
+          id: stewardRowId,
+          vaultId: vaultId,
+          shareIndex: slotZeroBased + 1, // 1-based in DB
           pubkey: pubkey,
-          name: steward['name'],
+          name: name,
           contactInfo: steward['contactInfo'],
           isOwner: pubkey == share.creatorPubkey,
         );
@@ -486,25 +535,44 @@ class VaultShareService {
     // Ensure the recipient's own steward row exists.
     var selfShareIndex = share.shareIndex + 1; // 1-based in DB
     String? selfName;
-    String? selfId;
-    if (currentPubkey != null && embeddedStewards != null) {
+    String? selfResolvedId;
+    if (currentPubkey != null && currentPubkey.isNotEmpty && embeddedStewards != null) {
       for (var i = 0; i < embeddedStewards.length; i++) {
-        if (embeddedStewards[i]['pubkey'] == currentPubkey) {
-          selfShareIndex = i + 1;
-          selfName = embeddedStewards[i]['name'];
-          selfId = embeddedStewards[i]['id'];
+        final row = embeddedStewards[i];
+        if ((row['pubkey'] ?? '') == currentPubkey) {
+          final slotZeroBased = _shardSlotZeroBasedFromEmbedded(
+            steward: row,
+            filteredEnumerationIndex: i,
+            share: share,
+            recipientPubkeyHex: currentPubkey,
+          );
+          selfShareIndex = slotZeroBased + 1;
+          selfName = row['name'];
+          selfResolvedId = _resolvedEmbeddedStewardRowId(
+            vaultId: vaultId,
+            steward: row,
+            slotZeroBased: slotZeroBased,
+          );
           break;
         }
       }
     }
-    if (selfId != null && selfId.isNotEmpty) {
+
+    if (currentPubkey != null && currentPubkey.isNotEmpty) {
+      final fallbackSlot = share.shareIndex;
+      final idForSelf = selfResolvedId ??
+          _resolvedEmbeddedStewardRowId(
+            vaultId: vaultId,
+            steward: {'pubkey': currentPubkey},
+            slotZeroBased: fallbackSlot,
+          );
       await repository.upsertStewardRow(
-        id: selfId,
+        id: idForSelf,
         vaultId: vaultId,
         shareIndex: selfShareIndex,
         pubkey: currentPubkey,
-        name: selfName,
-        isOwner: currentPubkey != null && currentPubkey == share.creatorPubkey,
+        name: selfName ?? 'Unknown',
+        isOwner: currentPubkey == share.creatorPubkey,
       );
     }
     Log.debug(
@@ -516,5 +584,53 @@ class VaultShareService {
     // steward bootstrap rows stay at threshold/total_shares = 0 (no
     // BackupConfig), and hydrated Vault.shares fail Share.isValid.
     await repository.mergeVaultRowFromIncomingShare(vaultId, share);
+    await _inferOwnerSelfStewardAckIfEmbeddedListsOwner(vaultId, share);
+  }
+
+  /// When the wire payload lists the vault owner as an embedded steward,
+  /// treat them as acknowledged for [Share.distributionVersion] without a
+  /// separate ack event id ([acknowledgmentEventId] stays null). Uses a
+  /// synthetic non-empty `giftWrapEventId` so `distribution_shares` rows (NOT
+  /// NULL `gift_wrap_event_id`) can be written for the owner.
+  ///
+  /// Skips when [mergeVaultRowFromIncomingShare] left the vault on a newer
+  /// distribution version than this share (stale ingest).
+  Future<void> _inferOwnerSelfStewardAckIfEmbeddedListsOwner(
+    String vaultId,
+    Share share,
+  ) async {
+    const syntheticPrefix = 'owner-self-steward-inferred';
+    final ownerPk = share.creatorPubkey;
+    final embedded = share.stewards;
+    if (embedded == null || embedded.isEmpty) return;
+
+    final ownerListed = embedded.any((m) => (m['pubkey'] ?? '') == ownerPk);
+    if (!ownerListed) return;
+
+    final shareDist = share.distributionVersion ?? 0;
+    final vault = await repository.getVault(vaultId);
+    final vaultDist = vault?.backupConfig?.distributionVersion;
+    if (vault == null || vaultDist == null) return;
+    if (shareDist != vaultDist) return;
+
+    final syntheticGiftWrapId = '$syntheticPrefix:$vaultId:v$shareDist';
+
+    try {
+      await repository.updateStewardStatus(
+        vaultId: vaultId,
+        pubkey: ownerPk,
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now(),
+        acknowledgmentEventId: null,
+        acknowledgedDistributionVersion: shareDist,
+        giftWrapEventId: syntheticGiftWrapId,
+      );
+    } catch (e, st) {
+      Log.warning(
+        '_inferOwnerSelfStewardAckIfEmbeddedListsOwner failed for vault $vaultId',
+        e,
+        st,
+      );
+    }
   }
 }

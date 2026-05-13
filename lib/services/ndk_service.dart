@@ -66,15 +66,21 @@ class RecoveryResponseEvent {
   });
 }
 
-// Provider for NdkService
+// Provider for NdkService.
+//
+// Watches [appDatabaseProvider] (and [processedNostrEventStoreProvider]) so a
+// logout-driven invalidation rebuilds NdkService against the fresh DB
+// instead of holding the closed handle from the previous session. The
+// invitation service stays behind a lazy callback to avoid a circular
+// dependency (InvitationService also depends on NdkService).
 final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
-  final loginService = ref.read(loginServiceProvider);
-  final processedEventStore = ref.read(processedNostrEventStoreProvider);
+  final loginService = ref.watch(loginServiceProvider);
+  final processedEventStore = ref.watch(processedNostrEventStoreProvider);
   final service = NdkService(
     ref: ref,
     loginService: loginService,
     processedEventStore: processedEventStore,
-    database: ref.read(appDatabaseProvider),
+    database: ref.watch(appDatabaseProvider),
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
 

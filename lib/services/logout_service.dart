@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
+import '../database/connection.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'login_service.dart';
@@ -7,17 +10,24 @@ import 'logger.dart';
 import 'processed_nostr_event_store.dart';
 import 'recovery_service.dart';
 import 'relay_scan_service.dart';
+import 'secure_storage_corruption.dart';
 import 'vault_share_service.dart';
 
 /// Service responsible for performing logout cleanup across data stores.
+///
+/// Every dependency is watched so that an [appDatabaseProvider] invalidation
+/// rebuilds this service against the new DB-backed services. Otherwise the
+/// next logout in the same session would still hold the previous database's
+/// repositories and either crash on access or wipe the wrong instance.
 final logoutServiceProvider = Provider<LogoutService>((ref) {
   return LogoutService(
-    vaultRepository: ref.read(vaultRepositoryProvider),
-    vaultShareService: ref.read(vaultShareServiceProvider),
-    recoveryService: ref.read(recoveryServiceProvider),
-    relayScanService: ref.read(relayScanServiceProvider),
-    loginService: ref.read(loginServiceProvider),
-    processedNostrEventStore: ref.read(processedNostrEventStoreProvider),
+    vaultRepository: ref.watch(vaultRepositoryProvider),
+    vaultShareService: ref.watch(vaultShareServiceProvider),
+    recoveryService: ref.watch(recoveryServiceProvider),
+    relayScanService: ref.watch(relayScanServiceProvider),
+    loginService: ref.watch(loginServiceProvider),
+    processedNostrEventStore: ref.watch(processedNostrEventStoreProvider),
+    appDatabase: ref.watch(appDatabaseProvider),
   );
 });
 
@@ -28,20 +38,38 @@ class LogoutService {
   final RelayScanService _relayScanService;
   final LoginService _loginService;
   final ProcessedNostrEventStore _processedNostrEventStore;
+  final AppDatabase _appDatabase;
+  final Future<void> Function() _deleteDatabaseFiles;
+  final Future<void> Function() _clearSharedPreferences;
+  final Future<void> Function() _clearSecureStorage;
 
-  const LogoutService({
+  LogoutService({
     required VaultRepository vaultRepository,
     required VaultShareService vaultShareService,
     required RecoveryService recoveryService,
     required RelayScanService relayScanService,
     required LoginService loginService,
     required ProcessedNostrEventStore processedNostrEventStore,
+    required AppDatabase appDatabase,
+    Future<void> Function()? deleteDatabaseFiles,
+    Future<void> Function()? clearSharedPreferences,
+    Future<void> Function()? clearSecureStorage,
   })  : _vaultRepository = vaultRepository,
         _vaultShareService = vaultShareService,
         _recoveryService = recoveryService,
         _relayScanService = relayScanService,
         _loginService = loginService,
-        _processedNostrEventStore = processedNostrEventStore;
+        _processedNostrEventStore = processedNostrEventStore,
+        _appDatabase = appDatabase,
+        _deleteDatabaseFiles = deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles,
+        _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
+        _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe;
+
+  // TODO(hvc-2em): Remove once VaultShareService recovery_shard_data is migrated to drift.
+  static Future<void> _clearAllSharedPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
 
   Future<void> logout() async {
     Log.info('LogoutService: clearing all vault data and keys');
@@ -68,17 +96,39 @@ class LogoutService {
       Log.error('Error clearing processed Nostr event store during logout', e, st);
       // Don't throw - keep going so the rest of logout can complete
     }
-    await _loginService.clearStoredKeys();
-
-    // Clear all SharedPreferences to ensure complete cleanup
-    // This removes any leftover vault files or other data from the previous account
+    // Clear primary key material first so LoginService's in-memory cache is also reset.
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      Log.info('LogoutService: cleared all SharedPreferences');
-    } catch (e) {
-      Log.error('Error clearing SharedPreferences during logout', e);
-      // Don't throw - we've already cleared the main data stores
+      await _loginService.clearStoredKeys();
+    } catch (e, st) {
+      Log.error('Error clearing login keys during logout', e, st);
+    }
+
+    // Close drift before deleting SQLite files to avoid locked-file races.
+    try {
+      await _appDatabase.close();
+    } catch (e, st) {
+      Log.error('Error closing app database during logout', e, st);
+    }
+
+    try {
+      await _deleteDatabaseFiles();
+      Log.info('LogoutService: deleted SQLCipher database files');
+    } catch (e, st) {
+      Log.error('Error deleting SQLCipher files during logout', e, st);
+    }
+
+    try {
+      await _clearSharedPreferences();
+      Log.info('LogoutService: cleared SharedPreferences');
+    } catch (e, st) {
+      Log.error('Error clearing SharedPreferences during logout', e, st);
+    }
+
+    try {
+      await _clearSecureStorage();
+      Log.info('LogoutService: cleared secure storage');
+    } catch (e, st) {
+      Log.error('Error clearing secure storage during logout', e, st);
     }
 
     Log.info('LogoutService: logout completed');

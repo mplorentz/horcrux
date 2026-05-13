@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart';
@@ -20,16 +21,22 @@ import 'vault_share_service.dart';
 import 'logger.dart';
 
 /// Provider for RecoveryService
-/// This service depends on VaultRepository for recovery operations
+/// This service depends on VaultRepository for recovery operations.
+///
+/// Watches every provider that holds a long-lived DB-backed reference so
+/// that invalidating [appDatabaseProvider] on logout cascades through and
+/// rebuilds this service against the fresh database. NdkService stays read
+/// (not watched) to avoid a circular dependency between the two.
 final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryService>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
-  final backupService = ref.read(backupServiceProvider);
+  final backupService = ref.watch(backupServiceProvider);
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
-  final vaultShareService = ref.read(vaultShareServiceProvider);
-  final processedStore = ref.read(processedNostrEventStoreProvider);
-  final localNotifications = ref.read(localNotificationServiceProvider);
-  final notificationService = ref.read(horcruxNotificationServiceProvider);
+  final vaultShareService = ref.watch(vaultShareServiceProvider);
+  final processedStore = ref.watch(processedNostrEventStoreProvider);
+  final localNotifications = ref.watch(localNotificationServiceProvider);
+  final notificationService = ref.watch(horcruxNotificationServiceProvider);
+  final database = ref.watch(appDatabaseProvider);
   final service = RecoveryService(
     repository,
     backupService,
@@ -38,6 +45,7 @@ final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryServi
     processedStore,
     localNotifications,
     notificationService,
+    database,
   );
 
   // Clean up streams when disposed
@@ -58,8 +66,7 @@ class RecoveryService {
   final ProcessedNostrEventStore _processedStore;
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notificationService;
-
-  static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
+  final AppDatabase _database;
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
@@ -94,6 +101,7 @@ class RecoveryService {
     this._processedStore,
     this._localNotifications,
     this._notificationService,
+    this._database,
   ) {
     _loadViewedNotificationIds();
   }
@@ -116,7 +124,7 @@ class RecoveryService {
     }
 
     try {
-      await getFirstAppOpenUtc();
+      await getFirstAppOpenUtc(database: _database);
       await _processedStore.ensureLoaded();
       await _loadViewedNotificationIds();
     } catch (e) {
@@ -138,17 +146,8 @@ class RecoveryService {
 
   /// Load viewed notification IDs from storage
   Future<void> _loadViewedNotificationIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_viewedNotificationIdsKey);
-
-    if (jsonData == null || jsonData.isEmpty) {
-      _viewedNotificationIds = {};
-      return;
-    }
-
     try {
-      final List<dynamic> jsonList = json.decode(jsonData);
-      _viewedNotificationIds = Set<String>.from(jsonList);
+      _viewedNotificationIds = (await _database.appStateDao.viewedNotificationIds()).toSet();
       Log.info(
         'Loaded ${_viewedNotificationIds!.length} viewed notification IDs from storage',
       );
@@ -165,12 +164,8 @@ class RecoveryService {
     }
 
     try {
-      final jsonList = _viewedNotificationIds!.toList();
-      final jsonString = json.encode(jsonList);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_viewedNotificationIdsKey, jsonString);
-      Log.info('Saved ${jsonList.length} viewed notification IDs to storage');
+      await _database.appStateDao.replaceViewedNotificationIds(_viewedNotificationIds!);
+      Log.info('Saved ${_viewedNotificationIds!.length} viewed notification IDs to storage');
     } catch (e) {
       Log.error('Error saving viewed notification IDs', e);
       throw Exception('Failed to save viewed notification IDs: $e');
@@ -192,7 +187,7 @@ class RecoveryService {
   /// does not surface historical requests as pending).
   Future<List<RecoveryRequest>> _pendingRecoveryRequests() async {
     await initialize();
-    final firstOpen = await getFirstAppOpenUtc();
+    final firstOpen = await getFirstAppOpenUtc(database: _database);
     final currentPubkey = await _ndkService.getCurrentPubkey();
     final allRequests = await repository.getAllRecoveryRequests();
 
@@ -473,7 +468,7 @@ class RecoveryService {
 
     if (!allowLocalNotification) return;
 
-    final firstOpen = await getFirstAppOpenUtc();
+    final firstOpen = await getFirstAppOpenUtc(database: _database);
     final myPubkey = await _ndkService.getCurrentPubkey();
     if (RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
       request,
@@ -645,7 +640,7 @@ class RecoveryService {
     await _emitNotificationUpdate();
 
     if (recoveryResponseSourceEvent != null && allowLocalNotification) {
-      final firstOpen = await getFirstAppOpenUtc();
+      final firstOpen = await getFirstAppOpenUtc(database: _database);
       final myPubkey = await _ndkService.getCurrentPubkey();
       if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(
         responseCreatedAt: recoveryResponseSourceEvent.createdAt,
@@ -1209,8 +1204,7 @@ class RecoveryService {
   /// Clear all recovery requests (for testing)
   Future<void> clearAll() async {
     _viewedNotificationIds = {};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_viewedNotificationIdsKey);
+    await _database.appStateDao.clearViewedNotificationIds();
     _isInitialized = false;
     _notificationController.add([]);
     Log.info('Cleared all recovery request notifications');

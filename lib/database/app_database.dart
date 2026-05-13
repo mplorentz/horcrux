@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'connection.dart';
+import 'daos/app_state_dao.dart';
 import 'daos/distribution_dao.dart';
 import 'daos/held_share_dao.dart';
 import 'daos/invitation_dao.dart';
@@ -15,6 +16,7 @@ import 'tables/distribution_shares.dart';
 import 'tables/distributions.dart';
 import 'tables/held_shares.dart';
 import 'tables/invitations.dart';
+import 'tables/kv.dart';
 import 'tables/outbox.dart';
 import 'tables/outbox_relays.dart';
 import 'tables/owned_vaults.dart';
@@ -22,12 +24,14 @@ import 'tables/recovery_request_participants.dart';
 import 'tables/recovery_requests.dart';
 import 'tables/recovery_responses.dart';
 import 'tables/stewards.dart';
+import 'tables/synced_consents.dart';
 import 'tables/vault_relays.dart';
 import 'tables/vaults.dart';
+import 'tables/viewed_notifications.dart';
 
 part 'app_database.g.dart';
 
-/// Schema version 4 — corresponds to `drift_schemas/drift_schema_v4.json`.
+/// Schema version 5 — corresponds to `drift_schemas/drift_schema_v5.json`.
 ///
 /// **v2**: Adds `held_shares` (and indexes) on upgrade for databases that were
 /// created at v1 before the Phase 2a table landed; those files kept
@@ -39,6 +43,10 @@ part 'app_database.g.dart';
 ///
 /// **v4**: `invitations` gains `vault_id` and nullable `steward_id` for
 /// invitee-side rows and vault-scoped listing.
+///
+/// **v5**: Adds app-state tables (`kv`, `viewed_notifications`,
+/// `synced_consents`) used to move remaining SharedPreferences-backed runtime
+/// state into SQLCipher.
 ///
 /// Any further change to any [Table] that affects the SQL schema MUST bump
 /// [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a new
@@ -60,6 +68,9 @@ part 'app_database.g.dart';
     RecoveryResponses,
     Outbox,
     OutboxRelays,
+    Kv,
+    ViewedNotifications,
+    SyncedConsents,
   ],
   daos: [
     VaultDao,
@@ -71,6 +82,7 @@ part 'app_database.g.dart';
     HeldShareDao,
     RecoveryDao,
     OutboxDao,
+    AppStateDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -83,7 +95,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   Future<void> _createPhase3Indexes() async {
     await customStatement(
@@ -245,6 +257,29 @@ class AppDatabase extends _$AppDatabase {
             // indexes exist after this block.
             await _createPhase3Indexes();
             await _createPhase4InvitationIndexes();
+          }
+          if (from < 5) {
+            Future<void> createIfMissing(
+              String tableName,
+              Future<void> Function() create,
+            ) async {
+              final exists = await customSelect(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '$tableName' LIMIT 1",
+              ).get();
+              if (exists.isEmpty) {
+                await create();
+              }
+            }
+
+            await createIfMissing('kv', () => m.createTable(kv));
+            await createIfMissing(
+              'viewed_notifications',
+              () => m.createTable(viewedNotifications),
+            );
+            await createIfMissing(
+              'synced_consents',
+              () => m.createTable(syncedConsents),
+            );
           }
         },
         beforeOpen: (details) async {
