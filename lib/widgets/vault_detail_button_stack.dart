@@ -169,12 +169,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   }
 
                   // Practice Recovery Button (only for owners)
-                  // Only show if all stewards are holding the current key
+                  // Always shown when the owner has vault content (OwnedVaultDetail)
+                  // so they can practice the recovery flow. When the owner has
+                  // deleted content (StewardedVaultDetail), only show practice if all
+                  // stewards are holding the current key so the practice is meaningful.
                   final backupConfig = vault.backupConfig;
                   final allStewardsHoldingCurrentKey =
                       backupConfig?.allStewardsHoldingCurrentKey ?? false;
+                  final ownerHasContent = vault is OwnedVaultDetail;
 
-                  if (allStewardsHoldingCurrentKey) {
+                  if (ownerHasContent || allStewardsHoldingCurrentKey) {
                     if (myActivePracticeRecovery != null) {
                       // Show "Manage Practice Recovery" if THIS user has an active
                       // practice session of their own. Other users' practice sessions
@@ -248,10 +252,13 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 // start a real recovery when you have shards but no content. Managing
                 // an existing recovery is handled in the owner block above so it
                 // survives the owner adding content back mid-recovery.
+                // Never show Initiate Recovery when the owner still has vault
+                // contents — they should use Practice Recovery instead.
+                final ownerHasOwnedContent = vault is OwnedVaultDetail;
                 final isOwnerSteward =
                     isVaultOwner && vault is StewardedVaultDetail && vault.latestShare != null;
 
-                if (isOwnerSteward && showInitiateRealRecovery) {
+                if (isOwnerSteward && showInitiateRealRecovery && !ownerHasOwnedContent) {
                   buttons.add(
                     RowButtonConfig(
                       onPressed: () => _initiateRecovery(context, ref, vaultId),
