@@ -71,6 +71,12 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 // instead. The service would reject the call anyway.
                 final showInitiateRealRecovery = !hasMyInFlightRecovery;
 
+                // Any in-flight recovery on the vault (any initiator, practice or real)
+                // blocks owner edits that redistribute shards. Stewards must not be asked
+                // to release old shards while simultaneously receiving new ones.
+                // (bug horcrux_app-3u7).
+                final vaultHasActiveRecovery = vault.hasActiveRecovery;
+
                 // View Instructions Button (only show for stewards)
                 if (isSteward) {
                   final instructions = _getInstructions(vault);
@@ -95,6 +101,10 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   buttons.add(
                     RowButtonConfig(
                       onPressed: () {
+                        if (vaultHasActiveRecovery) {
+                          _showRecoveryInProgressDialog(context);
+                          return;
+                        }
                         if (hasContent) {
                           // Edit existing content
                           Navigator.push(
@@ -127,21 +137,27 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   );
 
                   // Recovery Plan Section - only allow if vault has content
+                  // and no recovery is in progress (an in-flight recovery would race
+                  // with key redistribution; horcrux_app-3u7).
                   buttons.add(
                     RowButtonConfig(
-                      onPressed: hasContent
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => BackupConfigScreen(vaultId: vaultId),
-                                ),
-                              );
-                            }
-                          : () {
-                              // Show dialog offering to create content first
-                              _showNoContentDialog(context, ref, vaultId);
-                            },
+                      onPressed: () {
+                        if (vaultHasActiveRecovery) {
+                          _showRecoveryInProgressDialog(context);
+                          return;
+                        }
+                        if (hasContent) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BackupConfigScreen(vaultId: vaultId),
+                            ),
+                          );
+                        } else {
+                          // Show dialog offering to create content first
+                          _showNoContentDialog(context, ref, vaultId);
+                        }
+                      },
                       icon: Icons.settings,
                       text: 'Change Recovery Plan',
                     ),
@@ -456,6 +472,39 @@ class VaultDetailButtonStack extends ConsumerWidget {
         }
       }
     }
+  }
+
+  /// Show dialog when the owner taps an edit action while a recovery (practice
+  /// or real, any initiator) is in progress on the vault. Both "Change Vault
+  /// Contents" and "Change Recovery Plan" trigger key redistribution, which
+  /// races with the in-flight recovery -- stewards would be asked to release
+  /// old shards while simultaneously receiving new ones (horcrux_app-3u7).
+  Future<void> _showRecoveryInProgressDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recovery in progress'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A recovery is currently in progress for this vault.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'You can\'t change the vault contents or the recovery plan until the recovery finishes or is cancelled, because doing so would distribute new keys to stewards while they\'re still processing the existing recovery request.',
+            ),
+            SizedBox(height: 12),
+            Text('Use "Manage Recovery" to finish or cancel the recovery first.'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
   }
 
   /// Show dialog when trying to change recovery plan without content
