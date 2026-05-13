@@ -17,9 +17,9 @@ enum NostrKind {
   /// as `Authorization: Nostr <base64>`.
   httpAuth(27235),
 
-  /// Horcrux custom: Shard data distribution
+  /// Horcrux custom: Share distribution (Nostr kind 1337; internal name only).
   /// Used to distribute Shamir secret shares to stewards
-  shardData(1337),
+  shareData(1337),
 
   /// Horcrux custom: Recovery request
   /// Used when a user initiates vault recovery
@@ -37,13 +37,13 @@ enum NostrKind {
   /// Used when an invitee denies an invitation link
   invitationDenial(1341),
 
-  /// Horcrux custom: Shard confirmation
-  /// Used when a steward confirms successful receipt of a shard
-  shardConfirmation(1342),
+  /// Horcrux custom: Share confirmation (kind 1342).
+  /// Used when a steward confirms successful receipt of share material
+  shareConfirmation(1342),
 
-  /// Horcrux custom: Shard error
-  /// Used when a steward reports an error processing a shard
-  shardError(1343),
+  /// Horcrux custom: Share error (kind 1343).
+  /// Used when a steward reports an error processing share material
+  shareError(1343),
 
   /// Horcrux custom: Invitation invalid
   /// Used to notify invitee that an invitation code is invalid

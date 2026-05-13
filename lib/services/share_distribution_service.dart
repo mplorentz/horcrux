@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../models/backup_config.dart';
 import '../models/nostr_kinds.dart';
-import '../models/shard_event.dart';
-import '../models/shard_data.dart';
+import '../models/share_event.dart';
+import '../models/share.dart';
 import '../models/steward_status.dart';
 import '../models/event_status.dart';
 import '../providers/vault_provider.dart';
@@ -15,66 +15,73 @@ import 'login_service.dart';
 import 'ndk_service.dart';
 import 'logger.dart';
 
-/// Provider for ShardDistributionService
-final Provider<ShardDistributionService> shardDistributionServiceProvider =
-    Provider<ShardDistributionService>((ref) {
-  return ShardDistributionService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(loginServiceProvider),
+/// Provider for [ShareDistributionService]
+final Provider<ShareDistributionService> shareDistributionServiceProvider =
+    Provider<ShareDistributionService>((ref) {
+  // Watching repository and notification providers ensures that invalidating
+  // [appDatabaseProvider] (logout) cascades through and rebuilds this service
+  // against the fresh database.
+  //
+  // Use ref.read() for NdkService to break circular dependency: NdkService
+  // calls _ref.read(shareDistributionServiceProvider) from _handleShareConfirmation;
+  // watching ndk here would throw CircularDependencyError during that read.
+  return ShareDistributionService(
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(loginServiceProvider),
     ref.read(ndkServiceProvider),
-    ref.read(horcruxNotificationServiceProvider),
+    ref.watch(horcruxNotificationServiceProvider),
   );
 });
 
-/// Service for distributing shards to stewards via Nostr
-class ShardDistributionService {
+/// Service for distributing Shamir shares to stewards via Nostr
+class ShareDistributionService {
   final VaultRepository _repository;
   final LoginService _loginService;
   final NdkService _ndkService;
   final HorcruxNotificationService _notificationService;
 
-  ShardDistributionService(
+  ShareDistributionService(
     this._repository,
     this._loginService,
     this._ndkService,
     this._notificationService,
   );
 
-  /// Distribute shards to all stewards
-  Future<List<ShardEvent>> distributeShards({
+  /// Distribute shares to all stewards
+  Future<List<ShareEvent>> distributeShares({
     required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
-    required List<ShardData> shards,
+    required List<Share> shares,
   }) async {
     try {
-      if (shards.length != config.totalKeys) {
-        throw ArgumentError('Number of shards must equal totalKeys');
+      if (shares.length != config.totalKeys) {
+        throw ArgumentError('Number of shares must equal totalKeys');
       }
 
-      final shardEvents = <ShardEvent>[];
+      final shareEvents = <ShareEvent>[];
 
-      for (int i = 0; i < shards.length; i++) {
-        final shard = shards[i];
+      for (int i = 0; i < shares.length; i++) {
+        final share = shares[i];
         final keyHolder = config.stewards[i];
 
         // Skip stewards without pubkeys (invited but not yet accepted)
         if (keyHolder.pubkey == null) {
           Log.info(
-            'Skipping shard distribution to steward ${keyHolder.name ?? keyHolder.id} - no pubkey yet (invited)',
+            'Skipping share distribution to steward ${keyHolder.name ?? keyHolder.id} - no pubkey yet (invited)',
           );
           continue;
         }
 
         try {
-          // Update shard with relay URLs and distribution version from backup config
-          final shardWithRelays = shard.copyWith(
+          // Update share with relay URLs and distribution version from backup config
+          final shareWithRelays = share.copyWith(
             relayUrls: config.relays,
             distributionVersion: config.distributionVersion,
           );
 
-          // Create shard data JSON
-          final shardJson = shardDataToJson(shardWithRelays);
-          final shardString = json.encode(shardJson);
+          // Nostr payload JSON (wire keys remain shard_* — see [shareToJson])
+          final shareJson = shareToJson(shareWithRelays);
+          final shareString = json.encode(shareJson);
 
           Log.debug('recipient pubkey: ${keyHolder.pubkey}');
 
@@ -82,12 +89,12 @@ class ShardDistributionService {
           // wrap so we can pipe it to [tryPushForEvent] below without
           // rebuilding it.
           final publishedEvent = await _ndkService.publishEncryptedEvent(
-            content: shardString,
-            kind: NostrKind.shardData.value,
+            content: shareString,
+            kind: NostrKind.shareData.value,
             recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
             relays: config.relays,
             tags: [
-              ['d', 'shard_${config.vaultId}_$i'], // Distinguisher tag
+              ['d', 'shard_${config.vaultId}_$i'], // Wire distinguisher (stable)
               ['backup_config_id', config.vaultId],
               ['shard_index', i.toString()],
             ],
@@ -95,7 +102,7 @@ class ShardDistributionService {
           );
 
           if (publishedEvent == null) {
-            throw Exception('Failed to publish shard event');
+            throw Exception('Failed to publish share event');
           }
           final eventId = publishedEvent.id;
 
@@ -107,24 +114,27 @@ class ShardDistributionService {
             if (vault != null) {
               await _notificationService.tryPushForEvent(
                 event: publishedEvent,
-                kind: NostrKind.shardData,
+                kind: NostrKind.shareData,
                 vault: vault,
                 relayHints: config.relays,
               );
             }
           }
 
-          // If this is the owner's own shard, immediately store it locally and acknowledge it
+          // If this is the owner's own share, immediately store it locally and acknowledge it
           if (keyHolder.pubkey == ownerPubkey && keyHolder.isOwner) {
             try {
-              // Update shard with event ID and recipient pubkey
-              final shardWithEventId = shardWithRelays.copyWith(
+              // Update share with event ID and recipient pubkey
+              final shareWithEventId = shareWithRelays.copyWith(
                 nostrEventId: eventId,
                 recipientPubkey: ownerPubkey,
               );
 
-              // Store shard locally
-              await _repository.addShardToVault(config.vaultId, shardWithEventId);
+              // Store share locally (same persistence model as steward-held keys).
+              await _repository.addShareToVault(
+                config.vaultId,
+                shareWithEventId,
+              );
 
               // Immediately acknowledge with current distribution version
               await _repository.updateStewardStatus(
@@ -132,66 +142,85 @@ class ShardDistributionService {
                 pubkey: ownerPubkey,
                 status: StewardStatus.holdingKey,
                 acknowledgedAt: DateTime.now(),
-                acknowledgmentEventId: eventId, // Use shard event ID as acknowledgment
+                // Owner self-steward: provenance is distribution version + outbound
+                // wrap id only — no separate ack event id (stewards infer the same).
+                acknowledgmentEventId: null,
                 acknowledgedDistributionVersion: config.distributionVersion,
+                giftWrapEventId: eventId,
               );
 
-              Log.info('Owner shard stored locally and acknowledged immediately');
+              Log.info(
+                'Owner share stored locally and acknowledged immediately',
+              );
             } catch (e) {
-              Log.error('Failed to store and acknowledge owner shard locally', e);
-              // Continue - shard was still published to Nostr
+              Log.error(
+                'Failed to store and acknowledge owner share locally',
+                e,
+              );
+              // Continue - share was still published to Nostr
             }
+          } else {
+            // Record publish so [BackupConfig.needsRedistribution] can tell "awaiting
+            // steward acknowledgment" apart from "owner still needs to send".
+            await _repository.updateStewardStatus(
+              vaultId: config.vaultId,
+              pubkey: keyHolder.pubkey!,
+              status: keyHolder.status,
+              giftWrapEventId: eventId,
+            );
           }
 
-          // Create ShardEvent record
-          final shardEvent = createShardEvent(
+          // Create ShareEvent record
+          final shareEvent = createShareEvent(
             eventId: eventId,
             recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
-            encryptedContent: shardString, // Store original content for reference
+            encryptedContent: shareString, // Store original content for reference
             backupConfigId: config.vaultId,
-            shardIndex: i,
+            shareIndex: i,
           );
 
           // Update status to published
-          final publishedShardEvent = copyShardEvent(
-            shardEvent,
+          final publishedShareEvent = copyShareEvent(
+            shareEvent,
             publishedAt: DateTime.now(),
             status: EventStatus.published,
           );
 
-          shardEvents.add(publishedShardEvent);
-          Log.info('Distributed shard $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}');
+          shareEvents.add(publishedShareEvent);
+          Log.info(
+            'Distributed share $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}',
+          );
         } catch (e) {
           Log.error(
-            'Failed to distribute shard $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}',
+            'Failed to distribute share $i to ${keyHolder.npub ?? keyHolder.name ?? keyHolder.id}',
             e,
           );
-          // Continue with other shards even if one fails
+          // Continue with other shares even if one fails
         }
       }
 
-      return shardEvents;
+      return shareEvents;
     } catch (e) {
-      Log.error('Error distributing shards', e);
-      throw Exception('Failed to distribute shards: $e');
+      Log.error('Error distributing shares', e);
+      throw Exception('Failed to distribute shares: $e');
     }
   }
 
   /// Check distribution status and update steward statuses
   Future<void> updateDistributionStatus({
     required String vaultId,
-    required List<ShardEvent> shardEvents,
+    required List<ShareEvent> shareEvents,
   }) async {
     try {
       final ndk = await _ndkService.getNdk();
 
-      for (final shardEvent in shardEvents) {
+      for (final shareEvent in shareEvents) {
         try {
           // Query for acknowledgment events (kind 1059) from the recipient
           final filter = Filter(
             kinds: [1059], // Gift wrap events
-            authors: [shardEvent.recipientPubkey], // Hex format
-            since: shardEvent.createdAt.secondsSinceEpoch,
+            authors: [shareEvent.recipientPubkey], // Hex format
+            since: shareEvent.createdAt.secondsSinceEpoch,
           );
 
           final acknowledgmentResponse = ndk.requests.query(filters: [filter]);
@@ -224,7 +253,7 @@ class ShardDistributionService {
             // Update steward status to holdingKey (confirmed receipt)
             await _repository.updateStewardStatus(
               vaultId: vaultId,
-              pubkey: shardEvent.recipientPubkey, // Hex format
+              pubkey: shareEvent.recipientPubkey, // Hex format
               status: StewardStatus.holdingKey,
               acknowledgedAt: DateTime.now(),
               acknowledgmentEventId: acknowledgmentEventId,
@@ -234,13 +263,16 @@ class ShardDistributionService {
             // Update steward status to awaitingKey (published but not acknowledged)
             await _repository.updateStewardStatus(
               vaultId: vaultId,
-              pubkey: shardEvent.recipientPubkey, // Hex format
+              pubkey: shareEvent.recipientPubkey, // Hex format
               status: StewardStatus.awaitingKey,
             );
           }
         } catch (e) {
-          Log.error('Failed to check acknowledgment for shard ${shardEvent.shardIndex}', e);
-          // Continue with other shards even if one fails
+          Log.error(
+            'Failed to check acknowledgment for share ${shareEvent.shareIndex}',
+            e,
+          );
+          // Continue with other shares even if one fails
         }
       }
     } catch (e) {
@@ -249,43 +281,52 @@ class ShardDistributionService {
     }
   }
 
-  /// Processes shard confirmation event received from steward
+  /// Processes share confirmation event received from steward (kind 1342).
   ///
-  /// Decrypts event content using NIP-44.
-  /// Validates vault ID and shard index.
+  /// Validates vault ID and share index from tags ([shard_index] on wire).
   /// Updates steward status to "holding key".
-  /// Updates last acknowledgment timestamp.
-  Future<void> processShardConfirmationEvent({required Nip01Event event}) async {
+  Future<void> processShareConfirmationEvent({
+    required Nip01Event event,
+  }) async {
     // Validate event kind
-    if (event.kind != NostrKind.shardConfirmation.value) {
+    if (event.kind != NostrKind.shareConfirmation.value) {
       throw ArgumentError(
-        'Invalid event kind: expected ${NostrKind.shardConfirmation.value}, got ${event.kind}',
+        'Invalid event kind: expected ${NostrKind.shareConfirmation.value}, got ${event.kind}',
       );
     }
 
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process shard confirmation event.');
+      throw Exception(
+        'No key pair available. Cannot process share confirmation event.',
+      );
     }
 
-    // Extract vault ID, shard index, and distribution version from tags
+    // Extract vault ID, share index, and distribution version from tags
     // All confirmation data is stored in tags (no content)
     final vaultId = _extractTagValue(event.tags, 'vault_id');
-    final shardIndexStr = _extractTagValue(event.tags, 'shard_index');
-    final distributionVersionStr = _extractTagValue(event.tags, 'distribution_version');
+    final shareIndexStr = _extractTagValue(event.tags, 'shard_index');
+    final distributionVersionStr = _extractTagValue(
+      event.tags,
+      'distribution_version',
+    );
 
     if (vaultId == null) {
-      throw ArgumentError('Missing vault_id tag in shard confirmation event');
+      throw ArgumentError('Missing vault_id tag in share confirmation event');
     }
 
-    if (shardIndexStr == null) {
-      throw ArgumentError('Missing shard_index tag in shard confirmation event');
+    if (shareIndexStr == null) {
+      throw ArgumentError(
+        'Missing shard_index tag in share confirmation event',
+      );
     }
 
-    final shardIndex = int.tryParse(shardIndexStr);
-    if (shardIndex == null) {
-      throw ArgumentError('Invalid shard index in shard confirmation event: $shardIndexStr');
+    final shareIndex = int.tryParse(shareIndexStr);
+    if (shareIndex == null) {
+      throw ArgumentError(
+        'Invalid share index in share confirmation event: $shareIndexStr',
+      );
     }
 
     final distributionVersion =
@@ -303,51 +344,52 @@ class ShardDistributionService {
     );
 
     Log.info(
-      'Processed shard confirmation event for vault $vaultId, shard $shardIndex from steward $keyHolderPubkey',
+      'Processed share confirmation event for vault $vaultId, share $shareIndex from steward $keyHolderPubkey',
     );
   }
 
-  /// Processes shard error event received from steward
+  /// Processes share error event received from steward (kind 1343).
   ///
-  /// Decrypts event content using NIP-44.
-  /// Validates vault ID and shard index.
-  /// Updates steward status to "error".
-  /// Logs error details.
-  Future<void> processShardErrorEvent({required Nip01Event event}) async {
+  /// Wire tags keep historical names (`shard`, `shard_index` in payload).
+  Future<void> processShareErrorEvent({required Nip01Event event}) async {
     // Validate event kind
-    if (event.kind != NostrKind.shardError.value) {
+    if (event.kind != NostrKind.shareError.value) {
       throw ArgumentError(
-        'Invalid event kind: expected ${NostrKind.shardError.value}, got ${event.kind}',
+        'Invalid event kind: expected ${NostrKind.shareError.value}, got ${event.kind}',
       );
     }
 
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process shard error event.');
+      throw Exception(
+        'No key pair available. Cannot process share error event.',
+      );
     }
 
-    // Extract vault ID and shard index from tags
+    // Extract vault ID and share index from tags (wire `shard` tag)
     final vaultId = _extractTagValue(event.tags, 'vault');
-    final shardIndexStr = _extractTagValue(event.tags, 'shard');
+    final shareIndexStr = _extractTagValue(event.tags, 'shard');
 
     if (vaultId == null) {
-      throw ArgumentError('Missing vault tag in shard error event');
+      throw ArgumentError('Missing vault tag in share error event');
     }
 
-    if (shardIndexStr == null) {
-      throw ArgumentError('Missing shard tag in shard error event');
+    if (shareIndexStr == null) {
+      throw ArgumentError('Missing shard tag in share error event');
     }
 
-    final shardIndex = int.tryParse(shardIndexStr);
-    if (shardIndex == null) {
-      throw ArgumentError('Invalid shard index in shard error event: $shardIndexStr');
+    final shareIndex = int.tryParse(shareIndexStr);
+    if (shareIndex == null) {
+      throw ArgumentError(
+        'Invalid share index in share error event: $shareIndexStr',
+      );
     }
 
     // Verify we're the recipient (p tag should be owner)
     final recipientPubkey = _extractTagValue(event.tags, 'p');
     if (recipientPubkey != ownerPubkey) {
-      throw ArgumentError('Shard error event not addressed to current user');
+      throw ArgumentError('Share error event not addressed to current user');
     }
 
     // Decrypt event content
@@ -358,8 +400,8 @@ class ShardDistributionService {
         senderPubkey: event.pubKey,
       );
     } catch (e) {
-      Log.error('Error decrypting shard error event content', e);
-      throw Exception('Failed to decrypt shard error event content: $e');
+      Log.error('Error decrypting share error event content', e);
+      throw Exception('Failed to decrypt share error event content: $e');
     }
 
     // Parse decrypted JSON
@@ -367,21 +409,21 @@ class ShardDistributionService {
     try {
       payload = jsonDecode(decryptedContent) as Map<String, dynamic>;
     } catch (e) {
-      Log.error('Error parsing shard error event JSON', e);
-      throw Exception('Invalid JSON in shard error event content: $e');
+      Log.error('Error parsing share error event JSON', e);
+      throw Exception('Invalid JSON in share error event content: $e');
     }
 
-    // Validate payload
+    // Validate payload (wire keys remain snake_case shard_* )
     final payloadVaultId = payload['vault_id'] as String?;
-    final payloadShardIndex = payload['shard_index'] as int?;
+    final payloadShareIndex = payload['shard_index'] as int?;
     final error = payload['error'] as String? ?? 'Unknown error';
 
     if (payloadVaultId != vaultId) {
-      throw ArgumentError('Vault ID mismatch in shard error event payload');
+      throw ArgumentError('Vault ID mismatch in share error event payload');
     }
 
-    if (payloadShardIndex != shardIndex) {
-      throw ArgumentError('Shard index mismatch in shard error event payload');
+    if (payloadShareIndex != shareIndex) {
+      throw ArgumentError('Share index mismatch in share error event payload');
     }
 
     // Update steward status to error
@@ -393,7 +435,7 @@ class ShardDistributionService {
     );
 
     Log.error(
-      'Processed shard error event for vault $vaultId, shard $shardIndex from steward $keyHolderPubkey: $error',
+      'Processed share error event for vault $vaultId, share $shareIndex from steward $keyHolderPubkey: $error',
     );
   }
 

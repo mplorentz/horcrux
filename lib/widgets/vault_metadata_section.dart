@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+
+import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'name_label.dart';
@@ -13,7 +14,7 @@ class VaultMetadataSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vaultAsync = ref.watch(vaultProvider(vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return vaultAsync.when(
@@ -84,11 +85,14 @@ class VaultMetadataSection extends ConsumerWidget {
 
   Widget _buildMetadataContent(
     BuildContext context,
-    Vault vault,
+    VaultDetail vault,
     String? currentPubkey,
   ) {
     final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-    final threshold = vault.mostRecentShard?.threshold;
+    final threshold = switch (vault) {
+      StewardedVaultDetail(:final latestShare) => latestShare?.threshold,
+      OwnedVaultDetail() => vault.backupConfig?.threshold,
+    };
     final (ownerText, ownerStyle) = NameLabel.getDisplayContent(
       name: vault.ownerName,
       pubkey: vault.ownerPubkey,

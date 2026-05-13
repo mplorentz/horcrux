@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
@@ -52,73 +50,58 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       // Create a vault with a ready recovery plan
       final vault = Vault(
         id: testVaultId,
         name: 'My Important Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_ready');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error when vault has no recovery plan', (tester) async {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: null, // No recovery plan
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_no_plan');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error when recovery plan is not ready', (tester) async {
@@ -139,31 +122,26 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_not_ready');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows error for non-owner', (tester) async {
@@ -183,7 +161,6 @@ void main() {
       final vault = Vault(
         id: testVaultId,
         name: 'My Vault',
-        content: 'secret content',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
@@ -192,25 +169,21 @@ void main() {
       // User is not the owner
       const nonOwnerPubkey = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(nonOwnerPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_non_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('shows practice recovery with different threshold (3 of 5)', (
@@ -266,41 +239,31 @@ void main() {
       );
 
       // Update status to active and set lastRedistribution
-      backupConfig = copyBackupConfig(
-        backupConfig,
-        status: BackupStatus.active,
-        lastRedistribution: DateTime(2024, 1, 1),
-        distributionVersion: 1,
-      );
+      backupConfig = backupConfig.copyWith(distributionVersion: 1);
 
       final vault = Vault(
         id: testVaultId,
         name: 'High Security Vault',
-        content: 'top secret',
         createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
         backupConfig: backupConfig,
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
         overrides: [
           vaultProvider(testVaultId).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: testVaultId),
-        container: container,
         surfaceSize: const Size(400, 1200),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_3_of_5');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

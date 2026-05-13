@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
-import '../models/backup_status.dart';
 import '../providers/key_provider.dart';
 import '../screens/recovery_status_screen.dart';
 
@@ -40,7 +39,7 @@ class _StatusData {
 /// Banner widget that displays vault recovery readiness status
 /// Shows different messages for owners vs stewards
 class VaultStatusBanner extends ConsumerWidget {
-  final Vault vault;
+  final VaultDetail vault;
 
   const VaultStatusBanner({super.key, required this.vault});
 
@@ -53,7 +52,7 @@ class VaultStatusBanner extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (currentPubkey) {
         final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-        final isSteward = currentPubkey != null && !vault.isVaultOwner(currentPubkey);
+        final isSteward = currentPubkey != null && vault is StewardedVaultDetail;
 
         // Show "Recovery in progress" only when the CURRENT user has their own
         // manageable recovery on this vault. Per-user exclusivity allows other
@@ -92,7 +91,12 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildNormalStatus(BuildContext context, bool isOwner, bool isSteward, Vault vault) {
+  Widget _buildNormalStatus(
+    BuildContext context,
+    bool isOwner,
+    bool isSteward,
+    VaultDetail vault,
+  ) {
     if (isOwner) {
       return _buildOwnerStatus(context, vault);
     } else if (isSteward) {
@@ -114,7 +118,7 @@ class VaultStatusBanner extends ConsumerWidget {
     }
   }
 
-  Widget _buildOwnerStatus(BuildContext context, Vault vault) {
+  Widget _buildOwnerStatus(BuildContext context, VaultDetail vault) {
     final backupConfig = vault.backupConfig;
 
     // No recovery plan
@@ -135,8 +139,8 @@ class VaultStatusBanner extends ConsumerWidget {
 
     // Plan exists but not ready
     if (!backupConfig.isReady) {
-      // Plan is invalid or inactive
-      if (!backupConfig.isValid || backupConfig.status == BackupStatus.inactive) {
+      // Plan is invalid
+      if (!backupConfig.isValid) {
         return _buildBanner(
           context,
           const _StatusData(
@@ -154,7 +158,7 @@ class VaultStatusBanner extends ConsumerWidget {
       // Waiting for stewards to join
       final pendingCount = backupConfig.pendingInvitationsCount;
       final canDistribute = backupConfig.canDistribute;
-      if ((pendingCount > 0 || !canDistribute) && backupConfig.lastRedistribution == null) {
+      if ((pendingCount > 0 || !canDistribute) && !backupConfig.hasBeenDistributed) {
         return _buildBanner(
           context,
           _StatusData(
@@ -172,9 +176,7 @@ class VaultStatusBanner extends ConsumerWidget {
 
       // Keys not distributed
       if (backupConfig.canDistribute &&
-          (backupConfig.needsRedistribution ||
-              backupConfig.hasVersionMismatch ||
-              backupConfig.status == BackupStatus.pending)) {
+          (backupConfig.needsRedistribution || backupConfig.hasVersionMismatch)) {
         return _buildBanner(
           context,
           const _StatusData(
@@ -190,7 +192,7 @@ class VaultStatusBanner extends ConsumerWidget {
       }
 
       // Almost ready - waiting for confirmations
-      if (backupConfig.status == BackupStatus.active &&
+      if (backupConfig.hasBeenDistributed &&
           backupConfig.acknowledgedStewardsCount < backupConfig.threshold) {
         final needed = backupConfig.threshold - backupConfig.acknowledgedStewardsCount;
         return _buildBanner(
@@ -257,56 +259,49 @@ class VaultStatusBanner extends ConsumerWidget {
     );
   }
 
-  Widget _buildStewardStatus(BuildContext context, Vault vault) {
-    // Awaiting key
-    if (vault.state == VaultState.awaitingShard) {
-      return _buildBanner(
-        context,
-        const _StatusData(
-          headline: 'Waiting for your key',
-          subtext:
-              'You\'ve accepted an invitation to this vault. Waiting on the owner to send you your vault key.',
-          icon: Icons.hourglass_empty,
-          accentColor: Color(0xFF7A4A2F), // Umber
-          variant: _StatusVariant.stewardWaitingKey,
-        ),
-        false,
-        true,
-      );
-    }
-
-    // Key holder - stewards have received a shard
+  Widget _buildStewardStatus(BuildContext context, VaultDetail vault) {
     // Note: We don't check backupConfig.status because stewards can't read it
-    // (it's encrypted to the owner). If a steward has shards, they're ready to help.
-    if (vault.state == VaultState.holdingShard) {
-      return _buildBanner(
-        context,
-        const _StatusData(
-          headline: 'You\'re ready to help',
-          subtext:
-              'You hold a recovery key for this vault. If recovery is requested, you\'ll be asked to approve.',
-          icon: Icons.check_circle,
-          accentColor: Color(0xFF2E7D32), // Deep green for success
-          variant: _StatusVariant.stewardReady,
+    // (it's encrypted to the owner).
+    return switch (vault) {
+      StewardedVaultDetail(:final latestShare) when latestShare == null => _buildBanner(
+          context,
+          const _StatusData(
+            headline: 'Waiting for your key',
+            subtext:
+                "You've accepted an invitation to this vault. Waiting on the owner to send you your vault key.",
+            icon: Icons.hourglass_empty,
+            accentColor: Color(0xFF7A4A2F), // Umber
+            variant: _StatusVariant.stewardWaitingKey,
+          ),
+          false,
+          true,
         ),
-        false,
-        true,
-      );
-    }
-
-    // Fallback for steward (shouldn't normally reach here)
-    return _buildBanner(
-      context,
-      const _StatusData(
-        headline: 'Uknown status',
-        subtext: 'This is a bug.',
-        icon: Icons.key,
-        accentColor: Color(0xFF676F62), // Secondary text color
-        variant: _StatusVariant.stewardReady,
-      ),
-      false,
-      true,
-    );
+      StewardedVaultDetail() => _buildBanner(
+          context,
+          const _StatusData(
+            headline: "You're ready to help",
+            subtext:
+                "You hold a recovery key for this vault. If recovery is requested, you'll be asked to approve.",
+            icon: Icons.check_circle,
+            accentColor: Color(0xFF2E7D32), // Deep green for success
+            variant: _StatusVariant.stewardReady,
+          ),
+          false,
+          true,
+        ),
+      OwnedVaultDetail() => _buildBanner(
+          context,
+          const _StatusData(
+            headline: 'Steward status unavailable',
+            subtext: 'Unable to determine your key status for this vault.',
+            icon: Icons.info_outline,
+            accentColor: Color(0xFF676F62),
+            variant: _StatusVariant.unknown,
+          ),
+          false,
+          true,
+        ),
+    };
   }
 
   Widget _buildBanner(
@@ -334,7 +329,11 @@ class VaultStatusBanner extends ConsumerWidget {
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(statusData.icon, size: 20, color: colorScheme.onSurface),
+            child: Icon(
+              statusData.icon,
+              size: 20,
+              color: colorScheme.onSurface,
+            ),
           ),
           const SizedBox(width: 12),
           // Text content

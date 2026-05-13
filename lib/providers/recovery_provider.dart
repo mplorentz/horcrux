@@ -188,10 +188,7 @@ final recoveryStatusByIdProvider =
       if (request == null) return const AsyncValue.data(null);
 
       // Compute recovery status from the request
-      final collectedShardIds = request.stewardResponses.values
-          .where((r) => r.shardData != null)
-          .map((r) => r.pubkey)
-          .toList();
+      final collectedShareIds = request.approvedResponderPubkeys;
 
       final threshold = request.threshold;
       final totalStewards = request.totalStewards;
@@ -207,7 +204,7 @@ final recoveryStatusByIdProvider =
           respondedCount: respondedCount,
           approvedCount: approvedCount,
           deniedCount: deniedCount,
-          collectedShardIds: collectedShardIds,
+          collectedShareIds: collectedShareIds,
           threshold: threshold,
           canRecover: canRecover,
           lastUpdated: DateTime.now(),

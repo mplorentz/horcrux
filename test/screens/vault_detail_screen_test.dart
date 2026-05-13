@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/recovery_request.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -17,17 +17,34 @@ void main() {
   final testPubkey = 'a' * 64;
   final otherPubkey = 'b' * 64;
 
+  /// Minimal provider overrides shared across most tests.
+  List<Override> baseOverrides({
+    required VaultDetail vault,
+    required String currentPubkey,
+    RecoveryStatus recoveryStatus = const RecoveryStatus(
+      hasActiveRecovery: false,
+      canRecover: false,
+      activeRecoveryRequest: null,
+      isInitiator: false,
+    ),
+  }) =>
+      [
+        vaultDetailProvider(vault.id).overrideWith((ref) => Stream.value(vault)),
+        currentPublicKeyProvider.overrideWith((ref) async => currentPubkey),
+        recoveryStatusProvider.overrideWith((ref, vaultId) => AsyncValue.data(recoveryStatus)),
+      ];
+
   // T030: Widget test for owner-steward vault detail buttons
   group('Owner-steward vault detail buttons', () {
     testWidgets('shows Initiate Recovery and Change Vault Contents for owner-steward state', (
       tester,
     ) async {
-      // Owner-steward state: isOwner, content == null, shards.isNotEmpty
-      final ownerShard = createShardData(
-        shard: 'owner-shard-data',
+      // Owner-steward state: isOwner, no owned_vaults row, has self-shard
+      final ownerShard = createShare(
+        payload: 'owner-shard-data',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'test-prime-mod',
         creatorPubkey: testPubkey,
         vaultId: 'test-vault',
@@ -46,32 +63,26 @@ void main() {
         relays: ['wss://relay.example.com'],
       );
 
-      // Vault with no content but has shards (owner-steward state)
-      final vault = Vault(
+      // No owned_vaults row → StewardedVaultDetail (owner-steward carve-out)
+      final vaultDetail = StewardedVaultDetail(
         id: 'test-vault',
         name: 'Test Vault',
-        content: null, // Content deleted
+        ownerPubkey: testPubkey,
+        ownerName: null,
+        threshold: 2,
+        totalShares: 2,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: false,
         createdAt: DateTime(2024, 1, 1),
-        ownerPubkey: testPubkey, // Current user is owner
-        shards: [ownerShard], // Has owner shard
+        archivedAt: null,
+        archivedReason: null,
         backupConfig: backupConfig,
+        latestShare: ownerShard,
       );
 
       final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
-          recoveryStatusProvider.overrideWith((ref, vaultId) {
-            return const AsyncValue.data(
-              RecoveryStatus(
-                hasActiveRecovery: false,
-                canRecover: false,
-                activeRecoveryRequest: null,
-                isInitiator: false,
-              ),
-            );
-          }),
-        ],
+        overrides: baseOverrides(vault: vaultDetail, currentPubkey: testPubkey),
       );
 
       await tester.pumpWidget(
@@ -83,7 +94,6 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify owner-steward buttons are shown
       expect(find.text('Initiate Recovery'), findsOneWidget);
       expect(find.text('Change Vault Contents'), findsOneWidget);
 
@@ -91,51 +101,39 @@ void main() {
     });
 
     testWidgets(
-      'shows Delete Local Copy button when owner has content and owner steward configured',
+      'shows Travel Mode button when owner has content and owner steward configured',
       (tester) async {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
 
-        final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
-        final backupConfig = copyBackupConfig(
-          createBackupConfig(
-            vaultId: 'test-vault',
-            threshold: 2,
-            totalKeys: 2,
-            stewards: [ownerSteward, otherSteward],
-            relays: ['wss://relay.example.com'],
-          ),
-          lastRedistribution: lastRedistributionTime,
-          lastUpdated:
-              lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
-        );
+        final backupConfig = createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [ownerSteward, otherSteward],
+          relays: ['wss://relay.example.com'],
+        ).copyWith(distributionVersion: 1);
 
-        // Vault with content and owner steward configured (after distribution)
-        final vault = Vault(
+        final vaultDetail = OwnedVaultDetail(
           id: 'test-vault',
           name: 'Test Vault',
-          content: 'Secret content', // Has content
+          ownerPubkey: testPubkey,
+          ownerName: null,
+          threshold: 2,
+          totalShares: 2,
+          stewards: const [],
+          recoveryRequests: const [],
+          pushEnabled: false,
           createdAt: DateTime(2024, 1, 1),
-          ownerPubkey: testPubkey, // Current user is owner
-          shards: [],
+          archivedAt: null,
+          archivedReason: null,
           backupConfig: backupConfig,
+          content: 'ciphertext',
+          selfHeldShare: null,
         );
 
         final container = ProviderContainer(
-          overrides: [
-            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
-            recoveryStatusProvider.overrideWith((ref, vaultId) {
-              return const AsyncValue.data(
-                RecoveryStatus(
-                  hasActiveRecovery: false,
-                  canRecover: false,
-                  activeRecoveryRequest: null,
-                  isInitiator: false,
-                ),
-              );
-            }),
-          ],
+          overrides: baseOverrides(vault: vaultDetail, currentPubkey: testPubkey),
         );
 
         await tester.pumpWidget(
@@ -147,59 +145,45 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Verify Delete Local Copy button is shown
-        expect(find.text('Delete Local Copy'), findsOneWidget);
+        expect(find.text('Travel Mode'), findsOneWidget);
 
         container.dispose();
       },
     );
 
-    testWidgets('shows Delete Local Copy after distribution even without owner steward', (
+    testWidgets('shows Travel Mode after distribution even without owner steward', (
       tester,
     ) async {
-      // Only regular stewards, no owner steward
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
 
-      final lastRedistributionTime = DateTime.now().subtract(const Duration(hours: 1));
-      final backupConfig = copyBackupConfig(
-        createBackupConfig(
-          vaultId: 'test-vault',
-          threshold: 1,
-          totalKeys: 1,
-          stewards: [steward1],
-          relays: ['wss://relay.example.com'],
-        ),
-        lastRedistribution: lastRedistributionTime,
-        lastUpdated:
-            lastRedistributionTime, // Set lastUpdated to same time to prevent needsRedistribution
-      );
+      final backupConfig = createBackupConfig(
+        vaultId: 'test-vault',
+        threshold: 1,
+        totalKeys: 1,
+        stewards: [steward1],
+        relays: ['wss://relay.example.com'],
+      ).copyWith(distributionVersion: 1);
 
-      // Vault with content but no owner steward
-      final vault = Vault(
+      final vaultDetail = OwnedVaultDetail(
         id: 'test-vault',
         name: 'Test Vault',
-        content: 'Secret content',
-        createdAt: DateTime(2024, 1, 1),
         ownerPubkey: testPubkey,
-        shards: [],
+        ownerName: null,
+        threshold: 1,
+        totalShares: 1,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: false,
+        createdAt: DateTime(2024, 1, 1),
+        archivedAt: null,
+        archivedReason: null,
         backupConfig: backupConfig,
+        content: 'ciphertext',
+        selfHeldShare: null,
       );
 
       final container = ProviderContainer(
-        overrides: [
-          vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
-          recoveryStatusProvider.overrideWith((ref, vaultId) {
-            return const AsyncValue.data(
-              RecoveryStatus(
-                hasActiveRecovery: false,
-                canRecover: false,
-                activeRecoveryRequest: null,
-                isInitiator: false,
-              ),
-            );
-          }),
-        ],
+        overrides: baseOverrides(vault: vaultDetail, currentPubkey: testPubkey),
       );
 
       await tester.pumpWidget(
@@ -211,27 +195,21 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify Delete Local Copy button IS shown after distribution (owner steward not required)
-      expect(find.text('Delete Local Copy'), findsOneWidget);
+      expect(find.text('Travel Mode'), findsOneWidget);
 
       container.dispose();
     });
   });
 
-  // Concurrent multi-initiator scenario: per-user exclusivity allows two
-  // distinct users to each hold an active real recovery on the same vault.
-  // The current user must still see "Manage Recovery" pointing at THEIR own
-  // request, even when another user's request is the most-recent one
-  // recoveryStatusProvider would surface as `activeRecoveryRequest`.
   group('Steward vault detail buttons with concurrent multi-initiator recoveries', () {
     testWidgets(
       'shows Manage Recovery for the current user when another user has a newer active recovery',
       (tester) async {
-        final stewardShard = createShardData(
-          shard: 'steward-shard-data',
+        final stewardShard = createShare(
+          payload: 'steward-shard-data',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 2,
+          shareIndex: 0,
+          totalShares: 2,
           primeMod: 'test-prime-mod',
           creatorPubkey: otherPubkey,
           vaultId: 'test-vault',
@@ -256,26 +234,27 @@ void main() {
           threshold: 1,
         );
 
-        // Vault is owned by `otherPubkey`; current user holds a shard, so they
-        // are a (non-owner) steward. Both active recoveries live on the vault.
-        final vault = Vault(
+        final vaultDetail = StewardedVaultDetail(
           id: 'test-vault',
           name: 'Test Vault',
-          content: null,
-          createdAt: DateTime(2024, 1, 1),
           ownerPubkey: otherPubkey,
-          shards: [stewardShard],
+          ownerName: null,
+          threshold: 1,
+          totalShares: 2,
+          stewards: const [],
           recoveryRequests: [myRequest, otherRequest],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: null,
+          latestShare: stewardShard,
         );
 
         final container = ProviderContainer(
           overrides: [
-            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(vaultDetail)),
             currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
-            // Mirror what the real recoveryStatusProvider does: pick the
-            // most-recent request, regardless of initiator. With per-user
-            // exclusivity that representative can be someone else's, and
-            // `isInitiator` reflects only that single representative.
             recoveryStatusProvider.overrideWith((ref, vaultId) {
               return AsyncValue.data(
                 RecoveryStatus(
@@ -298,41 +277,16 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // The user must be able to manage their own active recovery.
         expect(find.text('Manage Recovery'), findsOneWidget);
-        // They should NOT be offered Initiate (per-user exclusivity).
         expect(find.text('Initiate Recovery'), findsNothing);
 
         container.dispose();
       },
     );
 
-    // Regression: once enough stewards approve, the user's request transitions
-    // to `RecoveryRequestStatus.completed` but is still manageable -- the user
-    // finalizes the recovery from the same Manage screen by tapping "Recover
-    // Vault". If the widget filters by `isActive` only, that path disappears
-    // and the user is incorrectly offered "Initiate Recovery" again.
-    // Regression for horcrux_app-e0h: an owner who deletes content, initiates
-    // recovery, and then creates new vault content goes from owner-steward
-    // (content == null) back to a regular owner (content != null). Their real
-    // recovery is still in flight, but the "Manage Recovery" button used to be
-    // gated solely by owner-steward state and disappeared the moment content
-    // came back.
     testWidgets(
       'shows Manage Recovery for an owner with content and an active real recovery',
       (tester) async {
-        final ownerShard = createShardData(
-          shard: 'owner-shard-data',
-          threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
-          primeMod: 'test-prime-mod',
-          creatorPubkey: testPubkey,
-          vaultId: 'test-vault',
-          vaultName: 'Test Vault',
-          distributionVersion: 1,
-        );
-
         final myRequest = RecoveryRequest(
           id: 'my-request',
           vaultId: 'test-vault',
@@ -342,23 +296,28 @@ void main() {
           threshold: 2,
         );
 
-        // Owner restored content while a real recovery they initiated is still
-        // in flight. Shards may or may not still be present after content is
-        // recreated; the bug reproduces either way, but include the owner's
-        // shard to mirror the realistic state right after content recreation.
-        final vault = Vault(
+        // Owner restored content; still has an in-flight recovery.
+        final vaultDetail = OwnedVaultDetail(
           id: 'test-vault',
           name: 'Test Vault',
-          content: 'New vault content',
-          createdAt: DateTime(2024, 1, 1),
           ownerPubkey: testPubkey,
-          shards: [ownerShard],
+          ownerName: null,
+          threshold: 0,
+          totalShares: 0,
+          stewards: const [],
           recoveryRequests: [myRequest],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: null,
+          content: 'ciphertext',
+          selfHeldShare: null,
         );
 
         final container = ProviderContainer(
           overrides: [
-            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(vaultDetail)),
             currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
             recoveryStatusProvider.overrideWith((ref, vaultId) {
               return AsyncValue.data(
@@ -383,7 +342,6 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Manage Recovery'), findsOneWidget);
-        // No new recovery should be initiable while one is already in flight.
         expect(find.text('Initiate Recovery'), findsNothing);
 
         container.dispose();
@@ -393,11 +351,11 @@ void main() {
     testWidgets(
       'shows Manage Recovery when the current user\'s own request is completed',
       (tester) async {
-        final stewardShard = createShardData(
-          shard: 'steward-shard-data',
+        final stewardShard = createShare(
+          payload: 'steward-shard-data',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 2,
+          shareIndex: 0,
+          totalShares: 2,
           primeMod: 'test-prime-mod',
           creatorPubkey: otherPubkey,
           vaultId: 'test-vault',
@@ -414,19 +372,26 @@ void main() {
           threshold: 1,
         );
 
-        final vault = Vault(
+        final vaultDetail = StewardedVaultDetail(
           id: 'test-vault',
           name: 'Test Vault',
-          content: null,
-          createdAt: DateTime(2024, 1, 1),
           ownerPubkey: otherPubkey,
-          shards: [stewardShard],
+          ownerName: null,
+          threshold: 1,
+          totalShares: 2,
+          stewards: const [],
           recoveryRequests: [myCompletedRequest],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: null,
+          latestShare: stewardShard,
         );
 
         final container = ProviderContainer(
           overrides: [
-            vaultProvider('test-vault').overrideWith((ref) => Stream.value(vault)),
+            vaultDetailProvider('test-vault').overrideWith((ref) => Stream.value(vaultDetail)),
             currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
             recoveryStatusProvider.overrideWith((ref, vaultId) {
               return AsyncValue.data(

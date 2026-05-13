@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../utils/invite_code_utils.dart';
@@ -16,28 +17,32 @@ import 'local_notification_service.dart';
 import 'ndk_service.dart';
 import 'notification_recency.dart';
 import 'processed_nostr_event_store.dart';
-import 'vault_share_service.dart';
 import 'logger.dart';
 
 /// Provider for RecoveryService
-/// This service depends on VaultRepository for recovery operations
+/// This service depends on VaultRepository for recovery operations.
+///
+/// Watches every provider that holds a long-lived DB-backed reference so
+/// that invalidating [appDatabaseProvider] on logout cascades through and
+/// rebuilds this service against the fresh database. NdkService stays read
+/// (not watched) to avoid a circular dependency between the two.
 final Provider<RecoveryService> recoveryServiceProvider = Provider<RecoveryService>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
-  final backupService = ref.read(backupServiceProvider);
+  final backupService = ref.watch(backupServiceProvider);
   // Use ref.read() to break circular dependency with NdkService
   final NdkService ndkService = ref.read(ndkServiceProvider);
-  final vaultShareService = ref.read(vaultShareServiceProvider);
-  final processedStore = ref.read(processedNostrEventStoreProvider);
-  final localNotifications = ref.read(localNotificationServiceProvider);
-  final notificationService = ref.read(horcruxNotificationServiceProvider);
+  final processedStore = ref.watch(processedNostrEventStoreProvider);
+  final localNotifications = ref.watch(localNotificationServiceProvider);
+  final notificationService = ref.watch(horcruxNotificationServiceProvider);
+  final database = ref.watch(appDatabaseProvider);
   final service = RecoveryService(
     repository,
     backupService,
     ndkService,
-    vaultShareService,
     processedStore,
     localNotifications,
     notificationService,
+    database,
   );
 
   // Clean up streams when disposed
@@ -54,15 +59,14 @@ class RecoveryService {
   final VaultRepository repository;
   final BackupService backupService;
   final NdkService _ndkService;
-  final VaultShareService _vaultShareService;
   final ProcessedNostrEventStore _processedStore;
   final LocalNotificationService _localNotifications;
   final HorcruxNotificationService _notificationService;
-
-  static const String _viewedNotificationIdsKey = 'viewed_recovery_notification_ids';
+  final AppDatabase _database;
 
   Set<String>? _viewedNotificationIds;
   bool _isInitialized = false;
+  Timer? _expirySweepTimer;
 
   /// Per-(vault, initiator) mutex serializing [initiateRecovery] calls. The
   /// check-then-act against `getRecoveryRequestsForVault` is async, so without
@@ -89,16 +93,18 @@ class RecoveryService {
     this.repository,
     this.backupService,
     this._ndkService,
-    this._vaultShareService,
     this._processedStore,
     this._localNotifications,
     this._notificationService,
+    this._database,
   ) {
     _loadViewedNotificationIds();
   }
 
   /// Dispose resources
   void dispose() {
+    _expirySweepTimer?.cancel();
+    _expirySweepTimer = null;
     _notificationController.close();
     _recoveryRequestController.close();
   }
@@ -113,7 +119,7 @@ class RecoveryService {
     }
 
     try {
-      await getFirstAppOpenUtc();
+      await getFirstAppOpenUtc(database: _database);
       await _processedStore.ensureLoaded();
       await _loadViewedNotificationIds();
     } catch (e) {
@@ -126,21 +132,17 @@ class RecoveryService {
 
     // Emit existing recovery requests to the notification stream
     await _emitNotificationUpdate();
+
+    await repository.cleanupExpiredRecoverySessions();
+    _expirySweepTimer ??= Timer.periodic(const Duration(minutes: 5), (_) {
+      unawaited(repository.cleanupExpiredRecoverySessions());
+    });
   }
 
   /// Load viewed notification IDs from storage
   Future<void> _loadViewedNotificationIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_viewedNotificationIdsKey);
-
-    if (jsonData == null || jsonData.isEmpty) {
-      _viewedNotificationIds = {};
-      return;
-    }
-
     try {
-      final List<dynamic> jsonList = json.decode(jsonData);
-      _viewedNotificationIds = Set<String>.from(jsonList);
+      _viewedNotificationIds = (await _database.appStateDao.viewedNotificationIds()).toSet();
       Log.info(
         'Loaded ${_viewedNotificationIds!.length} viewed notification IDs from storage',
       );
@@ -157,12 +159,8 @@ class RecoveryService {
     }
 
     try {
-      final jsonList = _viewedNotificationIds!.toList();
-      final jsonString = json.encode(jsonList);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_viewedNotificationIdsKey, jsonString);
-      Log.info('Saved ${jsonList.length} viewed notification IDs to storage');
+      await _database.appStateDao.replaceViewedNotificationIds(_viewedNotificationIds!);
+      Log.info('Saved ${_viewedNotificationIds!.length} viewed notification IDs to storage');
     } catch (e) {
       Log.error('Error saving viewed notification IDs', e);
       throw Exception('Failed to save viewed notification IDs: $e');
@@ -184,16 +182,14 @@ class RecoveryService {
   /// does not surface historical requests as pending).
   Future<List<RecoveryRequest>> _pendingRecoveryRequests() async {
     await initialize();
-    final firstOpen = await getFirstAppOpenUtc();
+    final firstOpen = await getFirstAppOpenUtc(database: _database);
     final currentPubkey = await _ndkService.getCurrentPubkey();
     final allRequests = await repository.getAllRecoveryRequests();
 
     return allRequests.where((req) {
-      if (currentPubkey != null) {
-        final userResponse = req.stewardResponses[currentPubkey];
-        if (userResponse != null && userResponse.status.isResolved) {
-          return false;
-        }
+      final userResponse = req.responseForPubkey(currentPubkey);
+      if (userResponse != null && userResponse.status.isResolved) {
+        return false;
       }
       if (!RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
         req,
@@ -252,24 +248,15 @@ class RecoveryService {
       // Generate cryptographically secure request ID
       final requestId = '${generateSecureID()}_$vaultId';
 
-      // Initialize steward responses
-      final stewardResponses = <String, RecoveryResponse>{};
-      for (final pubkey in stewardPubkeys) {
-        stewardResponses[pubkey] = RecoveryResponse(
-          pubkey: pubkey,
-          approved: false,
-        );
-      }
-
-      final recoveryRequest = RecoveryRequest(
+      final recoveryRequest = RecoveryRequest.makeFromParticipants(
         id: requestId,
         vaultId: vaultId,
         initiatorPubkey: initiatorPubkey,
         requestedAt: DateTime.now(),
         status: RecoveryRequestStatus.pending,
         threshold: threshold,
+        stewardPubkeys: stewardPubkeys,
         expiresAt: null,
-        stewardResponses: stewardResponses,
         isPractice: isPractice,
       );
 
@@ -352,46 +339,47 @@ class RecoveryService {
         throw StateError('No relays configured in recovery plan');
       }
     } else {
-      // Real recovery: use shard data
-      if (vault.shards.isEmpty) {
+      // Real recovery: use held share data from the database.
+      final shares = await repository.getSharesForVault(vaultId);
+      if (shares.isEmpty) {
         throw StateError(
           'Cannot recover: you don\'t have a key to this vault.',
         );
       }
 
-      final selectedShard = vault.mostRecentShard;
-      if (selectedShard == null) {
-        throw StateError(
-          'Cannot recover: you don\'t have a key to this vault.',
-        );
-      }
+      final selectedShard = latestShare(shares)!;
 
       Log.debug(
         'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
       );
 
-      // Use stewards list for recovery (includes owner if they have a shard)
-      stewardPubkeys = <String>[];
-      if (selectedShard.stewards != null) {
-        for (final steward in selectedShard.stewards!) {
-          final pubkey = steward['pubkey'];
-          if (pubkey != null) {
-            stewardPubkeys.add(pubkey);
-          }
-        }
+      final backupConfig = vault.backupConfig;
+      if (backupConfig == null) {
+        throw StateError(
+          'No steward metadata available for recovery. '
+          'Please refresh share metadata from a recent distribution.',
+        );
       }
+
+      // Use normalized stewards from the DB-backed backup config.
+      stewardPubkeys = backupConfig.stewards
+          .where((s) => s.pubkey != null && s.status != StewardStatus.invited)
+          .map((s) => s.pubkey!)
+          .toSet()
+          .toList();
 
       if (stewardPubkeys.isEmpty) {
         throw StateError('No stewards available for recovery');
       }
 
-      threshold = selectedShard.threshold;
+      threshold = backupConfig.threshold;
 
-      // Get relays from shard data (if available) or backup config
-      if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
+      // Use normalized relay configuration first; fall back to legacy shard
+      // relay hints for older vault rows.
+      if (backupConfig.relays.isNotEmpty) {
+        relayUrls = backupConfig.relays;
+      } else if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
         relayUrls = selectedShard.relayUrls!;
-      } else if (vault.backupConfig != null && vault.backupConfig!.relays.isNotEmpty) {
-        relayUrls = vault.backupConfig!.relays;
       } else {
         throw StateError(
           'No relays configured for recovery. Please configure relays in the recovery plan.',
@@ -425,7 +413,7 @@ class RecoveryService {
     if (stewardPubkeys.contains(initiatorPubkey)) {
       try {
         Log.info('Initiator is a steward (or owner with shard), auto-approving recovery request');
-        await respondToRecoveryRequestWithShard(
+        await respondToRecoveryRequestWithShare(
           recoveryRequest.id,
           initiatorPubkey,
           true,
@@ -475,7 +463,7 @@ class RecoveryService {
 
     if (!allowLocalNotification) return;
 
-    final firstOpen = await getFirstAppOpenUtc();
+    final firstOpen = await getFirstAppOpenUtc(database: _database);
     final myPubkey = await _ndkService.getCurrentPubkey();
     if (RecoveryNotificationPolicy.shouldNotifyRecoveryRequest(
       request,
@@ -532,8 +520,7 @@ class RecoveryService {
     if (request == null) return null;
 
     // Count responses that have shard data (approved responses)
-    final collectedShardIds = request.stewardResponses.values
-        .where((r) => r.shardData != null)
+    final collectedShareIds = request.approvedResponsesWithShare
         .map((r) => r.pubkey) // Use pubkey as identifier
         .toList();
 
@@ -546,7 +533,7 @@ class RecoveryService {
       respondedCount: request.respondedCount,
       approvedCount: request.approvedCount,
       deniedCount: request.deniedCount,
-      collectedShardIds: collectedShardIds,
+      collectedShareIds: collectedShareIds,
       threshold: threshold,
       canRecover: request.approvedCount >= threshold,
       lastUpdated: DateTime.now(),
@@ -566,7 +553,7 @@ class RecoveryService {
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
-    ShardData? shardData,
+    Share? share,
     String? nostrEventId,
     RecoveryResponseEvent? recoveryResponseSourceEvent,
     bool allowLocalNotification = true,
@@ -580,7 +567,7 @@ class RecoveryService {
     }
 
     // Check if response already exists for this pubkey
-    final existingResponse = request.stewardResponses[responderPubkey];
+    final existingResponse = request.responseForPubkey(responderPubkey);
     if (existingResponse != null) {
       // Check if this is a duplicate by comparing nostrEventId if provided
       if (nostrEventId != null && existingResponse.nostrEventId == nostrEventId) {
@@ -599,16 +586,15 @@ class RecoveryService {
     }
 
     // Update the response
-    final updatedResponses = Map<String, RecoveryResponse>.from(
-      request.stewardResponses,
-    );
-    updatedResponses[responderPubkey] = RecoveryResponse(
+    final newResponse = RecoveryResponse(
       pubkey: responderPubkey,
       approved: approved,
       respondedAt: DateTime.now(),
-      shardData: shardData,
+      share: share,
       nostrEventId: nostrEventId,
     );
+    final updatedResponses = request.copyResponsesByPubkey();
+    updatedResponses[responderPubkey] = newResponse;
 
     // Update request status
     var newStatus = request.status;
@@ -625,9 +611,9 @@ class RecoveryService {
     }
 
     // Update the request
-    final updatedRequest = request.copyWith(
+    final updatedRequest = request.withUpsertedResponse(
       status: newStatus,
-      stewardResponses: updatedResponses,
+      response: newResponse,
     );
 
     // Update in vault (single source of truth)
@@ -649,7 +635,7 @@ class RecoveryService {
     await _emitNotificationUpdate();
 
     if (recoveryResponseSourceEvent != null && allowLocalNotification) {
-      final firstOpen = await getFirstAppOpenUtc();
+      final firstOpen = await getFirstAppOpenUtc(database: _database);
       final myPubkey = await _ndkService.getCurrentPubkey();
       if (RecoveryNotificationPolicy.shouldNotifyRecoveryResponse(
         responseCreatedAt: recoveryResponseSourceEvent.createdAt,
@@ -674,7 +660,7 @@ class RecoveryService {
   /// 1. Retrieves shard data if approving
   /// 2. Records the response locally
   /// 3. Sends the response via Nostr using relay URLs from shard data
-  Future<void> respondToRecoveryRequestWithShard(
+  Future<void> respondToRecoveryRequestWithShare(
     String recoveryRequestId,
     String responderPubkey,
     bool approved,
@@ -687,24 +673,21 @@ class RecoveryService {
       throw ArgumentError('Recovery request not found: $recoveryRequestId');
     }
 
-    ShardData? shardData;
+    Share? stewardShare;
 
-    // If approving and NOT a practice request, get the shard data for this vault
-    // Practice requests should not include shard data
+    // If approving and NOT a practice request, get the share material for this vault
+    // Practice requests should not include share payloads
     if (approved && !request.isPractice) {
-      final vault = await repository.getVault(request.vaultId);
-      if (vault == null) {
-        throw ArgumentError('Vault not found: ${request.vaultId}');
+      final shares = await repository.getSharesForVault(request.vaultId);
+      if (shares.isEmpty) {
+        throw ArgumentError('No share data found for vault ${request.vaultId}');
       }
-      shardData = vault.mostRecentShard;
-      if (shardData == null) {
-        throw ArgumentError('No shard data found for vault ${request.vaultId}');
-      }
+      stewardShare = latestShare(shares)!;
       Log.info(
-        'Selected shard with distributionVersion ${shardData.distributionVersion} for recovery request $recoveryRequestId',
+        'Selected share with distributionVersion ${stewardShare.distributionVersion} for recovery request $recoveryRequestId',
       );
     } else if (approved && request.isPractice) {
-      Log.info('Practice request - skipping shard data retrieval');
+      Log.info('Practice request - skipping share data retrieval');
     }
 
     // Submit response locally
@@ -712,7 +695,7 @@ class RecoveryService {
       recoveryRequestId,
       responderPubkey,
       approved,
-      shardData: shardData,
+      share: stewardShare,
     );
 
     // Send response via Nostr (both approvals and denials)
@@ -722,13 +705,15 @@ class RecoveryService {
       try {
         List<String> relayUrls = [];
 
-        // Try to get relay URLs from shard data first (for approvals)
-        if (shardData != null && shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
-          relayUrls = shardData.relayUrls!;
-          Log.info('Using relay URLs from shard data for recovery response');
+        // Try to get relay URLs from share material first (for approvals)
+        if (stewardShare != null &&
+            stewardShare.relayUrls != null &&
+            stewardShare.relayUrls!.isNotEmpty) {
+          relayUrls = stewardShare.relayUrls!;
+          Log.info('Using relay URLs from share data for recovery response');
         } else {
-          // For denials or when shard data doesn't have relay URLs,
-          // get relay URLs from vault backup config or steward's shard data
+          // For denials or when share data doesn't have relay URLs,
+          // get relay URLs from vault backup config or steward's held share
           final vault = await repository.getVault(request.vaultId);
           if (vault != null) {
             // Try backup config first
@@ -736,26 +721,20 @@ class RecoveryService {
               relayUrls = vault.backupConfig!.relays;
               Log.info('Using relay URLs from backup config for recovery response');
             } else {
-              // Fall back to relay URLs from steward's shards
-              final latestShard = vault.mostRecentShard;
-              if (latestShard != null &&
-                  latestShard.relayUrls != null &&
-                  latestShard.relayUrls!.isNotEmpty) {
-                relayUrls = latestShard.relayUrls!;
-                Log.info('Using relay URLs from steward shard data for recovery response');
+              // Fall back to relay URLs from steward-held share.
+              final share = latestShare(await repository.getSharesForVault(request.vaultId));
+              if (share != null && share.relayUrls != null && share.relayUrls!.isNotEmpty) {
+                relayUrls = share.relayUrls!;
+                Log.info('Using relay URLs from steward share data for recovery response');
               }
             }
           }
         }
 
-        if (relayUrls.isEmpty) {
-          Log.warning('No relay URLs available for sending recovery response');
-        }
-
         if (relayUrls.isNotEmpty) {
           await sendRecoveryResponseViaNostr(
             request,
-            shardData,
+            stewardShare,
             approved,
             relays: relayUrls,
           );
@@ -801,18 +780,22 @@ class RecoveryService {
 
   /// Cancel a recovery request
   Future<void> cancelRecoveryRequest(String recoveryRequestId) async {
+    final request = await getRecoveryRequest(recoveryRequestId);
+    if (request == null) {
+      throw ArgumentError('Recovery request not found: $recoveryRequestId');
+    }
+
     await _updateRecoveryRequestStatus(
       recoveryRequestId,
       RecoveryRequestStatus.cancelled,
     );
 
-    // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShardData (keyed by vaultId)
-    // and won't be affected by removeRecoveryShards() which only deletes recovery shards
-    // (keyed by recoveryRequestId)
-    await _vaultShareService.removeRecoveryShards(recoveryRequestId);
+    await repository.deleteRecoveryResponseSharesForRequest(
+      vaultId: request.vaultId,
+      requestId: recoveryRequestId,
+    );
     Log.info(
-      'Deleted recovery shards for cancelled recovery request $recoveryRequestId',
+      'Cleared recovery share payloads for cancelled recovery request $recoveryRequestId',
     );
   }
 
@@ -834,19 +817,18 @@ class RecoveryService {
       RecoveryRequestStatus.archived,
     );
 
-    // Delete recovered content from vault (set to null)
-    final vault = await repository.getVault(request.vaultId);
-    if (vault != null) {
-      await repository.saveVault(vault.copyWith(content: null));
+    // Delete recovered content (owned_vaults row) from vault
+    final vaultExists = await repository.getVault(request.vaultId) != null;
+    if (vaultExists) {
+      await repository.deleteVaultContent(request.vaultId);
       Log.info('Deleted recovered content from vault ${request.vaultId}');
     }
 
-    // Delete all recovery shards for this recovery request
-    // Note: User's own shard is stored separately in _cachedShardData (keyed by vaultId)
-    // and won't be affected by removeRecoveryShards() which only deletes recovery shards
-    // (keyed by recoveryRequestId)
-    await _vaultShareService.removeRecoveryShards(recoveryRequestId);
-    Log.info('Deleted recovery shards for recovery request $recoveryRequestId');
+    await repository.deleteRecoveryResponsesForRequest(
+      vaultId: request.vaultId,
+      requestId: recoveryRequestId,
+    );
+    Log.info('Deleted recovery response rows for recovery request $recoveryRequestId');
 
     Log.info('Exited recovery mode for recovery request $recoveryRequestId');
   }
@@ -889,23 +871,20 @@ class RecoveryService {
     }
 
     // Collect shards from approved responses
-    final shards = request.stewardResponses.values
-        .where((r) => r.approved && r.shardData != null)
-        .map((r) => r.shardData!)
-        .toList();
+    final shares = request.approvedSharesWithPayload;
 
-    if (shards.isEmpty) {
-      throw Exception('No recovery shards found');
+    if (shares.isEmpty) {
+      throw Exception('No recovery shares found');
     }
 
-    if (shards.length < request.threshold) {
+    if (shares.length < request.threshold) {
       throw Exception(
-        'Insufficient shards: need ${request.threshold}, have ${shards.length}',
+        'Insufficient shares: need ${request.threshold}, have ${shares.length}',
       );
     }
 
-    // Reconstruct the vault content from the shards
-    final content = await backupService.reconstructFromShares(shares: shards);
+    // Reconstruct the vault content from the shares
+    final content = await backupService.reconstructFromShares(shares: shares);
 
     // Update the vault with recovered content
     final vault = await repository.getVault(request.vaultId);
@@ -945,7 +924,7 @@ class RecoveryService {
     final request = await getRecoveryRequest(recoveryRequestId);
     if (request == null) return [];
 
-    return request.stewardResponses.values.toList();
+    return request.responses.toList();
   }
 
   /// Update recovery request status (for Nostr event tracking)
@@ -995,9 +974,7 @@ class RecoveryService {
         throw Exception('Unable to get current user keys for signing');
       }
 
-      Log.info(
-        'Sending recovery request ${request.id} to ${request.stewardResponses.length} stewards',
-      );
+      Log.info('Sending recovery request ${request.id} to ${request.totalStewards} stewards');
 
       // Prepare recovery request data
       final requestData = {
@@ -1016,7 +993,7 @@ class RecoveryService {
       // Send gift wrap to each steward using NdkService. The signed events
       // come back positionally aligned with the recipient list so we can
       // pipe each one into [tryPushForEvent] without rebuilding it.
-      final recipients = request.stewardResponses.keys.toList();
+      final recipients = request.stewardPubkeys.toList();
       final publishedEvents = await _ndkService.publishEncryptedEventToMultiple(
         content: requestJson,
         kind: NostrKind.recoveryRequest.value,
@@ -1028,6 +1005,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
         ],
         customPubkey: currentPubkey,
+        vaultId: request.vaultId,
       );
 
       final eventIds = [
@@ -1073,7 +1051,7 @@ class RecoveryService {
   /// Note: shardData is nullable for practice requests (which don't include shard data)
   Future<String> sendRecoveryResponseViaNostr(
     RecoveryRequest request,
-    ShardData? shardData,
+    Share? share,
     bool approved, {
     required List<String> relays,
   }) async {
@@ -1096,8 +1074,8 @@ class RecoveryService {
 
       // Include shard data if approved and NOT a practice request
       // Practice requests should never include shard data
-      if (approved && !request.isPractice && shardData != null) {
-        responseData['shard_data'] = shardDataToJson(shardData);
+      if (approved && !request.isPractice && share != null) {
+        responseData['shard_data'] = shareToJson(share);
       }
 
       final responseJson = json.encode(responseData);
@@ -1119,6 +1097,7 @@ class RecoveryService {
           ['recovery_request_id', request.id],
           ['approved', approved.toString()],
         ],
+        vaultId: request.vaultId,
       );
 
       if (publishedEvent == null) {
@@ -1223,8 +1202,7 @@ class RecoveryService {
   /// Clear all recovery requests (for testing)
   Future<void> clearAll() async {
     _viewedNotificationIds = {};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_viewedNotificationIdsKey);
+    await _database.appStateDao.clearViewedNotificationIds();
     _isInitialized = false;
     _notificationController.add([]);
     Log.info('Cleared all recovery request notifications');

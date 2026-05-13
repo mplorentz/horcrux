@@ -1,9 +1,10 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/invitation_link.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
+import '../models/steward_status.dart';
 import '../models/vault.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
@@ -12,8 +13,43 @@ import 'logger.dart';
 import 'ndk_service.dart';
 import 'push_notification_receiver.dart';
 
+/// Resolves the Shamir slot (0-based) for an embedded steward entry.
+///
+/// Prefer explicit [shard_index] from the owner payload (matches
+/// [BackupConfig.stewards] ordering used at distribution). Legacy payloads
+/// without it fall back to this device's [Share.shareIndex] when the entry is
+/// for the recipient, then to [filteredEnumerationIndex] (enumerating only
+/// pubkey-known stewards in wire order).
+int _shardSlotZeroBasedFromEmbedded({
+  required Map<String, String> steward,
+  required int filteredEnumerationIndex,
+  required Share share,
+  required String? recipientPubkeyHex,
+}) {
+  final raw = steward['shard_index'];
+  if (raw != null && raw.isNotEmpty) {
+    final parsed = int.tryParse(raw);
+    if (parsed != null && parsed >= 0) return parsed;
+  }
+  final pk = steward['pubkey'];
+  if (recipientPubkeyHex != null && pk == recipientPubkeyHex) {
+    return share.shareIndex;
+  }
+  return filteredEnumerationIndex;
+}
+
+String _resolvedEmbeddedStewardRowId({
+  required String vaultId,
+  required Map<String, String> steward,
+  required int slotZeroBased,
+}) {
+  final id = steward['id'];
+  if (id != null && id.isNotEmpty) return id;
+  final pubkey = steward['pubkey'] ?? '';
+  return 'wire_${vaultId}_${slotZeroBased}_$pubkey';
+}
+
 /// Provider for VaultShareService
-/// This service depends on VaultRepository for shard management
 final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
   final repository = ref.watch(vaultRepositoryProvider);
   return VaultShareService(
@@ -24,11 +60,11 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
   );
 });
 
-/// Service for managing vault shares and recovery operations
+/// Service for managing vault shares (steward-side) and related Nostr flows.
 ///
-/// Manages two types of shards:
-/// 1. Key holder shards: Shards we hold as a steward for others (one per vault)
-/// 2. Recovery shards: Shards we collect during recovery (multiple per recovery request)
+/// Steward-side held shares live in the `held_shares` drift table via
+/// [VaultRepository]. Collected recovery shards are stored in
+/// `recovery_responses` through [RecoveryService] / [VaultRepository], not here.
 class VaultShareService {
   final VaultRepository repository;
   final NdkService Function() _getNdkService;
@@ -41,327 +77,156 @@ class VaultShareService {
     this._getNotificationService,
     this._getPushReceiver,
   );
-  static const String _shardDataKey = 'shard_data';
-  static const String _recoveryShardDataKey = 'recovery_shard_data';
 
-  // Shards we hold as a steward (one per vault)
-  static Map<String, ShardData>? _cachedShardData; // vaultId -> ShardData
+  // ── Steward-side share management (backed by `held_shares` table) ──
 
-  // Shards collected during recovery (multiple per recovery request)
-  static Map<String, List<ShardData>>?
-      _cachedRecoveryShards; // recoveryRequestId -> List<ShardData>
-
-  static bool _isInitialized = false;
-
-  /// Initialize the service
-  Future<void> initialize() async {
-    if (_isInitialized) return;
-
-    try {
-      await _loadShardData();
-      await _loadRecoveryShardData();
-      _isInitialized = true;
-      Log.info(
-        'VaultShareService initialized with ${_cachedShardData?.length ?? 0} steward shards and ${_cachedRecoveryShards?.length ?? 0} recovery requests',
-      );
-    } catch (e) {
-      Log.error('Error initializing VaultShareService', e);
-      _cachedShardData = {};
-      _cachedRecoveryShards = {};
-      _isInitialized = true;
-    }
+  /// Get all shares for a vault from the DB.
+  Future<List<Share>> getVaultShares(String vaultId) async {
+    return repository.getSharesForVault(vaultId);
   }
 
-  /// Load shard data from storage
-  Future<void> _loadShardData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_shardDataKey);
-
-    if (jsonData == null || jsonData.isEmpty) {
-      _cachedShardData = {};
-      return;
-    }
-
-    try {
-      final Map<String, dynamic> jsonMap = json.decode(jsonData);
-      _cachedShardData = jsonMap.map((vaultId, shardJson) {
-        final shard = shardDataFromJson(shardJson as Map<String, dynamic>);
-        return MapEntry(vaultId, shard);
-      });
-      Log.info(
-        'Loaded shard data for ${_cachedShardData!.length} vaults from storage',
-      );
-    } catch (e) {
-      Log.error('Error loading shard data', e);
-      _cachedShardData = {};
-    }
+  /// Get the most recent share for a vault, or null if none exist.
+  Future<Share?> getVaultShare(String vaultId) async {
+    return latestShare(await repository.getSharesForVault(vaultId));
   }
 
-  /// Save shard data to storage
-  Future<void> _saveShardData() async {
-    if (_cachedShardData == null) return;
+  /// Add or update share data for a vault.
+  ///
+  /// Writes to the `held_shares` drift table via [VaultRepository].
+  /// Also upserts the `vaults` row and self-steward row on the steward side
+  /// when [VaultRepository.isOwnedVaultForCurrentUser] is false (subject to the
+  /// version gate inside [_upsertStewardVaultAndSelf]).
+  Future<void> addVaultShare(String vaultId, Share share) async {
+    if (!share.isValid) throw ArgumentError('Invalid shard data');
 
-    try {
-      final jsonMap = _cachedShardData!.map((vaultId, shard) {
-        final shardJson = shardDataToJson(shard);
-        return MapEntry(vaultId, shardJson);
-      });
-      final jsonString = json.encode(jsonMap);
+    final ownedByThisDevice = await repository.isOwnedVaultForCurrentUser(vaultId);
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_shardDataKey, jsonString);
-      Log.info(
-        'Saved shard data for ${_cachedShardData!.length} vaults to storage',
-      );
-    } catch (e) {
-      Log.error('Error saving shard data', e);
-      throw Exception('Failed to save shard data: $e');
-    }
-  }
-
-  /// Load recovery shard data from storage
-  Future<void> _loadRecoveryShardData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_recoveryShardDataKey);
-
-    if (jsonData == null || jsonData.isEmpty) {
-      _cachedRecoveryShards = {};
-      return;
+    if (!ownedByThisDevice) {
+      // Steward-side: upsert vault and self-steward (version-gated).
+      await _upsertStewardVaultAndSelf(vaultId, share);
     }
 
-    try {
-      final Map<String, dynamic> jsonMap = json.decode(jsonData);
-      _cachedRecoveryShards = jsonMap.map((recoveryRequestId, shardListJson) {
-        final shardList = (shardListJson as List<dynamic>)
-            .map((json) => shardDataFromJson(json as Map<String, dynamic>))
-            .toList();
-        return MapEntry(recoveryRequestId, shardList);
-      });
-      Log.info(
-        'Loaded recovery shards for ${_cachedRecoveryShards!.length} recovery requests from storage',
-      );
-    } catch (e) {
-      Log.error('Error loading recovery shard data', e);
-      _cachedRecoveryShards = {};
-    }
-  }
-
-  /// Save recovery shard data to storage
-  Future<void> _saveRecoveryShardData() async {
-    if (_cachedRecoveryShards == null) return;
-
-    try {
-      final jsonMap = _cachedRecoveryShards!.map((
-        recoveryRequestId,
-        shardList,
-      ) {
-        final shardListJson = shardList.map((shard) => shardDataToJson(shard)).toList();
-        return MapEntry(recoveryRequestId, shardListJson);
-      });
-      final jsonString = json.encode(jsonMap);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_recoveryShardDataKey, jsonString);
-      Log.info(
-        'Saved recovery shards for ${_cachedRecoveryShards!.length} recovery requests to storage',
-      );
-    } catch (e) {
-      Log.error('Error saving recovery shard data', e);
-      throw Exception('Failed to save recovery shard data: $e');
-    }
-  }
-
-  /// Get all shares for a vault
-  /// Now delegates to VaultService
-  Future<List<ShardData>> getVaultShares(String vaultId) async {
-    return await repository.getShardsForVault(vaultId);
-  }
-
-  /// Get the share for a vault (returns first shard if multiple exist)
-  /// Now delegates to VaultRepository
-  Future<ShardData?> getVaultShare(String vaultId) async {
-    final vault = await repository.getVault(vaultId);
-    return vault?.mostRecentShard;
-  }
-
-  /// Get a specific share by nostr event ID
-  Future<ShardData?> getShareByEventId(String nostrEventId) async {
-    await initialize();
-
-    for (final shard in _cachedShardData!.values) {
-      if (shard.nostrEventId == nostrEventId) {
-        return shard;
-      }
-    }
-
-    return null;
-  }
-
-  /// Add or update shard data for a vault
-  /// Now delegates to VaultService
-  Future<void> addVaultShare(String vaultId, ShardData shardData) async {
-    // Validate shard data
-    if (!shardData.isValid) {
-      throw ArgumentError('Invalid shard data');
-    }
-
-    // Create a vault record if one doesn't exist yet
-    await _ensureVaultExists(vaultId, shardData);
-
-    // Sync mutable vault metadata from the authoritative owner shardData.
-    // `_ensureVaultExists` only initializes new/stub records; we pick up
-    // later owner-side changes (e.g. toggling pushEnabled and redistributing)
-    // here on every shard arrival.
-    await _syncVaultMetadataFromShardData(vaultId, shardData);
-
-    // Add shard to vault via VaultService
-    await repository.addShardToVault(vaultId, shardData);
+    await repository.addShareToVault(vaultId, share);
     Log.info(
-      'Added shard for vault $vaultId (event: ${shardData.nostrEventId})',
+      'addVaultShare: stored share for vault $vaultId '
+      '(shareIndex=${share.shareIndex}, version=${share.distributionVersion})',
     );
   }
 
-  /// Process a received vault share (invitation flow)
+  /// Process a received vault share (invitation flow).
   ///
-  /// This method handles the complete flow when an invitee receives a shard:
-  /// 1. Stores the shard via addVaultShare (skips if duplicate)
-  /// 2. Sends a confirmation event to notify the owner (only if shard was actually stored)
-  ///
-  /// Uses relay URLs from the shard data (included during distribution).
-  Future<void> processVaultShare(String vaultId, ShardData shardData) async {
-    // Validate shard data
-    if (!shardData.isValid) {
-      throw ArgumentError('Invalid shard data');
-    }
+  /// Full flow:
+  /// 1. Dedup check — skip if we already have this nostrEventId.
+  /// 2. [addVaultShare] — upsert vault/steward rows + write held_share.
+  /// 3. Opt into push if the owner has push enabled.
+  /// 4. Send share confirmation event to owner.
+  Future<void> processVaultShare(String vaultId, Share shardData) async {
+    if (!shardData.isValid) throw ArgumentError('Invalid shard data');
 
-    // Check if we already have this shard (by nostrEventId)
-    final existingVault = await repository.getVault(vaultId);
-    if (existingVault != null && shardData.nostrEventId != null) {
-      final hasDuplicate = existingVault.shards.any(
-        (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
-      );
-
-      if (hasDuplicate) {
-        Log.info(
-          'Shard with event ID ${shardData.nostrEventId} already exists for vault $vaultId, skipping processing',
+    // Dedup by nostrEventId. If the vault doesn't exist yet, skip the check
+    // and let addVaultShare create it.
+    if (shardData.nostrEventId != null) {
+      try {
+        final existingShares = await repository.getSharesForVault(vaultId);
+        final hasDuplicate = existingShares.any(
+          (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
         );
-        return; // Already have this shard, skip storing and sending confirmation
+        if (hasDuplicate) {
+          Log.info(
+            'processVaultShare: share ${shardData.nostrEventId} already stored '
+            'for vault $vaultId — skipping',
+          );
+          return;
+        }
+      } on ArgumentError {
+        // Vault not found — first time seeing this vault; proceed to create it.
       }
     }
 
-    // Store the shard first
     await addVaultShare(vaultId, shardData);
 
-    // Stewards opt into push globally (not per invitation URL). When the owner
-    // distributes with push enabled on the shard, prompt once for device
-    // permission + notifier registration if not already opted in.
     if (shardData.pushEnabled == true && PushNotificationReceiver.isSupported) {
       try {
         final receiver = _getPushReceiver();
-        if (!await receiver.isOptedIn()) {
-          await receiver.optIn();
-        }
+        if (!await receiver.isOptedIn()) await receiver.optIn();
       } catch (e, st) {
-        Log.warning('Steward push opt-in after shard delivery failed', e, st);
+        Log.warning('Steward push opt-in after share delivery failed', e, st);
       }
     }
 
-    // Send shard confirmation event after successfully storing the shard
-    // This is required for invitation flow - the owner needs to know the invitee received the shard
     try {
-      // Get relay URLs from shard data (included during distribution from backup config)
       if (shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
-        final ownerPubkey = shardData.creatorPubkey;
-        final shardIndex = shardData.shardIndex;
-
-        // Send confirmation event with distribution version if available
-        final eventId = await sendShardConfirmationEvent(
+        final eventId = await sendShareConfirmationEvent(
           vaultId: vaultId,
-          shardIndex: shardIndex,
-          ownerPubkey: ownerPubkey,
+          shareIndex: shardData.shareIndex,
+          ownerPubkey: shardData.creatorPubkey,
           relayUrls: shardData.relayUrls!,
           distributionVersion: shardData.distributionVersion,
         );
-
         if (eventId != null) {
           Log.info(
-            'Sent shard confirmation event $eventId for vault $vaultId, shard $shardIndex',
+            'processVaultShare: sent confirmation $eventId for vault $vaultId '
+            'share ${shardData.shareIndex}',
           );
         } else {
           Log.warning(
-            'Failed to send shard confirmation event for vault $vaultId, shard $shardIndex',
+            'processVaultShare: failed to send confirmation for vault $vaultId '
+            'share ${shardData.shareIndex}',
           );
         }
       } else {
         Log.warning(
-          'No relay URLs found in shard data for vault $vaultId - cannot send shard confirmation event',
+          'processVaultShare: no relay URLs in share for vault $vaultId — '
+          'cannot send confirmation',
         );
       }
     } catch (e) {
-      Log.error('Error sending shard confirmation event for vault $vaultId', e);
-      // Don't fail shard storage if confirmation sending fails
+      Log.error(
+        'processVaultShare: error sending confirmation for vault $vaultId',
+        e,
+      );
     }
   }
 
-  /// Creates and publishes shard confirmation event
-  ///
-  /// Creates confirmation event with empty content.
-  /// All confirmation data is stored in tags.
-  /// Encrypts using NIP-44.
-  /// Creates Nostr event (kind 1342).
-  /// Signs with steward's private key.
-  /// Publishes to relays.
-  /// Returns event ID.
-  Future<String?> sendShardConfirmationEvent({
+  /// Creates and publishes a share confirmation event (kind 1342).
+  Future<String?> sendShareConfirmationEvent({
     required String vaultId,
-    required int shardIndex,
-    required String ownerPubkey, // Hex format
+    required int shareIndex,
+    required String ownerPubkey,
     required List<String> relayUrls,
-    int? distributionVersion, // Optional distribution version
+    int? distributionVersion,
   }) async {
     try {
       final ndkService = _getNdkService();
       final currentPubkey = await ndkService.getCurrentPubkey();
       if (currentPubkey == null) {
-        Log.error('No key pair available for sending shard confirmation event');
+        Log.error('sendShareConfirmationEvent: no key pair available');
         return null;
       }
 
-      Log.info(
-        'Sending shard confirmation event for vault: ${vaultId.substring(0, 8)}..., shard: $shardIndex',
-      );
-
-      // Build tags list
       final tags = [
         ['vault_id', vaultId],
-        ['shard_index', shardIndex.toString()],
+        ['shard_index', shareIndex.toString()],
         ['steward_pubkey', currentPubkey],
         ['confirmed_at', DateTime.now().toIso8601String()],
+        if (distributionVersion != null) ['distribution_version', distributionVersion.toString()],
       ];
 
-      // Add distribution version if provided
-      if (distributionVersion != null) {
-        tags.add(['distribution_version', distributionVersion.toString()]);
-      }
-
-      // Publish using NdkService with empty content, all data in tags.
-      // We reuse the signed event for the best-effort push so the notifier
-      // can forward it to the vault owner's device.
       final publishedEvent = await ndkService.publishEncryptedEvent(
         content: '',
-        kind: NostrKind.shardConfirmation.value,
+        kind: NostrKind.shareConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: tags,
       );
 
       if (publishedEvent != null) {
-        final vaultForPush = await repository.getVault(vaultId);
-        if (vaultForPush != null) {
+        final vault = await repository.getVault(vaultId);
+        if (vault != null) {
           await _getNotificationService().tryPushForEvent(
             event: publishedEvent,
-            kind: NostrKind.shardConfirmation,
-            vault: vaultForPush,
+            kind: NostrKind.shareConfirmation,
+            vault: vault,
             relayHints: relayUrls,
           );
         }
@@ -369,410 +234,276 @@ class VaultShareService {
 
       return publishedEvent?.id;
     } catch (e) {
-      Log.error('Error sending shard confirmation event', e);
+      Log.error('sendShareConfirmationEvent: error', e);
       return null;
     }
   }
 
-  /// Ensure a vault record exists for received shares
-  Future<void> _ensureVaultExists(String vaultId, ShardData shardData) async {
-    try {
-      // Check if vault already exists
-      final existingVault = await repository.getVault(vaultId);
-      if (existingVault != null) {
-        // Vault exists - check if it's a stub (no shards, no content)
-        // If stub, update it with shard data
-        if (existingVault.shards.isEmpty && existingVault.content == null) {
-          // This is a stub vault created when invitation was accepted
-          // Update it with shard data and name from ShardData if available.
-          //
-          // `pushEnabled`: a null on the wire collapses to `false` so
-          // stewards stay opted-out by default. [_syncVaultMetadataFromShardData]
-          // applies the same rule on every later shard.
-          final updatedVault = existingVault.copyWith(
-            name: shardData.vaultName ?? existingVault.name,
-            ownerName: shardData.ownerName ?? existingVault.ownerName,
-            pushEnabled: shardData.pushEnabled ?? false,
-            // createdAt stays the same (from invitation)
-            // ownerPubkey stays the same (from invitation)
-            // shards will be added via addShardToVault below
-          );
-          await repository.saveVault(updatedVault);
-          Log.info('Updated stub vault $vaultId with shard data');
-        } else {
-          // Already-populated vault: metadata updates from redistribution
-          // are handled by [_syncVaultMetadataFromShardData], not here.
-          Log.info('Vault $vaultId already exists with shards/content');
-        }
-        return;
-      }
-
-      // Create a new vault entry for the shared key.
-      //
-      // pushEnabled defaults to `false` when the owner's shard doesn't carry
-      // the flag (legacy pre-push shard): stewards stay opted-out until the
-      // owner explicitly turns it on and re-distributes.
-      final vaultName = shardData.vaultName ?? defaultVaultName;
-
-      final vault = Vault(
-        id: vaultId,
-        name: vaultName,
-        content: null, // No decrypted content yet - we only have a shard
-        createdAt: DateTime.fromMillisecondsSinceEpoch(
-          shardData.createdAt * 1000,
-        ),
-        ownerPubkey: shardData.creatorPubkey, // Owner is the creator of the shard
-        ownerName: shardData.ownerName, // Set owner name from shard data
-        pushEnabled: shardData.pushEnabled ?? false,
-      );
-
-      await repository.addVault(vault);
-      Log.info('Created vault record for shared key: $vaultId ($vaultName)');
-    } catch (e) {
-      Log.error('Error creating vault record for $vaultId', e);
-      // Don't throw - we don't want to fail shard storage just because vault creation failed
-    }
-  }
-
-  /// Sync mutable vault metadata from the owner's authoritative shardData.
-  ///
-  /// Runs on every shard arrival so that redistribution picks up owner-side
-  /// changes the steward mirrors locally (`pushEnabled`, name, owner name).
-  ///
-  /// Updates apply only when [ShardData.distributionVersion] is present and
-  /// strictly greater than the newest version already stored in
-  /// [Vault.mostRecentShard] (this runs before [VaultRepository.addShardToVault],
-  /// so "stored" means prior shards only). Legacy or older/equal shards are
-  /// ignored here so they cannot roll back e.g. [Vault.pushEnabled] after a
-  /// newer redistribution. When the version qualifies but [ShardData.pushEnabled]
-  /// is null, the steward keeps the existing vault value (wire null = no
-  /// opinion). Creation and stub-upgrade initialization happen in
-  /// [_ensureVaultExists].
-  Future<void> _syncVaultMetadataFromShardData(
-    String vaultId,
-    ShardData shardData,
-  ) async {
-    try {
-      final vault = await repository.getVault(vaultId);
-      if (vault == null) return;
-
-      final storedDistributionVersion = vault.mostRecentShard?.distributionVersion ?? -1;
-      final incoming = shardData.distributionVersion;
-      final canApply = incoming != null && incoming > storedDistributionVersion;
-
-      if (!canApply) {
-        return;
-      }
-
-      var next = vault;
-
-      if (shardData.pushEnabled != null && shardData.pushEnabled != vault.pushEnabled) {
-        next = next.copyWith(pushEnabled: shardData.pushEnabled!);
-      }
-
-      final newName = shardData.vaultName;
-      if (newName != null && newName != vault.name) {
-        next = next.copyWith(name: newName);
-      }
-
-      final newOwnerName = shardData.ownerName;
-      if (newOwnerName != null && newOwnerName != vault.ownerName) {
-        next = next.copyWith(ownerName: newOwnerName);
-      }
-
-      if (!identical(next, vault)) {
-        await repository.saveVault(next);
-        Log.info(
-          'Synced vault $vaultId metadata from shardData '
-          '(distribution_version=$incoming, pushEnabled=${next.pushEnabled})',
-        );
-      }
-    } catch (e) {
-      Log.error('Error syncing vault metadata for $vaultId', e);
-      // Don't rethrow - metadata sync must not fail shard storage.
-    }
-  }
-
-  /// Mark a share as received
-  Future<void> markShareAsReceived(String vaultId) async {
-    await initialize();
-
-    final shard = _cachedShardData![vaultId];
-    if (shard == null) {
-      throw ArgumentError('No share found for vault: $vaultId');
-    }
-
-    // Update shard data with received information
-    final updatedShard = shard.copyWith(
-      isReceived: true,
-      receivedAt: DateTime.now(),
-    );
-
-    _cachedShardData![vaultId] = updatedShard;
-    await _saveShardData();
-    Log.info(
-      'Marked share as received for vault $vaultId (event: ${shard.nostrEventId})',
-    );
-  }
-
-  /// Mark a share as received by event ID
-  Future<void> markShareAsReceivedByEventId(String nostrEventId) async {
-    await initialize();
-
-    for (final entry in _cachedShardData!.entries) {
-      if (entry.value.nostrEventId == nostrEventId) {
-        await markShareAsReceived(entry.key);
-        return;
-      }
-    }
-
-    throw ArgumentError('Share not found with nostr event ID: $nostrEventId');
-  }
-
-  /// Reassemble vault content from collected shares
-  /// Note: This service now only stores a single shard per vault.
-  /// For full recovery, you need to collect shards from multiple stewards.
-  Future<String?> reassembleVaultContent(String vaultId) async {
-    await initialize();
-
-    final shard = _cachedShardData![vaultId];
-    if (shard == null) {
-      Log.warning('No shard found for vault $vaultId');
-      return null;
-    }
-
-    Log.warning(
-      'Cannot reassemble from single shard - need ${shard.threshold} shards from recovery process',
-    );
-    return null;
-  }
-
-  /// Check if we have a shard for this vault
-  /// Note: This returns true if we have ANY shard, but doesn't indicate if we have sufficient shards for recovery
-  Future<bool> hasShard(String vaultId) async {
-    await initialize();
-    return _cachedShardData!.containsKey(vaultId);
-  }
-
-  /// Get all collected shard data (returns all shards we hold as a steward)
-  Future<List<ShardData>> getAllCollectedShards() async {
-    await initialize();
-    return _cachedShardData!.values.toList();
-  }
-
-  /// Get all vaults that have shares (indicating steward status)
-  Future<List<String>> getVaultsWithShares() async {
-    await initialize();
-    return _cachedShardData!.keys.toList();
-  }
-
-  /// Check if user is a steward for a vault
-  /// Now delegates to VaultService
+  /// Check if user is a steward for a vault.
   Future<bool> isKeyHolderForVault(String vaultId) async {
-    return await repository.isKeyHolderForVault(vaultId);
+    return repository.isKeyHolderForVault(vaultId);
   }
 
-  /// Get shard count for a vault
-  /// Now delegates to VaultService
+  /// Get share count for a vault.
   Future<int> getShardCount(String vaultId) async {
-    final shards = await repository.getShardsForVault(vaultId);
-    return shards.length;
+    final shares = await repository.getSharesForVault(vaultId);
+    return shares.length;
   }
 
-  /// Remove shard for a vault
-  /// Now delegates to VaultService
+  /// Remove all shares for a vault.
   Future<void> removeVaultShare(String vaultId) async {
-    await repository.clearShardsForVault(vaultId);
-    Log.info('Removed all shards for vault $vaultId');
+    await repository.clearSharesForVault(vaultId);
+    Log.info('removeVaultShare: removed all held_shares for vault $vaultId');
   }
 
-  /// Remove a specific shard by nostr event ID
-  Future<void> removeShareByEventId(String nostrEventId) async {
-    await initialize();
-
-    for (final entry in _cachedShardData!.entries) {
-      if (entry.value.nostrEventId == nostrEventId) {
-        await removeVaultShare(entry.key);
-        return;
-      }
-    }
-
-    throw ArgumentError('Share not found with nostr event ID: $nostrEventId');
-  }
-
-  /// Get total shard count across all vaults (equals number of vaults we're a steward for)
-  Future<int> getTotalShardCount() async {
-    await initialize();
-    return _cachedShardData!.length;
-  }
-
-  // ========== Recovery Shard Methods ==========
-  // These methods manage shards collected during recovery
-
-  /// Add a recovery shard (for recovery initiator collecting shards from stewards)
-  Future<void> addRecoveryShard(
-    String recoveryRequestId,
-    ShardData shardData,
-  ) async {
-    await initialize();
-
-    // Validate shard data
-    if (!shardData.isValid) {
-      throw ArgumentError('Invalid shard data');
-    }
-
-    // Get existing shards for this recovery request
-    final existingShards = _cachedRecoveryShards![recoveryRequestId] ?? [];
-
-    // Check if shard with this nostrEventId already exists
-    final existingIndex = existingShards.indexWhere(
-      (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
-    );
-
-    if (existingIndex != -1) {
-      // Update existing shard
-      existingShards[existingIndex] = shardData;
-      Log.info(
-        'Updated recovery shard for request $recoveryRequestId (event: ${shardData.nostrEventId})',
-      );
-    } else {
-      // Add new shard
-      existingShards.add(shardData);
-      Log.info(
-        'Added recovery shard for request $recoveryRequestId (event: ${shardData.nostrEventId}, total: ${existingShards.length})',
-      );
-    }
-
-    _cachedRecoveryShards![recoveryRequestId] = existingShards;
-    await _saveRecoveryShardData();
-  }
-
-  /// Get all recovery shards for a recovery request
-  Future<List<ShardData>> getRecoveryShards(String recoveryRequestId) async {
-    await initialize();
-
-    final shards = _cachedRecoveryShards![recoveryRequestId];
-    if (shards == null) return [];
-
-    return List.unmodifiable(shards);
-  }
-
-  /// Get recovery shard count for a recovery request
-  Future<int> getRecoveryShardCount(String recoveryRequestId) async {
-    await initialize();
-
-    final shards = _cachedRecoveryShards![recoveryRequestId];
-    return shards?.length ?? 0;
-  }
-
-  /// Check if we have sufficient recovery shards for a recovery request
-  Future<bool> hasSufficientRecoveryShards(
-    String recoveryRequestId,
-    int threshold,
-  ) async {
-    await initialize();
-
-    final shards = _cachedRecoveryShards![recoveryRequestId];
-    return (shards?.length ?? 0) >= threshold;
-  }
-
-  /// Remove all recovery shards for a recovery request
-  Future<void> removeRecoveryShards(String recoveryRequestId) async {
-    await initialize();
-
-    if (_cachedRecoveryShards!.containsKey(recoveryRequestId)) {
-      final count = _cachedRecoveryShards![recoveryRequestId]!.length;
-      _cachedRecoveryShards!.remove(recoveryRequestId);
-      await _saveRecoveryShardData();
-      Log.info('Removed $count recovery shards for request $recoveryRequestId');
-    }
-  }
-
-  /// Clear all shard data (for testing)
-  Future<void> clearAll() async {
-    _cachedShardData = {};
-    _cachedRecoveryShards = {};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_shardDataKey);
-    await prefs.remove(_recoveryShardDataKey);
-    _isInitialized = false;
-    Log.info('Cleared all shard data and recovery shards');
-  }
-
-  /// Refresh the cached data from storage
-  Future<void> refresh() async {
-    _isInitialized = false;
-    _cachedShardData = null;
-    _cachedRecoveryShards = null;
-    await initialize();
-  }
-
-  /// Process a steward removal event
+  /// Process a steward removal event (kind keyHolderRemoved).
   ///
-  /// When a steward receives a removal event, they should:
-  /// 1. Archive the vault (set isArchived=true, archivedAt=now, archivedReason="Removed by owner")
-  /// 2. Delete their shard for that vault
-  /// 3. Save the updated vault
+  /// Archives the vault and deletes its held share.
   Future<void> processKeyHolderRemoval({required Nip01Event event}) async {
     try {
-      // Validate event kind
       if (event.kind != NostrKind.keyHolderRemoved.value) {
         throw ArgumentError(
-          'Invalid event kind: expected ${NostrKind.keyHolderRemoved.value}, got ${event.kind}',
+          'Invalid event kind: expected ${NostrKind.keyHolderRemoved.value}, '
+          'got ${event.kind}',
         );
       }
 
-      // Parse the removal data from the unwrapped content (already decrypted by NDK)
       Map<String, dynamic> payload;
       try {
         Log.debug('Key holder removed event content: ${event.content}');
         payload = json.decode(event.content) as Map<String, dynamic>;
-        Log.debug(
-          'Key holder removed event payload keys: ${payload.keys.toList()}',
-        );
       } catch (e) {
-        Log.error('Error parsing steward removed event JSON', e);
+        Log.error('processKeyHolderRemoval: failed to parse event JSON', e);
         throw Exception(
-          'Failed to parse steward removed event content. The event may be corrupted or encrypted incorrectly: $e',
+          'Failed to parse steward removed event content: $e',
         );
       }
 
-      // Extract vault ID from payload
       final vaultId = payload['vault_id'] as String?;
       if (vaultId == null || vaultId.isEmpty) {
-        throw ArgumentError(
-          'Missing vault_id in steward removed event payload',
-        );
+        throw ArgumentError('Missing vault_id in steward removed event payload');
       }
 
       Log.info(
-        'Processing steward removal for vault: ${vaultId.substring(0, 8)}...',
+        'processKeyHolderRemoval: vault ${vaultId.substring(0, 8)}...',
       );
 
-      // Get the vault
       final vault = await repository.getVault(vaultId);
       if (vault == null) {
-        Log.warning('Vault $vaultId not found - may have already been deleted');
+        Log.warning(
+          'processKeyHolderRemoval: vault $vaultId not found — may already be deleted',
+        );
         return;
       }
 
-      // Archive the vault
-      final archivedVault = vault.copyWith(
-        isArchived: true,
-        archivedAt: DateTime.now(),
-        archivedReason: 'Removed by owner',
+      await repository.saveVault(
+        vault.copyWith(
+          archivedAt: DateTime.now(),
+          archivedReason: 'Removed by owner',
+        ),
       );
-      await repository.saveVault(archivedVault);
-      Log.info('Archived vault $vaultId');
+      Log.info('processKeyHolderRemoval: archived vault $vaultId');
 
-      // Delete the shard for this vault
       await removeVaultShare(vaultId);
-      Log.info('Removed shard for archived vault $vaultId');
-
-      Log.info('Successfully processed steward removal for vault $vaultId');
+      Log.info('processKeyHolderRemoval: removed share for vault $vaultId');
     } catch (e) {
-      Log.error('Error processing steward removal event ${event.id}', e);
+      Log.error('processKeyHolderRemoval: error processing event ${event.id}', e);
       rethrow;
+    }
+  }
+
+  // ── Private helpers ──
+
+  /// Upsert the `vaults` row and self-steward row from [share] on the steward
+  /// side. Version-gated: only applies if the incoming
+  /// [Share.distributionVersion] is >= the stored
+  /// [Vault.mostRecentShare?.distributionVersion].
+  ///
+  /// Ownership check (skip if this device owns the vault) is done by the
+  /// caller before invoking this helper.
+  Future<void> _upsertStewardVaultAndSelf(
+    String vaultId,
+    Share share,
+  ) async {
+    final existing = await repository.getVault(vaultId);
+    final incomingVersion = share.distributionVersion ?? 0;
+
+    if (existing == null) {
+      // First time we see this vault — create the vault row.
+      final vault = Vault(
+        id: vaultId,
+        name: share.vaultName ?? defaultVaultName,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(share.createdAt * 1000),
+        ownerPubkey: share.creatorPubkey,
+        ownerName: share.ownerName,
+        pushEnabled: share.pushEnabled ?? false,
+      );
+      await repository.addVault(vault);
+      Log.info('_upsertStewardVaultAndSelf: created vault record $vaultId');
+    } else {
+      // Version-gate: only update vault metadata if incoming version is newer.
+      final storedVersion = (await repository.getSharesForVault(vaultId)).fold<int>(-1, (max, s) {
+        final v = s.distributionVersion ?? -1;
+        return v > max ? v : max;
+      });
+      if (incomingVersion > storedVersion) {
+        var updated = existing;
+        if (share.vaultName != null && share.vaultName != existing.name) {
+          updated = updated.copyWith(name: share.vaultName!);
+        }
+        if (share.ownerName != null && share.ownerName != existing.ownerName) {
+          updated = updated.copyWith(ownerName: share.ownerName);
+        }
+        if (share.pushEnabled != null && share.pushEnabled != existing.pushEnabled) {
+          updated = updated.copyWith(pushEnabled: share.pushEnabled!);
+        }
+        if (!identical(updated, existing)) {
+          await repository.saveVault(updated);
+          Log.info(
+            '_upsertStewardVaultAndSelf: updated vault $vaultId metadata '
+            '(version $incomingVersion)',
+          );
+        }
+      }
+    }
+
+    final currentPubkey = await _getNdkService().getCurrentPubkey();
+
+    // Upsert every steward advertised by the wire payload into normalized
+    // `stewards` rows so UI/read paths no longer depend on Share.stewards.
+    // Prefer embedded UUID `id` when present; otherwise derive a deterministic
+    // `wire_<vaultId>_<slot>_<pubkey>` row id so peers are not silently skipped.
+    final embeddedStewards = share.stewards;
+    if (embeddedStewards != null && embeddedStewards.isNotEmpty) {
+      for (var i = 0; i < embeddedStewards.length; i++) {
+        final steward = embeddedStewards[i];
+        final pubkey = steward['pubkey'];
+        final name = steward['name'];
+        if (pubkey == null || pubkey.isEmpty || name == null || name.isEmpty) {
+          continue;
+        }
+        final slotZeroBased = _shardSlotZeroBasedFromEmbedded(
+          steward: steward,
+          filteredEnumerationIndex: i,
+          share: share,
+          recipientPubkeyHex: currentPubkey,
+        );
+        final stewardRowId = _resolvedEmbeddedStewardRowId(
+          vaultId: vaultId,
+          steward: steward,
+          slotZeroBased: slotZeroBased,
+        );
+        await repository.upsertStewardRow(
+          id: stewardRowId,
+          vaultId: vaultId,
+          shareIndex: slotZeroBased + 1, // 1-based in DB
+          pubkey: pubkey,
+          name: name,
+          contactInfo: steward['contactInfo'],
+          isOwner: pubkey == share.creatorPubkey,
+        );
+      }
+    }
+
+    // Ensure the recipient's own steward row exists.
+    var selfShareIndex = share.shareIndex + 1; // 1-based in DB
+    String? selfName;
+    String? selfResolvedId;
+    if (currentPubkey != null && currentPubkey.isNotEmpty && embeddedStewards != null) {
+      for (var i = 0; i < embeddedStewards.length; i++) {
+        final row = embeddedStewards[i];
+        if ((row['pubkey'] ?? '') == currentPubkey) {
+          final slotZeroBased = _shardSlotZeroBasedFromEmbedded(
+            steward: row,
+            filteredEnumerationIndex: i,
+            share: share,
+            recipientPubkeyHex: currentPubkey,
+          );
+          selfShareIndex = slotZeroBased + 1;
+          selfName = row['name'];
+          selfResolvedId = _resolvedEmbeddedStewardRowId(
+            vaultId: vaultId,
+            steward: row,
+            slotZeroBased: slotZeroBased,
+          );
+          break;
+        }
+      }
+    }
+
+    if (currentPubkey != null && currentPubkey.isNotEmpty) {
+      final fallbackSlot = share.shareIndex;
+      final idForSelf = selfResolvedId ??
+          _resolvedEmbeddedStewardRowId(
+            vaultId: vaultId,
+            steward: {'pubkey': currentPubkey},
+            slotZeroBased: fallbackSlot,
+          );
+      await repository.upsertStewardRow(
+        id: idForSelf,
+        vaultId: vaultId,
+        shareIndex: selfShareIndex,
+        pubkey: currentPubkey,
+        name: selfName ?? 'Unknown',
+        isOwner: currentPubkey == share.creatorPubkey,
+      );
+    }
+    Log.debug(
+      '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
+      'shareIndex=$selfShareIndex',
+    );
+
+    // Persist Shamir params from the wire share onto `vaults`. Without this,
+    // steward bootstrap rows stay at threshold/total_shares = 0 (no
+    // BackupConfig), and hydrated Vault.shares fail Share.isValid.
+    await repository.mergeVaultRowFromIncomingShare(vaultId, share);
+    await _inferOwnerSelfStewardAckIfEmbeddedListsOwner(vaultId, share);
+  }
+
+  /// When the wire payload lists the vault owner as an embedded steward,
+  /// treat them as acknowledged for [Share.distributionVersion] without a
+  /// separate ack event id ([acknowledgmentEventId] stays null). Uses a
+  /// synthetic non-empty `giftWrapEventId` so `distribution_shares` rows (NOT
+  /// NULL `gift_wrap_event_id`) can be written for the owner.
+  ///
+  /// Skips when [mergeVaultRowFromIncomingShare] left the vault on a newer
+  /// distribution version than this share (stale ingest).
+  Future<void> _inferOwnerSelfStewardAckIfEmbeddedListsOwner(
+    String vaultId,
+    Share share,
+  ) async {
+    const syntheticPrefix = 'owner-self-steward-inferred';
+    final ownerPk = share.creatorPubkey;
+    final embedded = share.stewards;
+    if (embedded == null || embedded.isEmpty) return;
+
+    final ownerListed = embedded.any((m) => (m['pubkey'] ?? '') == ownerPk);
+    if (!ownerListed) return;
+
+    final shareDist = share.distributionVersion ?? 0;
+    final vault = await repository.getVault(vaultId);
+    final vaultDist = vault?.backupConfig?.distributionVersion;
+    if (vault == null || vaultDist == null) return;
+    if (shareDist != vaultDist) return;
+
+    final syntheticGiftWrapId = '$syntheticPrefix:$vaultId:v$shareDist';
+
+    try {
+      await repository.updateStewardStatus(
+        vaultId: vaultId,
+        pubkey: ownerPk,
+        status: StewardStatus.holdingKey,
+        acknowledgedAt: DateTime.now(),
+        acknowledgmentEventId: null,
+        acknowledgedDistributionVersion: shareDist,
+        giftWrapEventId: syntheticGiftWrapId,
+      );
+    } catch (e, st) {
+      Log.warning(
+        '_inferOwnerSelfStewardAckIfEmbeddedListsOwner failed for vault $vaultId',
+        e,
+        st,
+      );
     }
   }
 }

@@ -4,20 +4,29 @@ import 'package:mockito/mockito.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
-import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/providers/vault_provider.dart';
-import 'package:horcrux/services/shard_distribution_service.dart';
+import 'package:horcrux/providers/vault_detail_repository.dart';
+import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 
 import '../helpers/steward_test_helpers.dart';
 import 'backup_service_test.mocks.dart';
 
+class _MockVaultDetailRepository extends Mock implements VaultDetailRepository {
+  @override
+  Future<VaultDetail?> getVaultDetail(String vaultId) => super.noSuchMethod(
+        Invocation.method(#getVaultDetail, [vaultId]),
+        returnValue: Future.value(null),
+        returnValueForMissingStub: Future.value(null),
+      ) as Future<VaultDetail?>;
+}
+
 @GenerateMocks([
   VaultRepository,
-  ShardDistributionService,
+  ShareDistributionService,
   LoginService,
   RelayScanService,
 ])
@@ -25,18 +34,21 @@ void main() {
   group('BackupService - Shamir Secret Sharing', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
-    late MockShardDistributionService mockShardDistributionService;
+    late _MockVaultDetailRepository mockDetailRepository;
+    late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
-      mockShardDistributionService = MockShardDistributionService();
+      mockDetailRepository = _MockVaultDetailRepository();
+      mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
-        mockShardDistributionService,
+        mockDetailRepository,
+        mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
       );
@@ -78,11 +90,11 @@ void main() {
       expect(shares, hasLength(totalShards));
       for (int i = 0; i < totalShards; i++) {
         expect(shares[i].threshold, threshold);
-        expect(shares[i].totalShards, totalShards);
-        expect(shares[i].shardIndex, i);
+        expect(shares[i].totalShares, totalShards);
+        expect(shares[i].shareIndex, i);
         expect(shares[i].creatorPubkey, testCreatorPubkey);
-        expect(shares[i].shard, isA<String>());
-        expect(shares[i].shard.isNotEmpty, true);
+        expect(shares[i].payload, isA<String>());
+        expect(shares[i].payload.isNotEmpty, true);
         expect(shares[i].primeMod, isA<String>());
         expect(shares[i].primeMod.isNotEmpty, true);
       }
@@ -105,7 +117,7 @@ void main() {
       );
 
       // Assert - All shares should be unique
-      final shardStrings = shares.map((s) => s.shard).toList();
+      final shardStrings = shares.map((s) => s.payload).toList();
       expect(shardStrings.toSet().length, totalShards);
     });
 
@@ -230,7 +242,7 @@ void main() {
         stewards: testPeers,
       );
       final shares2 = await backupService.generateShamirShares(
-        content: 'Different secret',
+        content: testSecret,
         threshold: 2,
         totalShards: 3,
         creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
@@ -362,18 +374,21 @@ void main() {
   group('BackupService - redistributeForPushPreferenceChange', () {
     late BackupService backupService;
     late MockVaultRepository mockRepository;
-    late MockShardDistributionService mockShardDistributionService;
+    late _MockVaultDetailRepository mockDetailRepository;
+    late MockShareDistributionService mockShareDistributionService;
     late MockLoginService mockLoginService;
     late MockRelayScanService mockRelayScanService;
 
     setUp(() {
       mockRepository = MockVaultRepository();
-      mockShardDistributionService = MockShardDistributionService();
+      mockDetailRepository = _MockVaultDetailRepository();
+      mockShareDistributionService = MockShareDistributionService();
       mockLoginService = MockLoginService();
       mockRelayScanService = MockRelayScanService();
       backupService = BackupService(
         mockRepository,
-        mockShardDistributionService,
+        mockDetailRepository,
+        mockShareDistributionService,
         mockLoginService,
         mockRelayScanService,
       );
@@ -389,10 +404,10 @@ void main() {
 
       verifyNever(mockRepository.updateBackupConfig(any, any));
       verifyNever(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       );
     });
@@ -421,10 +436,10 @@ void main() {
 
       verifyNever(mockRepository.updateBackupConfig(any, any));
       verifyNever(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       );
     });
@@ -450,11 +465,7 @@ void main() {
         ],
         relays: const ['wss://relay.example.com'],
       );
-      final cfgAt5 = copyBackupConfig(
-        baseCfg,
-        distributionVersion: 5,
-        status: BackupStatus.active,
-      );
+      final cfgAt5 = baseCfg.copyWith(distributionVersion: 5);
 
       late BackupConfig current;
       current = cfgAt5;
@@ -463,35 +474,140 @@ void main() {
         current = inv.positionalArguments[1] as BackupConfig;
       });
       when(mockLoginService.getStoredNostrKey()).thenAnswer((_) async => kp);
-      when(mockRepository.getVault(testVaultId)).thenAnswer(
-        (_) async => Vault(
+      when(mockDetailRepository.getVaultDetail(testVaultId)).thenAnswer(
+        (_) async => OwnedVaultDetail(
           id: testVaultId,
           name: 'Vault',
-          content: testSecret,
-          createdAt: DateTime.now().toUtc(),
           ownerPubkey: ownerPk,
+          ownerName: null,
+          threshold: 2,
+          totalShares: 3,
+          stewards: const [],
+          recoveryRequests: const [],
           pushEnabled: false,
+          createdAt: DateTime.now().toUtc(),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: cfgAt5,
+          content: testSecret,
+          selfHeldShare: null,
         ),
       );
       when(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       ).thenAnswer((_) async => []);
 
       await backupService.redistributeForPushPreferenceChange(vaultId: testVaultId);
 
       expect(current.distributionVersion, 6);
-      expect(current.lastRedistribution, isNotNull);
+      expect(current.hasBeenDistributed, isTrue);
       verify(
-        mockShardDistributionService.distributeShards(
+        mockShareDistributionService.distributeShares(
           ownerPubkey: anyNamed('ownerPubkey'),
           config: anyNamed('config'),
-          shards: anyNamed('shards'),
+          shares: anyNamed('shares'),
         ),
       ).called(1);
     });
+  });
+
+  group('BackupService - createAndDistributeBackup', () {
+    late BackupService backupService;
+    late MockVaultRepository mockRepository;
+    late _MockVaultDetailRepository mockDetailRepository;
+    late MockShareDistributionService mockShareDistributionService;
+    late MockLoginService mockLoginService;
+    late MockRelayScanService mockRelayScanService;
+
+    setUp(() {
+      mockRepository = MockVaultRepository();
+      mockDetailRepository = _MockVaultDetailRepository();
+      mockShareDistributionService = MockShareDistributionService();
+      mockLoginService = MockLoginService();
+      mockRelayScanService = MockRelayScanService();
+      backupService = BackupService(
+        mockRepository,
+        mockDetailRepository,
+        mockShareDistributionService,
+        mockLoginService,
+        mockRelayScanService,
+      );
+    });
+
+    const testVaultId = 'vault-create-dist';
+    const testSecret = 'create and distribute secret';
+
+    test(
+      'first distribution initializes version 1 before shard publish',
+      () async {
+        final keyPair = Bip340.generatePrivateKey();
+        final ownerPubkey = keyPair.publicKey;
+
+        final configAt0 = createBackupConfig(
+          vaultId: testVaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createTestSteward(pubkey: ownerPubkey, name: 'Owner', isOwner: true),
+            createTestSteward(
+              pubkey: 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
+              name: 'Peer',
+            ),
+          ],
+          relays: const ['wss://relay.example.com'],
+        );
+        expect(configAt0.distributionVersion, 0);
+
+        late BackupConfig currentConfig;
+        currentConfig = configAt0;
+        when(mockRepository.getBackupConfig(testVaultId)).thenAnswer((_) async => currentConfig);
+        when(mockRepository.updateBackupConfig(any, any)).thenAnswer((invocation) async {
+          currentConfig = invocation.positionalArguments[1] as BackupConfig;
+        });
+        when(mockLoginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
+        when(mockDetailRepository.getVaultDetail(testVaultId)).thenAnswer(
+          (_) async => OwnedVaultDetail(
+            id: testVaultId,
+            name: 'Vault',
+            ownerPubkey: ownerPubkey,
+            ownerName: null,
+            threshold: 2,
+            totalShares: 2,
+            stewards: const [],
+            recoveryRequests: const [],
+            pushEnabled: false,
+            createdAt: DateTime.now().toUtc(),
+            archivedAt: null,
+            archivedReason: null,
+            backupConfig: configAt0,
+            content: testSecret,
+            selfHeldShare: null,
+          ),
+        );
+
+        BackupConfig? distributedWithConfig;
+        when(
+          mockShareDistributionService.distributeShares(
+            ownerPubkey: anyNamed('ownerPubkey'),
+            config: anyNamed('config'),
+            shares: anyNamed('shares'),
+          ),
+        ).thenAnswer((invocation) async {
+          distributedWithConfig = invocation.namedArguments[#config] as BackupConfig;
+          return [];
+        });
+
+        await backupService.createAndDistributeBackup(vaultId: testVaultId);
+
+        expect(distributedWithConfig, isNotNull);
+        expect(distributedWithConfig!.distributionVersion, 1);
+        expect(currentConfig.distributionVersion, 1);
+        expect(currentConfig.hasBeenDistributed, isTrue);
+      },
+    );
   });
 }

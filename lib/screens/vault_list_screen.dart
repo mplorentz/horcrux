@@ -14,8 +14,7 @@ class VaultListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the vault stream provider
-    final vaultsAsync = ref.watch(vaultListProvider);
+    final vaultsAsync = ref.watch(vaultDetailListProvider);
 
     return HorcruxScaffold(
       showNotificationBanner: true,
@@ -78,7 +77,7 @@ class VaultListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () => ref.refresh(vaultListProvider),
+                            onPressed: () => ref.refresh(vaultDetailListProvider),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(
                                 context,

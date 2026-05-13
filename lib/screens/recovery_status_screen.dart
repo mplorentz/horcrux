@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recovery_request.dart';
+import '../models/vault_detail.dart';
 import '../providers/recovery_provider.dart';
 import '../providers/vault_provider.dart';
 import '../services/recovery_service.dart';
@@ -94,7 +95,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
           }
 
           // Get vault to extract instructions
-          final vaultAsync = ref.watch(vaultProvider(request.vaultId));
+          final vaultAsync = ref.watch(vaultDetailProvider(request.vaultId));
 
           return vaultAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -103,13 +104,15 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
               // Get instructions from vault
               String? instructions;
               if (vault != null) {
-                // First try to get from backupConfig
                 if (vault.backupConfig?.instructions != null &&
                     vault.backupConfig!.instructions!.isNotEmpty) {
                   instructions = vault.backupConfig!.instructions;
-                } else if (vault.shards.isNotEmpty) {
-                  // Fallback to shard data
-                  instructions = vault.mostRecentShard?.instructions;
+                } else {
+                  final share = switch (vault) {
+                    StewardedVaultDetail(:final latestShare) => latestShare,
+                    OwnedVaultDetail(:final selfHeldShare) => selfHeldShare,
+                  };
+                  instructions = share?.instructions;
                 }
               }
 
@@ -293,18 +296,7 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
                     ),
                   ),
                   // Buttons at bottom
-                  if (approvedCount >= threshold) ...[
-                    // Open Vault button (top button when keys are sufficient)
-                    _buildOpenVaultButton(
-                      request.isPractice,
-                      addBottomSafeArea: request.status != RecoveryRequestStatus.completed,
-                    ),
-                    if (request.status == RecoveryRequestStatus.completed)
-                      _buildExitRecoveryButton(request.isPractice),
-                  ] else if (request.status.isActive)
-                    _buildCancelButton()
-                  else if (request.status == RecoveryRequestStatus.completed)
-                    _buildExitRecoveryButton(request.isPractice),
+                  ..._bottomActionsForRecoveryStatus(request),
                 ],
               );
             },
@@ -312,6 +304,29 @@ class _RecoveryStatusScreenState extends ConsumerState<RecoveryStatusScreen> {
         },
       ),
     );
+  }
+
+  /// Primary actions at the bottom of the recovery status screen.
+  ///
+  /// Active sessions: cancel. Completed: open vault and end. Terminal: end only.
+  List<Widget> _bottomActionsForRecoveryStatus(RecoveryRequest request) {
+    return switch (request.status) {
+      RecoveryRequestStatus.pending ||
+      RecoveryRequestStatus.sent ||
+      RecoveryRequestStatus.inProgress =>
+        <Widget>[_buildCancelButton()],
+      RecoveryRequestStatus.completed => <Widget>[
+          _buildOpenVaultButton(
+            request.isPractice,
+            addBottomSafeArea: false,
+          ),
+          _buildExitRecoveryButton(request.isPractice),
+        ],
+      RecoveryRequestStatus.cancelled ||
+      RecoveryRequestStatus.failed ||
+      RecoveryRequestStatus.archived =>
+        <Widget>[_buildExitRecoveryButton(request.isPractice)],
+    };
   }
 
   Widget _buildExitRecoveryButton([bool isPractice = false]) {

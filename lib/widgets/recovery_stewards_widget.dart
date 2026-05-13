@@ -103,7 +103,7 @@ class RecoveryStewardsWidget extends ConsumerWidget {
       for (final kh in vault.backupConfig!.stewards) {
         final pubkey = kh.pubkey;
         if (pubkey == null) continue;
-        final response = request.stewardResponses[pubkey];
+        final response = request.responseForPubkey(pubkey);
         result.add(
           _StewardInfo(
             pubkey: pubkey,
@@ -116,39 +116,15 @@ class RecoveryStewardsWidget extends ConsumerWidget {
       return result;
     }
 
-    // Fallback: use stewards from shards
-    final shard = vault.mostRecentShard;
-    if (shard != null) {
+    // Fallback: use owner pubkey if available
+    {
       final stewardsMap = <String, _StewardInfo>{};
 
-      // Add stewards - now a list of maps with name, pubkey, and optionally contactInfo
-      if (shard.stewards != null) {
-        for (final steward in shard.stewards!) {
-          final stewardPubkey = steward['pubkey'];
-          final stewardName = steward['name'];
-          final stewardContactInfo = steward['contactInfo'];
-          if (stewardPubkey == null) continue;
-
-          // Skip if this is the owner and we already have owner info
-          final isOwner = stewardPubkey == vault.ownerPubkey;
-
-          final response = request.stewardResponses[stewardPubkey];
-          stewardsMap[stewardPubkey] = _StewardInfo(
-            pubkey: stewardPubkey,
-            name: stewardName ??
-                (isOwner ? vault.ownerName : null) ??
-                (isOwner ? shard.ownerName : null),
-            contactInfo: stewardContactInfo,
-            response: response,
-          );
-        }
-      }
-
-      // If owner is not in stewards list but has a name, add them
+      // If owner has a name, add them
       if (!stewardsMap.containsKey(vault.ownerPubkey)) {
-        final ownerName = vault.ownerName ?? shard.ownerName;
+        final ownerName = vault.ownerName;
         if (ownerName != null) {
-          final response = request.stewardResponses[vault.ownerPubkey];
+          final response = request.responseForPubkey(vault.ownerPubkey);
           stewardsMap[vault.ownerPubkey] = _StewardInfo(
             pubkey: vault.ownerPubkey,
             name: ownerName,
@@ -159,8 +135,6 @@ class RecoveryStewardsWidget extends ConsumerWidget {
 
       return stewardsMap.values.toList();
     }
-
-    return [];
   }
 
   Widget _buildStewardItem(BuildContext context, _StewardInfo info) {

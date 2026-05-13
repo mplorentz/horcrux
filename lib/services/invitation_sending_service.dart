@@ -4,11 +4,15 @@ import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../models/nostr_kinds.dart';
 
-/// Provider for InvitationSendingService
+/// Provider for InvitationSendingService.
+///
+/// Watches [ndkServiceProvider] so a logout-driven NDK rebuild propagates
+/// here and we don't keep publishing through the previous session's NDK
+/// instance.
 final invitationSendingServiceProvider = Provider<InvitationSendingService>((
   ref,
 ) {
-  return InvitationSendingService(ref.read(ndkServiceProvider));
+  return InvitationSendingService(ref.watch(ndkServiceProvider));
 });
 
 /// Stateless utility service for creating and publishing outgoing invitation-related Nostr events
@@ -135,9 +139,9 @@ class InvitationSendingService {
   /// Signs with steward's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
-  Future<String?> sendShardConfirmationEvent({
+  Future<String?> sendShareConfirmationEvent({
     required String vaultId,
-    required int shardIndex,
+    required int shareIndex,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
     int? distributionVersion,
@@ -153,7 +157,7 @@ class InvitationSendingService {
       final confirmationData = {
         'type': 'shard_confirmation',
         'vault_id': vaultId,
-        'shard_index': shardIndex,
+        'shard_index': shareIndex,
         'steward_pubkey': currentPubkey,
         'confirmed_at': DateTime.now().toIso8601String(),
       };
@@ -161,14 +165,14 @@ class InvitationSendingService {
       final confirmationJson = json.encode(confirmationData);
 
       Log.info(
-        'Sending shard confirmation event for vault: ${vaultId.substring(0, 8)}..., shard: $shardIndex',
+        'Sending share confirmation event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
       // Publish using NdkService
       final tags = [
-        ['d', 'shard_confirmation_${vaultId}_$shardIndex'],
+        ['d', 'shard_confirmation_${vaultId}_$shareIndex'],
         ['vault_id', vaultId],
-        ['shard_index', shardIndex.toString()],
+        ['shard_index', shareIndex.toString()],
       ];
 
       // Include distribution version if provided
@@ -178,7 +182,7 @@ class InvitationSendingService {
 
       final event = await ndkService.publishEncryptedEvent(
         content: confirmationJson,
-        kind: NostrKind.shardConfirmation.value,
+        kind: NostrKind.shareConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: tags,
@@ -198,9 +202,9 @@ class InvitationSendingService {
   /// Signs with steward's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
-  Future<String?> sendShardErrorEvent({
+  Future<String?> sendShareErrorEvent({
     required String vaultId,
-    required int shardIndex,
+    required int shareIndex,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
     required String error,
@@ -216,7 +220,7 @@ class InvitationSendingService {
       final errorData = {
         'type': 'shard_error',
         'vault_id': vaultId,
-        'shard_index': shardIndex,
+        'shard_index': shareIndex,
         'steward_pubkey': currentPubkey,
         'error': error,
         'reported_at': DateTime.now().toIso8601String(),
@@ -225,19 +229,19 @@ class InvitationSendingService {
       final errorJson = json.encode(errorData);
 
       Log.warning(
-        'Sending shard error event for vault: ${vaultId.substring(0, 8)}..., shard: $shardIndex',
+        'Sending share error event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
       // Publish using NdkService
       final event = await ndkService.publishEncryptedEvent(
         content: errorJson,
-        kind: NostrKind.shardError.value,
+        kind: NostrKind.shareError.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'shard_error_${vaultId}_$shardIndex'],
+          ['d', 'shard_error_${vaultId}_$shareIndex'],
           ['vault_id', vaultId],
-          ['shard_index', shardIndex.toString()],
+          ['shard_index', shareIndex.toString()],
         ],
       );
       return event?.id;

@@ -3,26 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ntcdcrypto/ntcdcrypto.dart';
 import '../models/backup_config.dart';
 import '../models/steward.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/backup_status.dart';
 import '../models/steward_status.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
+import '../providers/vault_detail_repository.dart';
 import '../providers/key_provider.dart';
 import 'login_service.dart';
-import 'shard_distribution_service.dart';
+import 'share_distribution_service.dart';
 import 'relay_scan_service.dart';
 import '../services/logger.dart';
 
-/// Provider for BackupService
+/// Provider for BackupService.
+///
+/// Watches the repositories and downstream services so that an
+/// [appDatabaseProvider] invalidation rebuilds BackupService against the
+/// fresh repositories instead of holding the previous (closed) database.
 final Provider<BackupService> backupServiceProvider = Provider<BackupService>((
   ref,
 ) {
   return BackupService(
-    ref.read(vaultRepositoryProvider),
-    ref.read(shardDistributionServiceProvider),
-    ref.read(loginServiceProvider),
-    ref.read(relayScanServiceProvider),
+    ref.watch(vaultRepositoryProvider),
+    ref.watch(vaultDetailRepositoryProvider),
+    ref.watch(shareDistributionServiceProvider),
+    ref.watch(loginServiceProvider),
+    ref.watch(relayScanServiceProvider),
   );
 });
 
@@ -49,34 +56,30 @@ List<Steward> _stewardsResetForRedistribution(List<Steward> stewards) {
   }).toList();
 }
 
-/// [config] with [BackupConfig.distributionVersion] incremented and stewards reset.
-///
-/// Optionally sets [lastContentChange] (e.g. vault body edit); otherwise preserves
-/// the existing value.
-BackupConfig _backupConfigWithBumpedDistribution(
-  BackupConfig config, {
-  DateTime? lastContentChange,
-}) {
-  final now = DateTime.now();
-  return copyBackupConfig(
-    config,
+/// [config] with [BackupConfig.distributionVersion] incremented and stewards
+/// reset. Phase 1 stops tracking `lastContentChange` / `lastUpdated` —
+/// callers that need "content has changed since last distribution" should
+/// drive that off [BackupConfig.distributionVersion] and the steward statuses
+/// reset by this call.
+BackupConfig _backupConfigWithBumpedDistribution(BackupConfig config) {
+  return config.copyWith(
     stewards: _stewardsResetForRedistribution(config.stewards),
     distributionVersion: config.distributionVersion + 1,
-    lastUpdated: now,
-    lastContentChange: lastContentChange ?? config.lastContentChange,
   );
 }
 
 /// Service for managing distributed backup using Shamir's Secret Sharing
 class BackupService {
   final VaultRepository _repository;
-  final ShardDistributionService _shardDistributionService;
+  final VaultDetailRepository _vaultDetailRepository;
+  final ShareDistributionService _shareDistributionService;
   final LoginService _loginService;
   final RelayScanService _relayScanService;
 
   BackupService(
     this._repository,
-    this._shardDistributionService,
+    this._vaultDetailRepository,
+    this._shareDistributionService,
     this._loginService,
     this._relayScanService,
   );
@@ -89,7 +92,6 @@ class BackupService {
     required List<Steward> stewards,
     required List<String> relays,
     String? instructions,
-    String? contentHash,
   }) async {
     // Validate inputs
     if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
@@ -117,7 +119,6 @@ class BackupService {
       stewards: stewards,
       relays: relays,
       instructions: instructions,
-      contentHash: contentHash,
     );
 
     // Store the configuration in the vault via repository
@@ -158,7 +159,7 @@ class BackupService {
   }
 
   /// Generate Shamir shares for vault content
-  Future<List<ShardData>> generateShamirShares({
+  Future<List<Share>> generateShamirShares({
     required String content,
     required int threshold,
     required int totalShards,
@@ -197,14 +198,14 @@ class BackupService {
       final primeModHex = sss.prime.toRadixString(16);
       final primeMod = base64Url.encode(utf8.encode(primeModHex));
 
-      // Convert to ShardData objects
-      final shardDataList = <ShardData>[];
+      // Convert to Share objects
+      final shardDataList = <Share>[];
       for (int i = 0; i < totalShards; i++) {
-        final shardData = createShardData(
-          shard: shareStrings[i],
+        final shardData = createShare(
+          payload: shareStrings[i],
           threshold: threshold,
-          shardIndex: i,
-          totalShards: totalShards,
+          shareIndex: i,
+          totalShares: totalShards,
           primeMod: primeMod,
           creatorPubkey: creatorPubkey,
           vaultId: vaultId,
@@ -230,7 +231,7 @@ class BackupService {
 
   /// Reconstruct content from Shamir shares
   Future<String> reconstructFromShares({
-    required List<ShardData> shares,
+    required List<Share> shares,
   }) async {
     try {
       if (shares.isEmpty) {
@@ -239,13 +240,13 @@ class BackupService {
 
       // Validate that all shares have the same threshold and totalShards
       final threshold = shares.first.threshold;
-      final totalShards = shares.first.totalShards;
+      final totalSharesCount = shares.first.totalShares;
       final primeMod = shares.first.primeMod;
       final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
         if (share.threshold != threshold ||
-            share.totalShards != totalShards ||
+            share.totalShares != totalSharesCount ||
             share.primeMod != primeMod ||
             share.creatorPubkey != creatorPubkey) {
           throw ArgumentError('All shares must have the same parameters');
@@ -273,8 +274,8 @@ class BackupService {
         );
       }
 
-      // Extract the share strings from ShardData objects
-      final shareStrings = shares.map((s) => s.shard).toList();
+      // Extract the share strings from Share objects
+      final shareStrings = shares.map((s) => s.payload).toList();
 
       // Combine shares using Base64Url encoding (isBase64 = true)
       // This will reconstruct the original secret
@@ -293,21 +294,14 @@ class BackupService {
     }
   }
 
-  /// Update backup status
+  /// Previously updated a persisted [BackupStatus] enum on the config.
+  /// `status` is no longer stored — it is derived from steward statuses and
+  /// distribution timestamps. Retained as a no-op to keep call sites compiling
+  /// during the data-layer refactor; remove in a follow-up cleanup pass.
   Future<void> updateBackupStatus(String vaultId, BackupStatus status) async {
-    final config = await _repository.getBackupConfig(vaultId);
-    if (config == null) {
-      throw ArgumentError('Backup configuration not found for vault $vaultId');
-    }
-
-    final updatedConfig = copyBackupConfig(
-      config,
-      status: status,
-      lastUpdated: DateTime.now(),
+    Log.info(
+      'updateBackupStatus($vaultId, $status) is a no-op: status is derived',
     );
-    await _repository.updateBackupConfig(vaultId, updatedConfig);
-
-    Log.info('Updated backup status for vault $vaultId to $status');
   }
 
   /// Update steward status
@@ -317,6 +311,7 @@ class BackupService {
     required StewardStatus status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
+    String? giftWrapEventId,
   }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
@@ -330,17 +325,14 @@ class BackupService {
           status: status,
           acknowledgedAt: acknowledgedAt,
           acknowledgmentEventId: acknowledgmentEventId,
+          giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
           // Preserve contactInfo when updating steward status
         );
       }
       return steward;
     }).toList();
 
-    final updatedConfig = copyBackupConfig(
-      config,
-      stewards: updatedStewards,
-      lastUpdated: DateTime.now(),
-    );
+    final updatedConfig = config.copyWith(stewards: updatedStewards);
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
 
@@ -433,9 +425,6 @@ class BackupService {
       mergedStewards = existingConfig.stewards;
     }
 
-    // Calculate new total keys based on merged stewards
-    final newTotalKeys = mergedStewards.length;
-
     // Increment distribution version if config changed
     final newDistributionVersion = configParamsChanged
         ? existingConfig.distributionVersion + 1
@@ -447,16 +436,12 @@ class BackupService {
         : mergedStewards;
 
     // Create merged config
-    final mergedConfig = copyBackupConfig(
-      existingConfig,
+    final mergedConfig = existingConfig.copyWith(
       threshold: newThreshold,
-      totalKeys: newTotalKeys,
       stewards: finalStewards,
       relays: newRelays,
       instructions: newInstructions,
-      lastUpdated: DateTime.now(),
       distributionVersion: newDistributionVersion,
-      // Preserve lastRedistribution - only updated when distribution succeeds
     );
 
     // Save merged config
@@ -489,10 +474,7 @@ class BackupService {
       return;
     }
 
-    final updatedConfig = _backupConfigWithBumpedDistribution(
-      config,
-      lastContentChange: DateTime.now(),
-    );
+    final updatedConfig = _backupConfigWithBumpedDistribution(config);
 
     await _repository.updateBackupConfig(vaultId, updatedConfig);
     Log.info(
@@ -510,7 +492,9 @@ class BackupService {
   /// [createAndDistributeBackup] so new shards carry the current preference.
   ///
   /// No-ops when there is no config or [BackupConfig.canDistribute] is false.
-  Future<void> redistributeForPushPreferenceChange({required String vaultId}) async {
+  Future<void> redistributeForPushPreferenceChange({
+    required String vaultId,
+  }) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
       Log.info('BackupService: skip push redistribution (no backup config)');
@@ -547,9 +531,9 @@ class BackupService {
   Future<void> distributeKeysIfNecessary(String vaultId) async {
     try {
       final backupConfig = await _repository.getBackupConfig(vaultId);
-      final vault = await _repository.getVault(vaultId);
+      final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
 
-      if (backupConfig != null && vault != null && vault.content != null) {
+      if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)
@@ -570,7 +554,10 @@ class BackupService {
               await createAndDistributeBackup(vaultId: vaultId);
               Log.info('Auto-distributed keys after steward acceptance');
             } catch (e) {
-              Log.error('Failed to auto-distribute keys after steward acceptance', e);
+              Log.error(
+                'Failed to auto-distribute keys after steward acceptance',
+                e,
+              );
               // Don't fail if auto-distribution fails
             }
           }
@@ -678,17 +665,15 @@ class BackupService {
     required String vaultId,
   }) async {
     try {
-      // Step 1: Load vault content
-      final vault = await _repository.getVault(vaultId);
-      if (vault == null) {
+      // Step 1: Load vault content (requires owned vault).
+      final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
+      if (vaultDetail == null) {
         throw Exception('Vault not found: $vaultId');
       }
-      final content = vault.content;
-      if (content == null) {
-        throw Exception(
-          'Cannot backup encrypted vault - content is not available',
-        );
+      if (vaultDetail is! OwnedVaultDetail) {
+        throw Exception('Cannot backup vault — this device is not the owner');
       }
+      final content = vaultDetail.content;
       Log.info('Loaded vault content for backup: $vaultId');
 
       // Step 2: Load backup configuration
@@ -700,6 +685,14 @@ class BackupService {
         throw Exception('No stewards configured in backup configuration');
       }
       Log.info('Loaded backup configuration');
+      var configToDistribute = config;
+      if (!config.hasBeenDistributed) {
+        configToDistribute = _backupConfigWithBumpedDistribution(config);
+        await _repository.updateBackupConfig(vaultId, configToDistribute);
+        Log.info(
+          'Initialized first distribution version to ${configToDistribute.distributionVersion} for vault $vaultId',
+        );
+      }
 
       // Step 3: Get creator's Nostr key pair
       final creatorKeyPair = await _loginService.getStoredNostrKey();
@@ -711,52 +704,62 @@ class BackupService {
       Log.info('Retrieved creator key pair');
 
       // Step 4: Validate all stewards are ready for distribution
-      if (!config.canDistribute) {
-        final names = config.stewards
+      if (!configToDistribute.canDistribute) {
+        final names = configToDistribute.stewards
             .where((kh) => kh.pubkey == null)
             .map((kh) => kh.name ?? kh.id)
             .join(', ');
         throw StateError(
-          'Cannot distribute: ${config.pendingInvitationsCount} steward(s) '
+          'Cannot distribute: ${configToDistribute.pendingInvitationsCount} steward(s) '
           'haven\'t accepted invitations yet: $names',
         );
       }
 
       // Step 5: Generate Shamir shares
-      // Build stewards list with name, pubkey, and contactInfo maps
-      // Include all stewards with pubkeys (including owner if they have a shard)
-      final stewards = config.stewards.where((kh) => kh.pubkey != null).map((kh) {
+      // Build stewards list with id, name, pubkey, and contactInfo maps.
+      // Including the steward id lets the receiving device use the owner's
+      // authoritative steward UUID instead of a synthetic positional one,
+      // which avoids UNIQUE-constraint collisions on the stewards table.
+      // Including shard_index (0-based Shamir slot in BackupConfig.steward order)
+      // ensures steward-side upserts match distributeShares indexing even when
+      // invitees without pubkeys are omitted from this list.
+      final stewards = <Map<String, String>>[];
+      for (var idx = 0; idx < configToDistribute.stewards.length; idx++) {
+        final kh = configToDistribute.stewards[idx];
+        if (kh.pubkey == null) continue;
         final stewardMap = <String, String>{
+          'id': kh.id,
           'name': kh.name ?? 'Unknown',
           'pubkey': kh.pubkey!,
+          'shard_index': '$idx',
         };
         if (kh.contactInfo != null && kh.contactInfo!.isNotEmpty) {
           stewardMap['contactInfo'] = kh.contactInfo!;
         }
-        return stewardMap;
-      }).toList();
+        stewards.add(stewardMap);
+      }
 
       final shards = await generateShamirShares(
         content: content,
-        threshold: config.threshold,
-        totalShards: config.totalKeys,
+        threshold: configToDistribute.threshold,
+        totalShards: configToDistribute.totalKeys,
         creatorPubkey: creatorPubkey,
-        vaultId: vault.id,
-        vaultName: vault.name,
+        vaultId: vaultDetail.id,
+        vaultName: vaultDetail.name,
         stewards: stewards,
-        ownerName: vault.ownerName,
-        instructions: config.instructions,
+        ownerName: vaultDetail.ownerName,
+        instructions: configToDistribute.instructions,
         // Advertise the owner's current push preference so stewards learn
         // (or re-learn, on redistribution) whether this vault uses push.
-        pushEnabled: vault.pushEnabled,
+        pushEnabled: vaultDetail.pushEnabled,
       );
       Log.info('Generated ${shards.length} Shamir shares');
 
       // Step 6: Distribute shards using injected service
-      await _shardDistributionService.distributeShards(
+      await _shareDistributionService.distributeShares(
         ownerPubkey: creatorPubkey,
-        config: config,
-        shards: shards,
+        config: configToDistribute,
+        shares: shards,
       );
       Log.info('Successfully distributed all shards');
 
@@ -767,17 +770,16 @@ class BackupService {
       if (currentConfig == null) {
         throw Exception('Backup configuration not found after distribution');
       }
-      final now = DateTime.now();
-      final updatedConfig = copyBackupConfig(
-        currentConfig, // Use current config, not the stale one from step 2
-        lastRedistribution: now,
-        lastUpdated: now,
-        status: BackupStatus.active,
-      );
-      await _repository.updateBackupConfig(vaultId, updatedConfig);
-      Log.info('Updated backup config with redistribution timestamp');
+      // Phase 1: distribution success is no longer materialized into a
+      // dedicated `lastRedistribution` / `status` column on `BackupConfig`.
+      // The successful publish surface comes from steward acks (which raise
+      // each steward's status to `holdingKey`) and the bumped
+      // `distributionVersion`. Persist the current config so the latest
+      // steward state from step 6 is durable.
+      await _repository.updateBackupConfig(vaultId, currentConfig);
+      Log.info('Updated backup config after redistribution');
 
-      return updatedConfig;
+      return currentConfig;
     } catch (e) {
       Log.error('Failed to create and distribute backup', e);
       rethrow;

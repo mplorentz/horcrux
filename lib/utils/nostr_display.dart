@@ -1,6 +1,8 @@
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 
+import '../models/backup_config.dart';
 import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import 'validators.dart';
 
 /// Short npub-style label (`npub1abcd...wxyz`) from a 64-character hex pubkey.
@@ -27,59 +29,42 @@ String shortNpub(String hexPubkey) {
 /// Uses non-empty [Vault.ownerName], [Steward.name] in [Vault.backupConfig], and names from
 /// the newest shard's creator / embedded stewards only (no [shortNpub] fallback).
 String? displayNameFromPubkeyOrNull(Vault? vault, String hexPubkey) {
-  if (vault == null) {
-    return null;
-  }
-  if (vault.ownerPubkey == hexPubkey) {
-    final n = vault.ownerName;
-    if (n != null && n.isNotEmpty) {
-      return n;
-    }
-  }
-
-  final configStewards = vault.backupConfig?.stewards;
-  if (configStewards != null) {
-    for (final s in configStewards) {
-      if (s.pubkey == hexPubkey) {
-        final n = s.name;
-        if (n != null && n.isNotEmpty) {
-          return n;
-        }
-        break;
-      }
-    }
-  }
-
-  final shard = vault.mostRecentShard;
-  if (shard != null) {
-    if (shard.creatorPubkey == hexPubkey) {
-      final fromShard = shard.ownerName;
-      if (fromShard != null && fromShard.isNotEmpty) {
-        return fromShard;
-      }
-      final fromVault = vault.ownerName;
-      if (fromVault != null && fromVault.isNotEmpty) {
-        return fromVault;
-      }
-    }
-    final embedded = shard.stewards;
-    if (embedded != null) {
-      for (final st in embedded) {
-        if (st['pubkey'] == hexPubkey) {
-          final name = st['name'];
-          if (name is String && name.isNotEmpty) {
-            return name;
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  return null;
+  if (vault == null) return null;
+  return _nameFromComponents(vault.ownerPubkey, vault.ownerName, vault.backupConfig, hexPubkey);
 }
 
 /// Display label for [hexPubkey] using [vault] when non-null; otherwise [shortNpub].
 String displayNameFromPubkey(Vault? vault, String hexPubkey) {
   return displayNameFromPubkeyOrNull(vault, hexPubkey) ?? shortNpub(hexPubkey);
+}
+
+/// Explicit name from [vault] (a [VaultDetail]) for [hexPubkey], or null.
+///
+/// Mirrors [displayNameFromPubkeyOrNull] for the [VaultDetail] read model.
+String? displayNameFromDetailOrNull(VaultDetail? vault, String hexPubkey) {
+  if (vault == null) return null;
+  return _nameFromComponents(vault.ownerPubkey, vault.ownerName, vault.backupConfig, hexPubkey);
+}
+
+String? _nameFromComponents(
+  String ownerPubkey,
+  String? ownerName,
+  BackupConfig? backupConfig,
+  String hexPubkey,
+) {
+  if (ownerPubkey == hexPubkey) {
+    final n = ownerName;
+    if (n != null && n.isNotEmpty) return n;
+  }
+  final configStewards = backupConfig?.stewards;
+  if (configStewards != null) {
+    for (final s in configStewards) {
+      if (s.pubkey == hexPubkey) {
+        final n = s.name;
+        if (n != null && n.isNotEmpty) return n;
+        break;
+      }
+    }
+  }
+  return null;
 }

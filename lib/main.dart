@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/open.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'database/app_database.dart';
 import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
@@ -39,6 +42,13 @@ Future<void> main() async {
     );
   }
 
+  // Drift uses package:sqlite3, which defaults to libsqlite3.so on Android.
+  // sqlcipher_flutter_libs ships libsqlcipher.so — override before any DB open.
+  if (Platform.isAndroid) {
+    await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+  }
+
   await _initializeFirebaseIfNecessary();
 
   runApp(
@@ -62,13 +72,21 @@ Future<void> main() async {
 /// tap), and `getInitialMessage()` (cold-start tap) -- all wired from
 /// [PushNotificationReceiver].
 Future<void> _initializeFirebaseIfNecessary() async {
-  bool optedIn = false;
+  AppDatabase? database;
+  bool optedIn;
   try {
-    final prefs = await SharedPreferences.getInstance();
-    optedIn = prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
+    database = AppDatabase.openDefault();
+    optedIn = await database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
   } catch (e, st) {
-    Log.warning('Failed to read push opt-in flag; skipping Firebase init', e, st);
-    return;
+    Log.warning('Failed to read push opt-in flag from database; skipping Firebase init', e, st);
+    optedIn = false;
+  } finally {
+    // [LazyDatabase.close] awaits the lazy opener; if opening failed (no Nostr
+    // key yet), that future completes with an error and close rethrows unless
+    // we swallow it here.
+    try {
+      await database?.close();
+    } catch (_) {}
   }
 
   if (!optedIn) {

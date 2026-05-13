@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/steward_status.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -15,7 +15,7 @@ class StewardList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vaultAsync = ref.watch(vaultProvider(vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return vaultAsync.when(
@@ -76,11 +76,10 @@ class StewardList extends ConsumerWidget {
             ),
           ),
           data: (currentPubkey) {
-            // Hide steward list when vault is awaiting a shard and current user is a steward
-            // (not the owner) — stewards waiting for their shard shouldn't see an empty steward list
+            // Hide steward list for non-owner stewards waiting for their share —
+            // an empty steward list is misleading before the share event arrives.
             final isOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
-            if (vault.state == VaultState.awaitingShard && !isOwner) {
-              // Return empty widget - background fill handled at screen level
+            if (vault is StewardedVaultDetail && vault.latestShare == null && !isOwner) {
               return const SizedBox.shrink();
             }
             return _buildKeyHolderContent(context, ref, vault, currentPubkey);
@@ -93,7 +92,7 @@ class StewardList extends ConsumerWidget {
   Widget _buildKeyHolderContent(
     BuildContext context,
     WidgetRef ref,
-    Vault vault,
+    VaultDetail vault,
     String? currentPubkey,
   ) {
     final stewards = _extractStewards(vault, currentPubkey);
@@ -260,17 +259,21 @@ class StewardList extends ConsumerWidget {
     );
   }
 
-  /// Extract stewards from vault shard data
-  /// Includes owner if they are also a steward (hold a shard)
-  List<StewardInfo> _extractStewards(Vault vault, String? currentPubkey) {
-    // NEW: Try backupConfig first (owner will have this)
-    if (vault.backupConfig != null) {
-      final stewards = vault.backupConfig!.stewards.where((s) {
-        // Include owner only if they are holding a key (are a steward)
+  /// Extract stewards from normalized vault metadata.
+  List<StewardInfo> _extractStewards(VaultDetail vault, String? currentPubkey) {
+    final normalizedStewards = (vault.backupConfig?.stewards.isNotEmpty == true)
+        ? vault.backupConfig!.stewards
+        : vault.stewards;
+
+    if (normalizedStewards.isNotEmpty) {
+      final stewards = normalizedStewards.where((s) {
+        // Show invited stewards (no pubkey yet) so owners can see pending invitees.
+        if (s.pubkey == null) {
+          return true;
+        }
         if (s.isOwner) {
           return s.status == StewardStatus.holdingKey;
         }
-        // Include all non-owner stewards
         return true;
       }).map((s) {
         final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
@@ -278,13 +281,16 @@ class StewardList extends ConsumerWidget {
         return StewardInfo(
           pubkey: s.pubkey,
           displayName: displayName,
+          // TODO(Phase 3): gate contactInfo on vault.hasActiveRecovery once the
+          // recovery_requests table is populated by VaultDetailRepository. Until
+          // then recoveryRequests is always empty, so hasActiveRecovery is always
+          // false and contact info would be unconditionally hidden.
           contactInfo: s.contactInfo,
-          isOwner: s.isOwner, // Preserve owner flag
-          status: s.status, // Use actual status from Steward model
+          isOwner: s.isOwner,
+          status: s.status,
         );
       }).toList();
 
-      // Sort: owner first, then others
       stewards.sort((a, b) {
         if (a.isOwner && !b.isOwner) return -1;
         if (!a.isOwner && b.isOwner) return 1;
@@ -294,68 +300,7 @@ class StewardList extends ConsumerWidget {
       return stewards;
     }
 
-    // FALLBACK: Use shard peers (steward perspective)
-    if (vault.shards.isEmpty) {
-      return [];
-    }
-
-    // Prefer the most recent shard so peers reflect the latest distribution
-    final shard = vault.mostRecentShard;
-    if (shard == null) {
-      return [];
-    }
-    final stewardMap = <String, StewardInfo>{};
-
-    void addSteward({
-      required String pubkey,
-      String? name,
-      String? contactInfo,
-      required bool isOwner,
-      StewardStatus status = StewardStatus.holdingKey,
-    }) {
-      final isCurrentUser = currentPubkey != null && pubkey == currentPubkey;
-      final newDisplayName = isCurrentUser && name != null ? 'You ($name)' : name;
-
-      // Merge if we already have this pubkey
-      final existing = stewardMap[pubkey];
-      final merged = StewardInfo(
-        pubkey: pubkey,
-        displayName: newDisplayName ?? existing?.displayName,
-        contactInfo: contactInfo ?? existing?.contactInfo,
-        isOwner: isOwner || (existing?.isOwner ?? false),
-        status: status,
-      );
-      stewardMap[pubkey] = merged;
-    }
-
-    // Add stewards - include owner if they appear in stewards
-    if (shard.stewards != null) {
-      for (final steward in shard.stewards!) {
-        final stewardPubkey = steward['pubkey'];
-        final stewardName = steward['name'];
-        final stewardContactInfo = steward['contactInfo'];
-        if (stewardPubkey == null) continue;
-
-        final isOwner = stewardPubkey == vault.ownerPubkey;
-        addSteward(
-          pubkey: stewardPubkey,
-          name: stewardName,
-          contactInfo: stewardContactInfo,
-          isOwner: isOwner,
-        );
-      }
-    }
-
-    final stewards = stewardMap.values.toList();
-
-    // Sort: owner first, then others
-    stewards.sort((a, b) {
-      if (a.isOwner && !b.isOwner) return -1;
-      if (!a.isOwner && b.isOwner) return 1;
-      return 0;
-    });
-
-    return stewards;
+    return [];
   }
 }
 

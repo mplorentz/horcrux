@@ -21,8 +21,9 @@ mixin _$RecoveryStatus {
   int get respondedCount => throw _privateConstructorUsedError;
   int get approvedCount => throw _privateConstructorUsedError;
   int get deniedCount => throw _privateConstructorUsedError;
-  List<String> get collectedShardIds =>
-      throw _privateConstructorUsedError; // List of shard data IDs
+
+  /// Pubkeys (or ids) of stewards who contributed a share; JSON key stays `collectedShardIds`.
+  List<String> get collectedShareIds => throw _privateConstructorUsedError;
   int get threshold => throw _privateConstructorUsedError;
   bool get canRecover => throw _privateConstructorUsedError;
   DateTime get lastUpdated => throw _privateConstructorUsedError;
@@ -44,7 +45,7 @@ abstract class $RecoveryStatusCopyWith<$Res> {
       int respondedCount,
       int approvedCount,
       int deniedCount,
-      List<String> collectedShardIds,
+      List<String> collectedShareIds,
       int threshold,
       bool canRecover,
       DateTime lastUpdated});
@@ -70,7 +71,7 @@ class _$RecoveryStatusCopyWithImpl<$Res, $Val extends RecoveryStatus>
     Object? respondedCount = null,
     Object? approvedCount = null,
     Object? deniedCount = null,
-    Object? collectedShardIds = null,
+    Object? collectedShareIds = null,
     Object? threshold = null,
     Object? canRecover = null,
     Object? lastUpdated = null,
@@ -96,9 +97,9 @@ class _$RecoveryStatusCopyWithImpl<$Res, $Val extends RecoveryStatus>
           ? _value.deniedCount
           : deniedCount // ignore: cast_nullable_to_non_nullable
               as int,
-      collectedShardIds: null == collectedShardIds
-          ? _value.collectedShardIds
-          : collectedShardIds // ignore: cast_nullable_to_non_nullable
+      collectedShareIds: null == collectedShareIds
+          ? _value.collectedShareIds
+          : collectedShareIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       threshold: null == threshold
           ? _value.threshold
@@ -129,7 +130,7 @@ abstract class _$$RecoveryStatusImplCopyWith<$Res> implements $RecoveryStatusCop
       int respondedCount,
       int approvedCount,
       int deniedCount,
-      List<String> collectedShardIds,
+      List<String> collectedShareIds,
       int threshold,
       bool canRecover,
       DateTime lastUpdated});
@@ -153,7 +154,7 @@ class __$$RecoveryStatusImplCopyWithImpl<$Res>
     Object? respondedCount = null,
     Object? approvedCount = null,
     Object? deniedCount = null,
-    Object? collectedShardIds = null,
+    Object? collectedShareIds = null,
     Object? threshold = null,
     Object? canRecover = null,
     Object? lastUpdated = null,
@@ -179,9 +180,9 @@ class __$$RecoveryStatusImplCopyWithImpl<$Res>
           ? _value.deniedCount
           : deniedCount // ignore: cast_nullable_to_non_nullable
               as int,
-      collectedShardIds: null == collectedShardIds
-          ? _value._collectedShardIds
-          : collectedShardIds // ignore: cast_nullable_to_non_nullable
+      collectedShareIds: null == collectedShareIds
+          ? _value._collectedShareIds
+          : collectedShareIds // ignore: cast_nullable_to_non_nullable
               as List<String>,
       threshold: null == threshold
           ? _value.threshold
@@ -208,11 +209,11 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
       required this.respondedCount,
       required this.approvedCount,
       required this.deniedCount,
-      final List<String> collectedShardIds = const [],
+      final List<String> collectedShareIds = const [],
       required this.threshold,
       required this.canRecover,
       required this.lastUpdated})
-      : _collectedShardIds = collectedShardIds,
+      : _collectedShareIds = collectedShareIds,
         super._();
 
   @override
@@ -225,16 +226,19 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
   final int approvedCount;
   @override
   final int deniedCount;
-  final List<String> _collectedShardIds;
+
+  /// Pubkeys (or ids) of stewards who contributed a share; JSON key stays `collectedShardIds`.
+  final List<String> _collectedShareIds;
+
+  /// Pubkeys (or ids) of stewards who contributed a share; JSON key stays `collectedShardIds`.
   @override
   @JsonKey()
-  List<String> get collectedShardIds {
-    if (_collectedShardIds is EqualUnmodifiableListView) return _collectedShardIds;
+  List<String> get collectedShareIds {
+    if (_collectedShareIds is EqualUnmodifiableListView) return _collectedShareIds;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_collectedShardIds);
+    return EqualUnmodifiableListView(_collectedShareIds);
   }
 
-// List of shard data IDs
   @override
   final int threshold;
   @override
@@ -244,7 +248,7 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
 
   @override
   String toString() {
-    return 'RecoveryStatus(recoveryRequestId: $recoveryRequestId, totalStewards: $totalStewards, respondedCount: $respondedCount, approvedCount: $approvedCount, deniedCount: $deniedCount, collectedShardIds: $collectedShardIds, threshold: $threshold, canRecover: $canRecover, lastUpdated: $lastUpdated)';
+    return 'RecoveryStatus(recoveryRequestId: $recoveryRequestId, totalStewards: $totalStewards, respondedCount: $respondedCount, approvedCount: $approvedCount, deniedCount: $deniedCount, collectedShareIds: $collectedShareIds, threshold: $threshold, canRecover: $canRecover, lastUpdated: $lastUpdated)';
   }
 
   @override
@@ -261,7 +265,7 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
             (identical(other.approvedCount, approvedCount) ||
                 other.approvedCount == approvedCount) &&
             (identical(other.deniedCount, deniedCount) || other.deniedCount == deniedCount) &&
-            const DeepCollectionEquality().equals(other._collectedShardIds, _collectedShardIds) &&
+            const DeepCollectionEquality().equals(other._collectedShareIds, _collectedShareIds) &&
             (identical(other.threshold, threshold) || other.threshold == threshold) &&
             (identical(other.canRecover, canRecover) || other.canRecover == canRecover) &&
             (identical(other.lastUpdated, lastUpdated) || other.lastUpdated == lastUpdated));
@@ -275,7 +279,7 @@ class _$RecoveryStatusImpl extends _RecoveryStatus {
       respondedCount,
       approvedCount,
       deniedCount,
-      const DeepCollectionEquality().hash(_collectedShardIds),
+      const DeepCollectionEquality().hash(_collectedShareIds),
       threshold,
       canRecover,
       lastUpdated);
@@ -296,7 +300,7 @@ abstract class _RecoveryStatus extends RecoveryStatus {
       required final int respondedCount,
       required final int approvedCount,
       required final int deniedCount,
-      final List<String> collectedShardIds,
+      final List<String> collectedShareIds,
       required final int threshold,
       required final bool canRecover,
       required final DateTime lastUpdated}) = _$RecoveryStatusImpl;
@@ -312,8 +316,10 @@ abstract class _RecoveryStatus extends RecoveryStatus {
   int get approvedCount;
   @override
   int get deniedCount;
+
+  /// Pubkeys (or ids) of stewards who contributed a share; JSON key stays `collectedShardIds`.
   @override
-  List<String> get collectedShardIds; // List of shard data IDs
+  List<String> get collectedShareIds;
   @override
   int get threshold;
   @override

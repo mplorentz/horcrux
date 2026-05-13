@@ -14,10 +14,11 @@ import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
 import '../fixtures/test_keys.dart';
-import '../helpers/shared_preferences_mock.dart';
+import '../helpers/test_database.dart';
 import 'invitation_service_test.mocks.dart';
 
 @GenerateMocks([
@@ -31,16 +32,6 @@ import 'invitation_service_test.mocks.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
-
   group('InvitationService - Adding Steward to Backup Config', () {
     late MockNdkService mockNdkService;
     late MockLoginService mockLoginService;
@@ -49,11 +40,13 @@ void main() {
     late MockRelayScanService mockRelayScanService;
     late MockBackupService mockBackupService;
     late InvitationService invitationService;
+    late AppDatabase testDb;
 
     setUp(() async {
       mockNdkService = MockNdkService();
       mockLoginService = MockLoginService();
-      realRepository = VaultRepository(mockLoginService);
+      testDb = newTestDatabase();
+      realRepository = VaultRepository(mockLoginService, db: testDb);
       mockInvitationSendingService = MockInvitationSendingService();
       mockRelayScanService = MockRelayScanService();
       mockBackupService = MockBackupService();
@@ -65,9 +58,12 @@ void main() {
         () => mockNdkService,
         mockRelayScanService,
         mockBackupService,
+        testDb,
       );
+    });
 
-      sharedPreferencesMock.clear();
+    tearDown(() async {
+      await testDb.close();
     });
 
     test(
@@ -87,6 +83,8 @@ void main() {
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
           acknowledgedDistributionVersion: 1,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final initialBackupConfig = createBackupConfig(
@@ -98,10 +96,7 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         // Mock repository to return the initial backup config
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
@@ -114,7 +109,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -147,9 +141,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Process invitation acceptance (which adds Device C as a new steward)
@@ -169,12 +163,16 @@ void main() {
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was added with awaitingKey status
         final deviceCInUpdatedConfig =
             updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceCPubkey);
         expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
+
+        expect(updatedConfig.needsRedistribution, isTrue);
 
         // Verify totalKeys was updated
         expect(updatedConfig.totalKeys, equals(2));
@@ -201,6 +199,8 @@ void main() {
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
           acknowledgedDistributionVersion: 1,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final deviceCInvitedSteward = createInvitedSteward(
@@ -217,10 +217,7 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         // Mock repository to return the initial backup config
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
@@ -233,7 +230,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault Invited',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -267,9 +263,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Device C accepts the invitation
@@ -289,6 +285,8 @@ void main() {
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was updated from invited to awaitingKey
         final deviceCInUpdatedConfig =
@@ -297,6 +295,8 @@ void main() {
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
         // Note: inviteCode is preserved but we use the generated one, not the hardcoded test one
         expect(deviceCInUpdatedConfig.inviteCode, isNotNull);
+
+        expect(updatedConfig.needsRedistribution, isTrue);
 
         // Verify totalKeys - when updating an invited steward, totalKeys matches stewards length
         // Note: generateInvitationLink adds Device C as an invited steward, so we verify they match
@@ -320,6 +320,8 @@ void main() {
           name: 'Device B',
         ).copyWith(
           status: StewardStatus.holdingKey,
+          giftWrapEventId: 'stale-wrap-id',
+          keyShare: 'stale-share',
         );
 
         final deviceDSteward = createSteward(
@@ -342,10 +344,7 @@ void main() {
           relays: ['wss://relay.example.com'],
         );
 
-        final backupConfigWithVersion = copyBackupConfig(
-          initialBackupConfig,
-          distributionVersion: 1,
-        );
+        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
 
         when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
         when(mockLoginService.encryptText(any))
@@ -357,7 +356,6 @@ void main() {
         final testVault = Vault(
           id: vaultId,
           name: 'Test Vault Mixed Statuses',
-          content: null,
           createdAt: DateTime.now(),
           ownerPubkey: deviceAPubkey,
         );
@@ -387,9 +385,9 @@ void main() {
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          content: acceptancePayload,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: acceptancePayload,
         );
 
         // Act: Add Device C as a new steward
@@ -403,6 +401,8 @@ void main() {
         final deviceBInUpdatedConfig =
             updatedConfig!.stewards.firstWhere((s) => s.pubkey == deviceBPubkey);
         expect(deviceBInUpdatedConfig.status, equals(StewardStatus.awaitingNewKey));
+        expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
+        expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Device D (awaitingKey) should remain unchanged
         final deviceDInUpdatedConfig =

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/vault.dart';
+import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -23,8 +23,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Check if user is steward or owner
-    final vaultAsync = ref.watch(vaultProvider(vaultId));
+    final vaultAsync = ref.watch(vaultDetailProvider(vaultId));
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return vaultAsync.when(
@@ -40,275 +39,267 @@ class VaultDetailButtonStack extends ConsumerWidget {
             final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
             final isSteward = currentPubkey != null &&
                 !vault.isVaultOwner(currentPubkey) &&
-                vault.shards.isNotEmpty;
+                vault is StewardedVaultDetail &&
+                vault.latestShare != null;
 
-            // Watch vault for Generate and Distribute Keys button
-            final vaultAsync = ref.watch(vaultProvider(vaultId));
             // Watch recovery status for recovery buttons
             final recoveryStatusAsync = ref.watch(recoveryStatusProvider(vaultId));
 
-            return vaultAsync.when(
+            return recoveryStatusAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
-              data: (currentVault) {
-                return recoveryStatusAsync.when(
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (recoveryStatus) {
-                    final buttons = <RowButtonConfig>[];
-                    // Exclusivity is per (vault, initiator): each user may have at most one
-                    // active recovery session per vault (practice or real), but different
-                    // users (other stewards, owner) may have their own concurrent sessions
-                    // on the same vault. `recoveryStatusProvider` only surfaces the single
-                    // most-recent manageable request, which can belong to another user --
-                    // so we resolve the current user's own sessions through
-                    // `Vault.manageableRecoveryFor`, which keys off `initiatorPubkey` and
-                    // includes both in-flight statuses and `completed` (users finalize a
-                    // recovery from the same Manage screen once enough stewards approve).
-                    final myActiveRealRecovery =
-                        currentVault?.manageableRecoveryFor(currentPubkey, isPractice: false);
-                    final myActivePracticeRecovery =
-                        currentVault?.manageableRecoveryFor(currentPubkey, isPractice: true);
-                    final hasMyInFlightRecovery =
-                        myActiveRealRecovery != null || myActivePracticeRecovery != null;
-                    final showManageRealRecovery = myActiveRealRecovery != null;
-                    // Initiate is hidden when this user already has any of their own session
-                    // (practice or real) in flight on this vault; they should manage that one
-                    // instead. The service would reject the call anyway.
-                    final showInitiateRealRecovery = !hasMyInFlightRecovery;
+              data: (recoveryStatus) {
+                final buttons = <RowButtonConfig>[];
+                // Exclusivity is per (vault, initiator): each user may have at most one
+                // active recovery session per vault (practice or real), but different
+                // users (other stewards, owner) may have their own concurrent sessions
+                // on the same vault. `recoveryStatusProvider` only surfaces the single
+                // most-recent manageable request, which can belong to another user --
+                // so we resolve the current user's own sessions through
+                // `VaultDetail.manageableRecoveryFor`, which keys off `initiatorPubkey`
+                // and includes both in-flight statuses and `completed` (users finalize a
+                // recovery from the same Manage screen once enough stewards approve).
+                final myActiveRealRecovery =
+                    vault.manageableRecoveryFor(currentPubkey, isPractice: false);
+                final myActivePracticeRecovery =
+                    vault.manageableRecoveryFor(currentPubkey, isPractice: true);
+                final hasMyInFlightRecovery =
+                    myActiveRealRecovery != null || myActivePracticeRecovery != null;
+                final showManageRealRecovery = myActiveRealRecovery != null;
+                // Initiate is hidden when this user already has any of their own session
+                // (practice or real) in flight on this vault; they should manage that one
+                // instead. The service would reject the call anyway.
+                final showInitiateRealRecovery = !hasMyInFlightRecovery;
 
-                    // View Instructions Button (only show for stewards)
-                    if (isSteward) {
-                      final instructions = _getInstructions(vault);
-                      if (instructions != null && instructions.isNotEmpty) {
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () {
-                              InstructionsDialog.show(context, instructions);
-                            },
-                            icon: Icons.info_outline,
-                            text: 'View Instructions',
-                          ),
-                        );
-                      }
-                    }
+                // View Instructions Button (only show for stewards)
+                if (isSteward) {
+                  final instructions = _getInstructions(vault);
+                  if (instructions != null && instructions.isNotEmpty) {
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () {
+                          InstructionsDialog.show(context, instructions);
+                        },
+                        icon: Icons.info_outline,
+                        text: 'View Instructions',
+                      ),
+                    );
+                  }
+                }
 
-                    // Edit Vault Button (only show if user owns the vault)
-                    if (isVaultOwner) {
-                      // Check if vault has content
-                      final hasContent = currentVault?.content != null;
+                // Edit Vault Button (only show if user owns the vault)
+                if (isVaultOwner) {
+                  // Check if vault has content
+                  final hasContent = vault is OwnedVaultDetail;
 
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () {
-                            if (hasContent) {
-                              // Edit existing content
+                  buttons.add(
+                    RowButtonConfig(
+                      onPressed: () {
+                        if (hasContent) {
+                          // Edit existing content
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditVaultScreen(vaultId: vaultId),
+                            ),
+                          );
+                        } else {
+                          // Create new content (with warning if owner-steward)
+                          final isOwnerSteward =
+                              vault is StewardedVaultDetail && vault.latestShare != null;
+
+                          if (isOwnerSteward) {
+                            _showUpdateContentWarning(context, ref, vault);
+                          } else {
+                            // No content and no shards - just go to edit screen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditVaultScreen(vaultId: vaultId),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: Icons.edit,
+                      text: 'Change Vault Contents',
+                    ),
+                  );
+
+                  // Recovery Plan Section - only allow if vault has content
+                  buttons.add(
+                    RowButtonConfig(
+                      onPressed: hasContent
+                          ? () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => EditVaultScreen(vaultId: vaultId),
+                                  builder: (context) => BackupConfigScreen(vaultId: vaultId),
                                 ),
                               );
-                            } else if (currentVault != null) {
-                              // Create new content (with warning if owner-steward)
-                              final isOwnerSteward =
-                                  currentVault.content == null && currentVault.shards.isNotEmpty;
-
-                              if (isOwnerSteward) {
-                                _showUpdateContentWarning(context, ref, currentVault);
-                              } else {
-                                // No content and no shards - just go to edit screen
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => EditVaultScreen(vaultId: vaultId),
-                                  ),
-                                );
-                              }
                             }
+                          : () {
+                              // Show dialog offering to create content first
+                              _showNoContentDialog(context, ref, vaultId);
+                            },
+                      icon: Icons.settings,
+                      text: 'Change Recovery Plan',
+                    ),
+                  );
+
+                  // Travel Mode Button - shown after distribution
+                  // Erases the local copy of the vault contents while keeping the
+                  // recovery plan intact, so the owner can restore the contents later
+                  // via their stewards. Useful before crossing a border, lending the
+                  // device, or any other situation where the contents shouldn't be
+                  // accessible from this device.
+                  if (vault is OwnedVaultDetail) {
+                    final backupConfig = vault.backupConfig;
+                    if (backupConfig != null &&
+                        backupConfig.stewards.isNotEmpty &&
+                        backupConfig.hasBeenDistributed) {
+                      buttons.add(
+                        RowButtonConfig(
+                          onPressed: () => _showTravelModeDialog(context, ref, vault),
+                          icon: Icons.luggage,
+                          text: 'Travel Mode',
+                        ),
+                      );
+                    }
+                  }
+
+                  // Practice Recovery Button (only for owners)
+                  // Only show if all stewards are holding the current key
+                  final backupConfig = vault.backupConfig;
+                  final allStewardsHoldingCurrentKey =
+                      backupConfig?.allStewardsHoldingCurrentKey ?? false;
+
+                  if (allStewardsHoldingCurrentKey) {
+                    if (myActivePracticeRecovery != null) {
+                      // Show "Manage Practice Recovery" if THIS user has an active
+                      // practice session of their own. Other users' practice sessions
+                      // are not actionable from here.
+                      final myPracticeId = myActivePracticeRecovery.id;
+                      buttons.add(
+                        RowButtonConfig(
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    RecoveryStatusScreen(recoveryRequestId: myPracticeId),
+                              ),
+                            );
                           },
-                          icon: Icons.edit,
-                          text: 'Change Vault Contents',
+                          icon: Icons.school,
+                          text: 'Manage Practice Recovery',
                         ),
                       );
-
-                      // Recovery Plan Section - only allow if vault has content
+                    } else if (!hasMyInFlightRecovery) {
+                      // Show "Practice Recovery" only when this user has no session of
+                      // their own in flight (per-user exclusivity).
                       buttons.add(
                         RowButtonConfig(
-                          onPressed: hasContent
-                              ? () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => BackupConfigScreen(vaultId: vaultId),
-                                    ),
-                                  );
-                                }
-                              : () {
-                                  // Show dialog offering to create content first
-                                  _showNoContentDialog(context, ref, vaultId);
-                                },
-                          icon: Icons.settings,
-                          text: 'Change Recovery Plan',
-                        ),
-                      );
-
-                      // Delete Local Copy Button - shown after distribution
-                      // Owner can delete vault content while keeping recovery capability
-                      if (currentVault != null) {
-                        final backupConfig = currentVault.backupConfig;
-                        if (backupConfig != null &&
-                            backupConfig.stewards.isNotEmpty &&
-                            backupConfig.lastRedistribution != null &&
-                            currentVault.content != null) {
-                          buttons.add(
-                            RowButtonConfig(
-                              onPressed: () => _showDeleteContentDialog(context, ref, currentVault),
-                              icon: Icons.delete_sweep,
-                              text: 'Delete Local Copy',
-                            ),
-                          );
-                        }
-                      }
-
-                      // Practice Recovery Button (only for owners)
-                      // Only show if all stewards are holding the current key
-                      final backupConfig = currentVault?.backupConfig;
-                      final allStewardsHoldingCurrentKey =
-                          backupConfig?.allStewardsHoldingCurrentKey ?? false;
-
-                      if (allStewardsHoldingCurrentKey) {
-                        if (myActivePracticeRecovery != null) {
-                          // Show "Manage Practice Recovery" if THIS user has an active
-                          // practice session of their own. Other users' practice sessions
-                          // are not actionable from here.
-                          final myPracticeId = myActivePracticeRecovery.id;
-                          buttons.add(
-                            RowButtonConfig(
-                              onPressed: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        RecoveryStatusScreen(recoveryRequestId: myPracticeId),
-                                  ),
-                                );
-                              },
-                              icon: Icons.school,
-                              text: 'Manage Practice Recovery',
-                            ),
-                          );
-                        } else if (!hasMyInFlightRecovery) {
-                          // Show "Practice Recovery" only when this user has no session of
-                          // their own in flight (per-user exclusivity).
-                          buttons.add(
-                            RowButtonConfig(
-                              onPressed: () {
-                                // Use a full-screen route, not showModalBottomSheet,
-                                // so the AppBar gets normal Scaffold safe-area
-                                // insets on edge-to-edge Android devices.
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    fullscreenDialog: true,
-                                    builder: (_) => PracticeRecoveryInfoScreen(
-                                      vaultId: vaultId,
-                                    ),
-                                  ),
-                                );
-                              },
-                              icon: Icons.school,
-                              text: 'Practice Recovery',
-                            ),
-                          );
-                        }
-                      }
-
-                      // Surface "Manage Recovery" for the owner whenever they have an
-                      // active real recovery, regardless of content state. Owners can
-                      // recreate vault content (or restore it) while a recovery is still
-                      // in flight; gating on owner-steward state alone made the button
-                      // vanish in that scenario (bug horcrux_app-e0h).
-                      if (showManageRealRecovery) {
-                        final myRecoveryId = myActiveRealRecovery.id;
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
-                                ),
-                              );
-                            },
-                            icon: Icons.visibility,
-                            text: 'Manage Recovery',
-                          ),
-                        );
-                      }
-                    }
-
-                    // Owner-steward state: owner has deleted content but kept shards.
-                    // Only "Initiate Recovery" is gated on this state -- you can only
-                    // start a real recovery when you have shards but no content. Managing
-                    // an existing recovery is handled in the owner block above so it
-                    // survives the owner adding content back mid-recovery.
-                    final isOwnerSteward = isVaultOwner &&
-                        currentVault != null &&
-                        currentVault.content == null &&
-                        currentVault.shards.isNotEmpty;
-
-                    if (isOwnerSteward && showInitiateRealRecovery) {
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () => _initiateRecovery(context, ref, vaultId),
-                          icon: Icons.restore,
-                          text: 'Initiate Recovery',
+                          onPressed: () {
+                            // Use a full-screen route, not showModalBottomSheet,
+                            // so the AppBar gets normal Scaffold safe-area
+                            // insets on edge-to-edge Android devices.
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                fullscreenDialog: true,
+                                builder: (_) => PracticeRecoveryInfoScreen(vaultId: vaultId),
+                              ),
+                            );
+                          },
+                          icon: Icons.school,
+                          text: 'Practice Recovery',
                         ),
                       );
                     }
+                  }
 
-                    // Recovery buttons - only show for stewards (not owners, since owners already have contents)
-                    // Don't show recovery buttons when steward is waiting for their shard
-                    if (!isVaultOwner &&
-                        !isOwnerSteward &&
-                        currentVault != null &&
-                        currentVault.state != VaultState.awaitingShard) {
-                      if (showManageRealRecovery) {
-                        final myRecoveryId = myActiveRealRecovery.id;
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
-                                ),
-                              );
-                            },
-                            icon: Icons.visibility,
-                            text: 'Manage Recovery',
-                          ),
-                        );
-                      } else if (showInitiateRealRecovery) {
-                        buttons.add(
-                          RowButtonConfig(
-                            onPressed: () => _initiateRecovery(context, ref, vaultId),
-                            icon: Icons.restore,
-                            text: 'Initiate Recovery',
-                          ),
-                        );
-                      }
-                    }
+                  // Surface "Manage Recovery" for the owner whenever they have an
+                  // active real recovery, regardless of content state. Owners can
+                  // recreate vault content (or restore it) while a recovery is still
+                  // in flight; gating on owner-steward state alone made the button
+                  // vanish in that scenario (bug horcrux_app-e0h).
+                  if (showManageRealRecovery) {
+                    final myRecoveryId = myActiveRealRecovery.id;
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
+                            ),
+                          );
+                        },
+                        icon: Icons.visibility,
+                        text: 'Manage Recovery',
+                      ),
+                    );
+                  }
+                }
 
-                    if (buttons.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
+                // Owner-steward state: owner has deleted content but kept shards.
+                // Only "Initiate Recovery" is gated on this state -- you can only
+                // start a real recovery when you have shards but no content. Managing
+                // an existing recovery is handled in the owner block above so it
+                // survives the owner adding content back mid-recovery.
+                final isOwnerSteward =
+                    isVaultOwner && vault is StewardedVaultDetail && vault.latestShare != null;
 
-                    return RowButtonStack(buttons: buttons);
-                  },
-                );
+                if (isOwnerSteward && showInitiateRealRecovery) {
+                  buttons.add(
+                    RowButtonConfig(
+                      onPressed: () => _initiateRecovery(context, ref, vaultId),
+                      icon: Icons.restore,
+                      text: 'Initiate Recovery',
+                    ),
+                  );
+                }
+
+                // Recovery buttons for pure stewards who hold a share (not awaiting one).
+                // Owners have their own content and handle recovery through the owner block above.
+                if (!isVaultOwner &&
+                    !isOwnerSteward &&
+                    vault is StewardedVaultDetail &&
+                    vault.latestShare != null) {
+                  if (showManageRealRecovery) {
+                    final myRecoveryId = myActiveRealRecovery.id;
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RecoveryStatusScreen(recoveryRequestId: myRecoveryId),
+                            ),
+                          );
+                        },
+                        icon: Icons.visibility,
+                        text: 'Manage Recovery',
+                      ),
+                    );
+                  } else if (showInitiateRealRecovery) {
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () => _initiateRecovery(context, ref, vaultId),
+                        icon: Icons.restore,
+                        text: 'Initiate Recovery',
+                      ),
+                    );
+                  }
+                }
+
+                if (buttons.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return RowButtonStack(buttons: buttons);
               },
             );
           },
@@ -317,16 +308,17 @@ class VaultDetailButtonStack extends ConsumerWidget {
     );
   }
 
-  String? _getInstructions(Vault vault) {
-    final shard = vault.mostRecentShard;
-    if (shard != null) {
-      return shard.instructions;
-    }
-    return null;
+  String? _getInstructions(VaultDetail vault) {
+    final share = switch (vault) {
+      StewardedVaultDetail(:final latestShare) => latestShare,
+      OwnedVaultDetail(:final selfHeldShare) => selfHeldShare,
+    };
+    return share?.instructions;
   }
 
   /// Show warning dialog before creating new content for owner-steward vault (T016, T020)
-  Future<void> _showUpdateContentWarning(BuildContext context, WidgetRef ref, Vault vault) async {
+  Future<void> _showUpdateContentWarning(
+      BuildContext context, WidgetRef ref, VaultDetail vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -385,23 +377,25 @@ class VaultDetailButtonStack extends ConsumerWidget {
     }
   }
 
-  /// Show confirmation dialog for deleting vault content (T011 stub, T013 implements)
-  Future<void> _showDeleteContentDialog(BuildContext context, WidgetRef ref, Vault vault) async {
+  /// Confirm enabling Travel Mode: erase the local copy of the vault contents
+  /// while keeping the recovery plan intact, so the owner can restore them
+  /// later via their stewards.
+  Future<void> _showTravelModeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Local Copy?'),
+        title: const Text('Enable Travel Mode?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'This will delete the vault content "${vault.name}" from this device.',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            const Text(
+              'Travel Mode wipes the vault contents from this device, so even if this device is compromised your vault will be safe.',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
-              'Your backup configuration will be preserved, allowing you to initiate recovery later to restore the content.',
+              'Your recovery plan stays intact, so you can restore the contents later with help from your stewards.',
             ),
             const SizedBox(height: 12),
             Container(
@@ -417,7 +411,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'You will need to initiate recovery to view this vault content again.',
+                      "You'll need to initiate recovery and wait for stewards to approve before you can view this vault's contents again.",
                       style: TextStyle(color: Colors.orange),
                     ),
                   ),
@@ -434,7 +428,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete Local Copy'),
+            child: const Text('Enable Travel Mode'),
           ),
         ],
       ),
@@ -447,17 +441,16 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Local copy deleted. You can recover it later using your stewards.',
+            'Travel Mode enabled.',
             kind: HorcruxSnackKind.success,
           );
 
-          // Refresh vault data to show new state
           ref.invalidate(vaultProvider(vault.id));
         }
       } catch (e) {
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Failed to delete local copy: $e',
+            'Failed to enable Travel Mode: $e',
             kind: HorcruxSnackKind.error,
           );
         }

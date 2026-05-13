@@ -10,12 +10,13 @@ import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:horcrux/services/backup_service.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
 import '../fixtures/test_keys.dart';
-import '../helpers/shared_preferences_mock.dart';
+import '../helpers/test_database.dart';
 
 import 'invitation_acceptance_format_test.mocks.dart';
 
@@ -26,9 +27,9 @@ import 'invitation_acceptance_format_test.mocks.dart';
 Nip01Event _stubGiftWrap() => Nip01Event(
       kind: NostrKind.giftWrap.value,
       pubKey: 'a' * 64,
-      content: 'stub',
       tags: const [],
       createdAt: 1,
+      content: '',
     );
 
 @GenerateMocks([
@@ -42,16 +43,6 @@ Nip01Event _stubGiftWrap() => Nip01Event(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
-
   group('Invitation Acceptance Event Format Compatibility Tests', () {
     late MockNdkService mockNdkService;
     late MockLoginService mockLoginService;
@@ -59,11 +50,13 @@ void main() {
     late MockInvitationSendingService mockInvitationSendingService;
     late InvitationSendingService invitationSendingService;
     late InvitationService invitationService;
+    late AppDatabase testDb;
 
     setUp(() async {
       mockNdkService = MockNdkService();
       mockLoginService = MockLoginService();
-      realRepository = VaultRepository(mockLoginService);
+      testDb = newTestDatabase();
+      realRepository = VaultRepository(mockLoginService, db: testDb);
       mockInvitationSendingService = MockInvitationSendingService();
 
       invitationSendingService = InvitationSendingService(mockNdkService);
@@ -76,10 +69,12 @@ void main() {
         () => mockNdkService,
         mockRelayScanService,
         mockBackupService,
+        testDb,
       );
+    });
 
-      // Clear SharedPreferences before each test
-      sharedPreferencesMock.clear();
+    tearDown(() async {
+      await testDb.close();
     });
 
     test(
@@ -132,9 +127,9 @@ void main() {
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
-          content: content, // Already decrypted JSON from NDK
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: content,
         );
 
         // Mock LoginService.getCurrentPublicKey() to return owner pubkey
@@ -165,7 +160,6 @@ void main() {
         final testVault = Vault(
           id: 'test-vault-id',
           name: 'Test Vault',
-          content: 'test content',
           createdAt: DateTime.now(),
           ownerPubkey: ownerPubkey,
         );
@@ -199,9 +193,9 @@ void main() {
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
-          content: invalidJson,
           tags: [],
           createdAt: secondsSinceEpoch(),
+          content: invalidJson,
         );
 
         when(
@@ -237,9 +231,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: 'short',
-        content: invalidJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: invalidJson,
       );
 
       when(
@@ -276,9 +270,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: differentPubkey, // Different from payload
-        content: mismatchJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: mismatchJson,
       );
 
       when(
@@ -314,9 +308,9 @@ void main() {
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: inviteePubkey,
-        content: validJson,
         tags: [],
         createdAt: secondsSinceEpoch(),
+        content: validJson,
       );
 
       when(

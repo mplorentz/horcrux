@@ -3,31 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:ndk/ndk.dart';
+import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
+import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/recovery_request.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
+import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/backup_service.dart';
-import 'package:horcrux/services/shard_distribution_service.dart';
+import 'package:horcrux/services/share_distribution_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
-import 'package:horcrux/services/vault_share_service.dart';
 import 'package:horcrux/services/local_notification_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'recovery_service_test.mocks.dart';
 import '../helpers/secure_storage_mock.dart';
+import '../helpers/test_database.dart';
+import 'recovery_service_test.mocks.dart';
 
 @GenerateMocks([
   BackupService,
   LocalNotificationService,
-  ShardDistributionService,
+  ShareDistributionService,
   NdkService,
-  VaultShareService,
   HorcruxNotificationService,
   Nip01Event,
 ])
@@ -50,17 +51,15 @@ void main() {
     late VaultRepository repository;
     late BackupService backupService;
     late NdkService ndkService;
-    late VaultShareService vaultShareService;
     late MockLocalNotificationService mockLocalNotificationService;
     late RecoveryService recoveryService;
+    late AppDatabase testDb;
     const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
     const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
     const testVaultId = 'vault-test-123';
 
     setUp(() async {
       secureStorageMock.clear();
-      SharedPreferences.setMockInitialValues({});
-
       loginService = LoginService();
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
@@ -69,12 +68,12 @@ void main() {
       final keyPair = await loginService.generateAndStoreNostrKey();
       testCreatorPubkey = keyPair.publicKey;
 
+      testDb = newTestDatabase();
       // Clear any existing recovery requests and vaults
-      repository = VaultRepository(loginService);
+      repository = VaultRepository(loginService, db: testDb);
       // Create mocks for circular dependency
       final mockBackupService = MockBackupService();
       final mockNdkService = MockNdkService();
-      final mockVaultShareService = MockVaultShareService();
       mockLocalNotificationService = MockLocalNotificationService();
       when(
         mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
@@ -89,7 +88,6 @@ void main() {
 
       backupService = mockBackupService;
       ndkService = mockNdkService;
-      vaultShareService = mockVaultShareService;
       final mockHorcruxNotificationService = MockHorcruxNotificationService();
       when(
         mockHorcruxNotificationService.tryPushForEvent(
@@ -104,10 +102,10 @@ void main() {
         repository,
         backupService,
         ndkService,
-        vaultShareService,
         ProcessedNostrEventStore(),
         mockLocalNotificationService,
         mockHorcruxNotificationService,
+        testDb,
       );
       await recoveryService.clearAll();
       await repository.clearAll();
@@ -116,17 +114,28 @@ void main() {
       final testVault = Vault(
         id: testVaultId,
         name: 'Test Vault',
-        content: 'Test vault content',
         createdAt: DateTime.now(),
         ownerPubkey: testCreatorPubkey,
       );
       await repository.addVault(testVault);
+
+      final relayPlan = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 1,
+        totalKeys: 1,
+        stewards: [
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+        ],
+        relays: ['wss://relay.example.com'],
+      );
+      await repository.updateBackupConfig(testVaultId, relayPlan);
     });
 
     tearDown(() async {
       await repository.clearAll();
       await loginService.clearStoredKeys();
       loginService.resetCacheForTest();
+      await testDb.close();
     });
 
     test('concurrent initiateRecovery calls from same user do not create duplicates', () async {
@@ -287,13 +296,13 @@ void main() {
       // Verify request was created
       expect(recoveryRequest.vaultId, testVaultId);
       expect(recoveryRequest.initiatorPubkey, testCreatorPubkey);
-      expect(recoveryRequest.stewardResponses.length, 2);
+      expect(recoveryRequest.totalStewards, 2);
       expect(
-        recoveryRequest.stewardResponses.containsKey(testKeyHolder1),
+        recoveryRequest.responseForPubkey(testKeyHolder1) != null,
         true,
       );
       expect(
-        recoveryRequest.stewardResponses.containsKey(testKeyHolder2),
+        recoveryRequest.responseForPubkey(testKeyHolder2) != null,
         true,
       );
     });
@@ -344,11 +353,11 @@ void main() {
           threshold: 1,
         );
 
-        final shardData = createShardData(
-          shard: 'test_shard_data_base64',
+        final shardData = createShare(
+          payload: 'test_shard_data_base64',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'test_prime_mod',
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
@@ -363,7 +372,7 @@ void main() {
           'responder_pubkey': testKeyHolder1,
           'approved': true,
           'responded_at': DateTime.now().toIso8601String(),
-          'shard_data': shardDataToJson(shardData),
+          'shard_data': shareToJson(shardData),
         };
 
         final responseJson = json.encode(responseData);
@@ -431,13 +440,13 @@ void main() {
       );
 
       // Verify all stewards are in the request
-      expect(recoveryRequest.stewardResponses.length, 2);
+      expect(recoveryRequest.totalStewards, 2);
       expect(
-        recoveryRequest.stewardResponses[testKeyHolder1]?.status,
+        recoveryRequest.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.pending,
       );
       expect(
-        recoveryRequest.stewardResponses[testKeyHolder2]?.status,
+        recoveryRequest.responseForPubkey(testKeyHolder2)?.status,
         RecoveryResponseStatus.pending,
       );
 
@@ -480,11 +489,11 @@ void main() {
 
       // Simulate receiving a recovery response with shard data
       // In real flow, this would come via NDK from _handleRecoveryResponseData
-      final shardData = createShardData(
-        shard: 'recovered_shard_AAA=',
+      final shardData = createShare(
+        payload: 'recovered_shard_AAA=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'test_prime_CCC=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
@@ -499,7 +508,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
-        shardData: shardData,
+        share: shardData,
       );
 
       // Verify the response was recorded
@@ -508,17 +517,21 @@ void main() {
       );
       expect(updatedRequest, isNotNull);
       expect(
-        updatedRequest!.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest!.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData?.shard,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share?.payload,
         'recovered_shard_AAA=',
       );
+
+      final daoRows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(daoRows, hasLength(1));
+      expect(daoRows.single.sharePayload, contains('recovered_shard_AAA'));
     });
 
     test('recovery response denial does not include shard data', () async {
@@ -543,13 +556,81 @@ void main() {
       );
       expect(updatedRequest, isNotNull);
       expect(
-        updatedRequest!.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest!.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.denied,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNull,
       );
+    });
+
+    test('cancelRecoveryRequest clears share_payload in recovery_responses', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final shardData = createShare(
+        payload: 'cancel_test_payload=',
+        threshold: 1,
+        shareIndex: 0,
+        totalShares: 1,
+        primeMod: 'test_prime=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: shardData,
+      );
+
+      var rows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(rows, isNotEmpty);
+      expect(rows.every((r) => r.sharePayload.isNotEmpty), isTrue);
+
+      await recoveryService.cancelRecoveryRequest(recoveryRequest.id);
+
+      rows = await testDb.recoveryDao.responsesFor(recoveryRequest.id);
+      expect(rows, isNotEmpty);
+      expect(rows.every((r) => r.sharePayload.isEmpty), isTrue);
+    });
+
+    test('exitRecoveryMode deletes recovery_responses rows for the request', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final shardData = createShare(
+        payload: 'exit_mode_payload=',
+        threshold: 1,
+        shareIndex: 0,
+        totalShares: 1,
+        primeMod: 'test_prime=',
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: shardData,
+      );
+
+      expect(await testDb.recoveryDao.responsesFor(recoveryRequest.id), isNotEmpty);
+
+      await recoveryService.exitRecoveryMode(recoveryRequest.id);
+
+      expect(await testDb.recoveryDao.responsesFor(recoveryRequest.id), isEmpty);
     });
 
     test('multiple recovery responses accumulate correctly', () async {
@@ -562,22 +643,22 @@ void main() {
       );
 
       // Create shard data for first steward
-      final shardData1 = createShardData(
-        shard: 'shard_data_1_AAA=',
+      final shardData1 = createShare(
+        payload: 'shard_data_1_AAA=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 2,
+        shareIndex: 0,
+        totalShares: 2,
         primeMod: 'test_prime_DDD=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
 
       // Create shard data for second steward
-      final shardData2 = createShardData(
-        shard: 'shard_data_2_BBB=',
+      final shardData2 = createShare(
+        payload: 'shard_data_2_BBB=',
         threshold: 2,
-        shardIndex: 1,
-        totalShards: 2,
+        shareIndex: 1,
+        totalShares: 2,
         primeMod: 'test_prime_DDD=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
@@ -588,7 +669,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
-        shardData: shardData1,
+        share: shardData1,
       );
 
       // Second steward approves
@@ -596,7 +677,7 @@ void main() {
         recoveryRequest.id,
         testKeyHolder2,
         true, // approved
-        shardData: shardData2,
+        share: shardData2,
       );
 
       // Verify both responses were recorded
@@ -606,27 +687,27 @@ void main() {
       expect(updatedRequest, isNotNull);
       expect(updatedRequest!.approvedCount, 2);
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.status,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.status,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.status,
         RecoveryResponseStatus.approved,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.shardData,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.share,
         isNotNull,
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder1]?.shardData?.shard,
+        updatedRequest.responseForPubkey(testKeyHolder1)?.share?.payload,
         'shard_data_1_AAA=',
       );
       expect(
-        updatedRequest.stewardResponses[testKeyHolder2]?.shardData?.shard,
+        updatedRequest.responseForPubkey(testKeyHolder2)?.share?.payload,
         'shard_data_2_BBB=',
       );
 
@@ -647,18 +728,18 @@ void main() {
         );
 
         // Add a shard to the vault (steward has this shard)
-        final shardData = createShardData(
-          shard: 'practice_shard_secret_AAA=',
+        final shardData = createShare(
+          payload: 'practice_shard_secret_AAA=',
           threshold: 1,
-          shardIndex: 0,
-          totalShards: 1,
+          shareIndex: 0,
+          totalShares: 1,
           primeMod: 'test_prime_EEE=',
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: 'Test Vault',
           relayUrls: ['wss://relay.example.com'],
         );
-        await repository.addShardToVault(testVaultId, shardData);
+        await repository.addShareToVault(testVaultId, shardData);
 
         // Mock the NDK service to capture what's being sent
         final mockNdk = ndkService as MockNdkService;
@@ -670,6 +751,7 @@ void main() {
             recipientPubkey: anyNamed('recipientPubkey'),
             relays: anyNamed('relays'),
             tags: anyNamed('tags'),
+            vaultId: anyNamed('vaultId'),
           ),
         ).thenAnswer((invocation) {
           capturedContent = invocation.namedArguments[#content] as String?;
@@ -677,15 +759,15 @@ void main() {
             Nip01Event(
               kind: NostrKind.giftWrap.value,
               pubKey: 'a' * 64,
-              content: 'mock',
               tags: const [],
               createdAt: 1,
+              content: '',
             ),
           );
         });
 
         // Act: Respond to the practice recovery request with approval
-        await recoveryService.respondToRecoveryRequestWithShard(
+        await recoveryService.respondToRecoveryRequestWithShare(
           recoveryRequest.id,
           testKeyHolder1,
           true, // approved
@@ -699,6 +781,7 @@ void main() {
             recipientPubkey: anyNamed('recipientPubkey'),
             relays: anyNamed('relays'),
             tags: anyNamed('tags'),
+            vaultId: anyNamed('vaultId'),
           ),
         ).called(1);
 
@@ -739,18 +822,18 @@ void main() {
       );
 
       // Add a shard to the vault (steward has this shard)
-      final shardData = createShardData(
-        shard: 'real_shard_secret_BBB=',
+      final shardData = createShare(
+        payload: 'real_shard_secret_BBB=',
         threshold: 1,
-        shardIndex: 0,
-        totalShards: 1,
+        shareIndex: 0,
+        totalShares: 1,
         primeMod: 'test_prime_FFF=',
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: 'Test Vault',
         relayUrls: ['wss://relay.example.com'],
       );
-      await repository.addShardToVault(testVaultId, shardData);
+      await repository.addShareToVault(testVaultId, shardData);
 
       // Mock the NDK service to capture what's being sent
       final mockNdk = ndkService as MockNdkService;
@@ -762,6 +845,7 @@ void main() {
           recipientPubkey: anyNamed('recipientPubkey'),
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
+          vaultId: anyNamed('vaultId'),
         ),
       ).thenAnswer((invocation) {
         capturedContent = invocation.namedArguments[#content] as String?;
@@ -769,15 +853,15 @@ void main() {
           Nip01Event(
             kind: NostrKind.giftWrap.value,
             pubKey: 'a' * 64,
-            content: 'mock',
             tags: const [],
             createdAt: 1,
+            content: '',
           ),
         );
       });
 
       // Act: Respond to the REAL recovery request with approval
-      await recoveryService.respondToRecoveryRequestWithShard(
+      await recoveryService.respondToRecoveryRequestWithShare(
         recoveryRequest.id,
         testKeyHolder1,
         true, // approved
@@ -791,6 +875,7 @@ void main() {
           recipientPubkey: anyNamed('recipientPubkey'),
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
+          vaultId: anyNamed('vaultId'),
         ),
       ).called(1);
 
@@ -814,11 +899,11 @@ void main() {
       expect(decodedContent['shard_data'], isNotNull);
 
       // Verify shard data structure
-      final sentShardData = decodedContent['shard_data'] as Map<String, dynamic>;
-      expect(sentShardData['shard'], 'real_shard_secret_BBB=');
-      expect(sentShardData['threshold'], 1);
-      expect(sentShardData['shard_index'], 0);
-      expect(sentShardData['total_shards'], 1);
+      final sentShare = decodedContent['shard_data'] as Map<String, dynamic>;
+      expect(sentShare['shard'], 'real_shard_secret_BBB=');
+      expect(sentShare['threshold'], 1);
+      expect(sentShare['shard_index'], 0);
+      expect(sentShare['total_shards'], 1);
 
       // Log the captured content for verification
       // ignore: avoid_print

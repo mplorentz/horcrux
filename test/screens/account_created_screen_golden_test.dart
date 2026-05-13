@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/screens/account_created_screen.dart';
@@ -29,18 +28,15 @@ void main() {
     testGoldens('account created screen - default', (tester) async {
       const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
-      final container = ProviderContainer();
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const AccountCreatedScreen(nsec: testNsec),
-        container: container,
         surfaceSize: const Size(375, 667), // iPhone SE size
       );
 
       await screenMatchesGolden(tester, 'account_created_screen_default');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('account created screen - multiple device sizes', (
@@ -48,7 +44,7 @@ void main() {
     ) async {
       const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
 
-      final container = ProviderContainer();
+      final harness = GoldenTestHarness.withOverrides(const []);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -63,7 +59,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -72,7 +68,7 @@ void main() {
         'account_created_screen_multiple_devices',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

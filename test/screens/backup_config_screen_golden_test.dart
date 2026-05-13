@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/backup_config.dart';
@@ -11,24 +10,12 @@ import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
 import 'package:horcrux/services/login_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/steward_test_helpers.dart';
-import '../helpers/shared_preferences_mock.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final sharedPreferencesMock = SharedPreferencesMock();
-
-  setUpAll(() {
-    sharedPreferencesMock.setUpAll();
-  });
-
-  tearDownAll(() {
-    sharedPreferencesMock.tearDownAll();
-  });
 
   // Use test fixtures for consistent test data
   const steward1Pubkey = TestHexPubkeys.bob;
@@ -51,25 +38,19 @@ void main() {
   }
 
   group('BackupConfigScreen Golden Tests', () {
-    setUp(() async {
-      sharedPreferencesMock.clear();
-      SharedPreferences.setMockInitialValues({});
-    });
+    setUp(() async {});
 
     testGoldens('loading state', (tester) async {
       // Create a repository that never completes loading
       final mockRepository = _MockVaultRepository(null, neverCompletes: true);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         waitForSettle: false, // Loading state
       );
 
@@ -78,29 +59,26 @@ void main() {
         'backup_config_screen_loading',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('empty state - no existing config', (tester) async {
       // Create a repository that returns null (no existing config)
       final mockRepository = _MockVaultRepository(null);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 1000), // Taller to show full form
       );
 
       await screenMatchesGolden(tester, 'backup_config_screen_empty');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('with existing config - manual stewards', (tester) async {
@@ -128,16 +106,13 @@ void main() {
 
       final mockRepository = _MockVaultRepository(backupConfig);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
 
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 1200), // Taller to show all stewards
       );
 
@@ -146,7 +121,7 @@ void main() {
         'backup_config_screen_manual_key_holders',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('with existing config - invited stewards', (tester) async {
@@ -172,16 +147,12 @@ void main() {
 
       final mockRepository = _MockVaultRepository(backupConfig);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
@@ -190,7 +161,7 @@ void main() {
         'backup_config_screen_invited_key_holders',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('with existing config - mixed stewards', (tester) async {
@@ -221,16 +192,12 @@ void main() {
 
       final mockRepository = _MockVaultRepository(backupConfig);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 1200),
       );
 
@@ -239,7 +206,7 @@ void main() {
         'backup_config_screen_mixed_key_holders',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('with existing config - multiple relays', (tester) async {
@@ -264,22 +231,18 @@ void main() {
 
       final mockRepository = _MockVaultRepository(backupConfig);
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const BackupConfigScreen(vaultId: 'test-vault'),
         overrides: [
           vaultRepositoryProvider.overrideWith((ref) => mockRepository),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const BackupConfigScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 1000),
       );
 
       await screenMatchesGolden(tester, 'backup_config_screen_multiple_relays');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
@@ -305,11 +268,9 @@ void main() {
 
       final mockRepository = _MockVaultRepository(backupConfig);
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultRepositoryProvider.overrideWith((ref) => mockRepository),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        vaultRepositoryProvider.overrideWith((ref) => mockRepository),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -324,7 +285,7 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
@@ -333,7 +294,7 @@ void main() {
         'backup_config_screen_multiple_devices',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }
@@ -363,7 +324,6 @@ class _MockVaultRepository extends VaultRepository {
     return Vault(
       id: 'test-vault',
       name: 'Test',
-      content: 'secret',
       createdAt: DateTime(2024, 1, 1),
       ownerPubkey: 'a' * 64,
       pushEnabled: true,

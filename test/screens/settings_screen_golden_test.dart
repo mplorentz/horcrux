@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/screens/settings_screen.dart';
@@ -9,21 +8,18 @@ void main() {
 
   group('SettingsScreen Golden Tests', () {
     testGoldens('default state', (tester) async {
-      final container = ProviderContainer();
-
-      await pumpGoldenWidget(
+      final harness = await pumpGoldenWidget(
         tester,
         const SettingsScreen(),
-        container: container,
       );
 
       await screenMatchesGolden(tester, 'settings_screen_default');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
-      final container = ProviderContainer();
+      final harness = GoldenTestHarness.withOverrides(const []);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -35,13 +31,13 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'settings_screen_multiple_devices');
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

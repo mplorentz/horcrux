@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/backup_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/providers/vault_provider.dart';
@@ -30,20 +29,13 @@ void main() {
     List<String>? relays,
     String? instructions,
   }) {
-    return (
+    return BackupConfig(
       vaultId: vaultId,
-      specVersion: '1.0.0',
       threshold: threshold,
-      totalKeys: totalKeys,
       stewards: stewards,
       relays: relays ?? ['wss://relay.example.com'],
       instructions: instructions,
       createdAt: DateTime.now().subtract(const Duration(days: 7)),
-      lastUpdated: DateTime.now().subtract(const Duration(hours: 2)),
-      lastContentChange: null,
-      lastRedistribution: null,
-      contentHash: null,
-      status: BackupStatus.active,
       distributionVersion: 1,
     );
   }
@@ -58,7 +50,6 @@ void main() {
     return Vault(
       id: id,
       name: name,
-      content: 'Test vault content',
       createdAt: DateTime(2024, 10, 1, 10, 30),
       ownerPubkey: ownerPubkey,
       backupConfig: backupConfig,
@@ -67,7 +58,9 @@ void main() {
 
   group('PracticeRecoveryInfoScreen Golden Tests', () {
     testGoldens('loading state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider('test-vault').overrideWith(
             (ref) => Stream.value(null).asyncMap((_) async {
@@ -77,61 +70,47 @@ void main() {
           ),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 2000),
         waitForSettle: false,
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_loading');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('error state', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.error('Failed to load vault')),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_error');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('vault not found', (tester) async {
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider('test-vault').overrideWith((ref) => Stream.value(null)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_vault_not_found');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('not owner - permission denied', (tester) async {
@@ -151,25 +130,21 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 800),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_not_owner');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('no recovery plan', (tester) async {
@@ -180,25 +155,21 @@ void main() {
         backupConfig: null, // No backup config
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 2000),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_no_plan_detail');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('ready with 3 of 5 threshold', (tester) async {
@@ -220,25 +191,21 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 2500),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_3_of_5_full');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('ready with 2 of 3 threshold and instructions', (tester) async {
@@ -260,25 +227,21 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 2500),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_with_instructions');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('stewards not ready - waiting for confirmations', (
@@ -314,25 +277,21 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         overrides: [
           vaultProvider(
             'test-vault',
           ).overrideWith((ref) => Stream.value(vault)),
           currentPublicKeyProvider.overrideWith((ref) => testPubkey),
         ],
-      );
-
-      await pumpGoldenWidget(
-        tester,
-        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
-        container: container,
         surfaceSize: const Size(375, 2000),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_not_ready_detail');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     testGoldens('multiple device sizes', (tester) async {
@@ -352,14 +311,12 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        vaultProvider(
+          'test-vault',
+        ).overrideWith((ref) => Stream.value(vault)),
+        currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+      ]);
 
       final builder = DeviceBuilder()
         ..overrideDevicesForAllScenarios(
@@ -374,13 +331,13 @@ void main() {
         builder,
         wrapper: (child) => goldenMaterialAppWrapperWithProviders(
           child: child,
-          container: container,
+          container: harness.container,
         ),
       );
 
       await screenMatchesGolden(tester, 'practice_recovery_multiple_devices');
 
-      container.dispose();
+      await harness.dispose();
     });
 
     // Regression: on edge-to-edge Android (e.g. Pixel 10 Fold) the AppBar
@@ -405,19 +362,17 @@ void main() {
         ),
       );
 
-      final container = ProviderContainer(
-        overrides: [
-          vaultProvider(
-            'test-vault',
-          ).overrideWith((ref) => Stream.value(vault)),
-          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
-        ],
-      );
+      final harness = GoldenTestHarness.withOverrides([
+        vaultProvider(
+          'test-vault',
+        ).overrideWith((ref) => Stream.value(vault)),
+        currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+      ]);
 
       await tester.pumpWidgetBuilder(
         const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
         wrapper: (child) => UncontrolledProviderScope(
-          container: container,
+          container: harness.container,
           child: MaterialApp(
             theme: horcrux3Dark,
             builder: (context, body) => MediaQuery(
@@ -439,7 +394,7 @@ void main() {
         'practice_recovery_status_bar_safe_area',
       );
 
-      container.dispose();
+      await harness.dispose();
     });
   });
 }

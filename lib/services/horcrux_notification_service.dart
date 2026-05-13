@@ -6,8 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../database/app_database.dart';
+import '../database/app_database_provider.dart';
 import '../models/nostr_kinds.dart';
 import '../models/vault.dart';
 import '../providers/vault_provider.dart';
@@ -26,9 +27,11 @@ import 'push_notification_receiver.dart';
 final horcruxNotificationServiceProvider = Provider<HorcruxNotificationService>((ref) {
   final loginService = ref.watch(loginServiceProvider);
   final vaultRepository = ref.watch(vaultRepositoryProvider);
+  final database = ref.watch(appDatabaseProvider);
   final service = HorcruxNotificationService(
     loginService: loginService,
     vaultRepository: vaultRepository,
+    database: database,
   );
   ref.onDispose(service.dispose);
   return service;
@@ -113,17 +116,16 @@ class HorcruxNotifierException implements Exception {
 ///   consent sync, not here. [push] is the raw HTTP layer.
 ///
 /// The server URL defaults to [defaultBaseUrl] and can be overridden
-/// in [SharedPreferences] under [baseUrlPrefsKey] (e.g. for tests or
+/// in the drift `kv` table under [baseUrlPrefsKey] (e.g. for tests or
 /// development). Each HTTP method is small and explicit so future tests
 /// can mock individual endpoints.
 class HorcruxNotificationService {
   /// Default production notifier URL.
   static const String defaultBaseUrl = 'https://dev-notifier.horcruxbackup.com';
 
-  /// [SharedPreferences] key for a user-overridden base URL. When present,
+  /// Drift `kv` key for a user-overridden base URL. When present,
   /// overrides [defaultBaseUrl]; when absent or empty, the default is used.
   static const String baseUrlPrefsKey = 'horcrux_notifier_base_url';
-  static const String _consentSnapshotPrefsKey = 'horcrux_notifier_last_synced_consents';
   static const Duration _consentDebounce = Duration(milliseconds: 700);
 
   static const Duration _requestTimeout = Duration(seconds: 15);
@@ -137,6 +139,7 @@ class HorcruxNotificationService {
 
   final LoginService _loginService;
   final VaultRepository _vaultRepository;
+  final AppDatabase _database;
   final http.Client _httpClient;
   final bool _ownsHttpClient;
   StreamSubscription<List<Vault>>? _vaultsSubscription;
@@ -147,9 +150,11 @@ class HorcruxNotificationService {
   HorcruxNotificationService({
     required LoginService loginService,
     required VaultRepository vaultRepository,
+    required AppDatabase database,
     http.Client? httpClient,
   })  : _loginService = loginService,
         _vaultRepository = vaultRepository,
+        _database = database,
         _httpClient = httpClient ?? http.Client(),
         _ownsHttpClient = httpClient == null {
     _startConsentSyncSubscriptions();
@@ -159,19 +164,10 @@ class HorcruxNotificationService {
   /// when set, otherwise falls back to [defaultBaseUrl]. Trailing slashes
   /// are trimmed so [Uri.parse] composition is predictable.
   Future<String> getBaseUrl() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final override = prefs.getString(baseUrlPrefsKey)?.trim();
-      if (override != null && override.isNotEmpty) {
-        return _stripTrailingSlash(override);
-      }
-    } catch (e, st) {
-      Log.warning(
-        'HorcruxNotificationService: failed to read baseUrl override, '
-        'falling back to default',
-        e,
-        st,
-      );
+    final override = await _database.appStateDao.getString(baseUrlPrefsKey);
+    final trimmed = override?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return _stripTrailingSlash(trimmed);
     }
     return _stripTrailingSlash(defaultBaseUrl);
   }
@@ -182,12 +178,14 @@ class HorcruxNotificationService {
   /// [defaultBaseUrl]). The value is not validated beyond stripping
   /// whitespace; callers should verify it parses as a URL before saving.
   Future<void> setBaseUrl(String? override) async {
-    final prefs = await SharedPreferences.getInstance();
     final value = override?.trim();
     if (value == null || value.isEmpty) {
-      await prefs.remove(baseUrlPrefsKey);
+      await _database.appStateDao.removeKey(baseUrlPrefsKey);
     } else {
-      await prefs.setString(baseUrlPrefsKey, value);
+      await _database.appStateDao.setString(
+        key: baseUrlPrefsKey,
+        value: value,
+      );
     }
   }
 
@@ -279,11 +277,8 @@ class HorcruxNotificationService {
   /// - the vault owner (unless that's us), and
   /// - every co-steward of the vault (excluding us).
   ///
-  /// On the owner's side co-stewards come from `backupConfig.stewards`. On
-  /// the steward's side the local vault stub usually doesn't carry a
-  /// backup config, so we fall back to the `stewards` list that the owner
-  /// piggybacks onto each shard payload (see [ShardData.stewards], which
-  /// already excludes the creator).
+  /// Co-stewards come from the normalized `stewards` table (hydrated into
+  /// `backupConfig.stewards`) on both owner and steward devices.
   ///
   /// This is symmetric on purpose: any steward -- not just the owner --
   /// can originate a recovery request, so every co-steward of a shared
@@ -322,12 +317,8 @@ class HorcruxNotificationService {
         add(steward.pubkey);
       }
 
-      final coStewards = vault.mostRecentShard?.stewards;
-      if (coStewards != null) {
-        for (final entry in coStewards) {
-          add(entry['pubkey']);
-        }
-      }
+      // Co-steward pubkeys come from the normalized stewards table (via
+      // backupConfig), already added in the loop above.
     }
 
     final result = senders.toList()..sort();
@@ -395,7 +386,7 @@ class HorcruxNotificationService {
   /// [NdkService.publishEncryptedEvent]; we forward it to the notifier
   /// as-is and derive the recipient pubkey from its `p` tag.
   ///
-  /// [kind] is the *inner rumor* kind (e.g. [NostrKind.shardData]), not the
+  /// [kind] is the *inner rumor* kind (e.g. [NostrKind.shareData]), not the
   /// gift wrap's outer kind (which is always 1059). The inner kind lives
   /// inside the NIP-59-encrypted seal, so it can't be recovered from the
   /// gift wrap without the recipient's key — callers have to pass it.
@@ -575,6 +566,7 @@ class HorcruxNotificationService {
 
     final base = await getBaseUrl();
     final url = Uri.parse('$base$path');
+    final requestTarget = '$method $url';
 
     final authHeader = Nip98Auth.buildAuthorizationHeader(
       keyPair: keyPair,
@@ -595,7 +587,7 @@ class HorcruxNotificationService {
     } catch (e) {
       throw HorcruxNotifierException(
         statusCode: 0,
-        message: 'Notifier request failed: $e',
+        message: 'Notifier request failed ($requestTarget): $e',
         cause: e,
       );
     }
@@ -618,7 +610,7 @@ class HorcruxNotificationService {
 
     throw HorcruxNotifierException(
       statusCode: status,
-      message: _extractErrorMessage(response) ?? 'HTTP $status',
+      message: '${_extractErrorMessage(response) ?? 'HTTP $status'} ($requestTarget)',
     );
   }
 
@@ -686,40 +678,44 @@ class HorcruxNotificationService {
   }
 
   Future<bool> _isPushOptedIn() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
-    } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed to read push opt-in flag', e, st);
-      return false;
-    }
+    return await _database.appStateDao.getBool(PushNotificationReceiver.optInFlagKey) ?? false;
   }
 
   Future<List<String>> _loadLastSyncedConsentSnapshot() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getStringList(_consentSnapshotPrefsKey) ?? const <String>[];
-      final normalized = raw
-          .map((e) => e.trim().toLowerCase())
-          .where((e) => isValidHexPubkey(e))
-          .toSet()
-          .toList()
-        ..sort();
-      return normalized;
+      final raw = await _database.appStateDao.syncedConsentIds();
+      return _normalizeConsentIds(raw);
     } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed reading consent snapshot', e, st);
+      Log.warning(
+        'HorcruxNotificationService: failed reading synced_consents snapshot',
+        e,
+        st,
+      );
       return const <String>[];
     }
   }
 
   Future<void> _storeLastSyncedConsentSnapshot(List<String> senders) async {
-    final normalized = senders.map((e) => e.trim().toLowerCase()).toSet().toList()..sort();
+    final normalized = _normalizeConsentIds(senders);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_consentSnapshotPrefsKey, normalized);
+      await _database.appStateDao.replaceSyncedConsentIds(normalized);
     } catch (e, st) {
-      Log.warning('HorcruxNotificationService: failed persisting consent snapshot', e, st);
+      Log.warning(
+        'HorcruxNotificationService: failed persisting synced_consents snapshot',
+        e,
+        st,
+      );
     }
+  }
+
+  List<String> _normalizeConsentIds(Iterable<String> consentIds) {
+    final normalized = consentIds
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => isValidHexPubkey(e))
+        .toSet()
+        .toList()
+      ..sort();
+    return normalized;
   }
 
   bool _sameConsentSet(List<String> a, List<String> b) {

@@ -5,6 +5,7 @@ import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/vault.dart';
+import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/screens/recovery_request_detail_screen.dart';
@@ -21,7 +22,6 @@ void main() {
     return Vault(
       id: 'vault-1',
       name: 'Test Vault',
-      content: null,
       createdAt: DateTime(2026, 1, 1),
       ownerPubkey: ownerPubkey,
       ownerName: 'Owner',
@@ -38,19 +38,47 @@ void main() {
     );
   }
 
+  VaultDetail buildTestVaultDetail() {
+    final bc = createBackupConfig(
+      vaultId: 'vault-1',
+      threshold: 2,
+      totalKeys: 2,
+      stewards: [
+        createSteward(pubkey: initiatorPubkey, name: 'Initiator'),
+        createSteward(pubkey: currentStewardPubkey, name: 'Current Steward'),
+      ],
+      relays: const ['wss://relay.example.com'],
+    );
+    return StewardedVaultDetail(
+      id: 'vault-1',
+      name: 'Test Vault',
+      ownerPubkey: ownerPubkey,
+      ownerName: 'Owner',
+      threshold: 2,
+      totalShares: 2,
+      stewards: bc.stewards,
+      recoveryRequests: const [],
+      pushEnabled: false,
+      createdAt: DateTime(2026, 1, 1),
+      archivedAt: null,
+      archivedReason: null,
+      backupConfig: bc,
+      latestShare: null,
+    );
+  }
+
   RecoveryRequest buildRecoveryRequest({
     required RecoveryResponse responseForCurrentSteward,
   }) {
-    return RecoveryRequest(
+    return RecoveryRequest.makeFromParticipants(
       id: 'request-1',
       vaultId: 'vault-1',
       initiatorPubkey: initiatorPubkey,
       requestedAt: DateTime.now().subtract(const Duration(hours: 1)),
       status: RecoveryRequestStatus.inProgress,
       threshold: 2,
-      stewardResponses: {
-        currentStewardPubkey: responseForCurrentSteward,
-      },
+      stewardPubkeys: [currentStewardPubkey],
+      responses: [responseForCurrentSteward],
     );
   }
 
@@ -65,6 +93,7 @@ void main() {
             _FakeLoginService(currentStewardPubkey),
           ),
           vaultProvider('vault-1').overrideWith((_) => Stream.value(buildTestVault())),
+          vaultDetailProvider('vault-1').overrideWith((_) => Stream.value(buildTestVaultDetail())),
         ],
         child: MaterialApp(
           home: RecoveryRequestDetailScreen(recoveryRequest: request),

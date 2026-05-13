@@ -33,7 +33,8 @@ This refactor does two things at once because they're inseparable:
 - **DB key**: HKDF‑SHA‑256 from the Nostr private key already held in `FlutterSecureStorage` (single trust root, no new secret).
   - **Salt**: random 32 bytes, generated on first launch, persisted to `FlutterSecureStorage` under key `db_key_salt`. Lost salt = lost DB.
   - **Info string**: `"horcrux/db-key/v1"` — versioned so a future re‑derivation is unambiguous.
-  - **Output**: 32 bytes, passed to SQLCipher as a raw key (`PRAGMA key = "x'…'"`), not as a passphrase (skips SQLCipher's KDF, which would be redundant on top of HKDF).
+  - **Output**: 32 bytes, passed to SQLCipher as a raw key (`PRAGMA key = "x'…'"`), not as a passphrase (skips SQLCipher's KDF, which would be redundant on top of HKDF). The outer double‑quote wrapper is **required** — bare blob literals (`x'…'`) are not valid pragma‑values in SQLite's grammar and cause a syntax error at DB open time. See https://www.zetetic.net/sqlcipher/sqlcipher-api/ for the canonical format reference.
+  - **Key‑material sanitization**: the `PRAGMA key` execution is wrapped in a try/catch that re‑throws failures as a `StateError` with the original error type but **not** the original message, because the raw error contains the full SQL statement with the key embedded and would leak key material into crash reporters and logs.
   - **Key lifetime**: held in process memory after the first decrypt; cleared on logout, on `wipeLocalDataForCorruptedSecureStorage`, and on app termination. We do **not** clear on app background in v1 (would force re‑derive on every foreground); revisit if threat model demands.
   - **Key rotation is not supported in v1.** If the Nostr private key changes, the DB becomes orphaned ciphertext. Documented as a known limitation; owner data loss is the failure mode.
 - **SQLCipher v1 pragmas (pinned)**: `cipher_page_size=4096`, `cipher_kdf_algorithm=PBKDF2_HMAC_SHA512` (irrelevant when raw key is used, but pinned in case derivation strategy ever changes), `cipher_use_hmac=ON` (default), `cipher_memory_security=ON` on platforms that support mlock, **`PRAGMA secure_delete=ON`** (zero pages on delete so deleted share material is not recoverable from compacted pages under future key compromise). After every transaction that deletes share material (`recovery_responses` cleanup), run `PRAGMA wal_checkpoint(TRUNCATE)` to flush the WAL — otherwise fragments live in `-wal` until the next natural checkpoint.
@@ -460,7 +461,12 @@ Events that don't produce a row (steward leave‑messages, control events, stale
 - New folder `lib/database/` with `app_database.dart`, `tables/`, `daos/`.
 - DB key derivation helper (HKDF from `LoginService` private key, salt in `FlutterSecureStorage`).
 - `appDatabaseProvider` Riverpod provider with `NativeDatabase.memory()` test factory.
-- **Test fixture infrastructure** (lands here, not in Phase 7): `TestDatabase` factory (in‑memory, no SQLCipher), plus typed builders — `VaultFixture.owned(...)`, `VaultFixture.stewarded(...)`, `RecoverySessionFixture.inProgress(...)`. Every Phase 1+ PR uses these instead of bespoke setup; otherwise we accumulate setup‑code tax that has to be ripped out at the end.
+- **Test fixture infrastructure** (lands here, not in Phase 7): two in‑memory factories in `test/helpers/test_database.dart`:
+  - `newTestDatabase()` — plain `NativeDatabase.memory()` for pure Dart unit tests. No SQLCipher.
+  - `newWidgetTestDatabase()` — wraps `NativeDatabase.memory()` in a `DatabaseConnection` with `closeStreamsSynchronously: true` (the pattern Drift docs recommend) so query‑stream teardown completes synchronously and does not leave pending timers after a widget test disposes its tree. Use this in all widget / golden tests via `appDatabaseProvider.overrideWithValue(newWidgetTestDatabase())`.
+  - Typed fixture builders: `VaultFixture.owned(...)`, `VaultFixture.stewarded(...)`, `RecoverySessionFixture.inProgress(...)` (the last one throws `UnimplementedError` until Phase 3 when the recovery tables land). Every Phase 1+ PR uses these instead of bespoke setup.
+  - `FixedClock` helper (deterministic millisecond clock with an `advance(Duration)` method) so fixture ordering assertions don't depend on `DateTime.now()`.
+- **Golden test override helper** in `test/helpers/golden_test_helpers.dart`: `goldenOverrides(List<Override>)` prepends the in‑memory DB override and the empty‑recovery‑request‑stream override before any test‑specific overrides. This prevents golden tests from touching platform channels (storage or secure‑key access). Note: golden tests also still import `SharedPreferencesMock` during Phases 1–6 for the services not yet migrated to drift; `shared_preferences_mock.dart` and all its call sites are deleted in Phase 7.
 - **Schema‑evolution CI**: commit `drift_schemas/v1.json` from `drift_dev schema dump`; CI assertion that any schema change without a corresponding version bump + migration test fails the build. Cheap to add now, expensive to retrofit at v3.
 - No consumers wired yet; existing code still uses prefs.
 
@@ -468,7 +474,9 @@ Events that don't produce a row (steward leave‑messages, control events, stale
 - Tables: `vaults`, `vault_relays`, `owned_vaults`, `stewards`, `distributions`, `distribution_shares`.
 - DAOs for each.
 - `VaultRepository` rewritten on top of these DAOs; `vaultsStream` becomes `_vaultDao.watchAll()`.
-- Promote `BackupConfig` from record typedef to a domain class hydrated from `vaults` + `owned_vaults` + active `stewards` (filtered `WHERE left_at IS NULL`).
+- Promote `BackupConfig` from record typedef to a `@freezed` domain class hydrated from `vaults` + `owned_vaults` + active `stewards` (filtered `WHERE left_at IS NULL`). Dropped fields (`specVersion`, `totalKeys`, `lastUpdated`, `lastContentChange`, `lastRedistribution`, `contentHash`, `status`) are either derivable or decoration; `totalKeys` becomes a derived getter (`stewards.length`), `hasBeenDistributed` replaces `lastRedistribution != null` checks.
+- **`Vault.isArchived` becomes a derived getter** (`archivedAt != null`), not a stored field. Consistent with the "derive from timestamps, not redundant booleans" rule; removes the previous `@Default(false) bool isArchived` Freezed field.
+- **`Vault.toJson` / `Vault.fromJson` removed**: the vault is now persisted via DAOs, not JSON blobs. Any code that called these methods (primarily `VaultRepository`) is rewritten to use DAOs directly.
 - Update [lib/services/invitation_service.dart](../lib/services/invitation_service.dart), [lib/widgets/steward_list.dart](../lib/widgets/steward_list.dart), [lib/screens/backup_config_screen.dart](../lib/screens/backup_config_screen.dart) to read active stewards.
 - **No data migration**: legacy prefs keys are removed from code, not migrated.
 
@@ -512,6 +520,7 @@ Phase 2 was originally a single PR mixing schema, ingestion rewrite, model surge
 - Replace [lib/services/publish_service.dart](../lib/services/publish_service.dart) prefs queue with the `outbox` + `outbox_relays` tables; existing retry/backoff logic stays, now scoped per‑relay so retries only target failing relays.
 - Vault deletion cascades per the table at the top of "Target schema."
 - Removes the `RecoveryRequest.stewardResponses` map and the `ShardData.stewards` denormalization in the same PR (they have no on‑disk home anymore).
+- **Rewrite `needsRedistribution`**: the current `BackupConfigExtension.needsRedistribution` checks `Steward.giftWrapEventId == null`, which is only valid for the lifetime of the in‑memory `_backupConfigOverlay` in `VaultRepository` — after an app restart the overlay is empty, `_stewardFromRow` defaults all keyed stewards to `awaitingKey` with `giftWrapEventId == null`, and the getter always returns `true`, showing stale "Keys not distributed" UI for previously‑distributed vaults. Replace it with a DAO query against `distribution_shares WHERE sent_at IS NULL` for the current `distributions.version` (rows exist from the distribution flow above). Remove `Steward.giftWrapEventId` from the `Steward` model — it was a Phase 1 placeholder; `distribution_shares.gift_wrap_event_id` is the canonical, durable store. Update `_stewardFromRow` accordingly (the field no longer exists to default).
 
 ### Phase 4 — (was Shard → Share rename; now in Phase 1.5)
 

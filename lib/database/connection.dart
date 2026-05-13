@@ -20,6 +20,40 @@ import 'db_key.dart';
 /// also be removed during logout/wipe (see Phase 5 acceptance).
 const String dbFileName = 'horcrux.db';
 
+/// Returns the SQLCipher database path under application support.
+///
+/// [supportDirectory] exists for tests that need deterministic temporary
+/// directories without mocking platform channels.
+Future<String> resolveSqlCipherDatabasePath({Directory? supportDirectory}) async {
+  final dir = supportDirectory ?? await getApplicationSupportDirectory();
+  return p.join(dir.path, dbFileName);
+}
+
+/// Deletes the SQLCipher database file and its `-wal` / `-shm` siblings.
+///
+/// This is a best-effort cleanup used by logout and corruption wipe paths.
+/// Missing files are ignored so repeated cleanup calls are harmless.
+Future<void> deleteSqlCipherDatabaseFiles({Directory? supportDirectory}) async {
+  final dbPath = await resolveSqlCipherDatabasePath(
+    supportDirectory: supportDirectory,
+  );
+  final files = <String>[
+    dbPath,
+    '$dbPath-wal',
+    '$dbPath-shm',
+  ];
+  for (final filePath in files) {
+    final file = File(filePath);
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e, st) {
+      Log.error('Failed to delete SQLCipher file $filePath', e, st);
+    }
+  }
+}
+
 /// Opens the SQLCipher-backed drift connection used in production.
 ///
 /// Pinned pragmas — see "Stack" in `docs/data_layer_refactor_plan.md`:
@@ -29,13 +63,19 @@ const String dbFileName = 'horcrux.db';
 /// - `cipher_use_hmac = ON` (default)
 /// - `cipher_memory_security = ON` where supported
 /// - `secure_delete = ON` so deleted share-material pages are zeroed
-LazyDatabase openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
+///
+/// The connection sets `closeStreamsSynchronously: true` so drift cleans up
+/// query streams in the same microtask the subscription is cancelled. That
+/// matters at logout: when [appDatabaseProvider] is invalidated, Riverpod
+/// disposes the dependent repositories first; without synchronous stream
+/// cleanup, drift would leave a `Timer.zero` pending past the database
+/// close and produce "pending timers" failures in widget tests.
+DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   final derivation = keyDerivation ?? DbKeyDerivation();
-  return LazyDatabase(() async {
+  final lazy = LazyDatabase(() async {
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
 
-    final supportDir = await getApplicationSupportDirectory();
-    final dbPath = p.join(supportDir.path, dbFileName);
+    final dbPath = await resolveSqlCipherDatabasePath();
     final pragmaKey = await derivation.deriveSqlCipherPragmaKey();
     if (pragmaKey == null) {
       throw StateError(
@@ -52,12 +92,26 @@ LazyDatabase openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
       },
     );
   });
+  return DatabaseConnection(lazy, closeStreamsSynchronously: true);
 }
 
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
 /// Extracted so tests using a non-encrypted in-memory DB can skip it.
+///
+/// The key PRAGMA is executed first; any failure is re-thrown as a
+/// [StateError] with a sanitised message so key material cannot propagate
+/// through exception messages into crash reporters or logs.
 void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
-  rawDb.execute("PRAGMA key = $pragmaKey;");
+  try {
+    rawDb.execute("PRAGMA key = $pragmaKey;");
+  } on Object catch (e) {
+    // Do NOT include e.toString() — it contains the full SQL statement with
+    // the raw key embedded, which would leak key material into crash reports.
+    throw StateError(
+      'SQLCipher PRAGMA key failed (${e.runtimeType}). '
+      'This is a fatal configuration error.',
+    );
+  }
   rawDb.execute('PRAGMA cipher_page_size = 4096;');
   rawDb.execute("PRAGMA cipher_kdf_algorithm = 'PBKDF2_HMAC_SHA512';");
   rawDb.execute('PRAGMA cipher_use_hmac = ON;');

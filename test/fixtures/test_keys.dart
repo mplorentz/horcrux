@@ -48,8 +48,8 @@ class TestBackupConfigs {
   ];
 }
 
-/// Test data for creating ShardData objects
-class TestShardData {
+/// Test data for creating Share objects
+class TestShare {
   static const String testPrimeMod =
       '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
   static const String testCreatorPubkey =

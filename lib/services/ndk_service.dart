@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
+import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
@@ -12,12 +13,13 @@ import 'login_service.dart';
 import 'recovery_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
-import 'shard_distribution_service.dart';
+import 'share_distribution_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
 import 'publish_service.dart';
+import '../database/app_database.dart';
 import '../models/nostr_kinds.dart';
-import '../models/shard_data.dart';
+import '../models/share.dart';
 import '../models/recovery_request.dart';
 
 /// Nostr `since` for relay subscription filters ([NdkService] gift-wrap subscriptions).
@@ -49,7 +51,7 @@ class RecoveryResponseEvent {
   final String vaultId;
   final String senderPubkey;
   final bool approved;
-  final ShardData? shardData;
+  final Share? share;
   final String? nostrEventId;
   final DateTime? createdAt;
 
@@ -58,26 +60,33 @@ class RecoveryResponseEvent {
     required this.vaultId,
     required this.senderPubkey,
     required this.approved,
-    this.shardData,
+    this.share,
     this.nostrEventId,
     this.createdAt,
   });
 }
 
-// Provider for NdkService
+// Provider for NdkService.
+//
+// Watches [appDatabaseProvider] (and [processedNostrEventStoreProvider]) so a
+// logout-driven invalidation rebuilds NdkService against the fresh DB
+// instead of holding the closed handle from the previous session. The
+// invitation service stays behind a lazy callback to avoid a circular
+// dependency (InvitationService also depends on NdkService).
 final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
-  final loginService = ref.read(loginServiceProvider);
-  final processedEventStore = ref.read(processedNostrEventStoreProvider);
+  final loginService = ref.watch(loginServiceProvider);
+  final processedEventStore = ref.watch(processedNostrEventStoreProvider);
   final service = NdkService(
     ref: ref,
     loginService: loginService,
     processedEventStore: processedEventStore,
+    database: ref.watch(appDatabaseProvider),
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
 
-  // Clean up when disposed
-  ref.onDispose(() async {
-    await service.dispose();
+  ref.onDispose(() {
+    service.disposePublishWorkerSync();
+    unawaited(service.dispose());
   });
 
   return service;
@@ -106,6 +115,7 @@ class NdkService {
     required Ref ref,
     required LoginService loginService,
     required ProcessedNostrEventStore processedEventStore,
+    required AppDatabase database,
     required InvitationService Function() getInvitationService,
   })  : _ref = ref,
         _loginService = loginService,
@@ -113,6 +123,7 @@ class NdkService {
         _getInvitationService = getInvitationService {
     _publishService = PublishService(
       getNdk: getNdk,
+      database: database,
     );
     unawaited(_publishService.initialize());
   }
@@ -180,7 +191,7 @@ class NdkService {
 
       // Restart subscriptions to include new relay
       await _setupSubscriptions();
-      _publishService.onRelayReconnected(relayUrl);
+      unawaited(_publishService.onRelayReconnected(relayUrl));
     } catch (e) {
       Log.error('Error adding relay $relayUrl', e);
       _activeRelays.remove(relayUrl);
@@ -347,6 +358,41 @@ class NdkService {
     }
   }
 
+  /// Loads the inner kind-1337 share payload from a published distribution
+  /// gift-wrap (kind 1059) by [giftWrapEventId].
+  ///
+  /// Used when the owner device stores a `held_shares` row with an empty
+  /// [sharePayload] (owner-as-steward carve-out) but still needs the shard
+  /// bytes for recovery responses.
+  Future<Share?> loadShareDataFromPublishedDistributionGiftWrap({
+    required String giftWrapEventId,
+    required List<String> relayHints,
+  }) async {
+    await _ensureInitialized();
+    if (_ndk == null) return null;
+
+    final wrap = await fetchGiftWrapByIdForPush(
+      eventIdHex: giftWrapEventId,
+      relayHints: relayHints,
+    );
+    if (wrap == null) return null;
+
+    try {
+      final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: wrap);
+      if (inner.kind != NostrKind.shareData.value) {
+        Log.warning(
+          'loadShareDataFromPublishedDistributionGiftWrap: inner kind '
+          '${inner.kind} is not ${NostrKind.shareData.value} (shareData)',
+        );
+        return null;
+      }
+      return shareFromJson(json.decode(inner.content) as Map<String, dynamic>);
+    } catch (e, st) {
+      Log.warning('loadShareDataFromPublishedDistributionGiftWrap failed', e, st);
+      return null;
+    }
+  }
+
   /// Best-effort [Vault.id] for navigation after a push — unwraps once and reads
   /// inner JSON/tags. Returns `null` when unknown or unwrap fails.
   Future<String?> resolveVaultIdForGiftWrap(Nip01Event giftWrap) async {
@@ -355,7 +401,7 @@ class NdkService {
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
-        case 1337: // [NostrKind.shardData]
+        case 1337: // [NostrKind.shareData]
           final m = json.decode(inner.content) as Map<String, dynamic>;
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
@@ -367,7 +413,7 @@ class NdkService {
           final m = json.decode(inner.content) as Map<String, dynamic>;
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1342: // [NostrKind.shardConfirmation]
+        case 1342: // [NostrKind.shareConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
         default:
           return null;
@@ -446,8 +492,8 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
-      if (unwrappedEvent.kind == NostrKind.shardData.value) {
-        await _handleShardData(
+      if (unwrappedEvent.kind == NostrKind.shareData.value) {
+        await _handleShare(
           unwrappedEvent,
           allowLocalNotification: allowLocalNotification,
         );
@@ -465,8 +511,8 @@ class NdkService {
         await _handleInvitationAcceptance(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
-      } else if (unwrappedEvent.kind == NostrKind.shardConfirmation.value) {
-        await _handleShardConfirmation(
+      } else if (unwrappedEvent.kind == NostrKind.shareConfirmation.value) {
+        await _handleShareConfirmation(
           unwrappedEvent,
           allowLocalNotification: allowLocalNotification,
         );
@@ -485,7 +531,7 @@ class NdkService {
   }
 
   /// Handle incoming shard data (kind 1337)
-  Future<void> _handleShardData(
+  Future<void> _handleShare(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
@@ -493,7 +539,7 @@ class NdkService {
       Log.info('Processing shard data event: ${event.id}');
 
       final shardJson = json.decode(event.content) as Map<String, dynamic>;
-      var shardData = shardDataFromJson(shardJson);
+      var shardData = shareFromJson(shardJson);
 
       shardData = shardData.copyWith(nostrEventId: event.id);
 
@@ -511,9 +557,9 @@ class NdkService {
       await vaultShareService.processVaultShare(vaultId, shardData);
 
       if (allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShardDataProcessed(
+        await _ref.read(localNotificationServiceProvider).notifyShareDataProcessed(
               event: event,
-              shardData: shardData,
+              share: shardData,
             );
       }
     } catch (e) {
@@ -544,20 +590,20 @@ class NdkService {
             ? thresholdRaw.toInt()
             : 1;
 
-    final recoveryRequest = RecoveryRequest(
+    final recoveryRequest = RecoveryRequest.makeFromParticipants(
       id: (requestData['recovery_request_id'] as String?) ?? event.id,
       vaultId: requestData['vault_id'] as String,
       initiatorPubkey: senderPubkey,
       requestedAt: DateTime.parse(requestedAtRaw!),
       status: RecoveryRequestStatus.sent,
       threshold: threshold,
+      stewardPubkeys: const [],
       nostrEventId: event.id,
       eventCreationTime: DateTime.fromMillisecondsSinceEpoch(
         event.createdAt * 1000,
         isUtc: true,
       ),
       expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-      stewardResponses: {},
       isPractice: requestData['is_practice'] as bool? ?? false,
     );
 
@@ -591,18 +637,16 @@ class NdkService {
       'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
     );
 
-    ShardData? shardData;
+    Share? shardData;
 
     final shardPayload = responseData['shard_data'];
     if (approved && shardPayload != null) {
       final shardDataJson = shardPayload as Map<String, dynamic>;
-      shardData = shardDataFromJson(shardDataJson);
-
-      final vaultShareService = _ref.read(vaultShareServiceProvider);
-      await vaultShareService.addRecoveryShard(recoveryRequestId, shardData);
+      shardData = shareFromJson(shardDataJson);
 
       Log.info(
-        'Stored recovery shard from $senderPubkey for recovery request $recoveryRequestId',
+        'Decoded recovery shard from $senderPubkey for recovery request $recoveryRequestId '
+        '(persists via RecoveryService)',
       );
     }
 
@@ -611,7 +655,7 @@ class NdkService {
       vaultId: vaultId,
       senderPubkey: senderPubkey,
       approved: approved,
-      shardData: shardData,
+      share: shardData,
       nostrEventId: event.id,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         event.createdAt * 1000,
@@ -623,7 +667,7 @@ class NdkService {
           recoveryRequestId,
           senderPubkey,
           approved,
-          shardData: shardData,
+          share: shardData,
           nostrEventId: event.id,
           recoveryResponseSourceEvent: responseEvent,
           allowLocalNotification: allowLocalNotification,
@@ -662,7 +706,7 @@ class NdkService {
   }
 
   /// Handle incoming shard confirmation event (kind 1342)
-  Future<void> _handleShardConfirmation(
+  Future<void> _handleShareConfirmation(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
@@ -670,16 +714,16 @@ class NdkService {
       Log.info('Processing shard confirmation event: ${event.id}');
       Log.debug('Shard confirmation event tags: ${event.tags}');
       final shardDistributionService = _ref.read(
-        shardDistributionServiceProvider,
+        shareDistributionServiceProvider,
       );
-      await shardDistributionService.processShardConfirmationEvent(
+      await shardDistributionService.processShareConfirmationEvent(
         event: event,
       );
       Log.info('Successfully processed shard confirmation event: ${event.id}');
 
       final vaultId = _firstTagValue(event.tags, 'vault_id');
       if (vaultId != null && allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShardConfirmationProcessed(
+        await _ref.read(localNotificationServiceProvider).notifyShareConfirmationProcessed(
               event: event,
               vaultId: vaultId,
             );
@@ -813,6 +857,7 @@ class NdkService {
     required List<String> relays,
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
+    String? vaultId,
   }) async {
     await _ensureInitialized();
 
@@ -831,6 +876,7 @@ class NdkService {
       final result = await _publishService.enqueueEvent(
         event: giftWrap,
         relays: relays,
+        vaultId: vaultId,
       );
 
       if (result.successfulRelays.isEmpty) {
@@ -853,8 +899,7 @@ class NdkService {
 
       return giftWrap;
     } catch (e, stackTrace) {
-      Log.error('Error enqueuing encrypted event', e);
-      Log.debug('Encrypted event enqueue stack', stackTrace);
+      Log.error('Error enqueuing encrypted event', e, stackTrace);
       return null;
     }
   }
@@ -910,6 +955,7 @@ class NdkService {
     required List<String> relays,
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
+    String? vaultId,
   }) async {
     await _ensureInitialized();
 
@@ -925,6 +971,7 @@ class NdkService {
             relays: relays,
             tags: tags,
             customPubkey: customPubkey,
+            vaultId: vaultId,
           ),
         );
       } catch (e) {
@@ -959,14 +1006,17 @@ class NdkService {
     _isInitialized = true;
   }
 
+  /// Stops the outbox worker synchronously (see [PublishService.disposeSync]).
+  void disposePublishWorkerSync() {
+    _publishService.disposeSync();
+  }
+
   /// Dispose of NDK resources
   /// This stops all listening, closes subscriptions, and cleans up resources
   Future<void> dispose() async {
-    // Stop listening to all subscriptions first
-    await closeSubscriptions();
+    _publishService.disposeSync();
 
-    // Dispose publish service
-    await _publishService.dispose();
+    await closeSubscriptions();
 
     // Clear state
     _activeRelays.clear();

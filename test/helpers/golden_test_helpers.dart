@@ -2,7 +2,112 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
+import 'package:horcrux/database/app_database_provider.dart';
+import 'package:horcrux/models/recovery_request.dart';
+import 'package:horcrux/providers/recovery_provider.dart';
 import 'package:horcrux/widgets/theme.dart';
+
+import 'test_database.dart';
+
+/// In-memory database override for widget / golden tests. Uses
+/// `closeStreamsSynchronously: true` (the pattern recommended by the Drift
+/// docs) so stream teardown is synchronous and does not leave pending timers
+/// after a test disposes its widget tree.
+Override goldenAppDatabaseOverride() =>
+    appDatabaseProvider.overrideWithValue(newWidgetTestDatabase());
+
+/// Replaces the recovery banner stream with an empty one so
+/// [RecoveryService.initialize] is never called.
+///
+/// This override exists because [RecoveryService.initialize] has three
+/// hardcoded platform-channel calls with no injection points:
+///   1. [ProcessedNostrEventStore.ensureLoaded] → `path_provider`
+///   2. `_loadViewedNotificationIds` → [SharedPreferences.getInstance]
+///   3. [getFirstAppOpenUtc] → [SharedPreferences.getInstance]
+///
+/// The right long-term fix is to inject those dependencies so tests can
+/// swap them for in-memory doubles (bead 8lk). Until then, overriding at the
+/// [pendingRecoveryRequestsProvider] boundary is the narrowest cut that
+/// prevents the entire chain from initialising.
+final Override goldenPendingRecoveryEmptyOverride = pendingRecoveryRequestsProvider.overrideWith(
+  (ref) => Stream<List<RecoveryRequest>>.value(const []),
+);
+
+/// Prepends shared golden overrides before [overrides]. Later entries win when
+/// the same provider is overridden twice.
+///
+/// Includes an in-memory database override (via [goldenAppDatabaseOverride])
+/// and an empty recovery-request stream (via [goldenPendingRecoveryEmptyOverride])
+/// so widget / golden tests never touch platform channels for storage or
+/// secure-key access.
+List<Override> goldenOverrides(List<Override> overrides) => [
+      goldenAppDatabaseOverride(),
+      goldenPendingRecoveryEmptyOverride,
+      ...overrides,
+    ];
+
+/// Riverpod scope for golden / widget tests: in-memory DB, empty recovery
+/// stream, and async [dispose] that closes Drift after the container is disposed.
+final class GoldenTestHarness {
+  GoldenTestHarness._(this.container);
+
+  /// The [ProviderContainer] passed to [goldenMaterialAppWrapperWithProviders]
+  /// or [goldenMaterialAppWrapperWithProvidersAndScaffold].
+  final ProviderContainer container;
+
+  /// Same override stack as [pumpGoldenWidget], without pumping. Use with
+  /// [DeviceBuilder] / custom [pumpWidgetBuilder] and call [dispose] when done.
+  factory GoldenTestHarness.withOverrides([List<Override> overrides = const []]) {
+    return GoldenTestHarness._(
+      ProviderContainer(overrides: goldenOverrides(overrides)),
+    );
+  }
+
+  /// Pumps [widget] with MaterialApp, theme, and [goldenOverrides] applied.
+  static Future<GoldenTestHarness> pumpWidget(
+    WidgetTester tester,
+    Widget widget, {
+    List<Override> overrides = const [],
+    Size? surfaceSize,
+    bool useScaffold = false,
+    bool waitForSettle = true,
+  }) async {
+    const defaultSize = Size(375, 667); // iPhone SE size
+    final effectiveSize = surfaceSize ?? defaultSize;
+    final harness = GoldenTestHarness.withOverrides(overrides);
+    final container = harness.container;
+
+    final Widget Function(Widget) wrapper = useScaffold
+        ? (child) => goldenMaterialAppWrapperWithProvidersAndScaffold(
+              child: child,
+              container: container,
+            )
+        : (child) => goldenMaterialAppWrapperWithProviders(
+              child: child,
+              container: container,
+            );
+
+    await tester.pumpWidgetBuilder(
+      widget,
+      wrapper: wrapper,
+      surfaceSize: effectiveSize,
+    );
+
+    if (waitForSettle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
+    return harness;
+  }
+
+  /// Disposes the container and closes the in-memory test database.
+  Future<void> dispose() async {
+    final db = container.read(appDatabaseProvider);
+    container.dispose();
+    await db.close();
+  }
+}
 
 /// Matches a golden file without calling `pumpAndSettle()`.
 ///
@@ -88,20 +193,20 @@ Widget Function(Widget) get goldenMaterialAppWrapper =>
 ///
 /// Usage:
 /// ```dart
-/// final container = ProviderContainer(overrides: [...]);
+/// final harness = GoldenTestHarness.withOverrides([...]);
 /// await tester.pumpWidgetBuilder(
 ///   const MyWidget(),
 ///   wrapper: (child) => goldenMaterialAppWrapperWithProviders(
 ///     child: child,
-///     container: container,
+///     container: harness.container,
 ///   ),
 /// );
-/// container.dispose();
+/// await harness.dispose();
 /// ```
 ///
 /// Parameters:
 /// - [child] - The widget to wrap
-/// - [container] - The ProviderContainer with any necessary overrides
+/// - [container] - The [ProviderContainer] (for example [GoldenTestHarness.container])
 Widget goldenMaterialAppWrapperWithProviders({
   required Widget child,
   required ProviderContainer container,
@@ -119,20 +224,20 @@ Widget goldenMaterialAppWrapperWithProviders({
 ///
 /// Usage:
 /// ```dart
-/// final container = ProviderContainer(overrides: [...]);
+/// final harness = GoldenTestHarness.withOverrides([...]);
 /// await tester.pumpWidgetBuilder(
 ///   const MyWidget(),
 ///   wrapper: (child) => goldenMaterialAppWrapperWithProvidersAndScaffold(
 ///     child: child,
-///     container: container,
+///     container: harness.container,
 ///   ),
 /// );
-/// container.dispose();
+/// await harness.dispose();
 /// ```
 ///
 /// Parameters:
 /// - [child] - The widget to wrap
-/// - [container] - The ProviderContainer with any necessary overrides
+/// - [container] - The [ProviderContainer] (for example [GoldenTestHarness.container])
 Widget goldenMaterialAppWrapperWithProvidersAndScaffold({
   required Widget child,
   required ProviderContainer container,
@@ -148,87 +253,34 @@ Widget goldenMaterialAppWrapperWithProvidersAndScaffold({
 
 /// Pumps a widget for golden testing with automatic MaterialApp and theme setup.
 ///
-/// This is a high-level helper that wraps `pumpWidgetBuilder` and automatically
-/// handles MaterialApp wrapping with the horcrux3Dark theme. It simplifies common
-/// golden test setup by abstracting away the wrapper creation.
+/// Same behavior as [GoldenTestHarness.pumpWidget]; kept as a short name for
+/// call sites. Always applies [goldenOverrides] (in-memory DB + empty recovery
+/// stream) so widgets never resolve [appDatabaseProvider] to production
+/// SQLCipher / path_provider.
 ///
-/// Usage without providers:
+/// Usage:
 /// ```dart
-/// await pumpGoldenWidget(
+/// final harness = await pumpGoldenWidget(
 ///   tester,
 ///   const MyWidget(),
 ///   surfaceSize: Size(375, 667),
 /// );
+/// await screenMatchesGolden(tester, 'my_widget');
+/// await harness.dispose();
 /// ```
-///
-/// Usage with providers:
-/// ```dart
-/// final container = ProviderContainer(overrides: [...]);
-/// await pumpGoldenWidget(
-///   tester,
-///   const MyWidget(),
-///   container: container,
-///   surfaceSize: Size(375, 667),
-/// );
-/// container.dispose();
-/// ```
-///
-/// Usage for loading states (without waiting for settle):
-/// ```dart
-/// await pumpGoldenWidget(
-///   tester,
-///   const MyWidget(),
-///   waitForSettle: false,
-/// );
-/// await screenMatchesGoldenWithoutSettle<MyWidget>(tester, 'my_widget_loading');
-/// ```
-///
-/// Parameters:
-/// - [tester] - The widget tester instance
-/// - [widget] - The widget to test
-/// - [container] - Optional ProviderContainer for Riverpod providers
-/// - [surfaceSize] - Optional surface size (defaults to iPhone SE: 375x667)
-/// - [useScaffold] - Whether to wrap widget in Scaffold (defaults to false)
-/// - [waitForSettle] - Whether to wait for animations to settle (defaults to true).
-///   Set to false for loading states with infinite animations like CircularProgressIndicator.
-Future<void> pumpGoldenWidget(
+Future<GoldenTestHarness> pumpGoldenWidget(
   WidgetTester tester,
   Widget widget, {
-  ProviderContainer? container,
+  List<Override> overrides = const [],
   Size? surfaceSize,
   bool useScaffold = false,
   bool waitForSettle = true,
-}) async {
-  const defaultSize = Size(375, 667); // iPhone SE size
-  final effectiveSize = surfaceSize ?? defaultSize;
-
-  Widget Function(Widget) wrapper;
-  if (container != null) {
-    if (useScaffold) {
-      wrapper = (child) => goldenMaterialAppWrapperWithProvidersAndScaffold(
-            child: child,
-            container: container,
-          );
-    } else {
-      wrapper = (child) => goldenMaterialAppWrapperWithProviders(
-            child: child,
-            container: container,
-          );
-    }
-  } else {
-    wrapper = goldenMaterialAppWrapper;
-  }
-
-  await tester.pumpWidgetBuilder(
-    widget,
-    wrapper: wrapper,
-    surfaceSize: effectiveSize,
-  );
-
-  // Wait for animations to settle, or just pump once for loading states
-  if (waitForSettle) {
-    await tester.pumpAndSettle();
-  } else {
-    await tester.pump();
-  }
-}
+}) =>
+    GoldenTestHarness.pumpWidget(
+      tester,
+      widget,
+      overrides: overrides,
+      surfaceSize: surfaceSize,
+      useScaffold: useScaffold,
+      waitForSettle: waitForSettle,
+    );

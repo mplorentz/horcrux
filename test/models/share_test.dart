@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:horcrux/models/shard_data.dart';
+import 'package:horcrux/models/share.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
 
+import '../fixtures/test_keys.dart';
+
 void main() {
-  group('ShardData JSON Serialization', () {
+  group('Share JSON Serialization', () {
     late Map<String, dynamic> validJsonFixture;
     late Map<String, dynamic> validJsonWithRecoveryMetadata;
 
@@ -48,13 +50,13 @@ void main() {
       };
     });
 
-    test('shardDataFromJson creates valid ShardData from minimal JSON', () {
-      final shardData = shardDataFromJson(validJsonFixture);
+    test('shareFromJson creates valid Share from minimal JSON', () {
+      final shardData = shareFromJson(validJsonFixture);
 
-      expect(shardData.shard, validJsonFixture['shard']);
+      expect(shardData.payload, validJsonFixture['shard']);
       expect(shardData.threshold, validJsonFixture['threshold']);
-      expect(shardData.shardIndex, validJsonFixture['shard_index']);
-      expect(shardData.totalShards, validJsonFixture['total_shards']);
+      expect(shardData.shareIndex, validJsonFixture['shard_index']);
+      expect(shardData.totalShares, validJsonFixture['total_shards']);
       expect(shardData.primeMod, validJsonFixture['prime_mod']);
       expect(shardData.creatorPubkey, validJsonFixture['creator_pubkey']);
       expect(shardData.createdAt, validJsonFixture['created_at']);
@@ -67,19 +69,51 @@ void main() {
       expect(shardData.nostrEventId, isNull);
     });
 
-    test(
-      'shardDataFromJson creates valid ShardData with recovery metadata',
-      () {
-        final shardData = shardDataFromJson(validJsonWithRecoveryMetadata);
+    test('shareFromJson normalizes embedded stewards from loose wire JSON', () {
+      final json = {
+        ...validJsonFixture,
+        'shard_index': 1,
+        'total_shards': 3,
+        'threshold': 2,
+        'vault_id': 'vault-wire-stewards',
+        'stewards': [
+          {
+            'name': 'Alice',
+            'pubKey': TestHexPubkeys.alice,
+            'shard_index': 0,
+            'contact_info': 'alice@example.test',
+          },
+          {
+            'name': 'Bob',
+            'pubkey': TestHexPubkeys.bob,
+            'shardIndex': 2,
+          },
+        ],
+      };
 
-        expect(shardData.shard, validJsonWithRecoveryMetadata['shard']);
+      final shardData = shareFromJson(json);
+
+      expect(shardData.stewards, hasLength(2));
+      expect(shardData.stewards![0]['pubkey'], TestHexPubkeys.alice);
+      expect(shardData.stewards![0]['shard_index'], '0');
+      expect(shardData.stewards![0]['contactInfo'], 'alice@example.test');
+      expect(shardData.stewards![1]['shard_index'], '2');
+      expect(shardData.isValid, isTrue);
+    });
+
+    test(
+      'shareFromJson creates valid Share with recovery metadata',
+      () {
+        final shardData = shareFromJson(validJsonWithRecoveryMetadata);
+
+        expect(shardData.payload, validJsonWithRecoveryMetadata['shard']);
         expect(shardData.threshold, validJsonWithRecoveryMetadata['threshold']);
         expect(
-          shardData.shardIndex,
+          shardData.shareIndex,
           validJsonWithRecoveryMetadata['shard_index'],
         );
         expect(
-          shardData.totalShards,
+          shardData.totalShares,
           validJsonWithRecoveryMetadata['total_shards'],
         );
         expect(shardData.primeMod, validJsonWithRecoveryMetadata['prime_mod']);
@@ -117,9 +151,9 @@ void main() {
       },
     );
 
-    test('shardDataToJson encodes minimal ShardData correctly', () {
-      final shardData = shardDataFromJson(validJsonFixture);
-      final json = shardDataToJson(shardData);
+    test('shareToJson encodes minimal Share correctly', () {
+      final shardData = shareFromJson(validJsonFixture);
+      final json = shareToJson(shardData);
 
       expect(json['shard'], validJsonFixture['shard']);
       expect(json['threshold'], validJsonFixture['threshold']);
@@ -138,10 +172,10 @@ void main() {
     });
 
     test(
-      'shardDataToJson encodes ShardData with recovery metadata correctly',
+      'shareToJson encodes Share with recovery metadata correctly',
       () {
-        final shardData = shardDataFromJson(validJsonWithRecoveryMetadata);
-        final json = shardDataToJson(shardData);
+        final shardData = shareFromJson(validJsonWithRecoveryMetadata);
+        final json = shareToJson(shardData);
 
         expect(json['shard'], validJsonWithRecoveryMetadata['shard']);
         expect(json['threshold'], validJsonWithRecoveryMetadata['threshold']);
@@ -175,71 +209,71 @@ void main() {
     );
 
     test('round-trip encoding and decoding preserves data', () {
-      final originalShardData = shardDataFromJson(
+      final originalShare = shareFromJson(
         validJsonWithRecoveryMetadata,
       );
-      final json = shardDataToJson(originalShardData);
-      final decodedShardData = shardDataFromJson(json);
+      final json = shareToJson(originalShare);
+      final decodedShare = shareFromJson(json);
 
-      expect(decodedShardData.shard, originalShardData.shard);
-      expect(decodedShardData.threshold, originalShardData.threshold);
-      expect(decodedShardData.shardIndex, originalShardData.shardIndex);
-      expect(decodedShardData.totalShards, originalShardData.totalShards);
-      expect(decodedShardData.primeMod, originalShardData.primeMod);
-      expect(decodedShardData.creatorPubkey, originalShardData.creatorPubkey);
-      expect(decodedShardData.createdAt, originalShardData.createdAt);
-      expect(decodedShardData.vaultId, originalShardData.vaultId);
-      expect(decodedShardData.vaultName, originalShardData.vaultName);
-      expect(decodedShardData.stewards, isNotNull);
-      expect(decodedShardData.stewards!.length, originalShardData.stewards!.length);
-      expect(decodedShardData.ownerName, originalShardData.ownerName);
+      expect(decodedShare.payload, originalShare.payload);
+      expect(decodedShare.threshold, originalShare.threshold);
+      expect(decodedShare.shareIndex, originalShare.shareIndex);
+      expect(decodedShare.totalShares, originalShare.totalShares);
+      expect(decodedShare.primeMod, originalShare.primeMod);
+      expect(decodedShare.creatorPubkey, originalShare.creatorPubkey);
+      expect(decodedShare.createdAt, originalShare.createdAt);
+      expect(decodedShare.vaultId, originalShare.vaultId);
+      expect(decodedShare.vaultName, originalShare.vaultName);
+      expect(decodedShare.stewards, isNotNull);
+      expect(decodedShare.stewards!.length, originalShare.stewards!.length);
+      expect(decodedShare.ownerName, originalShare.ownerName);
       expect(
-        decodedShardData.recipientPubkey,
-        originalShardData.recipientPubkey,
+        decodedShare.recipientPubkey,
+        originalShare.recipientPubkey,
       );
-      expect(decodedShardData.isReceived, originalShardData.isReceived);
-      expect(decodedShardData.receivedAt, originalShardData.receivedAt);
-      expect(decodedShardData.nostrEventId, originalShardData.nostrEventId);
+      expect(decodedShare.isReceived, originalShare.isReceived);
+      expect(decodedShare.receivedAt, originalShare.receivedAt);
+      expect(decodedShare.nostrEventId, originalShare.nostrEventId);
     });
 
-    test('shardDataFromJson handles null receivedAt correctly', () {
+    test('shareFromJson handles null receivedAt correctly', () {
       final jsonWithoutReceivedAt = {...validJsonWithRecoveryMetadata};
       jsonWithoutReceivedAt.remove('received_at');
 
-      final shardData = shardDataFromJson(jsonWithoutReceivedAt);
+      final shardData = shareFromJson(jsonWithoutReceivedAt);
 
       expect(shardData.receivedAt, isNull);
       expect(shardData.vaultId, isNotNull);
       expect(shardData.vaultName, isNotNull);
     });
 
-    test('shardDataFromJson throws on missing required fields', () {
+    test('shareFromJson throws on missing required fields', () {
       final invalidJson = {
         'shard': 'abc123',
         'threshold': 2,
         // Missing shard_index, total_shards, prime_mod, creator_pubkey, created_at
       };
 
-      expect(() => shardDataFromJson(invalidJson), throwsA(isA<TypeError>()));
+      expect(() => shareFromJson(invalidJson), throwsA(isA<TypeError>()));
     });
 
-    test('shardDataFromJson rejects camelCase keys (use snake_case wire format)', () {
+    test('shareFromJson rejects camelCase keys (use snake_case wire format)', () {
       final legacy = {
         'shard': validJsonFixture['shard'],
         'threshold': 1,
-        'shardIndex': 0,
+        'shareIndex': 0,
         'totalShards': 1,
         'primeMod': validJsonFixture['prime_mod'],
         'creatorPubkey': validJsonFixture['creator_pubkey'],
         'createdAt': validJsonFixture['created_at'],
         'vaultId': 'v1',
       };
-      expect(() => shardDataFromJson(legacy), throwsA(isA<TypeError>()));
+      expect(() => shareFromJson(legacy), throwsA(isA<TypeError>()));
     });
 
-    test('shardDataToJson omits null optional fields', () {
-      final minimalShardData = shardDataFromJson(validJsonFixture);
-      final json = shardDataToJson(minimalShardData);
+    test('shareToJson omits null optional fields', () {
+      final minimalShare = shareFromJson(validJsonFixture);
+      final json = shareToJson(minimalShare);
 
       expect(json.containsKey('vault_id'), isFalse);
       expect(json.containsKey('vault_name'), isFalse);
@@ -250,31 +284,31 @@ void main() {
     });
   });
 
-  group('ShardData Validation', () {
-    test('createShardData creates valid ShardData with minimal fields', () {
-      final shardData = createShardData(
-        shard: 'J93z0EN6ZfWwx3j6zb4_YpxquwyZhSmVmrWCkwqtzR4=',
+  group('Share Validation', () {
+    test('createShare creates valid Share with minimal fields', () {
+      final shardData = createShare(
+        payload: 'J93z0EN6ZfWwx3j6zb4_YpxquwyZhSmVmrWCkwqtzR4=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'ZmZmZmZmZmZmZg==',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
-      expect(shardData.shard, isNotEmpty);
+      expect(shardData.payload, isNotEmpty);
       expect(shardData.threshold, equals(2));
-      expect(shardData.shardIndex, equals(0));
-      expect(shardData.totalShards, equals(3));
+      expect(shardData.shareIndex, equals(0));
+      expect(shardData.totalShares, equals(3));
       expect(shardData.createdAt, greaterThan(0));
     });
 
-    test('createShardData validates empty shard', () {
+    test('createShare validates empty shard', () {
       expect(
-        () => createShardData(
-          shard: '',
+        () => createShare(
+          payload: '',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -282,13 +316,13 @@ void main() {
       );
     });
 
-    test('createShardData validates threshold too low', () {
+    test('createShare validates threshold too low', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 0, // Too low
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -296,13 +330,13 @@ void main() {
       );
     });
 
-    test('createShardData validates threshold greater than totalShards', () {
+    test('createShare validates threshold greater than totalShards', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 5, // Greater than totalShards
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -310,13 +344,13 @@ void main() {
       );
     });
 
-    test('createShardData validates shardIndex negative', () {
+    test('createShare validates shardIndex negative', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: -1, // Negative
-          totalShards: 3,
+          shareIndex: -1, // Negative
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -324,13 +358,13 @@ void main() {
       );
     });
 
-    test('createShardData validates shardIndex >= totalShards', () {
+    test('createShare validates shardIndex >= totalShards', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 3, // >= totalShards
-          totalShards: 3,
+          shareIndex: 3, // >= totalShards
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -338,13 +372,13 @@ void main() {
       );
     });
 
-    test('createShardData validates empty primeMod', () {
+    test('createShare validates empty primeMod', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: '', // Empty
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
@@ -352,13 +386,13 @@ void main() {
       );
     });
 
-    test('createShardData validates empty creatorPubkey', () {
+    test('createShare validates empty creatorPubkey', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: '', // Empty
         ),
@@ -366,13 +400,13 @@ void main() {
       );
     });
 
-    test('createShardData validates recipientPubkey hex format', () {
+    test('createShare validates recipientPubkey hex format', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'not-hex', // Invalid hex
@@ -381,13 +415,13 @@ void main() {
       );
     });
 
-    test('createShardData validates recipientPubkey length', () {
+    test('createShare validates recipientPubkey length', () {
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'abcd1234', // Too short
@@ -396,15 +430,15 @@ void main() {
       );
     });
 
-    test('createShardData validates receivedAt in past', () {
+    test('createShare validates receivedAt in past', () {
       final futureDate = DateTime.now().add(const Duration(days: 1));
 
       expect(
-        () => createShardData(
-          shard: 'abc123',
+        () => createShare(
+          payload: 'abc123',
           threshold: 2,
-          shardIndex: 0,
-          totalShards: 3,
+          shareIndex: 0,
+          totalShares: 3,
           primeMod: 'abc',
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           isReceived: true,
@@ -414,12 +448,12 @@ void main() {
       );
     });
 
-    test('createShardData accepts valid recipientPubkey', () {
-      final shardData = createShardData(
-        shard: 'abc123',
+    test('createShare accepts valid recipientPubkey', () {
+      final shardData = createShare(
+        payload: 'abc123',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'abc',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         recipientPubkey: 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
@@ -429,12 +463,12 @@ void main() {
       expect(shardData.recipientPubkey!.length, equals(64));
     });
 
-    test('isValid returns true for valid ShardData', () {
-      final shardData = createShardData(
-        shard: 'SGVsbG9Xb3JsZFRlc3RCYXNlNjRTdHJpbmc=',
+    test('isValid returns true for valid Share', () {
+      final shardData = createShare(
+        payload: 'SGVsbG9Xb3JsZFRlc3RCYXNlNjRTdHJpbmc=',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'QW5vdGhlckJhc2U2NFN0cmluZ0hlcmU=',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
@@ -443,34 +477,34 @@ void main() {
     });
   });
 
-  group('ShardData Utility Methods', () {
-    test('copyShardData creates copy with updated fields', () {
-      final original = createShardData(
-        shard: 'abc123',
+  group('Share Utility Methods', () {
+    test('copyShare creates copy with updated fields', () {
+      final original = createShare(
+        payload: 'abc123',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
-      final copy = original.copyWith(threshold: 3, shardIndex: 1);
+      final copy = original.copyWith(threshold: 3, shareIndex: 1);
 
       expect(copy.threshold, equals(3));
-      expect(copy.shardIndex, equals(1));
-      expect(copy.shard, equals(original.shard));
-      expect(copy.totalShards, equals(original.totalShards));
+      expect(copy.shareIndex, equals(1));
+      expect(copy.payload, equals(original.payload));
+      expect(copy.totalShares, equals(original.totalShares));
       expect(copy.primeMod, equals(original.primeMod));
       expect(copy.creatorPubkey, equals(original.creatorPubkey));
     });
 
     test('ageInSeconds calculates correctly', () {
       final pastTimestamp = secondsSinceEpoch() - 3600; // 1 hour ago
-      final ShardData shardData = ShardData(
-        shard: 'abc',
+      final Share shardData = Share(
+        payload: 'abc',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
@@ -493,11 +527,11 @@ void main() {
 
     test('ageInHours calculates correctly', () {
       final pastTimestamp = secondsSinceEpoch() - 7200; // 2 hours ago
-      final ShardData shardData = ShardData(
-        shard: 'abc',
+      final Share shardData = Share(
+        payload: 'abc',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
@@ -520,11 +554,11 @@ void main() {
 
     test('isRecent returns true for recent shard', () {
       final recentTimestamp = secondsSinceEpoch() - 3600; // 1 hour ago
-      final ShardData shardData = ShardData(
-        shard: 'abc',
+      final Share shardData = Share(
+        payload: 'abc',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: recentTimestamp,
@@ -546,11 +580,11 @@ void main() {
 
     test('isRecent returns false for old shard', () {
       final oldTimestamp = secondsSinceEpoch() - 86400 - 3600; // >24 hours ago
-      final ShardData shardData = ShardData(
-        shard: 'abc',
+      final Share shardData = Share(
+        payload: 'abc',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: oldTimestamp,
@@ -570,34 +604,34 @@ void main() {
       expect(shardData.isRecent, isFalse);
     });
 
-    test('shardDataToString formats correctly', () {
-      final shardData = createShardData(
-        shard: 'abc123',
+    test('shareToString formats correctly', () {
+      final shardData = createShare(
+        payload: 'abc123',
         threshold: 2,
-        shardIndex: 1,
-        totalShards: 3,
+        shareIndex: 1,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
-      final str = shardDataToString(shardData);
+      final str = shareToString(shardData);
 
-      expect(str, contains('ShardData'));
+      expect(str, contains('Share'));
       expect(str, contains('1/3')); // shardIndex/totalShards
       expect(str, contains('threshold: 2'));
       expect(str, contains('a11ac73f')); // First 8 chars of pubkey
     });
   });
 
-  group('ShardData.pushEnabled wire format', () {
+  group('Share.pushEnabled wire format', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 
-    ShardData buildShard({bool? pushEnabled}) {
-      return createShardData(
-        shard: 'abc123',
+    Share buildShard({bool? pushEnabled}) {
+      return createShare(
+        payload: 'abc123',
         threshold: 2,
-        shardIndex: 0,
-        totalShards: 3,
+        shareIndex: 0,
+        totalShares: 3,
         primeMod: 'xyz',
         creatorPubkey: creatorPubkey,
         vaultId: 'vault-1',
@@ -611,12 +645,12 @@ void main() {
     });
 
     test('toJson omits push_enabled when null (legacy shard)', () {
-      final json = shardDataToJson(buildShard());
+      final json = shareToJson(buildShard());
       expect(json.containsKey('push_enabled'), isFalse);
     });
 
     test('toJson emits push_enabled=true when set', () {
-      final json = shardDataToJson(buildShard(pushEnabled: true));
+      final json = shareToJson(buildShard(pushEnabled: true));
       expect(json['push_enabled'], isTrue);
     });
 
@@ -625,14 +659,14 @@ void main() {
       // "explicitly false" (owner flipped it off). Both end up having the
       // receiver keep its previous value, but the wire format should still
       // distinguish them so future behaviour can rely on it.
-      final json = shardDataToJson(buildShard(pushEnabled: false));
+      final json = shareToJson(buildShard(pushEnabled: false));
       expect(json['push_enabled'], isFalse);
     });
 
     test('fromJson round-trips true/false/null', () {
       for (final value in [true, false, null]) {
-        final encoded = shardDataToJson(buildShard(pushEnabled: value));
-        final decoded = shardDataFromJson(encoded);
+        final encoded = shareToJson(buildShard(pushEnabled: value));
+        final decoded = shareFromJson(encoded);
         expect(decoded.pushEnabled, value, reason: 'for $value');
       }
     });
@@ -648,7 +682,7 @@ void main() {
         'created_at': 1759759657,
         // push_enabled intentionally absent.
       };
-      final decoded = shardDataFromJson(legacyJson);
+      final decoded = shareFromJson(legacyJson);
       expect(decoded.pushEnabled, isNull);
     });
   });

@@ -8,30 +8,23 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/backup_config_screen.dart';
 import 'package:horcrux/services/login_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/secure_storage_mock.dart';
-import '../helpers/shared_preferences_mock.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final secureStorageMock = SecureStorageMock();
-  final sharedPreferencesMock = SharedPreferencesMock();
 
   setUpAll(() {
     secureStorageMock.setUpAll();
-    sharedPreferencesMock.setUpAll();
   });
 
   tearDownAll(() {
     secureStorageMock.tearDownAll();
-    sharedPreferencesMock.tearDownAll();
   });
 
   setUp(() async {
-    sharedPreferencesMock.clear();
     secureStorageMock.clear();
-    SharedPreferences.setMockInitialValues({});
   });
 
   // T029: Widget test for self-shard toggle in backup config
@@ -67,6 +60,11 @@ void main() {
       expect(find.byType(Switch), findsNWidgets(2));
 
       container.dispose();
+      // Drift schedules a short timer when stream query subscriptions cancel
+      // (e.g. [VaultDetailRepository.dispose]); flush it before the binding
+      // asserts no pending timers.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
 
     testWidgets('toggle starts disabled for new config', (tester) async {
@@ -93,6 +91,8 @@ void main() {
       expect(switchWidget.value, isFalse);
 
       container.dispose();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
 
     testWidgets('toggle enabled when config has owner steward', (tester) async {
@@ -129,6 +129,8 @@ void main() {
       expect(switchWidget.value, isTrue);
 
       container.dispose();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
     });
   });
 }
@@ -150,7 +152,6 @@ class _MockVaultRepository extends VaultRepository {
     return Vault(
       id: 'test-vault',
       name: 'Test',
-      content: 'secret',
       createdAt: DateTime(2024, 1, 1),
       ownerPubkey: 'a' * 64,
       pushEnabled: true,

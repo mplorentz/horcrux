@@ -59,4 +59,4 @@ If a change affects visible copy or form validators (especially `lib/widgets/*_f
 
 ## Closing protocol
 
-Follow project/session rules in AGENTS.md and `bd prime` for `git push`, `bd dolt push`, and bead closure.
+Follow project/session rules in AGENTS.md and `bd prime` for `git push` and bead closure.
