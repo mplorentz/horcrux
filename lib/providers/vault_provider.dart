@@ -86,12 +86,10 @@ final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((r
 /// - Inserting a `held_shares` row also updates `vaults.last_synced_at` so
 ///   the reactive vault stream re-emits and callers see the updated shares.
 ///
-/// **Still Phase 1 / stub behavior**:
-///
-/// - `Vault.recoveryRequests` always hydrates to `[]`. The
-///   `recovery_requests` / `recovery_responses` tables land in Phase 3; until
-///   then [addRecoveryRequestToVault] and [updateRecoveryRequestInVault]
-///   throw [UnimplementedError].
+/// - `Vault.recoveryRequests` hydrates from `recovery_requests`,
+///   `recovery_request_participants`, and `recovery_responses` via
+///   [recovery_request_hydration.dart]. [addRecoveryRequestToVault] and
+///   [updateRecoveryRequestInVault] persist to those tables.
 /// - `BackupConfig` is hydrated from `vaults` + `owned_vaults` + active
 ///   `stewards` (`StewardDao.activeForVault`). [updateBackupConfig] writes
 ///   the same triple back atomically.
@@ -658,6 +656,26 @@ class VaultRepository {
             );
       }
     });
+    await _bumpVaultSync(vaultId);
+  }
+
+  /// Clears [recovery_responses.sharePayload] for [requestId] (e.g. cancelled recovery).
+  ///
+  /// Keeps rows so approve/deny metadata remains for audit.
+  Future<void> deleteRecoveryResponseSharesForRequest({
+    required String vaultId,
+    required String requestId,
+  }) async {
+    await _db.recoveryDao.clearSharePayloadsForRequest(requestId);
+    await _bumpVaultSync(vaultId);
+  }
+
+  /// Deletes all [recovery_responses] rows for [requestId] (e.g. after successful recovery).
+  Future<void> deleteRecoveryResponsesForRequest({
+    required String vaultId,
+    required String requestId,
+  }) async {
+    await _db.recoveryDao.deleteResponsesForRequest(requestId);
     await _bumpVaultSync(vaultId);
   }
 

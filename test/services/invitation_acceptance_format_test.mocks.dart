@@ -925,6 +925,42 @@ class MockVaultRepository extends _i1.Mock implements _i12.VaultRepository {
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<void> deleteRecoveryResponseSharesForRequest({
+    required String? vaultId,
+    required String? requestId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteRecoveryResponseSharesForRequest,
+          [],
+          {
+            #vaultId: vaultId,
+            #requestId: requestId,
+          },
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
+  _i7.Future<void> deleteRecoveryResponsesForRequest({
+    required String? vaultId,
+    required String? requestId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteRecoveryResponsesForRequest,
+          [],
+          {
+            #vaultId: vaultId,
+            #requestId: requestId,
+          },
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
   _i7.Future<void> cleanupExpiredRecoverySessions() => (super.noSuchMethod(
         Invocation.method(
           #cleanupExpiredRecoverySessions,

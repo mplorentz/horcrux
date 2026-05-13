@@ -11,7 +11,6 @@ import 'processed_nostr_event_store.dart';
 import 'recovery_service.dart';
 import 'relay_scan_service.dart';
 import 'secure_storage_corruption.dart';
-import 'vault_share_service.dart';
 
 /// Service responsible for performing logout cleanup across data stores.
 ///
@@ -22,7 +21,6 @@ import 'vault_share_service.dart';
 final logoutServiceProvider = Provider<LogoutService>((ref) {
   return LogoutService(
     vaultRepository: ref.watch(vaultRepositoryProvider),
-    vaultShareService: ref.watch(vaultShareServiceProvider),
     recoveryService: ref.watch(recoveryServiceProvider),
     relayScanService: ref.watch(relayScanServiceProvider),
     loginService: ref.watch(loginServiceProvider),
@@ -33,7 +31,6 @@ final logoutServiceProvider = Provider<LogoutService>((ref) {
 
 class LogoutService {
   final VaultRepository _vaultRepository;
-  final VaultShareService _vaultShareService;
   final RecoveryService _recoveryService;
   final RelayScanService _relayScanService;
   final LoginService _loginService;
@@ -45,7 +42,6 @@ class LogoutService {
 
   LogoutService({
     required VaultRepository vaultRepository,
-    required VaultShareService vaultShareService,
     required RecoveryService recoveryService,
     required RelayScanService relayScanService,
     required LoginService loginService,
@@ -55,7 +51,6 @@ class LogoutService {
     Future<void> Function()? clearSharedPreferences,
     Future<void> Function()? clearSecureStorage,
   })  : _vaultRepository = vaultRepository,
-        _vaultShareService = vaultShareService,
         _recoveryService = recoveryService,
         _relayScanService = relayScanService,
         _loginService = loginService,
@@ -65,7 +60,7 @@ class LogoutService {
         _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
         _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe;
 
-  // TODO(hvc-2em): Remove once VaultShareService recovery_shard_data is migrated to drift.
+  // TODO(horcrux_app-u86): Remove once remaining SharedPreferences users migrate off prefs.
   static Future<void> _clearAllSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -87,7 +82,6 @@ class LogoutService {
     // Clear all service data (clear the on-disk processed Nostr event store
     // after relay scanning has stopped so nothing is racing to write the WAL).
     await _vaultRepository.clearAll();
-    await _vaultShareService.clearAll();
     await _recoveryService.clearAll();
     await _relayScanService.clearAll();
     try {

@@ -18,13 +18,17 @@ import 'logger.dart';
 /// Provider for [ShareDistributionService]
 final Provider<ShareDistributionService> shareDistributionServiceProvider =
     Provider<ShareDistributionService>((ref) {
-  // Watching the repository and NDK providers ensures that invalidating
+  // Watching repository and notification providers ensures that invalidating
   // [appDatabaseProvider] (logout) cascades through and rebuilds this service
   // against the fresh database.
+  //
+  // Use ref.read() for NdkService to break circular dependency: NdkService
+  // calls _ref.read(shareDistributionServiceProvider) from _handleShareConfirmation;
+  // watching ndk here would throw CircularDependencyError during that read.
   return ShareDistributionService(
     ref.watch(vaultRepositoryProvider),
     ref.watch(loginServiceProvider),
-    ref.watch(ndkServiceProvider),
+    ref.read(ndkServiceProvider),
     ref.watch(horcruxNotificationServiceProvider),
   );
 });
