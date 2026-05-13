@@ -8,15 +8,18 @@
 # Example: issue-prefix: "myproject" creates issues like "myproject-1", "myproject-2", etc.
 issue-prefix: "horcrux_app"
 issue_prefix: horcrux_app
+
 # Gas City only reads top-level `dolt.host` / `dolt.port` (nested `dolt:` is ignored).
 # `explicit` = this rig pins shared dolt.lorentz.is; `inherited_city` expects a city_canonical mirror.
 dolt.auto-start: false
 dolt.host: dolt.lorentz.is
-dolt.port: 3307
+dolt.port: "3307"
 dolt.mode: server
 dolt.user: hudson
-gc.endpoint_origin: inherited_city
+
+gc.endpoint_origin: explicit
 gc.endpoint_status: verified
+
 # Use no-db mode: JSONL-only, no Dolt database
 # When true, bd will use .beads/issues.jsonl as the source of truth
 # no-db: false
@@ -61,4 +64,4 @@ gc.endpoint_status: verified
 # - linear.api-key
 # - github.org
 # - github.repo
-types.custom: molecule,convoy,message,event,gate,merge-request,agent,role,rig,session,spec,convergence
+

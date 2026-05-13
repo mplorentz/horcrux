@@ -1,7 +1,10 @@
 {
-  "backend": "dolt",
   "database": "dolt",
-  "dolt_database": "horcrux_app",
+  "backend": "dolt",
   "dolt_mode": "server",
+  "dolt_server_host": "dolt.lorentz.is",
+  "dolt_server_port": 3307,
+  "dolt_server_user": "hudson",
+  "dolt_database": "horcrux_app",
   "project_id": "aecb15e8-e08f-4d0d-b958-fd17d342de55"
 }
