@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
 import '../models/steward_status.dart';
@@ -61,16 +60,12 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
   );
 });
 
-/// Service for managing vault shares and recovery operations.
+/// Service for managing vault shares on the steward device.
 ///
-/// **Phase 2a**: steward-side held shares are stored in the `held_shares`
-/// drift table via [VaultRepository]. The prefs-based steward-share cache
-/// has been removed; [addShareToVault] and [processVaultShare] now go through
-/// the DB.
-///
-/// Recovery shards (collected by the initiator during recovery) remain in
-/// SharedPreferences for now; they move to the `recovery_responses` table in
-/// Phase 3.
+/// Steward-side held shares are stored in the `held_shares` drift table via
+/// [VaultRepository]. [addShareToVault] and [processVaultShare] go through the
+/// DB. Initiator recovery shards are persisted in `recovery_responses` via
+/// [RecoveryService] / [VaultRepository.updateRecoveryRequestInVault], not here.
 class VaultShareService {
   final VaultRepository repository;
   final NdkService Function() _getNdkService;
@@ -83,53 +78,6 @@ class VaultShareService {
     this._getNotificationService,
     this._getPushReceiver,
   );
-
-  // ── Recovery shards (Phase 3 will move these to `recovery_responses`) ──
-
-  static const String _recoveryShareKey = 'recovery_shard_data';
-  static Map<String, List<Share>>? _cachedRecoveryShards;
-  static bool _recoveryInitialized = false;
-
-  Future<void> _ensureRecoveryInitialized() async {
-    if (_recoveryInitialized) return;
-    await _loadRecoveryShares();
-    _recoveryInitialized = true;
-  }
-
-  Future<void> _loadRecoveryShares() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonData = prefs.getString(_recoveryShareKey);
-    if (jsonData == null || jsonData.isEmpty) {
-      _cachedRecoveryShards = {};
-      return;
-    }
-    try {
-      final Map<String, dynamic> jsonMap = json.decode(jsonData);
-      _cachedRecoveryShards = jsonMap.map((id, shardListJson) {
-        final shardList = (shardListJson as List<dynamic>)
-            .map((e) => shareFromJson(e as Map<String, dynamic>))
-            .toList();
-        return MapEntry(id, shardList);
-      });
-    } catch (e) {
-      Log.error('Error loading recovery shard data', e);
-      _cachedRecoveryShards = {};
-    }
-  }
-
-  Future<void> _saveRecoveryShards() async {
-    if (_cachedRecoveryShards == null) return;
-    try {
-      final jsonMap = _cachedRecoveryShards!.map((id, shards) {
-        return MapEntry(id, shards.map(shareToJson).toList());
-      });
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_recoveryShareKey, json.encode(jsonMap));
-    } catch (e) {
-      Log.error('Error saving recovery shard data', e);
-      rethrow;
-    }
-  }
 
   // ── Steward-side share management (backed by `held_shares` table) ──
 
@@ -363,80 +311,6 @@ class VaultShareService {
       Log.error('processKeyHolderRemoval: error processing event ${event.id}', e);
       rethrow;
     }
-  }
-
-  // ── Recovery shard methods (Phase 3 will move these to `recovery_responses`) ──
-
-  /// Add a recovery shard (initiator collecting shards from stewards).
-  Future<void> addRecoveryShard(
-    String recoveryRequestId,
-    Share shardData,
-  ) async {
-    await _ensureRecoveryInitialized();
-    if (!shardData.isValid) throw ArgumentError('Invalid shard data');
-
-    final existing = _cachedRecoveryShards![recoveryRequestId] ?? [];
-    final idx = existing.indexWhere(
-      (s) => s.nostrEventId != null && s.nostrEventId == shardData.nostrEventId,
-    );
-    if (idx != -1) {
-      existing[idx] = shardData;
-    } else {
-      existing.add(shardData);
-      Log.info(
-        'addRecoveryShard: added shard for request $recoveryRequestId '
-        '(event: ${shardData.nostrEventId}, total: ${existing.length})',
-      );
-    }
-    _cachedRecoveryShards![recoveryRequestId] = existing;
-    await _saveRecoveryShards();
-  }
-
-  /// Get all recovery shards for a recovery request.
-  Future<List<Share>> getRecoveryShards(String recoveryRequestId) async {
-    await _ensureRecoveryInitialized();
-    return List.unmodifiable(_cachedRecoveryShards![recoveryRequestId] ?? []);
-  }
-
-  /// Get recovery shard count for a recovery request.
-  Future<int> getRecoveryShardCount(String recoveryRequestId) async {
-    await _ensureRecoveryInitialized();
-    return _cachedRecoveryShards![recoveryRequestId]?.length ?? 0;
-  }
-
-  /// True when sufficient recovery shards have been collected.
-  Future<bool> hasSufficientRecoveryShards(
-    String recoveryRequestId,
-    int threshold,
-  ) async {
-    await _ensureRecoveryInitialized();
-    return (_cachedRecoveryShards![recoveryRequestId]?.length ?? 0) >= threshold;
-  }
-
-  /// Remove all recovery shards for a recovery request.
-  Future<void> removeRecoveryShards(String recoveryRequestId) async {
-    await _ensureRecoveryInitialized();
-    if (_cachedRecoveryShards!.containsKey(recoveryRequestId)) {
-      final count = _cachedRecoveryShards![recoveryRequestId]!.length;
-      _cachedRecoveryShards!.remove(recoveryRequestId);
-      await _saveRecoveryShards();
-      Log.info(
-        'removeRecoveryShards: removed $count shards for request $recoveryRequestId',
-      );
-    }
-  }
-
-  /// Clear all local state (called on logout / wipe).
-  ///
-  /// Held shares (steward-side) live in the drift DB and are cleared when the
-  /// DB is wiped. This method clears the recovery-shard prefs cache so the
-  /// in-process cache does not serve stale data after a re-login.
-  Future<void> clearAll() async {
-    _cachedRecoveryShards = {};
-    _recoveryInitialized = false;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_recoveryShareKey);
-    Log.info('VaultShareService.clearAll: cleared recovery shard cache');
   }
 
   // ── Private helpers ──

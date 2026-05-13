@@ -53,6 +53,13 @@ class RecoveryDao extends DatabaseAccessor<AppDatabase> with _$RecoveryDaoMixin 
   Future<int> deleteResponsesForRequest(String requestId) =>
       (delete(recoveryResponses)..where((r) => r.requestId.equals(requestId))).go();
 
+  /// Clears Shamir share payloads for every response on [requestId] while
+  /// keeping the rows (audit trail for cancelled sessions).
+  Future<int> clearSharePayloadsForRequest(String requestId) =>
+      (update(recoveryResponses)..where((r) => r.requestId.equals(requestId))).write(
+        const RecoveryResponsesCompanion(sharePayload: Value('')),
+      );
+
   Future<int> deleteRequestCascade(String requestId) async {
     await deleteResponsesForRequest(requestId);
     await (delete(recoveryRequestParticipants)..where((p) => p.requestId.equals(requestId))).go();

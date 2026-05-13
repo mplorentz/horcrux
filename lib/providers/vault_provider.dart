@@ -75,7 +75,7 @@ final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((r
 });
 
 /// Repository for vaults backed by drift DAOs (`vaults`, `owned_vaults`,
-/// `stewards`, `held_shares`).
+/// `stewards`, `held_shares`, `recovery_requests`, `recovery_responses`).
 ///
 /// **Phase 2a additions** — see `docs/data_layer_refactor_plan.md`:
 ///
@@ -85,12 +85,12 @@ final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((r
 /// - Inserting a `held_shares` row also updates `vaults.last_synced_at` so
 ///   the reactive vault stream re-emits and callers see the updated shares.
 ///
+/// **Recovery** — `Vault.recoveryRequests` hydrates from `recovery_requests`
+/// plus `recovery_responses` / participants. [addRecoveryRequestToVault] and
+/// [updateRecoveryRequestInVault] persist through [RecoveryDao].
+///
 /// **Still Phase 1 / stub behavior**:
 ///
-/// - `Vault.recoveryRequests` always hydrates to `[]`. The
-///   `recovery_requests` / `recovery_responses` tables land in Phase 3; until
-///   then [addRecoveryRequestToVault] and [updateRecoveryRequestInVault]
-///   throw [UnimplementedError].
 /// - `BackupConfig` is hydrated from `vaults` + `owned_vaults` + active
 ///   `stewards` (`StewardDao.activeForVault`). [updateBackupConfig] writes
 ///   the same triple back atomically.
@@ -658,6 +658,22 @@ class VaultRepository {
       }
     });
     await _bumpVaultSync(vaultId);
+  }
+
+  /// Clears [RecoveryResponses.sharePayload] for [requestId] (rows kept for audit).
+  Future<void> clearRecoveryResponseSharePayloadsForRequest(String requestId) async {
+    final row = await _db.recoveryDao.getById(requestId);
+    if (row == null) return;
+    await _db.recoveryDao.clearSharePayloadsForRequest(requestId);
+    await _bumpVaultSync(row.vaultId);
+  }
+
+  /// Deletes all `recovery_responses` rows for [requestId] (e.g. after successful recovery).
+  Future<void> deleteRecoveryResponsesForRequest(String requestId) async {
+    final row = await _db.recoveryDao.getById(requestId);
+    if (row == null) return;
+    await _db.recoveryDao.deleteResponsesForRequest(requestId);
+    await _bumpVaultSync(row.vaultId);
   }
 
   /// Marks expired in-flight recovery sessions failed and prunes their responses.

@@ -26,7 +26,7 @@ Future<void> clearSecureStorageForWipe({
 /// over the release build, or Android Auto Backup restoring SharedPreferences /
 /// application support files into a process whose keystore key is gone). The
 /// previous private key is unrecoverable, so any caches keyed off it -- the
-/// processed Nostr event log/WAL/cursors, vault metadata in SharedPreferences,
+/// processed Nostr event log/WAL/cursors, legacy SharedPreferences app state,
 /// and any half-written ciphertext in secure storage -- must be discarded
 /// before generating a fresh identity.
 ///
@@ -50,7 +50,7 @@ Future<void> wipeLocalDataForCorruptedSecureStorage({
     Log.error('Failed to clear processed Nostr event store during corruption wipe', e, st);
   }
 
-  // TODO(hvc-2em): Remove once VaultShareService recovery_shard_data is migrated to drift.
+  // Clears prefs still used outside SQLCipher (FCM, relay cursors, etc.).
   try {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
