@@ -818,9 +818,11 @@ class RecoveryService {
       RecoveryRequestStatus.archived,
     );
 
-    // Delete recovered content (owned_vaults row) from vault
+    // Delete recovered content (owned_vaults row) from vault.
+    // Skip for practice recoveries — the End-Practice dialog only promises
+    // to archive the request, not to delete vault content.
     final vaultExists = await repository.getVault(request.vaultId) != null;
-    if (vaultExists) {
+    if (vaultExists && !request.isPractice) {
       await repository.deleteVaultContent(request.vaultId);
       Log.info('Deleted recovered content from vault ${request.vaultId}');
     }

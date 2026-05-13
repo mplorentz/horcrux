@@ -849,5 +849,45 @@ void main() {
         'Captured real recovery response (with shard data): $capturedContent',
       );
     });
+
+    test(
+      'exitRecoveryMode preserves owner content when ending a practice recovery',
+      () async {
+        // Arrange: Set up owned vault content so the vault hydrates as
+        // OwnedVaultDetail (which gates the Travel Mode button).
+        await repository.saveOwnedVaultContent(testVaultId, 'ciphertext-AAA');
+
+        // Initiate a practice recovery
+        final request = await recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+          isPractice: true,
+        );
+
+        // Act: Exit practice recovery mode
+        await recoveryService.exitRecoveryMode(request.id);
+
+        // Assert: Vault content is still present (Travel Mode button stays visible)
+        final ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
+        expect(
+          ownedRow,
+          isNotNull,
+          reason: 'owned_vaults row must survive practice recovery exit',
+        );
+        expect(
+          ownedRow!.content,
+          'ciphertext-AAA',
+          reason: 'Practice recovery must not delete vault content',
+        );
+
+        // Assert: Distribution state is unchanged
+        final vault = await repository.getVault(testVaultId);
+        expect(vault, isNotNull);
+        expect(vault!.threshold, 1);
+        expect(vault.stewards.isNotEmpty, isTrue);
+      },
+    );
   });
 }
