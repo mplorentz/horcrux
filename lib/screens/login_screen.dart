@@ -120,6 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'Login'),
       body: SafeArea(
+        bottom: false, // Let RowButton handle bottom inset via addBottomSafeArea
         child: Column(
           children: [
             Expanded(
