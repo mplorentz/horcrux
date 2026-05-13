@@ -138,9 +138,11 @@ Future<void> screenMatchesGoldenWithoutSettle<T extends Widget>(
   await tester.pump();
 
   // Manually capture the golden without pumpAndSettle
+  // Respect the global skipGoldenAssertion (skips on non-macOS platforms)
   await expectLater(
     find.byType(T),
     matchesGoldenFile('goldens/$goldenName.png'),
+    skip: GoldenToolkit.configuration.skipGoldenAssertion(),
   );
 }
 
@@ -168,7 +170,12 @@ Future<void> screenMatchesGoldenWithoutSettleWithFinder(
   await tester.pump();
 
   // Manually capture the golden without pumpAndSettle
-  await expectLater(finder, matchesGoldenFile('goldens/$goldenName.png'));
+  // Respect the global skipGoldenAssertion (skips on non-macOS platforms)
+  await expectLater(
+    finder,
+    matchesGoldenFile('goldens/$goldenName.png'),
+    skip: GoldenToolkit.configuration.skipGoldenAssertion(),
+  );
 }
 
 /// Creates a MaterialApp wrapper with horcrux3Dark theme for golden tests.
