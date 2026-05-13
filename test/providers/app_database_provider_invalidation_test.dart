@@ -98,5 +98,38 @@ void main() {
         expect(vaults, isEmpty);
       },
     );
+
+    test(
+      'invalidating appDatabaseProvider after key appears clears a cached '
+      'open failure (logout then login)',
+      () {
+        var keyPresent = false;
+
+        final container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWith((ref) {
+              if (!keyPresent) {
+                throw StateError(
+                  'Cannot open AppDatabase: no Nostr private key in secure '
+                  'storage. The user must complete login first.',
+                );
+              }
+              return trackDb(AppDatabase(NativeDatabase.memory()));
+            }),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        expect(() => container.read(appDatabaseProvider), throwsStateError);
+
+        keyPresent = true;
+        expect(() => container.read(appDatabaseProvider), throwsStateError);
+
+        container.invalidate(appDatabaseProvider);
+
+        final db = container.read(appDatabaseProvider);
+        expect(db, isA<AppDatabase>());
+      },
+    );
   });
 }
