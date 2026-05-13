@@ -11,7 +11,15 @@ import 'logger.dart';
 
 // Provider for RelayScanService
 final relayScanServiceProvider = Provider<RelayScanService>((ref) {
-  final ndkService = ref.watch(ndkServiceProvider);
+  // Use ref.read() to break circular dependency with NdkService: subscription
+  // handlers call _ref.read(recoveryServiceProvider), recovery watches
+  // backupServiceProvider, backup watches relayScanServiceProvider — watching
+  // ndk here would close ndk → recovery → backup → relay → ndk.
+  //
+  // [relayScanServiceProvider] still watches [appDatabaseProvider] below; logout
+  // invalidates the database and (in practice) [ndkServiceProvider] together, so
+  // this provider rebuilds and picks up a fresh NdkService on the next read.
+  final ndkService = ref.read(ndkServiceProvider);
   final service = RelayScanService(
     ndkService: ndkService,
     database: ref.watch(appDatabaseProvider),
