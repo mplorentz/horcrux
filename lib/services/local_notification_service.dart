@@ -25,10 +25,10 @@ import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 /// True when the app is in [AppLifecycleState.resumed] (foreground).
 ///
 /// Used by [LocalNotificationService] to suppress informational shard
-/// notifications (kinds 1337 / 1342) while the user already has the app open.
+/// notifications (kind 1337) while the user already has the app open.
 /// [WidgetsBinding.instance.lifecycleState] may be null during early startup;
 /// that is treated as not resumed so notifications are not dropped.
-bool defaultLocalNotificationIsForegrounded() {
+bool _defaultLocalNotificationIsForegrounded() {
   final state = WidgetsBinding.instance.lifecycleState;
   return state == AppLifecycleState.resumed;
 }
@@ -93,7 +93,7 @@ class LocalNotificationService {
         _loginService = loginService,
         _appDatabase = appDatabase,
         _getRecoveryService = getRecoveryService,
-        _isForegrounded = isForegrounded ?? defaultLocalNotificationIsForegrounded;
+        _isForegrounded = isForegrounded ?? _defaultLocalNotificationIsForegrounded;
 
   /// Android notification ids are 32-bit signed. [millisecondsSinceEpoch] alone does not fit,
   /// so we use the same bits as appending `"$ms$counter"` then folding into 31 positive bits.
@@ -367,7 +367,7 @@ class LocalNotificationService {
       return;
     }
 
-    if ((kind == NostrKind.shareData || kind == NostrKind.shareConfirmation) && _isForegrounded()) {
+    if (kind == NostrKind.shareData && _isForegrounded()) {
       Log.debug(
         'Skipping ${kind.name} notification ${event.id}: app is in foreground',
       );
