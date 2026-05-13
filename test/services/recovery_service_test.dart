@@ -952,5 +952,65 @@ void main() {
         expect(vault.backupConfig!.stewards.isNotEmpty, isTrue);
       },
     );
+
+    test(
+      'exitRecoveryMode preserves owner content when ending a COMPLETED real recovery',
+      () async {
+        // Arrange: Set up owned vault content (simulating vault content that
+        // was restored via performRecovery)
+        await repository.saveOwnedVaultContent(testVaultId, 'ciphertext-AAA');
+
+        // Initiate a REAL recovery (isPractice: false)
+        final request = await recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1],
+          threshold: 1,
+          isPractice: false, // REAL recovery
+        );
+
+        // Process a response to meet threshold — this sets status to completed
+        final shardData = createShare(
+          payload: 'real_recovery_shard=',
+          threshold: 1,
+          shareIndex: 0,
+          totalShares: 1,
+          primeMod: 'test_prime=',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        );
+        await recoveryService.processRecoveryResponse(
+          request.id,
+          testKeyHolder1,
+          true, // approved
+          share: shardData,
+        );
+
+        // Sanity-check: content exists before exitRecoveryMode
+        var ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
+        expect(ownedRow, isNotNull,
+            reason: 'owned_vaults row must exist before exitRecoveryMode');
+        expect(ownedRow!.content, 'ciphertext-AAA');
+
+        // Act: Exit real recovery mode
+        await recoveryService.exitRecoveryMode(request.id);
+
+        // Assert: Vault content is PRESERVED (our fix skips deleteVaultContent
+        // when the recovery request status is completed)
+        ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
+        expect(
+          ownedRow,
+          isNotNull,
+          reason: 'exitRecoveryMode must NOT delete vault content for '
+              'completed real recoveries, because performRecovery has already '
+              'restored the content',
+        );
+        expect(
+          ownedRow!.content,
+          'ciphertext-AAA',
+          reason: 'Completed real recovery must preserve vault content',
+        );
+      },
+    );
   });
 }
