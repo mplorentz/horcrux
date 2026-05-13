@@ -69,7 +69,12 @@ Future<void> _initializeFirebaseIfNecessary() async {
     Log.warning('Failed to read push opt-in flag from database; skipping Firebase init', e, st);
     optedIn = false;
   } finally {
-    await database?.close();
+    // [LazyDatabase.close] awaits the lazy opener; if opening failed (no Nostr
+    // key yet), that future completes with an error and close rethrows unless
+    // we swallow it here.
+    try {
+      await database?.close();
+    } catch (_) {}
   }
 
   if (!optedIn) {
