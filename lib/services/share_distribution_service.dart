@@ -47,7 +47,16 @@ class ShareDistributionService {
     this._notificationService,
   );
 
-  /// Distribute shares to all stewards
+  /// Publishes encrypted share events for each steward in [config] who has a
+  /// pubkey, using [shares] entries aligned by roster index with those stewards.
+  ///
+  /// [ownerPubkey] (hex) is passed to [NdkService.publishEncryptedEvent] as
+  /// `customPubkey` so the vault owner signs each rumor.
+  ///
+  /// If the roster has no entry that is both `isOwner` and keyed by
+  /// [ownerPubkey], this also publishes one extra manifest-only share event
+  /// (empty payload, sentinel `shareIndex` -1) to [ownerPubkey] so the owner
+  /// can rehydrate recovery metadata without holding a steward slot.
   Future<List<ShareEvent>> distributeShares({
     required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,

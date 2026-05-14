@@ -858,15 +858,17 @@ class NdkService {
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
     String? vaultId,
-
-    /// NIP-40 expiration on the inner rumor.
-    ///
-    /// - `null` (default): expire after 7 days (relay pruning window).
-    /// - [Duration.zero]: omit the `expiration` tag (long-lived metadata).
-    /// - any other positive duration: expire after that duration from now.
     Duration? nip40Expiration,
   }) async {
     await _ensureInitialized();
+
+    if (nip40Expiration != null && nip40Expiration.isNegative) {
+      throw ArgumentError.value(
+        nip40Expiration,
+        'nip40Expiration',
+        'must not be negative',
+      );
+    }
 
     try {
       final pubkeySnippet =
@@ -936,7 +938,8 @@ class NdkService {
     }
 
     final effectiveTags = <List<String>>[
-      for (final t in tags ?? const <List<String>>[]) t,
+      for (final t in tags ?? const <List<String>>[])
+        if (t.isEmpty || t.first != 'expiration') t,
     ];
     if (nip40Expiration == null) {
       final expSec =
@@ -980,6 +983,14 @@ class NdkService {
     Duration? nip40Expiration,
   }) async {
     await _ensureInitialized();
+
+    if (nip40Expiration != null && nip40Expiration.isNegative) {
+      throw ArgumentError.value(
+        nip40Expiration,
+        'nip40Expiration',
+        'must not be negative',
+      );
+    }
 
     final results = <Nip01Event?>[];
 

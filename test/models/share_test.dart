@@ -77,9 +77,9 @@ void main() {
 
     test('rejects manifest with wrong shareIndex', () {
       final bad = Share(
-        payload: '',
+        payload: 'x',
         threshold: 2,
-        shareIndex: 0,
+        shareIndex: -2,
         totalShares: 3,
         primeMod: 'abc',
         creatorPubkey: 'a' * 64,

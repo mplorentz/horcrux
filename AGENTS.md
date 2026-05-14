@@ -191,8 +191,6 @@ class MyService {
 
 **Event Payloads**: Always use snake_case (not camelCase) in raw Nostr event JSON. NDK automatically converts to camelCase when processing.
 
-**Expiration**: All published events include NIP-40 expiration tags (7 days). Auto-added by `publishEncryptedEvent` functions.
-
 ### UI Architecture
 
 **Theme System**: Uses `horcrux3` theme (`lib/widgets/theme.dart`) with muted, professional palette.
@@ -279,7 +277,6 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 
 - Hex format for internal data, bech32 for display
 - Snake_case in Nostr event payloads
-- NIP-40 expiration tags on all events
 
 **Design System**: Orange only on RowButton. Check DESIGN_GUIDE.md before UI work.
 
