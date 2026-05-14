@@ -202,13 +202,25 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
       }
     });
 
-    return HorcruxScaffold(
-      appBar: const HorcruxAppBar(title: 'Where are your vaults?'),
-      body: switch (_state) {
-        _ScanState.editing => _buildEditingBody(),
-        _ScanState.scanning => _buildScanningBody(),
-        _ScanState.results => _buildResultsBody(),
-      },
+    return PopScope(
+      canPop: false,
+      child: HorcruxScaffold(
+        appBar: HorcruxAppBar(
+          title: 'Load Vaults',
+          automaticallyImplyLeading: false,
+          actions: [
+            TextButton(
+              onPressed: _continue,
+              child: const Text('Skip'),
+            ),
+          ],
+        ),
+        body: switch (_state) {
+          _ScanState.editing => _buildEditingBody(),
+          _ScanState.scanning => _buildScanningBody(),
+          _ScanState.results => _buildResultsBody(),
+        },
+      ),
     );
   }
 
@@ -222,9 +234,8 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
               children: [
                 Text(
-                  "We'll check these relays for vaults backed up to this key. "
-                  'The Horcrux relay is added for you — feel free to remove it '
-                  'if you don\'t use it, and add any others you\'ve used.',
+                  "Do you have existing Horcrux vaults we should restore? We'll scan these relays for vaults backed up to this key. "
+                  'The official Horcrux relay is added already.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
