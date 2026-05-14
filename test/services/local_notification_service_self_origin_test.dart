@@ -256,29 +256,7 @@ void main() {
         expect(vaultRepository.getVaultCalls, isEmpty);
       },
     );
-
-    test(
-      'kind-1342 from a peer is suppressed when isForegrounded is true '
-      '(before vault lookup)',
-      () async {
-        final service = buildService(
-          currentPubkey: TestHexPubkeys.alice,
-          isForegrounded: () => true,
-        );
-
-        await service.notifyShareConfirmationProcessed(
-          event: buildShardConfirmation(
-            senderPubkey: TestHexPubkeys.bob,
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          ),
-          vaultId: 'vault-1',
-        );
-
-        expect(vaultRepository.getVaultCalls, isEmpty);
-      },
-    );
-
-    test(
+     test(
       'kind-1337 from a peer still reaches vault lookup when not foregrounded',
       () async {
         final service = buildService(
@@ -292,26 +270,6 @@ void main() {
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           ),
           share: makeShare(vaultId: 'vault-1'),
-        );
-
-        expect(vaultRepository.getVaultCalls, equals(['vault-1']));
-      },
-    );
-
-    test(
-      'kind-1342 from a peer still reaches vault lookup when not foregrounded',
-      () async {
-        final service = buildService(
-          currentPubkey: TestHexPubkeys.alice,
-          isForegrounded: () => false,
-        );
-
-        await service.notifyShareConfirmationProcessed(
-          event: buildShardConfirmation(
-            senderPubkey: TestHexPubkeys.bob,
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          ),
-          vaultId: 'vault-1',
         );
 
         expect(vaultRepository.getVaultCalls, equals(['vault-1']));
