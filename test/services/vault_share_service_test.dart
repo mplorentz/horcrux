@@ -817,5 +817,50 @@ void main() {
         expect(v.backupConfig!.instructions, 'Instr 3');
       },
     );
+
+    test(
+      'stale manifest at same distribution still restores owned_vaults shell for owner',
+      () async {
+        const shellVaultId = 'manifest-owned-shell-repair';
+        final embedded = <Map<String, String>>[
+          {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
+          {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+        ];
+
+        Share manifest({required String nostrEventId}) {
+          return Share(
+            payload: '',
+            threshold: 2,
+            shareIndex: -1,
+            totalShares: 2,
+            primeMod: TestShare.testPrimeMod,
+            creatorPubkey: owner,
+            createdAt: 1700000000,
+            vaultId: shellVaultId,
+            vaultName: 'Shell Repair',
+            ownerName: 'Alice',
+            instructions: 'Instr',
+            stewards: embedded,
+            relayUrls: const ['ws://relay.example'],
+            distributionVersion: 3,
+            nostrEventId: nostrEventId,
+          );
+        }
+
+        await service.processVaultShare(shellVaultId, manifest(nostrEventId: 'manifest-first'));
+        expect(await repository.isOwnedVault(shellVaultId), isTrue);
+
+        await repository.deleteVaultContent(shellVaultId);
+        expect(await repository.isOwnedVault(shellVaultId), isFalse);
+
+        await service.processVaultShare(
+          shellVaultId,
+          manifest(nostrEventId: 'manifest-same-dist-replay'),
+        );
+
+        expect(await repository.isOwnedVault(shellVaultId), isTrue);
+        expect(await repository.isOwnedVaultForCurrentUser(shellVaultId), isTrue);
+      },
+    );
   });
 }

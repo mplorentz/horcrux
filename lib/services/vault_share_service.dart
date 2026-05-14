@@ -134,8 +134,10 @@ class VaultShareService {
   ///
   /// When the vault row already reflects a **newer** distribution (from prior
   /// manifests or held shares), a **stale** manifest (lower or equal
-  /// [Share.distributionVersion]) is ignored so relays cannot roll back
-  /// metadata.
+  /// [Share.distributionVersion]) does not update vault metadata so relays
+  /// cannot roll back fields. The ingesting owner may still need an
+  /// `owned_vaults` shell (for example after local content was cleared); that
+  /// path calls [VaultRepository.ensureOwnedVaultShell] before returning.
   Future<void> processVaultShare(String vaultId, Share shardData) async {
     if (!shardData.isValid) throw ArgumentError('Invalid shard data');
 
@@ -167,6 +169,10 @@ class VaultShareService {
         final storedHighWater = maxHeldDist > vaultRowDist ? maxHeldDist : vaultRowDist;
         final incoming = shardData.distributionVersion ?? 0;
         if (incoming <= storedHighWater) {
+          final pk = await _getNdkService().getCurrentPubkey();
+          if (pk != null && pk == shardData.creatorPubkey) {
+            await repository.ensureOwnedVaultShell(vaultId);
+          }
           Log.info(
             'processVaultShare: ignored stale manifest for vault $vaultId '
             '(incoming distributionVersion=$incoming, storedHighWater=$storedHighWater)',
