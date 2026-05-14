@@ -105,7 +105,9 @@ class VaultShareService {
       throw ArgumentError('Manifest shares must use processVaultShare');
     }
 
-    final ownedByThisDevice = await repository.isOwnedVaultForCurrentUser(vaultId);
+    final ownedByThisDevice = await repository.isOwnedVaultForCurrentUser(
+      vaultId,
+    );
 
     if (!ownedByThisDevice) {
       // Steward-side: upsert vault and self-steward (version-gated).
@@ -160,19 +162,16 @@ class VaultShareService {
     }
 
     if (shardData.isManifest) {
-      final vault = await repository.getVault(vaultId);
-      if (vault != null) {
-        final maxHeldDist = await repository.maxHeldShareDistributionVersion(vaultId);
-        final vaultRowDist = vault.backupConfig?.distributionVersion ?? -1;
-        final storedHighWater = maxHeldDist > vaultRowDist ? maxHeldDist : vaultRowDist;
-        final incoming = shardData.distributionVersion ?? 0;
-        if (incoming <= storedHighWater) {
-          Log.info(
-            'processVaultShare: ignored stale manifest for vault $vaultId '
-            '(incoming distributionVersion=$incoming, storedHighWater=$storedHighWater)',
-          );
-          return;
-        }
+      final storedHighWater = await repository.manifestStaleDistributionHighWaterMark(
+        vaultId,
+      );
+      final incoming = shardData.distributionVersion ?? 0;
+      if (incoming <= storedHighWater) {
+        Log.info(
+          'processVaultShare: ignored stale manifest for vault $vaultId '
+          '(incoming distributionVersion=$incoming, storedHighWater=$storedHighWater)',
+        );
+        return;
       }
 
       final ownedBefore = await repository.isOwnedVaultForCurrentUser(vaultId);
@@ -319,19 +318,17 @@ class VaultShareService {
         payload = json.decode(event.content) as Map<String, dynamic>;
       } catch (e) {
         Log.error('processKeyHolderRemoval: failed to parse event JSON', e);
-        throw Exception(
-          'Failed to parse steward removed event content: $e',
-        );
+        throw Exception('Failed to parse steward removed event content: $e');
       }
 
       final vaultId = payload['vault_id'] as String?;
       if (vaultId == null || vaultId.isEmpty) {
-        throw ArgumentError('Missing vault_id in steward removed event payload');
+        throw ArgumentError(
+          'Missing vault_id in steward removed event payload',
+        );
       }
 
-      Log.info(
-        'processKeyHolderRemoval: vault ${vaultId.substring(0, 8)}...',
-      );
+      Log.info('processKeyHolderRemoval: vault ${vaultId.substring(0, 8)}...');
 
       final vault = await repository.getVault(vaultId);
       if (vault == null) {
@@ -352,7 +349,10 @@ class VaultShareService {
       await removeVaultShare(vaultId);
       Log.info('processKeyHolderRemoval: removed share for vault $vaultId');
     } catch (e) {
-      Log.error('processKeyHolderRemoval: error processing event ${event.id}', e);
+      Log.error(
+        'processKeyHolderRemoval: error processing event ${event.id}',
+        e,
+      );
       rethrow;
     }
   }

@@ -64,13 +64,18 @@ final vaultDetailRepositoryProvider = Provider<VaultDetailRepository>((ref) {
 ///
 /// Emits null when the vault does not exist. Emits [OwnedVaultDetail] when
 /// this device owns the vault, or [StewardedVaultDetail] otherwise.
-final vaultDetailProvider = StreamProvider.family<VaultDetail?, String>((ref, vaultId) {
+final vaultDetailProvider = StreamProvider.family<VaultDetail?, String>((
+  ref,
+  vaultId,
+) {
   final repository = ref.watch(vaultDetailRepositoryProvider);
   return repository.watchVaultDetail(vaultId);
 });
 
 /// Stream provider for the list of all [VaultDetail] entries.
-final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((ref) {
+final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((
+  ref,
+) {
   final repository = ref.watch(vaultDetailRepositoryProvider);
   return repository.vaultListStream;
 });
@@ -361,17 +366,21 @@ class VaultRepository {
             ))
           .go();
 
-      await _db.heldShareDao.insertIfNew(HeldSharesCompanion.insert(
-        id: id,
-        vaultId: vaultId,
-        shareIndex: share.shareIndex,
-        sharePayload: share.payload,
-        distributionVersion: dist,
-        receivedAt: now,
-        nostrEventId: Value(share.nostrEventId),
-        lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
-        pushEnabled: Value(share.pushEnabled ?? true),
-      ));
+      await _db.heldShareDao.insertIfNew(
+        HeldSharesCompanion.insert(
+          id: id,
+          vaultId: vaultId,
+          shareIndex: share.shareIndex,
+          sharePayload: share.payload,
+          distributionVersion: dist,
+          receivedAt: now,
+          nostrEventId: Value(share.nostrEventId),
+          lastSeenRelay: Value(
+            share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null,
+          ),
+          pushEnabled: Value(share.pushEnabled ?? true),
+        ),
+      );
       await _db.heldShareDao.pruneOldVersions(vaultId);
       // Write primeMod to the vault row when provided so that
       // _shareFromHeldShareRow can hydrate valid Share objects. For owned
@@ -384,7 +393,10 @@ class VaultRepository {
               lastSyncedAt: Value(now),
             )
           : VaultsCompanion(lastSyncedAt: Value(now));
-      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(vaultsUpdate);
+      await (_db.update(
+        _db.vaults,
+      )..where((v) => v.id.equals(vaultId)))
+          .write(vaultsUpdate);
     });
     Log.info(
       'addShareToVault: wrote held_share for vault $vaultId '
@@ -412,6 +424,35 @@ class VaultRepository {
     final row = await _db.heldShareDao.mostRecentForVault(vaultId);
     if (row == null) return -1;
     return row.distributionVersion;
+  }
+
+  /// High-water distribution for **manifest-only** stale detection
+  /// ([VaultShareService.processVaultShare]).
+  ///
+  /// Like [maxHeldShareDistributionVersion] vs the vault row, but when
+  /// [Vault.backupConfig] is absent and [VaultRow.currentDistributionVersion]
+  /// is still `0` (invitation stub / fresh row), treats the row contribution
+  /// as `-1` so an incoming version `0` manifest is not mistaken for stale.
+  /// When the row is already above zero (e.g. after
+  /// [mergeVaultRowFromIncomingShare] without a hydrated config), that value
+  /// participates so relays cannot roll back metadata.
+  Future<int> manifestStaleDistributionHighWaterMark(String vaultId) async {
+    final maxHeld = await maxHeldShareDistributionVersion(vaultId);
+    final row = await _db.vaultDao.getById(vaultId);
+    if (row == null) {
+      return maxHeld;
+    }
+    final vault = await getVault(vaultId);
+    final configDist = vault?.backupConfig?.distributionVersion;
+    final int rowBasis;
+    if (configDist != null) {
+      rowBasis = configDist;
+    } else if (row.currentDistributionVersion > 0) {
+      rowBasis = row.currentDistributionVersion;
+    } else {
+      rowBasis = -1;
+    }
+    return maxHeld > rowBasis ? maxHeld : rowBasis;
   }
 
   /// Delete all `held_shares` rows for [vaultId].
@@ -483,7 +524,10 @@ class VaultRepository {
   /// No-op when [Share.distributionVersion] (null → 0) is **strictly less** than
   /// the stored `vaults.current_distribution_version` so stale shares cannot
   /// roll back metadata.
-  Future<void> mergeVaultRowFromIncomingShare(String vaultId, Share share) async {
+  Future<void> mergeVaultRowFromIncomingShare(
+    String vaultId,
+    Share share,
+  ) async {
     final row = await _db.vaultDao.getById(vaultId);
     if (row == null) {
       throw ArgumentError('Vault not found: $vaultId');
@@ -543,7 +587,9 @@ class VaultRepository {
     final existing = await _db.ownedVaultDao.getByVaultId(vaultId);
     if (existing != null) return;
     await saveOwnedVaultContent(vaultId, '');
-    Log.info('ensureOwnedVaultShell: inserted owned placeholder for vault $vaultId');
+    Log.info(
+      'ensureOwnedVaultShell: inserted owned placeholder for vault $vaultId',
+    );
   }
 
   /// Write or replace the NIP-44 [content] ciphertext for an owned vault.
@@ -592,7 +638,10 @@ class VaultRepository {
   Future<void> deleteVaultContent(String vaultId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.transaction(() async {
-      await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vaultId))).go();
+      await (_db.delete(
+        _db.ownedVaults,
+      )..where((v) => v.vaultId.equals(vaultId)))
+          .go();
       await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
         VaultsCompanion(lastSyncedAt: Value(now)),
       );
@@ -632,7 +681,9 @@ class VaultRepository {
               status: request.status.name,
               isPractice: Value(request.isPractice),
               errorMessage: Value(request.errorMessage),
-              eventCreationTimeMs: Value(request.eventCreationTime?.millisecondsSinceEpoch),
+              eventCreationTimeMs: Value(
+                request.eventCreationTime?.millisecondsSinceEpoch,
+              ),
             ),
           );
       await _db.batch((b) {
@@ -658,13 +709,18 @@ class VaultRepository {
   ) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.transaction(() async {
-      await (_db.update(_db.recoveryRequests)..where((r) => r.id.equals(requestId))).write(
+      await (_db.update(
+        _db.recoveryRequests,
+      )..where((r) => r.id.equals(requestId)))
+          .write(
         RecoveryRequestsCompanion(
           requestEventId: Value(updatedRequest.nostrEventId),
           status: Value(updatedRequest.status.name),
           errorMessage: Value(updatedRequest.errorMessage),
           expiresAt: Value(updatedRequest.expiresAt?.millisecondsSinceEpoch),
-          eventCreationTimeMs: Value(updatedRequest.eventCreationTime?.millisecondsSinceEpoch),
+          eventCreationTimeMs: Value(
+            updatedRequest.eventCreationTime?.millisecondsSinceEpoch,
+          ),
           cancelledAt: updatedRequest.status == RecoveryRequestStatus.cancelled
               ? Value(now)
               : const Value.absent(),
@@ -731,7 +787,10 @@ class VaultRepository {
         continue;
       }
       await _db.transaction(() async {
-        await (_db.update(_db.recoveryRequests)..where((x) => x.id.equals(r.id))).write(
+        await (_db.update(
+          _db.recoveryRequests,
+        )..where((x) => x.id.equals(r.id)))
+            .write(
           RecoveryRequestsCompanion(
             status: const Value('failed'),
             errorMessage: const Value('Recovery session expired'),
@@ -786,7 +845,10 @@ class VaultRepository {
     return result;
   }
 
-  Steward _mergeDbStewardWithBackupOverlay(Steward dbSteward, BackupConfig overlay) {
+  Steward _mergeDbStewardWithBackupOverlay(
+    Steward dbSteward,
+    BackupConfig overlay,
+  ) {
     final cached = overlay.stewards.firstWhere(
       (c) => c.id == dbSteward.id,
       orElse: () => dbSteward,
@@ -945,11 +1007,15 @@ class VaultRepository {
     }
 
     final distributionId = _distributionId(vaultId, distributionVersion);
-    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+    final byId = await (_db.select(
+      _db.distributions,
+    )..where((d) => d.id.equals(distributionId)))
         .getSingleOrNull();
     final distribution = byId ??
         await (_db.select(_db.distributions)
-              ..where((d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion)))
+              ..where(
+                (d) => d.vaultId.equals(vaultId) & d.version.equals(distributionVersion),
+              ))
             .getSingleOrNull();
     if (distribution == null) {
       return const {};
@@ -985,7 +1051,9 @@ class VaultRepository {
           ),
         );
 
-    final existing = await (_db.select(_db.distributionShares)..where((s) => s.id.equals(shareId)))
+    final existing = await (_db.select(
+      _db.distributionShares,
+    )..where((s) => s.id.equals(shareId)))
         .getSingleOrNull();
     final persistedGiftWrapEventId = giftWrapEventId ??
         existing?.giftWrapEventId ??
@@ -1042,18 +1110,28 @@ class VaultRepository {
     final archivedAtMs = vault.archivedAt?.millisecondsSinceEpoch;
     final archivedReason = vault.archivedAt == null ? null : vault.archivedReason;
     await _db.transaction(() async {
+      final existingVaultRow = await _db.vaultDao.getById(vault.id);
+      final effectiveThreshold = config?.threshold ?? existingVaultRow?.threshold ?? 0;
+      final effectiveTotalShares = config?.totalKeys ?? existingVaultRow?.totalShares ?? 0;
+      final effectiveDistributionVersion = config != null
+          ? config.distributionVersion
+          : (existingVaultRow?.currentDistributionVersion ?? 0);
+      final Value<String?> instructionsValue = config != null
+          ? Value(config.instructions)
+          : (existingVaultRow != null
+              ? Value(existingVaultRow.instructions)
+              : const Value.absent());
+
       await _db.into(_db.vaults).insertOnConflictUpdate(
             VaultsCompanion.insert(
               id: vault.id,
               name: vault.name,
               ownerPubkey: vault.ownerPubkey,
               ownerName: Value(vault.ownerName),
-              threshold: config?.threshold ?? 0,
-              totalShares: config?.totalKeys ?? 0,
-              currentDistributionVersion: Value(
-                config?.distributionVersion ?? 0,
-              ),
-              instructions: Value(config?.instructions),
+              threshold: effectiveThreshold,
+              totalShares: effectiveTotalShares,
+              currentDistributionVersion: Value(effectiveDistributionVersion),
+              instructions: instructionsValue,
               pushEnabled: Value(vault.pushEnabled),
               archivedAt: Value(archivedAtMs),
               archivedReason: Value(archivedReason),
@@ -1083,15 +1161,18 @@ class VaultRepository {
         // roster introduces any steward id the DB has never seen, treat backup
         // config ordering as authoritative and assign contiguous indices again so
         // owners can insert rows ahead of existing stewards.
-        final hasNewStewardId =
-            incomingStewardIds.any((id) => !shareIndexByStewardId.containsKey(id));
+        final hasNewStewardId = incomingStewardIds.any(
+          (id) => !shareIndexByStewardId.containsKey(id),
+        );
 
         for (final existingRow in existing) {
           // Retire rows removed from the config permanently, and rows that ARE
           // being kept but need a clean re-insert (to avoid position conflicts).
           // Kept rows are immediately re-activated below with left_at = null.
           final willReinsert = keptIds.contains(existingRow.id);
-          final idxInConfig = config.stewards.indexWhere((s) => s.id == existingRow.id);
+          final idxInConfig = config.stewards.indexWhere(
+            (s) => s.id == existingRow.id,
+          );
           final int targetShareIndex;
           if (hasNewStewardId) {
             targetShareIndex = idxInConfig >= 0 ? idxInConfig + 1 : existingRow.shareIndex;
@@ -1101,9 +1182,7 @@ class VaultRepository {
           }
           final conflictsOnPosition = willReinsert && targetShareIndex != existingRow.shareIndex;
           if (!willReinsert || conflictsOnPosition) {
-            await (_db.update(
-              _db.stewards,
-            )..where((s) => s.id.equals(existingRow.id)))
+            await (_db.update(_db.stewards)..where((s) => s.id.equals(existingRow.id)))
                 .write(StewardsCompanion(leftAt: Value(nowMs)));
           }
         }
@@ -1153,14 +1232,8 @@ class VaultRepository {
             .get();
         final nowMs = DateTime.now().millisecondsSinceEpoch;
         for (final existingRow in existing) {
-          await (_db.update(
-            _db.stewards,
-          )..where((s) => s.id.equals(existingRow.id)))
-              .write(
-            StewardsCompanion(
-              leftAt: Value(nowMs),
-            ),
-          );
+          await (_db.update(_db.stewards)..where((s) => s.id.equals(existingRow.id)))
+              .write(StewardsCompanion(leftAt: Value(nowMs)));
         }
         await _db.vaultRelayDao.replaceForVault(
           vaultId: vault.id,

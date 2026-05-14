@@ -42,13 +42,17 @@ void main() {
 
     setUp(() {
       mockLoginService = MockLoginService();
-      when(mockLoginService.encryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.decryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(mockLoginService.decryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
 
       mockNdkService = MockNdkService();
-      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
       when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
@@ -147,8 +151,11 @@ void main() {
         );
 
         final stored = await repository.getVault(vaultId);
-        expect(stored!.pushEnabled, isTrue,
-            reason: 'redistribution should sync the owner\'s new preference');
+        expect(
+          stored!.pushEnabled,
+          isTrue,
+          reason: 'redistribution should sync the owner\'s new preference',
+        );
       },
     );
 
@@ -194,7 +201,9 @@ void main() {
 
         when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => false);
         when(mockPushReceiver.optIn()).thenAnswer((_) async => true);
-        when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+        when(
+          mockNdkService.getCurrentPubkey(),
+        ).thenAnswer((_) async => TestHexPubkeys.bob);
         when(
           mockNdkService.publishEncryptedEvent(
             content: anyNamed('content'),
@@ -249,13 +258,17 @@ void main() {
     setUp(() {
       db = newTestDatabase();
       mockLoginService = MockLoginService();
-      when(mockLoginService.encryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.decryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(mockLoginService.decryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
 
       mockNdkService = MockNdkService();
-      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
 
@@ -311,43 +324,42 @@ void main() {
       expect(bob.shareIndex, 3);
     });
 
-    test('upserts all embedded stewards when wire payload omits steward id', () async {
-      const vaultId = 'vault-no-steward-id';
-      const ownerPubkey = TestHexPubkeys.alice;
-      final share = createShare(
-        payload: 'shard-bytes',
-        threshold: 2,
-        shareIndex: 1,
-        totalShares: 3,
-        primeMod: 'prime-mod-value',
-        creatorPubkey: ownerPubkey,
-        vaultId: vaultId,
-        vaultName: 'Shared Vault',
-        stewards: [
-          {
-            'name': 'Alice',
-            'pubkey': TestHexPubkeys.alice,
-            'shard_index': '0',
-          },
-          {
-            'name': 'Bob',
-            'pubkey': TestHexPubkeys.bob,
-            'shard_index': '1',
-          },
-        ],
-      );
+    test(
+      'upserts all embedded stewards when wire payload omits steward id',
+      () async {
+        const vaultId = 'vault-no-steward-id';
+        const ownerPubkey = TestHexPubkeys.alice;
+        final share = createShare(
+          payload: 'shard-bytes',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 3,
+          primeMod: 'prime-mod-value',
+          creatorPubkey: ownerPubkey,
+          vaultId: vaultId,
+          vaultName: 'Shared Vault',
+          stewards: [
+            {
+              'name': 'Alice',
+              'pubkey': TestHexPubkeys.alice,
+              'shard_index': '0',
+            },
+            {'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '1'},
+          ],
+        );
 
-      await service.addVaultShare(vaultId, share);
+        await service.addVaultShare(vaultId, share);
 
-      final rows = await db.stewardDao.activeForVault(vaultId);
-      expect(rows, hasLength(2));
-      final alice = rows.firstWhere((r) => r.pubkey == TestHexPubkeys.alice);
-      final bob = rows.firstWhere((r) => r.pubkey == TestHexPubkeys.bob);
-      expect(alice.id, 'wire_${vaultId}_0_${TestHexPubkeys.alice}');
-      expect(bob.id, 'wire_${vaultId}_1_${TestHexPubkeys.bob}');
-      expect(alice.shareIndex, 1);
-      expect(bob.shareIndex, 2);
-    });
+        final rows = await db.stewardDao.activeForVault(vaultId);
+        expect(rows, hasLength(2));
+        final alice = rows.firstWhere((r) => r.pubkey == TestHexPubkeys.alice);
+        final bob = rows.firstWhere((r) => r.pubkey == TestHexPubkeys.bob);
+        expect(alice.id, 'wire_${vaultId}_0_${TestHexPubkeys.alice}');
+        expect(bob.id, 'wire_${vaultId}_1_${TestHexPubkeys.bob}');
+        expect(alice.shareIndex, 1);
+        expect(bob.shareIndex, 2);
+      },
+    );
 
     test(
       'infers owner holdingKey from embedded roster when owner self-stewards',
@@ -400,7 +412,9 @@ void main() {
 
         const distributionId = '${vaultId}_v$distVersion';
         final shareRows = await db.distributionDao.sharesFor(distributionId);
-        final ownerShareRow = shareRows.firstWhere((r) => r.stewardId == 'steward-alice');
+        final ownerShareRow = shareRows.firstWhere(
+          (r) => r.stewardId == 'steward-alice',
+        );
         expect(ownerShareRow.acknowledgmentEventId, isNull);
         expect(ownerShareRow.acknowledgmentDistributionVersion, distVersion);
         expect(
@@ -513,16 +527,26 @@ void main() {
 
         await ingest(1, 1);
         var vault = await repository.getVault(vaultId);
-        var ownerRow = vault!.backupConfig!.stewards.firstWhere((s) => s.pubkey == ownerPubkey);
+        var ownerRow = vault!.backupConfig!.stewards.firstWhere(
+          (s) => s.pubkey == ownerPubkey,
+        );
         expect(ownerRow.acknowledgedDistributionVersion, 1);
-        expect(ownerRow.giftWrapEventId, 'owner-self-steward-inferred:$vaultId:v1');
+        expect(
+          ownerRow.giftWrapEventId,
+          'owner-self-steward-inferred:$vaultId:v1',
+        );
 
         await ingest(2, 2);
         vault = await repository.getVault(vaultId);
-        ownerRow = vault!.backupConfig!.stewards.firstWhere((s) => s.pubkey == ownerPubkey);
+        ownerRow = vault!.backupConfig!.stewards.firstWhere(
+          (s) => s.pubkey == ownerPubkey,
+        );
         expect(vault.backupConfig!.distributionVersion, 2);
         expect(ownerRow.acknowledgedDistributionVersion, 2);
-        expect(ownerRow.giftWrapEventId, 'owner-self-steward-inferred:$vaultId:v2');
+        expect(
+          ownerRow.giftWrapEventId,
+          'owner-self-steward-inferred:$vaultId:v2',
+        );
 
         final rowsV2 = await db.distributionDao.sharesFor('${vaultId}_v2');
         expect(
@@ -575,7 +599,9 @@ void main() {
         const distributionId = '${vaultId}_v1';
         final shareRows = await db.distributionDao.sharesFor(distributionId);
         expect(
-          shareRows.any((r) => r.giftWrapEventId.startsWith('owner-self-steward-inferred:')),
+          shareRows.any(
+            (r) => r.giftWrapEventId.startsWith('owner-self-steward-inferred:'),
+          ),
           isFalse,
         );
       },
@@ -594,14 +620,20 @@ void main() {
     setUp(() {
       db = newTestDatabase();
       mockLoginService = MockLoginService();
-      when(mockLoginService.encryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.decryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(mockLoginService.decryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(
+        mockLoginService.getCurrentPublicKey(),
+      ).thenAnswer((_) async => TestHexPubkeys.bob);
 
       mockNdkService = MockNdkService();
-      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
 
@@ -682,11 +714,15 @@ void main() {
 
     setUp(() {
       mockLoginService = MockLoginService();
-      when(mockLoginService.encryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.decryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => owner);
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(mockLoginService.decryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(
+        mockLoginService.getCurrentPublicKey(),
+      ).thenAnswer((_) async => owner);
 
       mockNdkService = MockNdkService();
       when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => owner);
@@ -707,64 +743,87 @@ void main() {
       repository.dispose();
     });
 
-    test('hydrates backup config without held_shares or confirmation publish', () async {
-      final embedded = <Map<String, String>>[
-        {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
-        {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
-      ];
-      final manifest = Share(
-        payload: '',
-        threshold: 2,
-        shareIndex: -1,
-        totalShares: 2,
-        primeMod: TestShare.testPrimeMod,
-        creatorPubkey: owner,
-        createdAt: 1700000000,
-        vaultId: vaultId,
-        vaultName: 'Wire Vault',
-        ownerName: 'Alice',
-        instructions: 'Handle with care',
-        stewards: embedded,
-        relayUrls: const ['ws://relay.example'],
-        distributionVersion: 3,
-        nostrEventId: 'manifest-event-1',
-      );
+    test(
+      'hydrates backup config without held_shares or confirmation publish',
+      () async {
+        final embedded = <Map<String, String>>[
+          {
+            'id': 'b1',
+            'name': 'Bob',
+            'pubkey': TestHexPubkeys.bob,
+            'shard_index': '0',
+          },
+          {
+            'id': 'c1',
+            'name': 'Charlie',
+            'pubkey': TestHexPubkeys.charlie,
+            'shard_index': '1',
+          },
+        ];
+        final manifest = Share(
+          payload: '',
+          threshold: 2,
+          shareIndex: -1,
+          totalShares: 2,
+          primeMod: TestShare.testPrimeMod,
+          creatorPubkey: owner,
+          createdAt: 1700000000,
+          vaultId: vaultId,
+          vaultName: 'Wire Vault',
+          ownerName: 'Alice',
+          instructions: 'Handle with care',
+          stewards: embedded,
+          relayUrls: const ['ws://relay.example'],
+          distributionVersion: 3,
+          nostrEventId: 'manifest-event-1',
+        );
 
-      await service.processVaultShare(vaultId, manifest);
+        await service.processVaultShare(vaultId, manifest);
 
-      final shares = await repository.getSharesForVault(vaultId);
-      expect(shares, isEmpty);
+        final shares = await repository.getSharesForVault(vaultId);
+        expect(shares, isEmpty);
 
-      final v = await repository.getVault(vaultId);
-      expect(v, isNotNull);
-      expect(v!.backupConfig, isNotNull);
-      expect(v.backupConfig!.threshold, 2);
-      expect(v.backupConfig!.instructions, 'Handle with care');
-      expect(v.backupConfig!.distributionVersion, 3);
-      expect(v.backupConfig!.stewards, hasLength(2));
-      expect(await repository.isOwnedVault(vaultId), isTrue);
+        final v = await repository.getVault(vaultId);
+        expect(v, isNotNull);
+        expect(v!.backupConfig, isNotNull);
+        expect(v.backupConfig!.threshold, 2);
+        expect(v.backupConfig!.instructions, 'Handle with care');
+        expect(v.backupConfig!.distributionVersion, 3);
+        expect(v.backupConfig!.stewards, hasLength(2));
+        expect(await repository.isOwnedVault(vaultId), isTrue);
 
-      verifyNever(
-        mockNdkService.publishEncryptedEvent(
-          content: anyNamed('content'),
-          kind: anyNamed('kind'),
-          recipientPubkey: anyNamed('recipientPubkey'),
-          relays: anyNamed('relays'),
-          tags: anyNamed('tags'),
-          customPubkey: anyNamed('customPubkey'),
-          vaultId: anyNamed('vaultId'),
-          nip40Expiration: anyNamed('nip40Expiration'),
-        ),
-      );
-    });
+        verifyNever(
+          mockNdkService.publishEncryptedEvent(
+            content: anyNamed('content'),
+            kind: anyNamed('kind'),
+            recipientPubkey: anyNamed('recipientPubkey'),
+            relays: anyNamed('relays'),
+            tags: anyNamed('tags'),
+            customPubkey: anyNamed('customPubkey'),
+            vaultId: anyNamed('vaultId'),
+            nip40Expiration: anyNamed('nip40Expiration'),
+          ),
+        );
+      },
+    );
 
     test(
       'stale manifest does not overwrite a newer manifest (distribution order)',
       () async {
         const orderVaultId = 'manifest-order-vault';
         final embedded = <Map<String, String>>[
-          {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
-          {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+          {
+            'id': 'b1',
+            'name': 'Bob',
+            'pubkey': TestHexPubkeys.bob,
+            'shard_index': '0',
+          },
+          {
+            'id': 'c1',
+            'name': 'Charlie',
+            'pubkey': TestHexPubkeys.charlie,
+            'shard_index': '1',
+          },
         ];
 
         Share wireManifest({
@@ -817,5 +876,69 @@ void main() {
         expect(v.backupConfig!.instructions, 'Instr 3');
       },
     );
+
+    test(
+        'stale manifest respects vault row distribution version when '
+        'hydrated BackupConfig is absent', () async {
+      final db = newTestDatabase();
+      const bareVaultId = 'bare-vault-row';
+      await db.into(db.vaults).insert(
+            VaultsCompanion.insert(
+              id: bareVaultId,
+              name: 'Ghost',
+              ownerPubkey: owner,
+              threshold: 0,
+              totalShares: 0,
+              currentDistributionVersion: const Value(5),
+              createdAt: 1700000000,
+            ),
+          );
+
+      final localRepo = VaultRepository(mockLoginService, db: db);
+      final localService = VaultShareService(
+        localRepo,
+        () => mockNdkService,
+        () => mockNotificationService,
+        () => mockPushReceiver,
+      );
+
+      final bare = await localRepo.getVault(bareVaultId);
+      expect(bare, isNotNull);
+      expect(bare!.backupConfig, isNull);
+
+      final staleManifest = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 2,
+        primeMod: TestShare.testPrimeMod,
+        creatorPubkey: owner,
+        createdAt: 1700000000,
+        vaultId: bareVaultId,
+        vaultName: 'ShouldNotApply',
+        ownerName: 'Alice',
+        instructions: 'ShouldNotApply',
+        stewards: [
+          {
+            'id': 'b1',
+            'name': 'Bob',
+            'pubkey': TestHexPubkeys.bob,
+            'shard_index': '0',
+          },
+        ],
+        relayUrls: const ['ws://relay.example'],
+        distributionVersion: 3,
+        nostrEventId: 'manifest-stale-vs-row',
+      );
+
+      await localService.processVaultShare(bareVaultId, staleManifest);
+
+      final row = await db.vaultDao.getById(bareVaultId);
+      expect(row!.name, 'Ghost');
+      expect(row.currentDistributionVersion, 5);
+
+      localRepo.dispose();
+      await db.close();
+    });
   });
 }
