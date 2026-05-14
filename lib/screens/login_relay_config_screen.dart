@@ -282,7 +282,12 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            LinearProgressIndicator(value: _progressValue),
+            LinearProgressIndicator(
+              value: _progressValue,
+              minHeight: 8,
+              color: Theme.of(context).colorScheme.onSurface,
+              backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
+            ),
             const SizedBox(height: 16),
             Text(
               'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
