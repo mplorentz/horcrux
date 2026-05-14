@@ -386,6 +386,17 @@ class VaultRepository {
     return rows.map((r) => _shareFromHeldShareRow(r, vaultRow)).toList();
   }
 
+  /// Highest [HeldShareRow.distributionVersion] among `held_shares` for
+  /// [vaultId], or `-1` when none exist.
+  ///
+  /// Implemented as [HeldShareDao.mostRecentForVault] (version desc, then
+  /// [HeldShareRow.receivedAt] desc): the first row carries the max version.
+  Future<int> maxHeldShareDistributionVersion(String vaultId) async {
+    final row = await _db.heldShareDao.mostRecentForVault(vaultId);
+    if (row == null) return -1;
+    return row.distributionVersion;
+  }
+
   /// Delete all `held_shares` rows for [vaultId].
   Future<void> clearSharesForVault(String vaultId) async {
     await _db.heldShareDao.deleteForVault(vaultId);

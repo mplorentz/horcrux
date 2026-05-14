@@ -703,6 +703,10 @@ void main() {
       );
     });
 
+    tearDown(() {
+      repository.dispose();
+    });
+
     test('hydrates backup config without held_shares or confirmation publish', () async {
       final embedded = <Map<String, String>>[
         {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
@@ -753,5 +757,65 @@ void main() {
         ),
       );
     });
+
+    test(
+      'stale manifest does not overwrite a newer manifest (distribution order)',
+      () async {
+        const orderVaultId = 'manifest-order-vault';
+        final embedded = <Map<String, String>>[
+          {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
+          {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+        ];
+
+        Share wireManifest({
+          required int distributionVersion,
+          required String vaultName,
+          required String nostrEventId,
+        }) {
+          return Share(
+            payload: '',
+            threshold: 2,
+            shareIndex: -1,
+            totalShares: 2,
+            primeMod: TestShare.testPrimeMod,
+            creatorPubkey: owner,
+            createdAt: 1700000000,
+            vaultId: orderVaultId,
+            vaultName: vaultName,
+            ownerName: 'Alice',
+            instructions: 'Instr $distributionVersion',
+            stewards: embedded,
+            relayUrls: const ['ws://relay.example'],
+            distributionVersion: distributionVersion,
+            nostrEventId: nostrEventId,
+          );
+        }
+
+        await service.processVaultShare(
+          orderVaultId,
+          wireManifest(
+            distributionVersion: 3,
+            vaultName: 'FromVThree',
+            nostrEventId: 'manifest-v3-first',
+          ),
+        );
+
+        await service.processVaultShare(
+          orderVaultId,
+          wireManifest(
+            distributionVersion: 2,
+            vaultName: 'FromVTwoStale',
+            nostrEventId: 'manifest-v2-late',
+          ),
+        );
+
+        final v = await repository.getVault(orderVaultId);
+        expect(v, isNotNull);
+        expect(v!.name, 'FromVThree');
+        expect(v.backupConfig, isNotNull);
+        expect(v.backupConfig!.distributionVersion, 3);
+        expect(v.backupConfig!.instructions, 'Instr 3');
+      },
+    );
   });
 }

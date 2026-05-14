@@ -181,7 +181,8 @@ class VaultStatusBanner extends ConsumerWidget {
           context,
           const _StatusData(
             headline: 'Keys not distributed',
-            subtext: 'Step 2 of 3: Generate and distribute keys to stewards from this screen.',
+            subtext:
+                'Step 2 of 3: Generate and distribute keys to stewards from the three dot menu.',
             icon: Icons.send,
             accentColor: Color(0xFF7A4A2F), // Umber
             variant: _StatusVariant.keysNotDistributed,

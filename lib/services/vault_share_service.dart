@@ -131,6 +131,11 @@ class VaultShareService {
   /// owner rehydration — skips `held_shares`, confirmation (1342), and
   /// phantom self-steward upsert; may insert an `owned_vaults` shell when the
   /// ingesting pubkey is the vault owner on a fresh device.
+  ///
+  /// When the vault row already reflects a **newer** distribution (from prior
+  /// manifests or held shares), a **stale** manifest (lower or equal
+  /// [Share.distributionVersion]) is ignored so relays cannot roll back
+  /// metadata.
   Future<void> processVaultShare(String vaultId, Share shardData) async {
     if (!shardData.isValid) throw ArgumentError('Invalid shard data');
 
@@ -155,6 +160,21 @@ class VaultShareService {
     }
 
     if (shardData.isManifest) {
+      final vault = await repository.getVault(vaultId);
+      if (vault != null) {
+        final maxHeldDist = await repository.maxHeldShareDistributionVersion(vaultId);
+        final vaultRowDist = vault.backupConfig?.distributionVersion ?? -1;
+        final storedHighWater = maxHeldDist > vaultRowDist ? maxHeldDist : vaultRowDist;
+        final incoming = shardData.distributionVersion ?? 0;
+        if (incoming <= storedHighWater) {
+          Log.info(
+            'processVaultShare: ignored stale manifest for vault $vaultId '
+            '(incoming distributionVersion=$incoming, storedHighWater=$storedHighWater)',
+          );
+          return;
+        }
+      }
+
       final ownedBefore = await repository.isOwnedVaultForCurrentUser(vaultId);
       await _upsertStewardVaultAndSelf(vaultId, shardData);
       final pk = await _getNdkService().getCurrentPubkey();
@@ -341,8 +361,9 @@ class VaultShareService {
 
   /// Upsert the `vaults` row and self-steward row from [share] on the steward
   /// side. Version-gated: only applies if the incoming
-  /// [Share.distributionVersion] is >= the stored
-  /// [Vault.mostRecentShare?.distributionVersion].
+  /// [Share.distributionVersion] is **greater than** the higher of (a) the max
+  /// version on held shares and (b) the vault row's current distribution
+  /// version (see [Vault.backupConfig.distributionVersion] when hydrated).
   ///
   /// Ownership check (skip if this device owns the vault) is done by the
   /// caller before invoking this helper.
@@ -364,10 +385,13 @@ class VaultShareService {
       Log.info('_upsertStewardVaultAndSelf: created vault record $vaultId');
     } else {
       // Version-gate: only update vault metadata if incoming version is newer.
-      final storedVersion = (await repository.getSharesForVault(vaultId)).fold<int>(-1, (max, s) {
-        final v = s.distributionVersion ?? -1;
-        return v > max ? v : max;
-      });
+      // Held shares drive the steward case; manifest-only 1337 never writes
+      // `held_shares`, so also compare to the vault row's current distribution
+      // (hydrated as [Vault.backupConfig.distributionVersion]) so a late stale
+      // manifest cannot roll back [Vault.name] / owner display fields.
+      final maxHeldDist = await repository.maxHeldShareDistributionVersion(vaultId);
+      final vaultRowDist = existing.backupConfig?.distributionVersion ?? -1;
+      final storedVersion = maxHeldDist > vaultRowDist ? maxHeldDist : vaultRowDist;
       if (incomingVersion > storedVersion) {
         var updated = existing;
         if (share.vaultName != null && share.vaultName != existing.name) {
