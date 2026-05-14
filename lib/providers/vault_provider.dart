@@ -339,17 +339,34 @@ class VaultRepository {
   /// Write [share] into the `held_shares` table and prune old versions.
   ///
   /// Also bumps `vaults.last_synced_at` so the reactive vault stream re-emits.
+  ///
+  /// **Slot replace:** before insert, deletes any existing row for the same
+  /// `(vaultId, shareIndex, distributionVersion)`. Relay replays or republished
+  /// gift-wraps can carry a **new** Nostr id for the same steward slot and
+  /// version; the partial unique index on `(vault_id, distribution_version,
+  /// nostr_event_id)` does not include `share_index`, so without this delete
+  /// those inserts would accumulate duplicate slots.
   Future<void> addShareToVault(String vaultId, Share share) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = '${vaultId}_${share.shareIndex}_${share.distributionVersion ?? 0}_$now';
+    final dist = share.distributionVersion ?? 0;
+    final id = '${vaultId}_${share.shareIndex}_${dist}_$now';
 
     await _db.transaction(() async {
+      await (_db.delete(_db.heldShares)
+            ..where(
+              (h) =>
+                  h.vaultId.equals(vaultId) &
+                  h.shareIndex.equals(share.shareIndex) &
+                  h.distributionVersion.equals(dist),
+            ))
+          .go();
+
       await _db.heldShareDao.insertIfNew(HeldSharesCompanion.insert(
         id: id,
         vaultId: vaultId,
         shareIndex: share.shareIndex,
         sharePayload: share.payload,
-        distributionVersion: share.distributionVersion ?? 0,
+        distributionVersion: dist,
         receivedAt: now,
         nostrEventId: Value(share.nostrEventId),
         lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
@@ -371,7 +388,7 @@ class VaultRepository {
     });
     Log.info(
       'addShareToVault: wrote held_share for vault $vaultId '
-      '(shareIndex=${share.shareIndex}, version=${share.distributionVersion})',
+      '(shareIndex=${share.shareIndex}, version=$dist)',
     );
   }
 

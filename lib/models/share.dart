@@ -191,8 +191,11 @@ class Share with _$Share {
 /// Selection order:
 /// 1. Higher [Share.distributionVersion] wins (null treated as -1 so that
 ///    unversioned/legacy shares sort before any explicitly-versioned share).
-/// 2. Higher [Share.createdAt] (Unix seconds) breaks ties within the same
-///    version.
+/// 2. When versions tie: prefer the share with the later [Share.receivedAt] when
+///    both are non-null (steward `held_shares` hydration often gives every row
+///    the same [Share.createdAt] because it is derived from the vault row, while
+///    [Share.receivedAt] is the local ingest clock).
+/// 3. Otherwise fall back to higher [Share.createdAt] (Unix seconds).
 ///
 /// This is the single authoritative implementation of the "pick most recent
 /// share" policy.  All call sites in [VaultShareService] and [RecoveryService]
@@ -203,6 +206,18 @@ Share? latestShare(List<Share> shares) {
     final cv = current.distributionVersion ?? -1;
     final nv = next.distributionVersion ?? -1;
     if (cv != nv) return nv > cv ? next : current;
+
+    final cr = current.receivedAt;
+    final nr = next.receivedAt;
+    if (cr != null && nr != null) {
+      if (cr.isAfter(nr)) return current;
+      if (nr.isAfter(cr)) return next;
+    } else if (cr != null) {
+      return current;
+    } else if (nr != null) {
+      return next;
+    }
+
     return next.createdAt > current.createdAt ? next : current;
   });
 }

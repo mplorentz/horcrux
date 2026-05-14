@@ -722,6 +722,77 @@ void main() {
     });
   });
 
+  group('latestShare', () {
+    Share heldStyleShare({
+      required int shareIndex,
+      required int distributionVersion,
+      required int createdAt,
+      DateTime? receivedAt,
+    }) {
+      return Share(
+        payload: 'p$shareIndex',
+        threshold: 2,
+        shareIndex: shareIndex,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: 'a' * 64,
+        createdAt: createdAt,
+        distributionVersion: distributionVersion,
+        receivedAt: receivedAt,
+      );
+    }
+
+    test('higher distributionVersion wins', () {
+      final v1 = heldStyleShare(
+        shareIndex: 0,
+        distributionVersion: 1,
+        createdAt: 200,
+        receivedAt: null,
+      );
+      final v3 = heldStyleShare(
+        shareIndex: 1,
+        distributionVersion: 3,
+        createdAt: 100,
+        receivedAt: null,
+      );
+      expect(latestShare([v1, v3]), v3);
+      expect(latestShare([v3, v1]), v3);
+    });
+
+    test('same distributionVersion picks later receivedAt when createdAt ties', () {
+      final early = heldStyleShare(
+        shareIndex: 0,
+        distributionVersion: 4,
+        createdAt: 1700000000,
+        receivedAt: DateTime.fromMillisecondsSinceEpoch(1000),
+      );
+      final late = heldStyleShare(
+        shareIndex: 1,
+        distributionVersion: 4,
+        createdAt: 1700000000,
+        receivedAt: DateTime.fromMillisecondsSinceEpoch(9000),
+      );
+      expect(latestShare([early, late]), late);
+      expect(latestShare([late, early]), late);
+    });
+
+    test('same version without receivedAt falls back to createdAt', () {
+      final older = heldStyleShare(
+        shareIndex: 0,
+        distributionVersion: 2,
+        createdAt: 100,
+        receivedAt: null,
+      );
+      final newer = heldStyleShare(
+        shareIndex: 1,
+        distributionVersion: 2,
+        createdAt: 200,
+        receivedAt: null,
+      );
+      expect(latestShare([older, newer]), newer);
+    });
+  });
+
   group('Share.pushEnabled wire format', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 

@@ -71,6 +71,71 @@ void main() {
     });
 
     test(
+      'addShareToVault replaces prior row for same vault, shareIndex, and '
+      'distributionVersion (republished gift-wrap id)',
+      () async {
+        final fixture = await VaultFixture.stewarded(
+          db,
+          ownerPubkey: TestHexPubkeys.alice,
+          threshold: 2,
+          totalShares: 3,
+        );
+
+        await (db.update(db.vaults)..where((v) => v.id.equals(fixture.vaultId))).write(
+          const VaultsCompanion(primeMod: Value('prime-mod')),
+        );
+
+        Future<void> addSlot0({required String payload, required String eventId}) {
+          return repository.addShareToVault(
+            fixture.vaultId,
+            Share(
+              payload: payload,
+              threshold: 2,
+              shareIndex: 0,
+              totalShares: 3,
+              primeMod: 'prime-mod',
+              creatorPubkey: TestHexPubkeys.alice,
+              createdAt: 1700000000,
+              vaultId: fixture.vaultId,
+              distributionVersion: 7,
+              nostrEventId: eventId,
+            ),
+          );
+        }
+
+        await addSlot0(payload: 'first-bytes', eventId: 'evt-aaa');
+        var rows = await db.heldShareDao.forVault(fixture.vaultId);
+        expect(rows, hasLength(1));
+        expect(rows.single.sharePayload, 'first-bytes');
+        expect(rows.single.nostrEventId, 'evt-aaa');
+
+        await addSlot0(payload: 'second-bytes', eventId: 'evt-bbb');
+        rows = await db.heldShareDao.forVault(fixture.vaultId);
+        expect(rows, hasLength(1));
+        expect(rows.single.sharePayload, 'second-bytes');
+        expect(rows.single.nostrEventId, 'evt-bbb');
+
+        await repository.addShareToVault(
+          fixture.vaultId,
+          Share(
+            payload: 'slot1',
+            threshold: 2,
+            shareIndex: 1,
+            totalShares: 3,
+            primeMod: 'prime-mod',
+            creatorPubkey: TestHexPubkeys.alice,
+            createdAt: 1700000000,
+            vaultId: fixture.vaultId,
+            distributionVersion: 7,
+            nostrEventId: 'evt-ccc',
+          ),
+        );
+        rows = await db.heldShareDao.forVault(fixture.vaultId);
+        expect(rows, hasLength(2));
+      },
+    );
+
+    test(
       'mergeVaultRowFromIncomingShare persists Shamir metadata when vault has '
       'no BackupConfig (steward bootstrap)',
       () async {
