@@ -422,6 +422,7 @@ class InvitationService {
     try {
       acceptanceEventId = await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
+        vaultId: invitation.vaultId,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
       );
@@ -573,6 +574,93 @@ class InvitationService {
     Log.info('Invalidated invitation $inviteCode, reason: $reason');
   }
 
+  /// Applies invitation acceptance when this device has no [Invitations] row
+  /// (e.g. another owner device created the invite) but the acceptance payload
+  /// includes [vault_id] and the steward slot still carries a matching invite code.
+  Future<void> _processInvitationAcceptanceWithoutLocalInvitation({
+    required String inviteCode,
+    required String inviteePubkey,
+    required String vaultId,
+  }) async {
+    final ownerPubkey = await _loginService.getCurrentPublicKey();
+    if (ownerPubkey == null) {
+      return;
+    }
+
+    final vault = await repository.getVault(vaultId);
+    if (vault == null) {
+      Log.warning(
+        'Invitation acceptance fallback: vault not found (vaultId=$vaultId, inviteCode=$inviteCode)',
+      );
+      return;
+    }
+    if (vault.ownerPubkey != ownerPubkey) {
+      Log.warning(
+        'Invitation acceptance fallback: vault not owned by this session (vaultId=$vaultId)',
+      );
+      return;
+    }
+
+    final backupConfig = vault.backupConfig;
+    if (backupConfig == null) {
+      Log.warning(
+        'Invitation acceptance fallback: vault has no backup config (vaultId=$vaultId)',
+      );
+      return;
+    }
+
+    final hasMatchingSlot = backupConfig.stewards.any(
+      (s) => s.pubkey == null && s.inviteCode == inviteCode && s.status == StewardStatus.invited,
+    );
+    if (!hasMatchingSlot) {
+      Log.warning(
+        'Invitation acceptance fallback: no invited steward slot matches '
+        '(vaultId=$vaultId, inviteCode=$inviteCode)',
+      );
+      return;
+    }
+
+    await _addKeyHolderToBackupConfig(
+      vaultId,
+      inviteePubkey,
+      null,
+      backupConfig.relays,
+      inviteCode: inviteCode,
+    );
+    await _backupService.distributeKeysIfNecessary(vaultId);
+    _notifyInvitationsChanged();
+    Log.info(
+      'Processed invitation acceptance without local invitation row '
+      '(vaultId=$vaultId, inviteePubkey=$inviteePubkey)',
+    );
+  }
+
+  /// When the [Invitations] row is missing, locate an owned vault whose
+  /// hydrated stewards still expose this pending [inviteCode] (backed by
+  /// `stewards.invite_code` after schema v6).
+  Future<String?> _findOwnedVaultIdForPendingInvite({
+    required String ownerPubkey,
+    required String inviteCode,
+  }) async {
+    final vaults = await repository.getAllVaults();
+    for (final v in vaults) {
+      if (v.ownerPubkey != ownerPubkey) {
+        continue;
+      }
+      final bc = v.backupConfig;
+      if (bc == null) {
+        continue;
+      }
+      final match = bc.stewards.any(
+        (s) => s.pubkey == null && s.inviteCode == inviteCode && s.status == StewardStatus.invited,
+      );
+      if (match) {
+        return v.id;
+      }
+    }
+    return null;
+  }
+
   /// Processes invitation acceptance event received from invitee
   ///
   /// Decrypts event content using NIP-44.
@@ -625,11 +713,30 @@ class InvitationService {
       );
     }
 
+    final vaultIdFromPayload = payload['vault_id'] as String?;
+
     // Load invitation
     final invitation = await _loadInvitation(inviteCode);
     if (invitation == null) {
+      var fallbackVaultId = vaultIdFromPayload?.trim();
+      fallbackVaultId ??= await _findOwnedVaultIdForPendingInvite(
+        ownerPubkey: ownerPubkey,
+        inviteCode: inviteCode,
+      );
+      if (fallbackVaultId != null && fallbackVaultId.isNotEmpty) {
+        Log.warning(
+          'Invitation acceptance: unknown invite code in local DB; '
+          'attempting fallback (vaultId=$fallbackVaultId)',
+        );
+        await _processInvitationAcceptanceWithoutLocalInvitation(
+          inviteCode: inviteCode,
+          inviteePubkey: inviteePubkey,
+          vaultId: fallbackVaultId,
+        );
+        return;
+      }
       Log.warning('Invitation acceptance event received for unknown invitation: $inviteCode');
-      return; // Silently ignore if invitation not found
+      return;
     }
 
     // Persist redemption only after backup stewards are updated: marking acceptedAt first makes
@@ -892,8 +999,7 @@ class InvitationService {
               return steward.copyWith(
                 pubkey: pubkey,
                 status: newStatus,
-                // Preserve contactInfo when updating invited steward
-                // Keep inviteCode for reference, but it's no longer needed after acceptance
+                inviteCode: null,
               );
             }
             return steward;
