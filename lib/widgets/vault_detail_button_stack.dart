@@ -66,10 +66,6 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 final hasMyInFlightRecovery =
                     myActiveRealRecovery != null || myActivePracticeRecovery != null;
                 final showManageRealRecovery = myActiveRealRecovery != null;
-                // Initiate is hidden when this user already has any of their own session
-                // (practice or real) in flight on this vault; they should manage that one
-                // instead. The service would reject the call anyway.
-                final showInitiateRealRecovery = !hasMyInFlightRecovery;
 
                 // View Instructions Button (only show for stewards)
                 if (isSteward) {
@@ -169,53 +165,52 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   }
 
                   // Practice Recovery Button (only for owners)
-                  // Only show if all stewards are holding the current key
+                  // Shown only when the backup plan is ready (distributed and
+                  // enough stewards acknowledged). This matches the gate in
+                  // PracticeRecoveryInfoScreen.
                   final backupConfig = vault.backupConfig;
-                  final allStewardsHoldingCurrentKey =
-                      backupConfig?.allStewardsHoldingCurrentKey ?? false;
+                  final isReadyForRecovery = backupConfig?.isReady ?? false;
 
-                  if (allStewardsHoldingCurrentKey) {
-                    if (myActivePracticeRecovery != null) {
-                      // Show "Manage Practice Recovery" if THIS user has an active
-                      // practice session of their own. Other users' practice sessions
-                      // are not actionable from here.
-                      final myPracticeId = myActivePracticeRecovery.id;
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    RecoveryStatusScreen(recoveryRequestId: myPracticeId),
-                              ),
-                            );
-                          },
-                          icon: Icons.school,
-                          text: 'Manage Practice Recovery',
-                        ),
-                      );
-                    } else if (!hasMyInFlightRecovery) {
-                      // Show "Practice Recovery" only when this user has no session of
-                      // their own in flight (per-user exclusivity).
-                      buttons.add(
-                        RowButtonConfig(
-                          onPressed: () {
-                            // Use a full-screen route, not showModalBottomSheet,
-                            // so the AppBar gets normal Scaffold safe-area
-                            // insets on edge-to-edge Android devices.
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                fullscreenDialog: true,
-                                builder: (_) => PracticeRecoveryInfoScreen(vaultId: vaultId),
-                              ),
-                            );
-                          },
-                          icon: Icons.school,
-                          text: 'Practice Recovery',
-                        ),
-                      );
-                    }
+                  if (myActivePracticeRecovery != null) {
+                    // Show "Manage Practice Recovery" if THIS user has an active
+                    // practice session of their own. Other users' practice sessions
+                    // are not actionable from here.
+                    final myPracticeId = myActivePracticeRecovery.id;
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RecoveryStatusScreen(recoveryRequestId: myPracticeId),
+                            ),
+                          );
+                        },
+                        icon: Icons.school,
+                        text: 'Manage Practice Recovery',
+                      ),
+                    );
+                  } else if (isReadyForRecovery && !hasMyInFlightRecovery) {
+                    // Show "Practice Recovery" only when this user has no session of
+                    // their own in flight (per-user exclusivity).
+                    buttons.add(
+                      RowButtonConfig(
+                        onPressed: () {
+                          // Use a full-screen route, not showModalBottomSheet,
+                          // so the AppBar gets normal Scaffold safe-area
+                          // insets on edge-to-edge Android devices.
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              fullscreenDialog: true,
+                              builder: (_) => PracticeRecoveryInfoScreen(vaultId: vaultId),
+                            ),
+                          );
+                        },
+                        icon: Icons.school,
+                        text: 'Practice Recovery',
+                      ),
+                    );
                   }
 
                   // Surface "Manage Recovery" for the owner whenever they have an
@@ -248,10 +243,15 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 // start a real recovery when you have shards but no content. Managing
                 // an existing recovery is handled in the owner block above so it
                 // survives the owner adding content back mid-recovery.
+                // Never show Initiate Recovery when the owner still has vault
+                // contents — they should use Practice Recovery instead.
+                final ownerHasOwnedContent = vault is OwnedVaultDetail;
                 final isOwnerSteward =
                     isVaultOwner && vault is StewardedVaultDetail && vault.latestShare != null;
+                final showInitiateRealRecovery =
+                    isOwnerSteward && !hasMyInFlightRecovery && !ownerHasOwnedContent;
 
-                if (isOwnerSteward && showInitiateRealRecovery) {
+                if (showInitiateRealRecovery) {
                   buttons.add(
                     RowButtonConfig(
                       onPressed: () => _initiateRecovery(context, ref, vaultId),
@@ -284,7 +284,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         text: 'Manage Recovery',
                       ),
                     );
-                  } else if (showInitiateRealRecovery) {
+                  } else if (!hasMyInFlightRecovery) {
                     buttons.add(
                       RowButtonConfig(
                         onPressed: () => _initiateRecovery(context, ref, vaultId),

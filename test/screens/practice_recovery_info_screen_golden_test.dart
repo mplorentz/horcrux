@@ -172,6 +172,38 @@ void main() {
       await harness.dispose();
     });
 
+    testGoldens('recovery plan has no stewards', (tester) async {
+      final vault = createTestVault(
+        id: 'test-vault',
+        name: 'My Important Vault',
+        ownerPubkey: testPubkey,
+        backupConfig: BackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          stewards: const [],
+          relays: const ['wss://relay.example.com'],
+          createdAt: DateTime(2024, 10, 1, 10, 30),
+          distributionVersion: 0,
+        ),
+      );
+
+      final harness = await pumpGoldenWidget(
+        tester,
+        const PracticeRecoveryInfoScreen(vaultId: 'test-vault'),
+        overrides: [
+          vaultProvider(
+            'test-vault',
+          ).overrideWith((ref) => Stream.value(vault)),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+        surfaceSize: const Size(375, 2000),
+      );
+
+      await screenMatchesGolden(tester, 'practice_recovery_no_stewards_detail');
+
+      await harness.dispose();
+    });
+
     testGoldens('ready with 3 of 5 threshold', (tester) async {
       final vault = createTestVault(
         id: 'test-vault',

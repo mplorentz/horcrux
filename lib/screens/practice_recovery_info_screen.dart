@@ -80,6 +80,15 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       );
     }
 
+    if (backupConfig.stewards.isEmpty) {
+      return _buildNotReadyMessage(
+        context,
+        'No Stewards on Recovery Plan',
+        'Add at least one steward to your recovery plan before you can practice recovery.\n\n'
+            'Use "Change Recovery Plan" on the vault detail screen to add stewards.',
+      );
+    }
+
     if (!backupConfig.isValid) {
       return _buildNotReadyMessage(
         context,

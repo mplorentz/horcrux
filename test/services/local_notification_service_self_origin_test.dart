@@ -102,12 +102,18 @@ void main() {
     recoveryService = _FakeRecoveryService();
   });
 
-  LocalNotificationService buildService({String? currentPubkey}) {
+  LocalNotificationService buildService({
+    String? currentPubkey,
+    bool Function()? isForegrounded,
+  }) {
     return LocalNotificationService(
       vaultRepository: vaultRepository,
       loginService: _FakeLoginService(currentPubkey),
       appDatabase: AppDatabase(NativeDatabase.memory()),
       getRecoveryService: () => recoveryService,
+      // Tests default to "background" so behavior does not depend on the
+      // binding's lifecycle (horcrux_app-tur foreground gate).
+      isForegrounded: isForegrounded ?? () => false,
     );
   }
 
@@ -222,6 +228,48 @@ void main() {
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           ),
           vaultId: 'vault-1',
+        );
+
+        expect(vaultRepository.getVaultCalls, equals(['vault-1']));
+      },
+    );
+  });
+
+  group('LocalNotificationService foreground shard suppression (horcrux_app-tur)', () {
+    test(
+      'kind-1337 from a peer is suppressed when isForegrounded is true '
+      '(before vault lookup)',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
+
+        await service.notifyShareDataProcessed(
+          event: buildShare(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          share: makeShare(vaultId: 'vault-1'),
+        );
+
+        expect(vaultRepository.getVaultCalls, isEmpty);
+      },
+    );
+    test(
+      'kind-1337 from a peer still reaches vault lookup when not foregrounded',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => false,
+        );
+
+        await service.notifyShareDataProcessed(
+          event: buildShare(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          share: makeShare(vaultId: 'vault-1'),
         );
 
         expect(vaultRepository.getVaultCalls, equals(['vault-1']));
