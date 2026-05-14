@@ -256,7 +256,7 @@ void main() {
         expect(vaultRepository.getVaultCalls, isEmpty);
       },
     );
-     test(
+    test(
       'kind-1337 from a peer still reaches vault lookup when not foregrounded',
       () async {
         final service = buildService(
