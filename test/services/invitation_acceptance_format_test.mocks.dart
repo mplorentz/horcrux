@@ -802,6 +802,15 @@ class MockVaultRepository extends _i1.Mock implements _i12.VaultRepository {
       ) as _i7.Future<List<_i8.Share>>);
 
   @override
+  _i7.Future<int> maxHeldShareDistributionVersion(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #maxHeldShareDistributionVersion,
+          [vaultId],
+        ),
+        returnValue: _i7.Future<int>.value(0),
+      ) as _i7.Future<int>);
+
+  @override
   _i7.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #clearSharesForVault,
