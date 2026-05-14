@@ -335,7 +335,8 @@ class VaultShareService {
         );
       }
 
-      Log.info('processKeyHolderRemoval: vault ${vaultId.substring(0, 8)}...');
+      Log.info(
+          'processKeyHolderRemoval: vault ${vaultId.substring(0, vaultId.length.clamp(0, 8))}...');
 
       final vault = await repository.getVault(vaultId);
       if (vault == null) {
