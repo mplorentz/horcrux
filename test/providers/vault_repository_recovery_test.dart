@@ -204,5 +204,88 @@ void main() {
       expect(responses, hasLength(1));
       expect(responses.single.sharePayload, contains('still-there'));
     });
+
+    test(
+      'archiveActiveRecoverySessionsInitiatedBy archives active sessions and clears share payloads',
+      () async {
+        final fixture = await RecoverySessionFixture.inProgress(
+          db,
+          ownerPubkey: TestHexPubkeys.alice,
+          initiatorPubkey: TestHexPubkeys.alice,
+          participantPubkeys: const [TestHexPubkeys.bob],
+          threshold: 1,
+        );
+        await fixture.withResponse(
+          responderPubkey: TestHexPubkeys.bob,
+          approved: true,
+          sharePayload: '{"shard":"secret"}',
+        );
+
+        await repository.archiveActiveRecoverySessionsInitiatedBy(TestHexPubkeys.alice);
+
+        final requestRow = await db.recoveryDao.getById(fixture.requestId);
+        expect(requestRow, isNotNull);
+        expect(requestRow!.status, RecoveryRequestStatus.archived.name);
+        expect(requestRow.completedAt, isNotNull);
+
+        final responses = await db.recoveryDao.responsesFor(fixture.requestId);
+        expect(responses, hasLength(1));
+        expect(responses.single.sharePayload, isEmpty);
+      },
+    );
+
+    test(
+      'archiveActiveRecoverySessionsInitiatedBy leaves other-initiator sessions active',
+      () async {
+        final initiatedByAlice = await RecoverySessionFixture.inProgress(
+          db,
+          ownerPubkey: TestHexPubkeys.alice,
+          initiatorPubkey: TestHexPubkeys.alice,
+          participantPubkeys: const [TestHexPubkeys.bob],
+          threshold: 1,
+        );
+        final initiatedByBob = await RecoverySessionFixture.inProgress(
+          db,
+          vaultId: initiatedByAlice.vaultId,
+          ownerPubkey: TestHexPubkeys.alice,
+          initiatorPubkey: TestHexPubkeys.bob,
+          participantPubkeys: const [TestHexPubkeys.alice],
+          threshold: 1,
+        );
+
+        await repository.archiveActiveRecoverySessionsInitiatedBy(TestHexPubkeys.alice);
+
+        final rowAlice = await db.recoveryDao.getById(initiatedByAlice.requestId);
+        expect(rowAlice!.status, RecoveryRequestStatus.archived.name);
+
+        final rowBobInit = await db.recoveryDao.getById(initiatedByBob.requestId);
+        expect(rowBobInit!.status, RecoveryRequestStatus.inProgress.name);
+      },
+    );
+
+    test(
+      'archiveActiveRecoverySessionsInitiatedBy does not alter completed sessions',
+      () async {
+        final fixture = await RecoverySessionFixture.inProgress(
+          db,
+          ownerPubkey: TestHexPubkeys.alice,
+          initiatorPubkey: TestHexPubkeys.alice,
+          participantPubkeys: const [TestHexPubkeys.bob],
+          threshold: 1,
+        );
+        final vault = await repository.getVault(fixture.vaultId);
+        final request = vault!.recoveryRequests.firstWhere((r) => r.id == fixture.requestId);
+        await repository.updateRecoveryRequestInVault(
+          fixture.vaultId,
+          fixture.requestId,
+          request.copyWith(status: RecoveryRequestStatus.completed),
+        );
+
+        await repository.archiveActiveRecoverySessionsInitiatedBy(TestHexPubkeys.alice);
+
+        final row = await db.recoveryDao.getById(fixture.requestId);
+        expect(row!.status, RecoveryRequestStatus.completed.name);
+      },
+    );
   });
 }

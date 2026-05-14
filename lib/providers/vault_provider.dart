@@ -706,6 +706,51 @@ class VaultRepository {
     }
   }
 
+  /// Archives every **active** recovery session ([RecoveryRequestStatus.isActive])
+  /// whose [RecoveryRequest.initiatorPubkey] equals [initiatorPubkeyHex], clears
+  /// any persisted steward share payloads for those sessions, and [refresh]es the
+  /// vault cache.
+  ///
+  /// Intended for a fresh app launch with a stable identity: in-flight sessions
+  /// that survived on disk from a prior run are treated as abandoned so the UI
+  /// and providers do not keep showing them as ongoing recovery.
+  ///
+  /// Called from `initializeAppServices` in `app_initialization.dart` (before
+  /// `RecoveryService.initialize`) on startup when a stored Nostr key exists.
+  Future<void> archiveActiveRecoverySessionsInitiatedBy(
+    String initiatorPubkeyHex,
+  ) async {
+    final requests = await getAllRecoveryRequests();
+    final toArchive = requests
+        .where(
+          (r) => r.initiatorPubkey == initiatorPubkeyHex && r.status.isActive,
+        )
+        .toList();
+    if (toArchive.isEmpty) {
+      return;
+    }
+
+    Log.info(
+      'Archiving ${toArchive.length} active recovery session(s) previously initiated '
+      'by the current user (${initiatorPubkeyHex.substring(0, 8)}…)',
+    );
+
+    for (final request in toArchive) {
+      await updateRecoveryRequestInVault(
+        request.vaultId,
+        request.id,
+        request.copyWith(status: RecoveryRequestStatus.archived),
+      );
+      await deleteRecoveryResponseSharesForRequest(
+        vaultId: request.vaultId,
+        requestId: request.id,
+      );
+    }
+
+    await _db.walCheckpointTruncate();
+    await refresh();
+  }
+
   Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
     String vaultId,
   ) async {

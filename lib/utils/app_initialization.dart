@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../providers/vault_provider.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_receiver.dart';
@@ -38,6 +39,12 @@ Future<void> initializeAppServices(
   // or from settings. See [PushNotificationReceiver.optIn]. Users who haven't
   // opted in never have Firebase initialized on their device.
   await ref.read(pushNotificationReceiverProvider).maybeInitialize();
+
+  // Abandoned self-initiated recoveries from a prior run (crash / force-quit).
+  final currentPubkey = await ref.read(loginServiceProvider).getCurrentPublicKey();
+  if (currentPubkey != null) {
+    await ref.read(vaultRepositoryProvider).archiveActiveRecoverySessionsInitiatedBy(currentPubkey);
+  }
 
   // Recovery dedupe + notification timeline before relay traffic.
   await ref.read(recoveryServiceProvider).initialize();
