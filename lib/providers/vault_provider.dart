@@ -853,10 +853,11 @@ class VaultRepository {
       (c) => c.id == dbSteward.id,
       orElse: () => dbSteward,
     );
-    // Prefer invite code from the invitations table when present; otherwise keep the overlay
-    // value (e.g. stewards not yet written through InvitationService).
-    return cached.copyWith(
-      inviteCode: dbSteward.inviteCode ?? cached.inviteCode,
+    // Use dbSteward as the base so DB-updated fields (pubkey, name, contactInfo,
+    // isOwner) are never masked by the in-memory overlay. Only overlay the
+    // transient inviteCode, which may not be persisted yet.
+    return dbSteward.copyWith(
+      inviteCode: cached.inviteCode ?? dbSteward.inviteCode,
     );
   }
 
