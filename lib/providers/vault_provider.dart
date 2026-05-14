@@ -753,12 +753,14 @@ class VaultRepository {
   /// any persisted steward share payloads for those sessions, and [refresh]es the
   /// vault cache.
   ///
-  /// Intended for a fresh app launch with a stable identity: in-flight sessions
-  /// that survived on disk from a prior run are treated as abandoned so the UI
+  /// Intended when the user has a stable identity but in-flight sessions they
+  /// initiated are no longer meaningful: those sessions are archived so the UI
   /// and providers do not keep showing them as ongoing recovery.
   ///
   /// Called from `initializeAppServices` in `app_initialization.dart` (before
-  /// `RecoveryService.initialize`) on startup when a stored Nostr key exists.
+  /// `RecoveryService.initialize`) on startup when a stored Nostr key exists,
+  /// and from [NdkService] when processing a kind-1337 inner event published by
+  /// the current user (share distribution echo from relays).
   Future<void> archiveActiveRecoverySessionsInitiatedBy(
     String initiatorPubkeyHex,
   ) async {

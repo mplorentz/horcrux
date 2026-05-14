@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../providers/vault_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
 import 'login_service.dart';
@@ -553,6 +554,8 @@ class NdkService {
         return;
       }
 
+      await _maybeArchiveSelfInitiatedRecoveriesForOwnShareDistribution(event);
+
       final vaultShareService = _ref.read(vaultShareServiceProvider);
       await vaultShareService.processVaultShare(vaultId, shardData);
 
@@ -566,6 +569,25 @@ class NdkService {
       Log.error('Error handling shard data event ${event.id}', e);
     }
   }
+
+  /// When relay scan delivers our own share distribution ([NostrKind.shareData]),
+  /// treat any still-active recovery sessions we initiated as abandoned (same
+  /// policy as startup in [initializeAppServices]).
+  Future<void> _maybeArchiveSelfInitiatedRecoveriesForOwnShareDistribution(
+    Nip01Event innerShareEvent,
+  ) async {
+    final selfPubkey = await getCurrentPubkey();
+    if (selfPubkey == null || selfPubkey != innerShareEvent.pubKey) {
+      return;
+    }
+    await _ref.read(vaultRepositoryProvider).archiveActiveRecoverySessionsInitiatedBy(selfPubkey);
+  }
+
+  @visibleForTesting
+  Future<void> archiveSelfInitiatedRecoveriesWhenProcessingOwnShareForTesting(
+    Nip01Event innerShareEvent,
+  ) =>
+      _maybeArchiveSelfInitiatedRecoveriesForOwnShareDistribution(innerShareEvent);
 
   /// Handle incoming recovery request data (kind 1338)
   ///
