@@ -12,7 +12,6 @@ import '../utils/invite_code_utils.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/row_button.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
 
@@ -205,15 +204,9 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     return PopScope(
       canPop: false,
       child: HorcruxScaffold(
-        appBar: HorcruxAppBar(
+        appBar: const HorcruxAppBar(
           title: 'Load Vaults',
           automaticallyImplyLeading: false,
-          actions: [
-            TextButton(
-              onPressed: _continue,
-              child: const Text('Skip'),
-            ),
-          ],
         ),
         body: switch (_state) {
           _ScanState.editing => _buildEditingBody(),
@@ -254,11 +247,19 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
               ],
             ),
           ),
-          RowButton(
-            onPressed: _startScan,
-            icon: Icons.search,
-            text: 'Scan for Vaults',
-            addBottomSafeArea: true,
+          RowButtonStack(
+            buttons: [
+              RowButtonConfig(
+                onPressed: _startScan,
+                icon: Icons.search,
+                text: 'Scan for Vaults',
+              ),
+              RowButtonConfig(
+                onPressed: _continue,
+                icon: Icons.skip_next,
+                text: 'Skip',
+              ),
+            ],
           ),
         ],
       ),
