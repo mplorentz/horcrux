@@ -817,5 +817,58 @@ void main() {
         expect(v.backupConfig!.instructions, 'Instr 3');
       },
     );
+
+    test(
+      'stale same-version manifest still restores owned_vaults shell for owner',
+      () async {
+        const shellVaultId = 'manifest-stale-shell-vault';
+        final embedded = <Map<String, String>>[
+          {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
+          {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+        ];
+        final manifest = Share(
+          payload: '',
+          threshold: 2,
+          shareIndex: -1,
+          totalShares: 2,
+          primeMod: TestShare.testPrimeMod,
+          creatorPubkey: owner,
+          createdAt: 1700000000,
+          vaultId: shellVaultId,
+          vaultName: 'Wire Vault',
+          ownerName: 'Alice',
+          instructions: 'Once',
+          stewards: embedded,
+          relayUrls: const ['ws://relay.example'],
+          distributionVersion: 3,
+          nostrEventId: 'manifest-shell-a',
+        );
+
+        await service.processVaultShare(shellVaultId, manifest);
+        expect(await repository.isOwnedVault(shellVaultId), isTrue);
+
+        await repository.deleteVaultContent(shellVaultId);
+        expect(await repository.isOwnedVault(shellVaultId), isFalse);
+
+        await service.processVaultShare(
+          shellVaultId,
+          manifest.copyWith(
+            instructions: 'Replay same dist',
+            nostrEventId: 'manifest-shell-b',
+          ),
+        );
+
+        expect(await repository.isOwnedVault(shellVaultId), isTrue);
+        final v = await repository.getVault(shellVaultId);
+        expect(v, isNotNull);
+        expect(v!.backupConfig, isNotNull);
+        expect(v.backupConfig!.distributionVersion, 3);
+        expect(
+          v.backupConfig!.instructions,
+          'Once',
+          reason: 'stale ingest must not overwrite metadata',
+        );
+      },
+    );
   });
 }
