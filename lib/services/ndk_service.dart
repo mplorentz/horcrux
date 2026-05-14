@@ -850,15 +850,14 @@ class NdkService {
   /// relay rejected it. Callers that only care about the event ID can read
   /// `.id` off the result; callers that need to forward the wrap elsewhere
   /// (e.g. to `horcrux-notifier` for push) can pass the whole event.
-  Future<Nip01Event?> publishEncryptedEvent({
-    required String content,
-    required int kind,
-    required String recipientPubkey, // Hex format
-    required List<String> relays,
-    List<List<String>>? tags,
-    String? customPubkey, // Hex format - if null, uses current user's pubkey
-    String? vaultId,
-  }) async {
+  Future<Nip01Event?> publishEncryptedEvent(
+      {required String content,
+      required int kind,
+      required String recipientPubkey, // Hex format
+      required List<String> relays,
+      List<List<String>>? tags,
+      String? customPubkey, // Hex format - if null, uses current user's pubkey
+      String? vaultId}) async {
     await _ensureInitialized();
 
     try {
@@ -866,12 +865,11 @@ class NdkService {
           recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
 
       final giftWrap = await _buildGiftWrapEvent(
-        content: content,
-        kind: kind,
-        recipientPubkey: recipientPubkey,
-        tags: tags,
-        customPubkey: customPubkey,
-      );
+          content: content,
+          kind: kind,
+          recipientPubkey: recipientPubkey,
+          tags: tags,
+          customPubkey: customPubkey);
 
       final result = await _publishService.enqueueEvent(
         event: giftWrap,
@@ -926,16 +924,28 @@ class NdkService {
       throw Exception('No sender pubkey available');
     }
 
+    final effectiveTags = <List<String>>[
+      for (final t in tags ?? const <List<String>>[])
+        if (t.isEmpty || t.first != 'expiration') t,
+    ];
+      final expSec =
+          DateTime.now().toUtc().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
+      effectiveTags.add(['expiration', expSec.toString()]);
+    } else if (nip40Expiration.inMicroseconds != 0) {
+      final expSec = DateTime.now().toUtc().add(nip40Expiration).millisecondsSinceEpoch ~/ 1000;
+      effectiveTags.add(['expiration', expSec.toString()]);
+    }
+
     final rumor = await _ndk!.giftWrap.createRumor(
       customPubkey: senderPubkey,
       content: content,
       kind: kind,
-      tags: tags ?? [],
+      tags: effectiveTags,
     );
 
     return _ndk!.giftWrap.toGiftWrap(
-      rumor: rumor,
-      recipientPubkey: recipientPubkey,
+      rumor = rumor,
+      recipientPubkey = recipientPubkey,
     );
   }
 
@@ -956,8 +966,17 @@ class NdkService {
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
     String? vaultId,
+    Duration? nip40Expiration,
   }) async {
     await _ensureInitialized();
+
+    if (nip40Expiration != null && nip40Expiration.isNegative) {
+      throw ArgumentError.value(
+        nip40Expiration,
+        'nip40Expiration',
+        'must not be negative',
+      );
+    }
 
     final results = <Nip01Event?>[];
 
@@ -965,14 +984,13 @@ class NdkService {
       try {
         results.add(
           await publishEncryptedEvent(
-            content: content,
-            kind: kind,
-            recipientPubkey: recipientPubkey,
-            relays: relays,
-            tags: tags,
-            customPubkey: customPubkey,
-            vaultId: vaultId,
-          ),
+              content: content,
+              kind: kind,
+              recipientPubkey: recipientPubkey,
+              relays: relays,
+              tags: tags,
+              customPubkey: customPubkey,
+              vaultId: vaultId),
         );
       } catch (e) {
         Log.error(
