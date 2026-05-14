@@ -8,11 +8,21 @@ import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/login_service.dart';
+import 'package:horcrux/services/notification_recency.dart';
 
 import '../fixtures/test_keys.dart';
 import '../helpers/test_database.dart';
 
 class _MockLoginService extends Mock implements LoginService {}
+
+/// [LoginService] that only implements [getCurrentPublicKey]; other methods use [Mock]'s noSuchMethod.
+class _LoginServiceWithPubkey extends Mock implements LoginService {
+  _LoginServiceWithPubkey(this._pubkey);
+  final String? _pubkey;
+
+  @override
+  Future<String?> getCurrentPublicKey() async => _pubkey;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -203,6 +213,147 @@ void main() {
       final responses = await db.recoveryDao.responsesFor(fixture.requestId);
       expect(responses, hasLength(1));
       expect(responses.single.sharePayload, contains('still-there'));
+    });
+  });
+
+  group('addRecoveryRequestToVault recency gate', () {
+    late AppDatabase db;
+    late VaultRepository repository;
+
+    tearDown(() async {
+      repository.dispose();
+      await db.close();
+    });
+
+    test('drops self-initiated request when eventCreationTime predates first app open', () async {
+      db = newTestDatabase();
+      repository = VaultRepository(_LoginServiceWithPubkey(TestHexPubkeys.alice), db: db);
+      final vault = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+        threshold: 2,
+        totalShares: 3,
+      );
+      final firstOpen = DateTime.utc(2024, 6, 1, 12, 0, 0);
+      await db.appStateDao.setInt(
+        key: firstAppOpenUtcKey,
+        value: firstOpen.millisecondsSinceEpoch,
+      );
+
+      final request = RecoveryRequest.makeFromParticipants(
+        id: 'req-stale-self',
+        vaultId: vault.vaultId,
+        initiatorPubkey: TestHexPubkeys.alice,
+        requestedAt: DateTime.utc(2024, 5, 15, 12, 0, 0),
+        eventCreationTime: DateTime.utc(2024, 5, 10, 12, 0, 0),
+        status: RecoveryRequestStatus.inProgress,
+        threshold: 2,
+        stewardPubkeys: const [TestHexPubkeys.bob, TestHexPubkeys.charlie],
+      );
+
+      await repository.addRecoveryRequestToVault(vault.vaultId, request);
+
+      expect(await db.recoveryDao.getById(request.id), isNull);
+    });
+
+    test('persists self-initiated request when eventCreationTime is after first app open',
+        () async {
+      db = newTestDatabase();
+      repository = VaultRepository(_LoginServiceWithPubkey(TestHexPubkeys.alice), db: db);
+      final vault = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+        threshold: 2,
+        totalShares: 3,
+      );
+      final firstOpen = DateTime.utc(2024, 6, 1, 12, 0, 0);
+      await db.appStateDao.setInt(
+        key: firstAppOpenUtcKey,
+        value: firstOpen.millisecondsSinceEpoch,
+      );
+
+      final request = RecoveryRequest.makeFromParticipants(
+        id: 'req-recent-self',
+        vaultId: vault.vaultId,
+        initiatorPubkey: TestHexPubkeys.alice,
+        requestedAt: DateTime.utc(2024, 6, 15, 12, 0, 0),
+        eventCreationTime: DateTime.utc(2024, 6, 15, 12, 0, 0),
+        status: RecoveryRequestStatus.inProgress,
+        threshold: 2,
+        stewardPubkeys: const [TestHexPubkeys.bob, TestHexPubkeys.charlie],
+      );
+
+      await repository.addRecoveryRequestToVault(vault.vaultId, request);
+
+      final row = await db.recoveryDao.getById(request.id);
+      expect(row, isNotNull);
+      expect(row!.initiatorPubkey, TestHexPubkeys.alice);
+    });
+
+    test('persists self-initiated request when eventCreationTime is null (local create path)',
+        () async {
+      db = newTestDatabase();
+      repository = VaultRepository(_LoginServiceWithPubkey(TestHexPubkeys.alice), db: db);
+      final vault = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+        threshold: 2,
+        totalShares: 3,
+      );
+      final firstOpen = DateTime.utc(2024, 6, 1, 12, 0, 0);
+      await db.appStateDao.setInt(
+        key: firstAppOpenUtcKey,
+        value: firstOpen.millisecondsSinceEpoch,
+      );
+
+      final request = RecoveryRequest.makeFromParticipants(
+        id: 'req-local-self',
+        vaultId: vault.vaultId,
+        initiatorPubkey: TestHexPubkeys.alice,
+        requestedAt: DateTime.utc(2024, 1, 1, 12, 0, 0),
+        status: RecoveryRequestStatus.pending,
+        threshold: 2,
+        stewardPubkeys: const [TestHexPubkeys.bob, TestHexPubkeys.charlie],
+      );
+
+      await repository.addRecoveryRequestToVault(vault.vaultId, request);
+
+      final row = await db.recoveryDao.getById(request.id);
+      expect(row, isNotNull);
+      expect(row!.status, RecoveryRequestStatus.pending.name);
+    });
+
+    test('persists other-initiator request even when event predates first app open', () async {
+      db = newTestDatabase();
+      repository = VaultRepository(_LoginServiceWithPubkey(TestHexPubkeys.alice), db: db);
+      final vault = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+        threshold: 2,
+        totalShares: 3,
+      );
+      final firstOpen = DateTime.utc(2024, 6, 1, 12, 0, 0);
+      await db.appStateDao.setInt(
+        key: firstAppOpenUtcKey,
+        value: firstOpen.millisecondsSinceEpoch,
+      );
+
+      final request = RecoveryRequest.makeFromParticipants(
+        id: 'req-other-stale',
+        vaultId: vault.vaultId,
+        initiatorPubkey: TestHexPubkeys.bob,
+        requestedAt: DateTime.utc(2024, 5, 15, 12, 0, 0),
+        eventCreationTime: DateTime.utc(2024, 5, 10, 12, 0, 0),
+        status: RecoveryRequestStatus.inProgress,
+        threshold: 2,
+        stewardPubkeys: const [TestHexPubkeys.alice, TestHexPubkeys.charlie],
+      );
+
+      await repository.addRecoveryRequestToVault(vault.vaultId, request);
+
+      final row = await db.recoveryDao.getById(request.id);
+      expect(row, isNotNull);
+      expect(row!.initiatorPubkey, TestHexPubkeys.bob);
     });
   });
 }
