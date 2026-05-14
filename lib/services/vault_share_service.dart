@@ -171,6 +171,13 @@ class VaultShareService {
           'processVaultShare: ignored stale manifest for vault $vaultId '
           '(incoming distributionVersion=$incoming, storedHighWater=$storedHighWater)',
         );
+        // Same-version replay can arrive after reinstall: `vaults` already
+        // reflects this distribution but `owned_vaults` is missing. Still
+        // materialize the owner shell when the ingesting key is the creator.
+        final pkStale = await _getNdkService().getCurrentPubkey();
+        if (pkStale != null && pkStale == shardData.creatorPubkey) {
+          await repository.ensureOwnedVaultShell(vaultId);
+        }
         return;
       }
 

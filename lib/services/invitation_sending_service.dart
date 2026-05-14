@@ -1,18 +1,21 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../database/app_database_provider.dart';
 import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../models/nostr_kinds.dart';
 
 /// Provider for InvitationSendingService.
 ///
-/// Watches [ndkServiceProvider] so a logout-driven NDK rebuild propagates
-/// here and we don't keep publishing through the previous session's NDK
-/// instance.
+/// Uses [ref.read] for [ndkServiceProvider] to break the circular dependency:
+///   ndk → invitationService → invitationSendingService → ndk.
+/// [appDatabaseProvider] is watched so that a logout (which invalidates the
+/// database) cascades and rebuilds this provider with a fresh NdkService.
 final invitationSendingServiceProvider = Provider<InvitationSendingService>((
   ref,
 ) {
-  return InvitationSendingService(ref.watch(ndkServiceProvider));
+  ref.watch(appDatabaseProvider); // keep logout-invalidation cascade
+  return InvitationSendingService(ref.read(ndkServiceProvider));
 });
 
 /// Stateless utility service for creating and publishing outgoing invitation-related Nostr events
@@ -34,6 +37,7 @@ class InvitationSendingService {
   /// Returns event ID, or null if publishing fails.
   Future<String?> sendInvitationAcceptanceEvent({
     required String inviteCode,
+    required String vaultId,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
   }) async {
@@ -47,6 +51,7 @@ class InvitationSendingService {
       // Create invitation acceptance event payload
       final acceptanceData = {
         'invite_code': inviteCode,
+        'vault_id': vaultId,
         'invitee_pubkey': currentPubkey,
         'responded_at': DateTime.now().toIso8601String(),
       };

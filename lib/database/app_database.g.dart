@@ -1244,6 +1244,11 @@ class $StewardsTable extends Stewards with TableInfo<$StewardsTable, StewardRow>
   @override
   late final GeneratedColumn<String> pubkey = GeneratedColumn<String>('pubkey', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _inviteCodeMeta = const VerificationMeta('inviteCode');
+  @override
+  late final GeneratedColumn<String> inviteCode = GeneratedColumn<String>(
+      'invite_code', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>('name', aliasedName, true,
@@ -1279,6 +1284,7 @@ class $StewardsTable extends Stewards with TableInfo<$StewardsTable, StewardRow>
         vaultId,
         shareIndex,
         pubkey,
+        inviteCode,
         name,
         contactInfo,
         isOwner,
@@ -1314,6 +1320,10 @@ class $StewardsTable extends Stewards with TableInfo<$StewardsTable, StewardRow>
     }
     if (data.containsKey('pubkey')) {
       context.handle(_pubkeyMeta, pubkey.isAcceptableOrUnknown(data['pubkey']!, _pubkeyMeta));
+    }
+    if (data.containsKey('invite_code')) {
+      context.handle(
+          _inviteCodeMeta, inviteCode.isAcceptableOrUnknown(data['invite_code']!, _inviteCodeMeta));
     }
     if (data.containsKey('name')) {
       context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
@@ -1354,6 +1364,8 @@ class $StewardsTable extends Stewards with TableInfo<$StewardsTable, StewardRow>
           .read(DriftSqlType.int, data['${effectivePrefix}share_index'])!,
       pubkey:
           attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}pubkey']),
+      inviteCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}invite_code']),
       name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name']),
       contactInfo: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}contact_info']),
@@ -1383,6 +1395,11 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
 
   /// Nullable until the invitee accepts and we learn their pubkey.
   final String? pubkey;
+
+  /// Owner-generated invite code bound to this steward slot. Duplicated from
+  /// [Invitations] so another owner device can match [NostrKind.invitationAcceptance]
+  /// payloads when its invitations row is missing (e.g. plan created elsewhere).
+  final String? inviteCode;
   final String? name;
 
   /// Shared on the wire as part of the share event; UI hides it outside
@@ -1399,6 +1416,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       required this.vaultId,
       required this.shareIndex,
       this.pubkey,
+      this.inviteCode,
       this.name,
       this.contactInfo,
       required this.isOwner,
@@ -1413,6 +1431,9 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
     map['share_index'] = Variable<int>(shareIndex);
     if (!nullToAbsent || pubkey != null) {
       map['pubkey'] = Variable<String>(pubkey);
+    }
+    if (!nullToAbsent || inviteCode != null) {
+      map['invite_code'] = Variable<String>(inviteCode);
     }
     if (!nullToAbsent || name != null) {
       map['name'] = Variable<String>(name);
@@ -1437,6 +1458,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       vaultId: Value(vaultId),
       shareIndex: Value(shareIndex),
       pubkey: pubkey == null && nullToAbsent ? const Value.absent() : Value(pubkey),
+      inviteCode: inviteCode == null && nullToAbsent ? const Value.absent() : Value(inviteCode),
       name: name == null && nullToAbsent ? const Value.absent() : Value(name),
       contactInfo: contactInfo == null && nullToAbsent ? const Value.absent() : Value(contactInfo),
       isOwner: Value(isOwner),
@@ -1454,6 +1476,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       vaultId: serializer.fromJson<String>(json['vaultId']),
       shareIndex: serializer.fromJson<int>(json['shareIndex']),
       pubkey: serializer.fromJson<String?>(json['pubkey']),
+      inviteCode: serializer.fromJson<String?>(json['inviteCode']),
       name: serializer.fromJson<String?>(json['name']),
       contactInfo: serializer.fromJson<String?>(json['contactInfo']),
       isOwner: serializer.fromJson<bool>(json['isOwner']),
@@ -1470,6 +1493,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       'vaultId': serializer.toJson<String>(vaultId),
       'shareIndex': serializer.toJson<int>(shareIndex),
       'pubkey': serializer.toJson<String?>(pubkey),
+      'inviteCode': serializer.toJson<String?>(inviteCode),
       'name': serializer.toJson<String?>(name),
       'contactInfo': serializer.toJson<String?>(contactInfo),
       'isOwner': serializer.toJson<bool>(isOwner),
@@ -1484,6 +1508,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
           String? vaultId,
           int? shareIndex,
           Value<String?> pubkey = const Value.absent(),
+          Value<String?> inviteCode = const Value.absent(),
           Value<String?> name = const Value.absent(),
           Value<String?> contactInfo = const Value.absent(),
           bool? isOwner,
@@ -1495,6 +1520,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
         vaultId: vaultId ?? this.vaultId,
         shareIndex: shareIndex ?? this.shareIndex,
         pubkey: pubkey.present ? pubkey.value : this.pubkey,
+        inviteCode: inviteCode.present ? inviteCode.value : this.inviteCode,
         name: name.present ? name.value : this.name,
         contactInfo: contactInfo.present ? contactInfo.value : this.contactInfo,
         isOwner: isOwner ?? this.isOwner,
@@ -1508,6 +1534,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
       vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
       shareIndex: data.shareIndex.present ? data.shareIndex.value : this.shareIndex,
       pubkey: data.pubkey.present ? data.pubkey.value : this.pubkey,
+      inviteCode: data.inviteCode.present ? data.inviteCode.value : this.inviteCode,
       name: data.name.present ? data.name.value : this.name,
       contactInfo: data.contactInfo.present ? data.contactInfo.value : this.contactInfo,
       isOwner: data.isOwner.present ? data.isOwner.value : this.isOwner,
@@ -1524,6 +1551,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
           ..write('vaultId: $vaultId, ')
           ..write('shareIndex: $shareIndex, ')
           ..write('pubkey: $pubkey, ')
+          ..write('inviteCode: $inviteCode, ')
           ..write('name: $name, ')
           ..write('contactInfo: $contactInfo, ')
           ..write('isOwner: $isOwner, ')
@@ -1535,8 +1563,8 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, vaultId, shareIndex, pubkey, name, contactInfo, isOwner, joinedAt, leftAt, removalReason);
+  int get hashCode => Object.hash(id, vaultId, shareIndex, pubkey, inviteCode, name, contactInfo,
+      isOwner, joinedAt, leftAt, removalReason);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1545,6 +1573,7 @@ class StewardRow extends DataClass implements Insertable<StewardRow> {
           other.vaultId == this.vaultId &&
           other.shareIndex == this.shareIndex &&
           other.pubkey == this.pubkey &&
+          other.inviteCode == this.inviteCode &&
           other.name == this.name &&
           other.contactInfo == this.contactInfo &&
           other.isOwner == this.isOwner &&
@@ -1558,6 +1587,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
   final Value<String> vaultId;
   final Value<int> shareIndex;
   final Value<String?> pubkey;
+  final Value<String?> inviteCode;
   final Value<String?> name;
   final Value<String?> contactInfo;
   final Value<bool> isOwner;
@@ -1570,6 +1600,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
     this.vaultId = const Value.absent(),
     this.shareIndex = const Value.absent(),
     this.pubkey = const Value.absent(),
+    this.inviteCode = const Value.absent(),
     this.name = const Value.absent(),
     this.contactInfo = const Value.absent(),
     this.isOwner = const Value.absent(),
@@ -1583,6 +1614,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
     required String vaultId,
     required int shareIndex,
     this.pubkey = const Value.absent(),
+    this.inviteCode = const Value.absent(),
     this.name = const Value.absent(),
     this.contactInfo = const Value.absent(),
     this.isOwner = const Value.absent(),
@@ -1599,6 +1631,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
     Expression<String>? vaultId,
     Expression<int>? shareIndex,
     Expression<String>? pubkey,
+    Expression<String>? inviteCode,
     Expression<String>? name,
     Expression<String>? contactInfo,
     Expression<bool>? isOwner,
@@ -1612,6 +1645,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
       if (vaultId != null) 'vault_id': vaultId,
       if (shareIndex != null) 'share_index': shareIndex,
       if (pubkey != null) 'pubkey': pubkey,
+      if (inviteCode != null) 'invite_code': inviteCode,
       if (name != null) 'name': name,
       if (contactInfo != null) 'contact_info': contactInfo,
       if (isOwner != null) 'is_owner': isOwner,
@@ -1627,6 +1661,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
       Value<String>? vaultId,
       Value<int>? shareIndex,
       Value<String?>? pubkey,
+      Value<String?>? inviteCode,
       Value<String?>? name,
       Value<String?>? contactInfo,
       Value<bool>? isOwner,
@@ -1639,6 +1674,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
       vaultId: vaultId ?? this.vaultId,
       shareIndex: shareIndex ?? this.shareIndex,
       pubkey: pubkey ?? this.pubkey,
+      inviteCode: inviteCode ?? this.inviteCode,
       name: name ?? this.name,
       contactInfo: contactInfo ?? this.contactInfo,
       isOwner: isOwner ?? this.isOwner,
@@ -1663,6 +1699,9 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
     }
     if (pubkey.present) {
       map['pubkey'] = Variable<String>(pubkey.value);
+    }
+    if (inviteCode.present) {
+      map['invite_code'] = Variable<String>(inviteCode.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -1695,6 +1734,7 @@ class StewardsCompanion extends UpdateCompanion<StewardRow> {
           ..write('vaultId: $vaultId, ')
           ..write('shareIndex: $shareIndex, ')
           ..write('pubkey: $pubkey, ')
+          ..write('inviteCode: $inviteCode, ')
           ..write('name: $name, ')
           ..write('contactInfo: $contactInfo, ')
           ..write('isOwner: $isOwner, ')
@@ -7731,6 +7771,7 @@ typedef $$StewardsTableCreateCompanionBuilder = StewardsCompanion Function({
   required String vaultId,
   required int shareIndex,
   Value<String?> pubkey,
+  Value<String?> inviteCode,
   Value<String?> name,
   Value<String?> contactInfo,
   Value<bool> isOwner,
@@ -7744,6 +7785,7 @@ typedef $$StewardsTableUpdateCompanionBuilder = StewardsCompanion Function({
   Value<String> vaultId,
   Value<int> shareIndex,
   Value<String?> pubkey,
+  Value<String?> inviteCode,
   Value<String?> name,
   Value<String?> contactInfo,
   Value<bool> isOwner,
@@ -7826,6 +7868,9 @@ class $$StewardsTableFilterComposer extends Composer<_$AppDatabase, $StewardsTab
 
   ColumnFilters<String> get pubkey =>
       $composableBuilder(column: $table.pubkey, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get inviteCode =>
+      $composableBuilder(column: $table.inviteCode, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
@@ -7938,6 +7983,9 @@ class $$StewardsTableOrderingComposer extends Composer<_$AppDatabase, $StewardsT
   ColumnOrderings<String> get pubkey =>
       $composableBuilder(column: $table.pubkey, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get inviteCode =>
+      $composableBuilder(column: $table.inviteCode, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
 
@@ -7991,6 +8039,9 @@ class $$StewardsTableAnnotationComposer extends Composer<_$AppDatabase, $Steward
 
   GeneratedColumn<String> get pubkey =>
       $composableBuilder(column: $table.pubkey, builder: (column) => column);
+
+  GeneratedColumn<String> get inviteCode =>
+      $composableBuilder(column: $table.inviteCode, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -8115,6 +8166,7 @@ class $$StewardsTableTableManager extends RootTableManager<
             Value<String> vaultId = const Value.absent(),
             Value<int> shareIndex = const Value.absent(),
             Value<String?> pubkey = const Value.absent(),
+            Value<String?> inviteCode = const Value.absent(),
             Value<String?> name = const Value.absent(),
             Value<String?> contactInfo = const Value.absent(),
             Value<bool> isOwner = const Value.absent(),
@@ -8128,6 +8180,7 @@ class $$StewardsTableTableManager extends RootTableManager<
             vaultId: vaultId,
             shareIndex: shareIndex,
             pubkey: pubkey,
+            inviteCode: inviteCode,
             name: name,
             contactInfo: contactInfo,
             isOwner: isOwner,
@@ -8141,6 +8194,7 @@ class $$StewardsTableTableManager extends RootTableManager<
             required String vaultId,
             required int shareIndex,
             Value<String?> pubkey = const Value.absent(),
+            Value<String?> inviteCode = const Value.absent(),
             Value<String?> name = const Value.absent(),
             Value<String?> contactInfo = const Value.absent(),
             Value<bool> isOwner = const Value.absent(),
@@ -8154,6 +8208,7 @@ class $$StewardsTableTableManager extends RootTableManager<
             vaultId: vaultId,
             shareIndex: shareIndex,
             pubkey: pubkey,
+            inviteCode: inviteCode,
             name: name,
             contactInfo: contactInfo,
             isOwner: isOwner,

@@ -396,14 +396,15 @@ void main() {
       await harness.dispose();
     });
 
-    testGoldens('owner not as steward excluded from list', (tester) async {
+    testGoldens('owner as steward awaiting key still appears in list', (tester) async {
       final ownerPubkey = testPubkey;
       final stewardPubkeyB = otherPubkey;
       final stewardPubkeyC = thirdPubkey;
 
-      // Create owner steward with awaitingKey status (NOT a steward yet)
+      // Owner row in the plan with awaitingKey — must still list them so the owner
+      // sees themselves alongside other stewards.
       final ownerSteward = createOwnerSteward(pubkey: ownerPubkey, name: 'Device A').copyWith(
-        status: StewardStatus.awaitingKey, // Not holding a key
+        status: StewardStatus.awaitingKey,
       );
 
       // Create regular stewards
@@ -419,7 +420,7 @@ void main() {
         acknowledgedDistributionVersion: 1,
       );
 
-      // Create backup config with owner NOT as steward
+      // Backup plan includes owner-as-steward plus two peers already holding keys.
       final backupConfig = createBackupConfig(
         vaultId: 'test-vault',
         threshold: 2,
@@ -450,7 +451,7 @@ void main() {
         useScaffold: true,
       );
 
-      await screenMatchesGolden(tester, 'steward_list_owner_not_steward');
+      await screenMatchesGolden(tester, 'steward_list_owner_awaiting_key_visible');
 
       await harness.dispose();
     });
