@@ -339,17 +339,34 @@ class VaultRepository {
   /// Write [share] into the `held_shares` table and prune old versions.
   ///
   /// Also bumps `vaults.last_synced_at` so the reactive vault stream re-emits.
+  ///
+  /// **Slot replace:** before insert, deletes any existing row for the same
+  /// `(vaultId, shareIndex, distributionVersion)`. Relay replays or republished
+  /// gift-wraps can carry a **new** Nostr id for the same steward slot and
+  /// version; the partial unique index on `(vault_id, distribution_version,
+  /// nostr_event_id)` does not include `share_index`, so without this delete
+  /// those inserts would accumulate duplicate slots.
   Future<void> addShareToVault(String vaultId, Share share) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final id = '${vaultId}_${share.shareIndex}_${share.distributionVersion ?? 0}_$now';
+    final dist = share.distributionVersion ?? 0;
+    final id = '${vaultId}_${share.shareIndex}_${dist}_$now';
 
     await _db.transaction(() async {
+      await (_db.delete(_db.heldShares)
+            ..where(
+              (h) =>
+                  h.vaultId.equals(vaultId) &
+                  h.shareIndex.equals(share.shareIndex) &
+                  h.distributionVersion.equals(dist),
+            ))
+          .go();
+
       await _db.heldShareDao.insertIfNew(HeldSharesCompanion.insert(
         id: id,
         vaultId: vaultId,
         shareIndex: share.shareIndex,
         sharePayload: share.payload,
-        distributionVersion: share.distributionVersion ?? 0,
+        distributionVersion: dist,
         receivedAt: now,
         nostrEventId: Value(share.nostrEventId),
         lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
@@ -371,7 +388,7 @@ class VaultRepository {
     });
     Log.info(
       'addShareToVault: wrote held_share for vault $vaultId '
-      '(shareIndex=${share.shareIndex}, version=${share.distributionVersion})',
+      '(shareIndex=${share.shareIndex}, version=$dist)',
     );
   }
 
@@ -384,6 +401,17 @@ class VaultRepository {
     if (vaultRow == null) throw ArgumentError('Vault not found: $vaultId');
     final rows = await _db.heldShareDao.forVault(vaultId);
     return rows.map((r) => _shareFromHeldShareRow(r, vaultRow)).toList();
+  }
+
+  /// Highest [HeldShareRow.distributionVersion] among `held_shares` for
+  /// [vaultId], or `-1` when none exist.
+  ///
+  /// Implemented as [HeldShareDao.mostRecentForVault] (version desc, then
+  /// [HeldShareRow.receivedAt] desc): the first row carries the max version.
+  Future<int> maxHeldShareDistributionVersion(String vaultId) async {
+    final row = await _db.heldShareDao.mostRecentForVault(vaultId);
+    if (row == null) return -1;
+    return row.distributionVersion;
   }
 
   /// Delete all `held_shares` rows for [vaultId].
@@ -476,6 +504,8 @@ class VaultRepository {
                 ? incomingDist
                 : row.currentDistributionVersion,
           ),
+          instructions:
+              share.instructions != null ? Value(share.instructions) : const Value.absent(),
         ),
       );
 
@@ -502,6 +532,18 @@ class VaultRepository {
       'mergeVaultRowFromIncomingShare: vault $vaultId '
       '(threshold=${share.threshold}, totalShares=${share.totalShares})',
     );
+  }
+
+  /// Ensures an `owned_vaults` row exists for [vaultId] (empty encrypted shell).
+  ///
+  /// Used when the vault owner (same device pubkey as [vaults.owner_pubkey])
+  /// ingests a manifest-only 1337 on a fresh install so [isOwnedVault] and
+  /// owner UI gates activate while [saveOwnedVaultContent] has not run yet.
+  Future<void> ensureOwnedVaultShell(String vaultId) async {
+    final existing = await _db.ownedVaultDao.getByVaultId(vaultId);
+    if (existing != null) return;
+    await saveOwnedVaultContent(vaultId, '');
+    Log.info('ensureOwnedVaultShell: inserted owned placeholder for vault $vaultId');
   }
 
   /// Write or replace the NIP-44 [content] ciphertext for an owned vault.

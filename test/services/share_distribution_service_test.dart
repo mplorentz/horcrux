@@ -10,6 +10,7 @@ import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/event_status.dart';
+import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/share_distribution_service.dart';
@@ -73,6 +74,8 @@ void main() {
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
           customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: anyNamed('nip40Expiration'),
         ),
       ).thenAnswer((_) async => nextGiftWrap());
 
@@ -111,7 +114,7 @@ void main() {
         threshold: TestBackupConfigs.simple2of2Threshold,
         totalKeys: TestBackupConfigs.simple2of2TotalKeys,
         stewards: [
-          createSteward(pubkey: alicePubHex, name: 'Alice'),
+          createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
           createSteward(pubkey: bobPubHex, name: 'Bob'),
         ],
         relays: TestBackupConfigs.simple2of2Relays,
@@ -358,8 +361,79 @@ void main() {
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
           customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: anyNamed('nip40Expiration'),
         ),
       ).called(2);
+    });
+
+    test('publishes extra manifest 1337 when owner is not marked self-steward', () async {
+      final charliePrivHex = Helpers.decodeBech32(TestNsecKeys.charlie)[0];
+      final charliePubHex = Bip340.getPublicKey(charliePrivHex);
+
+      final cfg = createBackupConfig(
+        vaultId: 'vault-manifest-extra',
+        threshold: 2,
+        totalKeys: 2,
+        stewards: [
+          createSteward(pubkey: bobPubHex, name: 'Bob'),
+          createSteward(pubkey: charliePubHex, name: 'Charlie'),
+        ],
+        relays: TestBackupConfigs.simple2of2Relays,
+      );
+
+      final embedded = <Map<String, String>>[
+        {'id': 'b1', 'name': 'Bob', 'pubkey': bobPubHex, 'shard_index': '0'},
+        {'id': 'c1', 'name': 'Charlie', 'pubkey': charliePubHex, 'shard_index': '1'},
+      ];
+
+      final shards = [
+        Share(
+          payload: 's0',
+          threshold: 2,
+          shareIndex: 0,
+          totalShares: 2,
+          primeMod: TestShare.testPrimeMod,
+          creatorPubkey: alicePubHex,
+          createdAt: 1700000000,
+          vaultId: cfg.vaultId,
+          stewards: embedded,
+        ),
+        Share(
+          payload: 's1',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 2,
+          primeMod: TestShare.testPrimeMod,
+          creatorPubkey: alicePubHex,
+          createdAt: 1700000000,
+          vaultId: cfg.vaultId,
+          stewards: embedded,
+        ),
+      ];
+
+      await shardDistributionService.distributeShares(
+        ownerPubkey: alicePubHex,
+        config: cfg,
+        shares: shards,
+      );
+
+      verify(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: NostrKind.shareData.value,
+          recipientPubkey: alicePubHex,
+          relays: cfg.relays,
+          tags: [
+            ['d', 'manifest_${cfg.vaultId}'],
+            ['backup_config_id', cfg.vaultId],
+            ['shard_index', '-1'],
+          ],
+          customPubkey: alicePubHex,
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: null,
+        ),
+      ).called(1);
     });
   });
 
@@ -390,6 +464,8 @@ void main() {
           relays: anyNamed('relays'),
           tags: anyNamed('tags'),
           customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: anyNamed('nip40Expiration'),
         ),
       ).thenAnswer((_) async {
         final ev = Nip01Event(

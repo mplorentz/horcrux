@@ -668,4 +668,154 @@ void main() {
       },
     );
   });
+
+  group('VaultShareService manifest ingest', () {
+    const vaultId = 'manifest-ingest-vault';
+    const owner = TestHexPubkeys.alice;
+
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
+    late MockPushNotificationReceiver mockPushReceiver;
+    late VaultRepository repository;
+    late VaultShareService service;
+
+    setUp(() {
+      mockLoginService = MockLoginService();
+      when(mockLoginService.encryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.decryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => owner);
+
+      mockNdkService = MockNdkService();
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => owner);
+      mockNotificationService = MockHorcruxNotificationService();
+      mockPushReceiver = MockPushNotificationReceiver();
+      when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
+
+      repository = VaultRepository(mockLoginService);
+      service = VaultShareService(
+        repository,
+        () => mockNdkService,
+        () => mockNotificationService,
+        () => mockPushReceiver,
+      );
+    });
+
+    tearDown(() {
+      repository.dispose();
+    });
+
+    test('hydrates backup config without held_shares or confirmation publish', () async {
+      final embedded = <Map<String, String>>[
+        {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
+        {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+      ];
+      final manifest = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 2,
+        primeMod: TestShare.testPrimeMod,
+        creatorPubkey: owner,
+        createdAt: 1700000000,
+        vaultId: vaultId,
+        vaultName: 'Wire Vault',
+        ownerName: 'Alice',
+        instructions: 'Handle with care',
+        stewards: embedded,
+        relayUrls: const ['ws://relay.example'],
+        distributionVersion: 3,
+        nostrEventId: 'manifest-event-1',
+      );
+
+      await service.processVaultShare(vaultId, manifest);
+
+      final shares = await repository.getSharesForVault(vaultId);
+      expect(shares, isEmpty);
+
+      final v = await repository.getVault(vaultId);
+      expect(v, isNotNull);
+      expect(v!.backupConfig, isNotNull);
+      expect(v.backupConfig!.threshold, 2);
+      expect(v.backupConfig!.instructions, 'Handle with care');
+      expect(v.backupConfig!.distributionVersion, 3);
+      expect(v.backupConfig!.stewards, hasLength(2));
+      expect(await repository.isOwnedVault(vaultId), isTrue);
+
+      verifyNever(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+          customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: anyNamed('nip40Expiration'),
+        ),
+      );
+    });
+
+    test(
+      'stale manifest does not overwrite a newer manifest (distribution order)',
+      () async {
+        const orderVaultId = 'manifest-order-vault';
+        final embedded = <Map<String, String>>[
+          {'id': 'b1', 'name': 'Bob', 'pubkey': TestHexPubkeys.bob, 'shard_index': '0'},
+          {'id': 'c1', 'name': 'Charlie', 'pubkey': TestHexPubkeys.charlie, 'shard_index': '1'},
+        ];
+
+        Share wireManifest({
+          required int distributionVersion,
+          required String vaultName,
+          required String nostrEventId,
+        }) {
+          return Share(
+            payload: '',
+            threshold: 2,
+            shareIndex: -1,
+            totalShares: 2,
+            primeMod: TestShare.testPrimeMod,
+            creatorPubkey: owner,
+            createdAt: 1700000000,
+            vaultId: orderVaultId,
+            vaultName: vaultName,
+            ownerName: 'Alice',
+            instructions: 'Instr $distributionVersion',
+            stewards: embedded,
+            relayUrls: const ['ws://relay.example'],
+            distributionVersion: distributionVersion,
+            nostrEventId: nostrEventId,
+          );
+        }
+
+        await service.processVaultShare(
+          orderVaultId,
+          wireManifest(
+            distributionVersion: 3,
+            vaultName: 'FromVThree',
+            nostrEventId: 'manifest-v3-first',
+          ),
+        );
+
+        await service.processVaultShare(
+          orderVaultId,
+          wireManifest(
+            distributionVersion: 2,
+            vaultName: 'FromVTwoStale',
+            nostrEventId: 'manifest-v2-late',
+          ),
+        );
+
+        final v = await repository.getVault(orderVaultId);
+        expect(v, isNotNull);
+        expect(v!.name, 'FromVThree');
+        expect(v.backupConfig, isNotNull);
+        expect(v.backupConfig!.distributionVersion, 3);
+        expect(v.backupConfig!.instructions, 'Instr 3');
+      },
+    );
+  });
 }

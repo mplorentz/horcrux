@@ -50,10 +50,19 @@ class Share with _$Share {
 
   const Share._();
 
+  /// Wire-level "manifest-only" 1337: empty Shamir payload with sentinel index.
+  ///
+  /// Used when the owner is not a self-steward so relays can still carry a
+  /// gift-wrapped recovery-plan snapshot to the owner's pubkey. Distinct from
+  /// a real share (`payload` non-empty, `shareIndex` in `0..totalShares-1`).
+  /// A future format revision may add an explicit `manifest` flag on the JSON
+  /// ([horcrux_app-8yw]); v1 discriminates only on this pair.
+  bool get isManifest => payload.isEmpty && shareIndex == -1;
+
   /// Check if this share is valid
   bool get isValid {
     try {
-      if (payload.isEmpty) {
+      if (payload.isEmpty && !isManifest) {
         Log.error('Share validation failed: payload is empty');
         return false;
       }
@@ -73,14 +82,21 @@ class Share with _$Share {
         return false;
       }
 
-      if (shareIndex < 0) {
+      if (!isManifest && shareIndex < 0) {
         Log.error(
           'Share validation failed: shareIndex ($shareIndex) is negative',
         );
         return false;
       }
 
-      if (shareIndex >= totalShares) {
+      if (isManifest && shareIndex != -1) {
+        Log.error(
+          'Share validation failed: manifest shares must use shareIndex -1 (got $shareIndex)',
+        );
+        return false;
+      }
+
+      if (!isManifest && shareIndex >= totalShares) {
         Log.error(
           'Share validation failed: shareIndex ($shareIndex) is out of bounds (should be 0 to ${totalShares - 1})',
         );
@@ -175,8 +191,14 @@ class Share with _$Share {
 /// Selection order:
 /// 1. Higher [Share.distributionVersion] wins (null treated as -1 so that
 ///    unversioned/legacy shares sort before any explicitly-versioned share).
-/// 2. Higher [Share.createdAt] (Unix seconds) breaks ties within the same
-///    version.
+/// 2. When versions tie: if **both** shares have [Share.receivedAt], prefer the
+///    later one (steward `held_shares` hydration often gives every row the same
+///    [Share.createdAt] from the vault row, while [Share.receivedAt] is local
+///    ingest time). If either side lacks `receivedAt`, compare [Share.createdAt]
+///    only — do not prefer one-sided `receivedAt` over a higher wire
+///    `created_at`.
+/// 3. When both `receivedAt` are present but equal, use [Share.createdAt] as the
+///    tie-breaker (Unix seconds).
 ///
 /// This is the single authoritative implementation of the "pick most recent
 /// share" policy.  All call sites in [VaultShareService] and [RecoveryService]
@@ -187,6 +209,14 @@ Share? latestShare(List<Share> shares) {
     final cv = current.distributionVersion ?? -1;
     final nv = next.distributionVersion ?? -1;
     if (cv != nv) return nv > cv ? next : current;
+
+    final cr = current.receivedAt;
+    final nr = next.receivedAt;
+    if (cr != null && nr != null) {
+      if (cr.isAfter(nr)) return current;
+      if (nr.isAfter(cr)) return next;
+    }
+
     return next.createdAt > current.createdAt ? next : current;
   });
 }

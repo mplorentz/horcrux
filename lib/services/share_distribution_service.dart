@@ -47,7 +47,16 @@ class ShareDistributionService {
     this._notificationService,
   );
 
-  /// Distribute shares to all stewards
+  /// Publishes encrypted share events for each steward in [config] who has a
+  /// pubkey, using [shares] entries aligned by roster index with those stewards.
+  ///
+  /// [ownerPubkey] (hex) is passed to [NdkService.publishEncryptedEvent] as
+  /// `customPubkey` so the vault owner signs each rumor.
+  ///
+  /// If the roster has no entry that is both `isOwner` and keyed by
+  /// [ownerPubkey], this also publishes one extra manifest-only share event
+  /// (empty payload, sentinel `shareIndex` -1) to [ownerPubkey] so the owner
+  /// can rehydrate recovery metadata without holding a steward slot.
   Future<List<ShareEvent>> distributeShares({
     required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
@@ -197,6 +206,56 @@ class ShareDistributionService {
           );
           // Continue with other shares even if one fails
         }
+      }
+
+      final ownerInRoster = config.stewards.any(
+        (s) => s.isOwner && s.pubkey == ownerPubkey,
+      );
+      if (!ownerInRoster) {
+        final template = shares.firstWhere(
+          (s) => s.payload.isNotEmpty,
+          orElse: () => throw StateError('distributeShares: no payload-bearing share for manifest'),
+        );
+        final manifest = Share(
+          payload: '',
+          threshold: config.threshold,
+          shareIndex: -1,
+          totalShares: config.totalKeys,
+          primeMod: template.primeMod,
+          creatorPubkey: ownerPubkey,
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          vaultId: config.vaultId,
+          vaultName: template.vaultName,
+          ownerName: template.ownerName,
+          instructions: config.instructions,
+          stewards: template.stewards,
+          recipientPubkey: ownerPubkey,
+          relayUrls: config.relays,
+          distributionVersion: config.distributionVersion,
+          pushEnabled: template.pushEnabled,
+        );
+        if (!manifest.isValid) {
+          throw StateError('distributeShares: built manifest share failed validation');
+        }
+        final manifestString = json.encode(shareToJson(manifest));
+        final publishedManifest = await _ndkService.publishEncryptedEvent(
+          content: manifestString,
+          kind: NostrKind.shareData.value,
+          recipientPubkey: ownerPubkey,
+          relays: config.relays,
+          tags: [
+            ['d', 'manifest_${config.vaultId}'],
+            ['backup_config_id', config.vaultId],
+            ['shard_index', '-1'],
+          ],
+          customPubkey: ownerPubkey,
+        );
+        if (publishedManifest == null) {
+          throw Exception('Failed to publish owner manifest share event');
+        }
+        Log.info(
+          'Published manifest-only 1337 for vault ${config.vaultId} (owner not self-steward)',
+        );
       }
 
       return shareEvents;
