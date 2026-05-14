@@ -743,6 +743,11 @@ void main() {
       expect(v.backupConfig!.distributionVersion, 3);
       expect(v.backupConfig!.stewards, hasLength(2));
       expect(await repository.isOwnedVault(vaultId), isTrue);
+      expect(
+        await repository.isOwnedVaultForCurrentUser(vaultId),
+        isTrue,
+        reason: 'manifest-only ingest must insert owned shell so owner UI gates work',
+      );
 
       verifyNever(
         mockNdkService.publishEncryptedEvent(
