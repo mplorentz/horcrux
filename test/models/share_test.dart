@@ -791,6 +791,26 @@ void main() {
       );
       expect(latestShare([older, newer]), newer);
     });
+
+    test(
+      'same version with only one receivedAt uses createdAt (not one-sided receivedAt)',
+      () {
+        final withReceived = heldStyleShare(
+          shareIndex: 0,
+          distributionVersion: 5,
+          createdAt: 100,
+          receivedAt: DateTime.fromMillisecondsSinceEpoch(5000),
+        );
+        final wireOnly = heldStyleShare(
+          shareIndex: 1,
+          distributionVersion: 5,
+          createdAt: 200,
+          receivedAt: null,
+        );
+        expect(latestShare([withReceived, wireOnly]), wireOnly);
+        expect(latestShare([wireOnly, withReceived]), wireOnly);
+      },
+    );
   });
 
   group('Share.pushEnabled wire format', () {

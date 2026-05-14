@@ -431,7 +431,7 @@ void main() {
           ],
           customPubkey: alicePubHex,
           vaultId: anyNamed('vaultId'),
-          nip40Expiration: Duration.zero,
+          nip40Expiration: null,
         ),
       ).called(1);
     });
