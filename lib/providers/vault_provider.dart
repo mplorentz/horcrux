@@ -858,11 +858,17 @@ class VaultRepository {
       (c) => c.id == dbSteward.id,
       orElse: () => dbSteward,
     );
-    // Use dbSteward as the base so DB-updated fields (pubkey, name, contactInfo,
-    // isOwner) are never masked by the in-memory overlay. Only overlay the
-    // transient inviteCode, which may not be persisted yet.
-    return dbSteward.copyWith(
-      inviteCode: cached.inviteCode ?? dbSteward.inviteCode,
+    // Use cached as the base to preserve distribution-state fields (status,
+    // acknowledgedAt, giftWrapEventId, etc.) that may be ahead of the DB when
+    // a new distribution version has been set but distribution_shares rows have
+    // not yet been written. Override persistent identity fields with DB values
+    // so DB-updated pubkey / name / contactInfo / isOwner are never masked.
+    return cached.copyWith(
+      pubkey: dbSteward.pubkey ?? cached.pubkey,
+      name: dbSteward.name ?? cached.name,
+      contactInfo: dbSteward.contactInfo ?? cached.contactInfo,
+      isOwner: dbSteward.isOwner,
+      inviteCode: dbSteward.inviteCode ?? cached.inviteCode,
     );
   }
 
