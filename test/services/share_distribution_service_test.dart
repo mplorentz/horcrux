@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -420,7 +422,19 @@ void main() {
 
       verify(
         mockNdkService.publishEncryptedEvent(
-          content: anyNamed('content'),
+          content: argThat(
+            predicate<String>(
+              (raw) {
+                final m = json.decode(raw) as Map<String, dynamic>;
+                return m['shard'] == '' &&
+                    m['shard_index'] == -1 &&
+                    m['vault_id'] == cfg.vaultId &&
+                    m['distribution_version'] == cfg.distributionVersion;
+              },
+              'manifest-only 1337 wire JSON for owner rehydration',
+            ),
+            named: 'content',
+          ),
           kind: NostrKind.shareData.value,
           recipientPubkey: alicePubHex,
           relays: cfg.relays,
