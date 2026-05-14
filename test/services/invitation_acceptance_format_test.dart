@@ -109,6 +109,7 @@ void main() {
         // Act: Call sendInvitationAcceptanceEvent
         await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
+          vaultId: 'test-vault-id',
           ownerPubkey: ownerPubkey,
           relayUrls: relayUrls,
         );
@@ -120,6 +121,7 @@ void main() {
         // Parse the captured JSON to verify its structure
         final parsedJson = json.decode(content) as Map<String, dynamic>;
         expect(parsedJson['invite_code'], inviteCode);
+        expect(parsedJson['vault_id'], 'test-vault-id');
         expect(parsedJson['invitee_pubkey'], inviteePubkey);
         expect(parsedJson['responded_at'], isA<String>());
 
@@ -355,6 +357,7 @@ void main() {
       // Act
       await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
+        vaultId: 'vault-for-structure-test',
         ownerPubkey: ownerPubkey,
         relayUrls: relayUrls,
       );
@@ -364,12 +367,14 @@ void main() {
       final content = capturedContent!;
       final parsed = json.decode(content) as Map<String, dynamic>;
       expect(parsed['invite_code'], isA<String>());
+      expect(parsed['vault_id'], isA<String>());
       expect(parsed['invitee_pubkey'], isA<String>());
       expect(parsed['responded_at'], isA<String>());
       expect((parsed['invitee_pubkey'] as String).length, 64);
 
       // Verify values match
       expect(parsed['invite_code'], inviteCode);
+      expect(parsed['vault_id'], 'vault-for-structure-test');
       expect(parsed['invitee_pubkey'], inviteePubkey);
     });
   });
@@ -420,6 +425,7 @@ void main() {
         // Act
         final result = await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
+          vaultId: 'vault-param-test',
           ownerPubkey: ownerPubkey,
           relayUrls: relayUrls,
         );
@@ -464,6 +470,7 @@ void main() {
       // Act
       await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
+        vaultId: 'vault-field-names-test',
         ownerPubkey: ownerPubkey,
         relayUrls: relayUrls,
       );
@@ -479,6 +486,11 @@ void main() {
         reason: 'Payload must contain invite_code field',
       );
       expect(
+        payload.containsKey('vault_id'),
+        true,
+        reason: 'Payload must contain vault_id field',
+      );
+      expect(
         payload.containsKey('invitee_pubkey'),
         true,
         reason: 'Payload must contain invitee_pubkey field',
@@ -491,14 +503,16 @@ void main() {
 
       // Verify field values
       expect(payload['invite_code'], inviteCode);
+      expect(payload['vault_id'], 'vault-field-names-test');
       expect(payload['invitee_pubkey'], inviteePubkey);
       expect(payload['responded_at'], isA<String>());
 
       // Verify no extra fields that might confuse parsing
       expect(
         payload.keys.length,
-        3,
-        reason: 'Payload should only have 3 fields: invite_code, invitee_pubkey, responded_at',
+        4,
+        reason:
+            'Payload should only have 4 fields: invite_code, vault_id, invitee_pubkey, responded_at',
       );
     });
 
@@ -509,6 +523,7 @@ void main() {
       // Act
       final result = await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: 'test-code',
+        vaultId: 'vault-null-pubkey-test',
         ownerPubkey: TestHexPubkeys.alice,
         relayUrls: ['ws://localhost:10547'],
       );
@@ -550,6 +565,7 @@ void main() {
         // Act
         final result = await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
+          vaultId: 'vault-network-error-test',
           ownerPubkey: ownerPubkey,
           relayUrls: ['ws://localhost:10547'],
         );
@@ -586,6 +602,7 @@ void main() {
       // Act
       await invitationSendingService.sendInvitationAcceptanceEvent(
         inviteCode: inviteCode,
+        vaultId: 'vault-tags-test',
         ownerPubkey: ownerPubkey,
         relayUrls: ['ws://localhost:10547'],
       );
@@ -629,6 +646,7 @@ void main() {
         // Act
         await invitationSendingService.sendInvitationAcceptanceEvent(
           inviteCode: inviteCode,
+          vaultId: 'vault-roundtrip-test',
           ownerPubkey: ownerPubkey,
           relayUrls: ['ws://localhost:10547'],
         );
@@ -641,6 +659,7 @@ void main() {
 
         // Verify roundtrip preserves data
         expect(payload2['invite_code'], payload1['invite_code']);
+        expect(payload2['vault_id'], payload1['vault_id']);
         expect(payload2['invitee_pubkey'], payload1['invitee_pubkey']);
         expect(payload2['responded_at'], payload1['responded_at']);
       },

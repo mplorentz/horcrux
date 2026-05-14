@@ -171,7 +171,7 @@ class VaultDetailRepository {
             s,
             currentDistributionVersion: row.currentDistributionVersion,
             distributionShareRow: distributionSharesByStewardId[s.id],
-            inviteCode: inviteCodeByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id] ?? s.inviteCode,
           ),
         )
         .toList();

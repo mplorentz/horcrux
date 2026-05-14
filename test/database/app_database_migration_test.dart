@@ -6,7 +6,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 /// Verifies [AppDatabase] migration from schema v1 files that predate the
 /// Phase 2a `held_shares` table (same `user_version`, expanded drift schema).
 void main() {
-  test('upgrade from v1 without held_shares reaches schema v5', () async {
+  test('upgrade from v1 without held_shares reaches schema v6', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
 
@@ -26,7 +26,7 @@ void main() {
     expect(held, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 5);
+    expect(versionRow.first.columnAt(0), 6);
 
     final phase3 = await db
         .customSelect(
@@ -38,7 +38,7 @@ void main() {
     await db.close();
   });
 
-  test('upgrade from v1 with held_shares already present reaches schema v5', () async {
+  test('upgrade from v1 with held_shares already present reaches schema v6', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
 
@@ -59,7 +59,7 @@ void main() {
     expect(held.first.data['c'], 0);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 5);
+    expect(versionRow.first.columnAt(0), 6);
 
     await db.close();
   });
@@ -85,7 +85,7 @@ void main() {
     expect(invitations, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 5);
+    expect(versionRow.first.columnAt(0), 6);
 
     await db.close();
   });
@@ -131,7 +131,7 @@ void main() {
     expect(consentsTable, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 5);
+    expect(versionRow.first.columnAt(0), 6);
 
     await db.close();
   });
