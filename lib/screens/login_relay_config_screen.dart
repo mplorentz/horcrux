@@ -14,6 +14,7 @@ import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
+import 'vault_list_screen.dart';
 
 enum _ScanState { editing, scanning, results }
 
@@ -182,7 +183,16 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     });
   }
 
+  /// After a successful scan the user goes straight to the vault list.
   void _continue() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const VaultListScreen()),
+      (route) => false,
+    );
+  }
+
+  /// Skip the scan — offer to back up the key in a vault first.
+  void _skip() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
       (route) => false,
@@ -255,7 +265,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
                 text: 'Scan for Vaults',
               ),
               RowButtonConfig(
-                onPressed: _continue,
+                onPressed: _skip,
                 icon: Icons.skip_next,
                 text: 'Skip',
               ),
