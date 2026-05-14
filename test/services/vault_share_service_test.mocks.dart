@@ -419,6 +419,18 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
       ) as List<String>);
 
   @override
+  _i5.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #queryHistoricalGiftWraps,
+          [],
+          {#relayUrls: relayUrls},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   _i5.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentPubkey,
