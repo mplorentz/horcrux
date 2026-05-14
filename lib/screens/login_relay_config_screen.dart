@@ -94,20 +94,12 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
       return;
     }
 
-    String name;
-    try {
-      final uri = Uri.parse(url);
-      name = uri.host.isNotEmpty ? uri.host : url;
-    } catch (_) {
-      name = url;
-    }
-
     setState(() {
       _relays.add(
         RelayConfiguration(
           id: generateSecureID(),
           url: url,
-          name: name,
+          name: url,
           isEnabled: true,
           isTrusted: false,
         ),
@@ -385,18 +377,7 @@ class _RelayRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(relay.name, style: theme.textTheme.bodyMedium),
-                Text(
-                  relay.url,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
+            child: Text(relay.url, style: theme.textTheme.bodyMedium),
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 18),
