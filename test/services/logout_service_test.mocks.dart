@@ -531,6 +531,17 @@ class MockVaultRepository extends _i1.Mock implements _i2.VaultRepository {
       ) as _i8.Future<void>);
 
   @override
+  _i8.Future<void> archiveActiveRecoverySessionsInitiatedBy(String? initiatorPubkeyHex) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #archiveActiveRecoverySessionsInitiatedBy,
+          [initiatorPubkeyHex],
+        ),
+        returnValue: _i8.Future<void>.value(),
+        returnValueForMissingStub: _i8.Future<void>.value(),
+      ) as _i8.Future<void>);
+
+  @override
   _i8.Future<List<_i4.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
