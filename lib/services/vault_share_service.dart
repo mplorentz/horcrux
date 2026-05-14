@@ -156,7 +156,7 @@ class VaultShareService {
 
     if (shardData.isManifest) {
       final ownedBefore = await repository.isOwnedVaultForCurrentUser(vaultId);
-      await _upsertStewardVaultAndSelf(vaultId, shardData, isManifestIngest: true);
+      await _upsertStewardVaultAndSelf(vaultId, shardData);
       final pk = await _getNdkService().getCurrentPubkey();
       if (!ownedBefore && pk != null && pk == shardData.creatorPubkey) {
         await repository.ensureOwnedVaultShell(vaultId);
@@ -346,11 +346,7 @@ class VaultShareService {
   ///
   /// Ownership check (skip if this device owns the vault) is done by the
   /// caller before invoking this helper.
-  Future<void> _upsertStewardVaultAndSelf(
-    String vaultId,
-    Share share, {
-    bool isManifestIngest = false,
-  }) async {
+  Future<void> _upsertStewardVaultAndSelf(String vaultId, Share share) async {
     final existing = await repository.getVault(vaultId);
     final incomingVersion = share.distributionVersion ?? 0;
 
@@ -457,7 +453,7 @@ class VaultShareService {
       }
     }
 
-    if (!isManifestIngest && currentPubkey != null && currentPubkey.isNotEmpty) {
+    if (!share.isManifest && currentPubkey != null && currentPubkey.isNotEmpty) {
       final fallbackSlot = share.shareIndex;
       final idForSelf = selfResolvedId ??
           _resolvedEmbeddedStewardRowId(

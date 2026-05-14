@@ -858,17 +858,8 @@ class NdkService {
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
     String? vaultId,
-    Duration? nip40Expiration,
   }) async {
     await _ensureInitialized();
-
-    if (nip40Expiration != null && nip40Expiration.isNegative) {
-      throw ArgumentError.value(
-        nip40Expiration,
-        'nip40Expiration',
-        'must not be negative',
-      );
-    }
 
     try {
       final pubkeySnippet =
@@ -880,7 +871,6 @@ class NdkService {
         recipientPubkey: recipientPubkey,
         tags: tags,
         customPubkey: customPubkey,
-        nip40Expiration: nip40Expiration,
       );
 
       final result = await _publishService.enqueueEvent(
@@ -926,7 +916,6 @@ class NdkService {
     required String recipientPubkey, // Hex format
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
-    Duration? nip40Expiration,
   }) async {
     if (!_isInitialized || _ndk == null) {
       throw Exception('NDK not initialized');
@@ -937,24 +926,11 @@ class NdkService {
       throw Exception('No sender pubkey available');
     }
 
-    final effectiveTags = <List<String>>[
-      for (final t in tags ?? const <List<String>>[])
-        if (t.isEmpty || t.first != 'expiration') t,
-    ];
-    if (nip40Expiration == null) {
-      final expSec =
-          DateTime.now().toUtc().add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
-      effectiveTags.add(['expiration', expSec.toString()]);
-    } else if (nip40Expiration.inMicroseconds != 0) {
-      final expSec = DateTime.now().toUtc().add(nip40Expiration).millisecondsSinceEpoch ~/ 1000;
-      effectiveTags.add(['expiration', expSec.toString()]);
-    }
-
     final rumor = await _ndk!.giftWrap.createRumor(
       customPubkey: senderPubkey,
       content: content,
       kind: kind,
-      tags: effectiveTags,
+      tags: tags ?? [],
     );
 
     return _ndk!.giftWrap.toGiftWrap(
@@ -980,17 +956,8 @@ class NdkService {
     List<List<String>>? tags,
     String? customPubkey, // Hex format - if null, uses current user's pubkey
     String? vaultId,
-    Duration? nip40Expiration,
   }) async {
     await _ensureInitialized();
-
-    if (nip40Expiration != null && nip40Expiration.isNegative) {
-      throw ArgumentError.value(
-        nip40Expiration,
-        'nip40Expiration',
-        'must not be negative',
-      );
-    }
 
     final results = <Nip01Event?>[];
 
@@ -1005,7 +972,6 @@ class NdkService {
             tags: tags,
             customPubkey: customPubkey,
             vaultId: vaultId,
-            nip40Expiration: nip40Expiration,
           ),
         );
       } catch (e) {

@@ -237,11 +237,7 @@ class ShareDistributionService {
         if (!manifest.isValid) {
           throw StateError('distributeShares: built manifest share failed validation');
         }
-        final manifestWithRelays = manifest.copyWith(
-          relayUrls: config.relays,
-          distributionVersion: config.distributionVersion,
-        );
-        final manifestString = json.encode(shareToJson(manifestWithRelays));
+        final manifestString = json.encode(shareToJson(manifest));
         final publishedManifest = await _ndkService.publishEncryptedEvent(
           content: manifestString,
           kind: NostrKind.shareData.value,
@@ -253,7 +249,6 @@ class ShareDistributionService {
             ['shard_index', '-1'],
           ],
           customPubkey: ownerPubkey,
-          nip40Expiration: Duration.zero,
         );
         if (publishedManifest == null) {
           throw Exception('Failed to publish owner manifest share event');
