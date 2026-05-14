@@ -311,6 +311,15 @@ class MockVaultRepository extends _i1.Mock implements _i5.VaultRepository {
       ) as _i6.Future<int>);
 
   @override
+  _i6.Future<int> manifestStaleDistributionHighWaterMark(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #manifestStaleDistributionHighWaterMark,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<int>.value(0),
+      ) as _i6.Future<int>);
+
+  @override
   _i6.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #clearSharesForVault,

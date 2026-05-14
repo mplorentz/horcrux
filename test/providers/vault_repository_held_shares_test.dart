@@ -245,7 +245,7 @@ void main() {
 
         await repository.addShareToVault(
           vaultId,
-          Share(
+          const Share(
             payload: 'x',
             threshold: 2,
             shareIndex: 0,

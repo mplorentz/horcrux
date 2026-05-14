@@ -3,7 +3,6 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'dart:typed_data';
 
 import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
@@ -906,7 +905,7 @@ void main() {
       expect(bare, isNotNull);
       expect(bare!.backupConfig, isNull);
 
-      final staleManifest = Share(
+      const staleManifest = Share(
         payload: '',
         threshold: 2,
         shareIndex: -1,
@@ -919,14 +918,14 @@ void main() {
         ownerName: 'Alice',
         instructions: 'ShouldNotApply',
         stewards: [
-          {
+          <String, String>{
             'id': 'b1',
             'name': 'Bob',
             'pubkey': TestHexPubkeys.bob,
             'shard_index': '0',
           },
         ],
-        relayUrls: const ['ws://relay.example'],
+        relayUrls: ['ws://relay.example'],
         distributionVersion: 3,
         nostrEventId: 'manifest-stale-vs-row',
       );

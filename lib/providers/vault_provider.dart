@@ -1111,16 +1111,27 @@ class VaultRepository {
     final archivedReason = vault.archivedAt == null ? null : vault.archivedReason;
     await _db.transaction(() async {
       final existingVaultRow = await _db.vaultDao.getById(vault.id);
-      final effectiveThreshold = config?.threshold ?? existingVaultRow?.threshold ?? 0;
-      final effectiveTotalShares = config?.totalKeys ?? existingVaultRow?.totalShares ?? 0;
+      final activeStewardRows = await (_db.select(_db.stewards)
+            ..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
+          .get();
+      final clearingBackupConfig = config == null && activeStewardRows.isNotEmpty;
+
+      final effectiveThreshold = config != null
+          ? config.threshold
+          : (clearingBackupConfig ? 0 : (existingVaultRow?.threshold ?? 0));
+      final effectiveTotalShares = config != null
+          ? config.totalKeys
+          : (clearingBackupConfig ? 0 : (existingVaultRow?.totalShares ?? 0));
       final effectiveDistributionVersion = config != null
           ? config.distributionVersion
-          : (existingVaultRow?.currentDistributionVersion ?? 0);
+          : (clearingBackupConfig ? 0 : (existingVaultRow?.currentDistributionVersion ?? 0));
       final Value<String?> instructionsValue = config != null
           ? Value(config.instructions)
-          : (existingVaultRow != null
-              ? Value(existingVaultRow.instructions)
-              : const Value.absent());
+          : (clearingBackupConfig
+              ? const Value(null)
+              : (existingVaultRow != null
+                  ? Value(existingVaultRow.instructions)
+                  : const Value.absent()));
 
       await _db.into(_db.vaults).insertOnConflictUpdate(
             VaultsCompanion.insert(
