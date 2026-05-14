@@ -18,6 +18,7 @@ import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../services/login_service.dart';
 import '../services/logger.dart';
+import '../services/notification_recency.dart';
 import 'key_provider.dart';
 import 'vault_detail_repository.dart';
 
@@ -95,10 +96,6 @@ final vaultDetailListProvider = StreamProvider.autoDispose<List<VaultDetail>>((r
 ///   the same triple back atomically.
 class VaultRepository {
   final AppDatabase _db;
-  // Held for parity with the legacy API; encryption is handled by SQLCipher
-  // at the DB layer rather than by per-row NIP-44 (except for
-  // `owned_vaults.content`, which `BackupService` already encrypts).
-  // ignore: unused_field
   final LoginService _loginService;
 
   final StreamController<List<Vault>> _vaultsController = StreamController<List<Vault>>.broadcast();
@@ -361,17 +358,19 @@ class VaultRepository {
             ))
           .go();
 
-      await _db.heldShareDao.insertIfNew(HeldSharesCompanion.insert(
-        id: id,
-        vaultId: vaultId,
-        shareIndex: share.shareIndex,
-        sharePayload: share.payload,
-        distributionVersion: dist,
-        receivedAt: now,
-        nostrEventId: Value(share.nostrEventId),
-        lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
-        pushEnabled: Value(share.pushEnabled ?? true),
-      ));
+      await _db.heldShareDao.insertIfNew(
+        HeldSharesCompanion.insert(
+          id: id,
+          vaultId: vaultId,
+          shareIndex: share.shareIndex,
+          sharePayload: share.payload,
+          distributionVersion: dist,
+          receivedAt: now,
+          nostrEventId: Value(share.nostrEventId),
+          lastSeenRelay: Value(share.relayUrls?.isNotEmpty == true ? share.relayUrls!.first : null),
+          pushEnabled: Value(share.pushEnabled ?? true),
+        ),
+      );
       await _db.heldShareDao.pruneOldVersions(vaultId);
       // Write primeMod to the vault row when provided so that
       // _shareFromHeldShareRow can hydrate valid Share objects. For owned
@@ -379,10 +378,7 @@ class VaultRepository {
       // carry it); persisting it here fills that gap. For steward vaults
       // mergeVaultRowFromIncomingShare already set it, so this is idempotent.
       final vaultsUpdate = share.primeMod.isNotEmpty
-          ? VaultsCompanion(
-              primeMod: Value(share.primeMod),
-              lastSyncedAt: Value(now),
-            )
+          ? VaultsCompanion(primeMod: Value(share.primeMod), lastSyncedAt: Value(now))
           : VaultsCompanion(lastSyncedAt: Value(now));
       await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(vaultsUpdate);
     });
@@ -454,7 +450,9 @@ class VaultRepository {
             ))
           .get();
       for (final row in incumbents) {
-        await (_db.update(_db.stewards)..where((s) => s.id.equals(row.id)))
+        await (_db.update(
+          _db.stewards,
+        )..where((s) => s.id.equals(row.id)))
             .write(StewardsCompanion(leftAt: Value(now)));
       }
 
@@ -573,9 +571,10 @@ class VaultRepository {
               createdBySelfAt: createdAtMs,
             ),
           );
-      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
-        VaultsCompanion(lastSyncedAt: Value(now)),
-      );
+      await (_db.update(
+        _db.vaults,
+      )..where((v) => v.id.equals(vaultId)))
+          .write(VaultsCompanion(lastSyncedAt: Value(now)));
     });
     Log.info('saveOwnedVaultContent: wrote content for vault $vaultId');
   }
@@ -593,9 +592,10 @@ class VaultRepository {
     final now = DateTime.now().millisecondsSinceEpoch;
     await _db.transaction(() async {
       await (_db.delete(_db.ownedVaults)..where((v) => v.vaultId.equals(vaultId))).go();
-      await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
-        VaultsCompanion(lastSyncedAt: Value(now)),
-      );
+      await (_db.update(
+        _db.vaults,
+      )..where((v) => v.id.equals(vaultId)))
+          .write(VaultsCompanion(lastSyncedAt: Value(now)));
     });
     Log.info('deleteVaultContent: removed owned_vaults row for vault $vaultId');
   }
@@ -608,10 +608,23 @@ class VaultRepository {
 
   // ========== Recovery Request Management (Phase 3) ==========
 
-  Future<void> addRecoveryRequestToVault(
-    String vaultId,
-    RecoveryRequest request,
-  ) async {
+  Future<void> addRecoveryRequestToVault(String vaultId, RecoveryRequest request) async {
+    final eventTime = request.eventCreationTime;
+    if (eventTime != null) {
+      final currentPubkey = await _loginService.getCurrentPublicKey();
+      if (currentPubkey != null && request.initiatorPubkey == currentPubkey) {
+        final firstOpen = await getFirstAppOpenUtc(database: _db);
+        if (eventTime.isBefore(firstOpen)) {
+          Log.info(
+            'addRecoveryRequestToVault: ignored stale self-initiated request '
+            '${request.id} for vault $vaultId '
+            '(eventCreationTime=$eventTime < firstOpen=$firstOpen)',
+          );
+          return;
+        }
+      }
+    }
+
     final vaultRow = await _db.vaultDao.getById(vaultId);
     if (vaultRow == null) {
       throw ArgumentError('Vault not found: $vaultId');
@@ -639,10 +652,7 @@ class VaultRepository {
         for (final pubkey in request.stewardPubkeys) {
           b.insert(
             _db.recoveryRequestParticipants,
-            RecoveryRequestParticipantsCompanion.insert(
-              requestId: request.id,
-              pubkey: pubkey,
-            ),
+            RecoveryRequestParticipantsCompanion.insert(requestId: request.id, pubkey: pubkey),
             mode: InsertMode.insertOrIgnore,
           );
         }
@@ -748,9 +758,7 @@ class VaultRepository {
     }
   }
 
-  Future<List<RecoveryRequest>> getRecoveryRequestsForVault(
-    String vaultId,
-  ) async {
+  Future<List<RecoveryRequest>> getRecoveryRequestsForVault(String vaultId) async {
     final vault = await getVault(vaultId);
     if (vault == null) {
       throw ArgumentError('Vault not found: $vaultId');
@@ -793,9 +801,7 @@ class VaultRepository {
     );
     // Prefer invite code from the invitations table when present; otherwise keep the overlay
     // value (e.g. stewards not yet written through InvitationService).
-    return cached.copyWith(
-      inviteCode: dbSteward.inviteCode ?? cached.inviteCode,
-    );
+    return cached.copyWith(inviteCode: dbSteward.inviteCode ?? cached.inviteCode);
   }
 
   Future<Vault> _hydrate(VaultRow row) async {
@@ -822,9 +828,7 @@ class VaultRepository {
       final overlay = _backupConfigOverlay[row.id];
       final stewards = overlay == null
           ? dbStewards
-          : [
-              for (final s in dbStewards) _mergeDbStewardWithBackupOverlay(s, overlay),
-            ];
+          : [for (final s in dbStewards) _mergeDbStewardWithBackupOverlay(s, overlay)];
       backupConfig = BackupConfig(
         vaultId: row.id,
         threshold: row.threshold,
@@ -945,7 +949,9 @@ class VaultRepository {
     }
 
     final distributionId = _distributionId(vaultId, distributionVersion);
-    final byId = await (_db.select(_db.distributions)..where((d) => d.id.equals(distributionId)))
+    final byId = await (_db.select(
+      _db.distributions,
+    )..where((d) => d.id.equals(distributionId)))
         .getSingleOrNull();
     final distribution = byId ??
         await (_db.select(_db.distributions)
@@ -985,7 +991,9 @@ class VaultRepository {
           ),
         );
 
-    final existing = await (_db.select(_db.distributionShares)..where((s) => s.id.equals(shareId)))
+    final existing = await (_db.select(
+      _db.distributionShares,
+    )..where((s) => s.id.equals(shareId)))
         .getSingleOrNull();
     final persistedGiftWrapEventId = giftWrapEventId ??
         existing?.giftWrapEventId ??
@@ -1026,9 +1034,10 @@ class VaultRepository {
 
   Future<void> _bumpVaultSync(String vaultId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(
-      VaultsCompanion(lastSyncedAt: Value(now)),
-    );
+    await (_db.update(
+      _db.vaults,
+    )..where((v) => v.id.equals(vaultId)))
+        .write(VaultsCompanion(lastSyncedAt: Value(now)));
   }
 
   Future<void> _persistVault(Vault vault) async {
@@ -1050,9 +1059,7 @@ class VaultRepository {
               ownerName: Value(vault.ownerName),
               threshold: config?.threshold ?? 0,
               totalShares: config?.totalKeys ?? 0,
-              currentDistributionVersion: Value(
-                config?.distributionVersion ?? 0,
-              ),
+              currentDistributionVersion: Value(config?.distributionVersion ?? 0),
               instructions: Value(config?.instructions),
               pushEnabled: Value(vault.pushEnabled),
               archivedAt: Value(archivedAtMs),
@@ -1074,17 +1081,16 @@ class VaultRepository {
           _db.stewards,
         )..where((s) => s.vaultId.equals(vault.id) & s.leftAt.isNull()))
             .get();
-        final shareIndexByStewardId = {
-          for (final row in existing) row.id: row.shareIndex,
-        };
+        final shareIndexByStewardId = {for (final row in existing) row.id: row.shareIndex};
         final incomingStewardIds = config.stewards.map((s) => s.id).toSet();
         // Preserve historical Shamir slots for stable ingest-side writes when the
         // steward set is unchanged (ack/metadata-only paths). When the backed-up
         // roster introduces any steward id the DB has never seen, treat backup
         // config ordering as authoritative and assign contiguous indices again so
         // owners can insert rows ahead of existing stewards.
-        final hasNewStewardId =
-            incomingStewardIds.any((id) => !shareIndexByStewardId.containsKey(id));
+        final hasNewStewardId = incomingStewardIds.any(
+          (id) => !shareIndexByStewardId.containsKey(id),
+        );
 
         for (final existingRow in existing) {
           // Retire rows removed from the config permanently, and rows that ARE
@@ -1101,10 +1107,9 @@ class VaultRepository {
           }
           final conflictsOnPosition = willReinsert && targetShareIndex != existingRow.shareIndex;
           if (!willReinsert || conflictsOnPosition) {
-            await (_db.update(
-              _db.stewards,
-            )..where((s) => s.id.equals(existingRow.id)))
-                .write(StewardsCompanion(leftAt: Value(nowMs)));
+            await (_db.update(_db.stewards)..where((s) => s.id.equals(existingRow.id))).write(
+              StewardsCompanion(leftAt: Value(nowMs)),
+            );
           }
         }
 
@@ -1153,20 +1158,11 @@ class VaultRepository {
             .get();
         final nowMs = DateTime.now().millisecondsSinceEpoch;
         for (final existingRow in existing) {
-          await (_db.update(
-            _db.stewards,
-          )..where((s) => s.id.equals(existingRow.id)))
-              .write(
-            StewardsCompanion(
-              leftAt: Value(nowMs),
-            ),
+          await (_db.update(_db.stewards)..where((s) => s.id.equals(existingRow.id))).write(
+            StewardsCompanion(leftAt: Value(nowMs)),
           );
         }
-        await _db.vaultRelayDao.replaceForVault(
-          vaultId: vault.id,
-          role: 'owner',
-          rows: [],
-        );
+        await _db.vaultRelayDao.replaceForVault(vaultId: vault.id, role: 'owner', rows: []);
       }
     });
   }
