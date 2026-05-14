@@ -96,7 +96,6 @@ class StewardList extends ConsumerWidget {
     String? currentPubkey,
   ) {
     final stewards = _extractStewards(vault, currentPubkey);
-
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -266,16 +265,7 @@ class StewardList extends ConsumerWidget {
         : vault.stewards;
 
     if (normalizedStewards.isNotEmpty) {
-      final stewards = normalizedStewards.where((s) {
-        // Show invited stewards (no pubkey yet) so owners can see pending invitees.
-        if (s.pubkey == null) {
-          return true;
-        }
-        if (s.isOwner) {
-          return s.status == StewardStatus.holdingKey;
-        }
-        return true;
-      }).map((s) {
+      final stewards = normalizedStewards.map((s) {
         final isCurrentUser = currentPubkey != null && s.pubkey == currentPubkey;
         final displayName = isCurrentUser ? '${s.displayName} (You)' : s.displayName;
         return StewardInfo(

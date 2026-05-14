@@ -17,6 +17,12 @@ class Stewards extends Table {
 
   /// Nullable until the invitee accepts and we learn their pubkey.
   TextColumn get pubkey => text().nullable()();
+
+  /// Owner-generated invite code bound to this steward slot. Duplicated from
+  /// [Invitations] so another owner device can match [NostrKind.invitationAcceptance]
+  /// payloads when its invitations row is missing (e.g. plan created elsewhere).
+  TextColumn get inviteCode => text().nullable()();
+
   TextColumn get name => text().nullable()();
 
   /// Shared on the wire as part of the share event; UI hides it outside

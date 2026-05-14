@@ -31,7 +31,7 @@ import 'tables/viewed_notifications.dart';
 
 part 'app_database.g.dart';
 
-/// Schema version 5 — corresponds to `drift_schemas/drift_schema_v5.json`.
+/// Schema version 6 — corresponds to `drift_schemas/drift_schema_v6.json`.
 ///
 /// **v2**: Adds `held_shares` (and indexes) on upgrade for databases that were
 /// created at v1 before the Phase 2a table landed; those files kept
@@ -47,6 +47,10 @@ part 'app_database.g.dart';
 /// **v5**: Adds app-state tables (`kv`, `viewed_notifications`,
 /// `synced_consents`) used to move remaining SharedPreferences-backed runtime
 /// state into SQLCipher.
+///
+/// **v6**: `stewards.invite_code` stores the pending invite code for a slot so
+/// invitation acceptance can hydrate stewards without relying on a local
+/// [Invitations] row on every owner device.
 ///
 /// Any further change to any [Table] that affects the SQL schema MUST bump
 /// [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a new
@@ -95,7 +99,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   Future<void> _createPhase3Indexes() async {
     await customStatement(
@@ -280,6 +284,29 @@ class AppDatabase extends _$AppDatabase {
               'synced_consents',
               () => m.createTable(syncedConsents),
             );
+          }
+          if (from < 6) {
+            final cols = await customSelect('PRAGMA table_info(stewards)').get();
+            final hasInviteCode = cols.any((c) => c.data['name'] == 'invite_code');
+            if (!hasInviteCode) {
+              await customStatement('ALTER TABLE stewards ADD COLUMN invite_code TEXT');
+              await customStatement('''
+UPDATE stewards
+SET invite_code = (
+  SELECT i.code
+  FROM invitations AS i
+  WHERE i.steward_id = stewards.id
+    AND i.revoked_at IS NULL
+  LIMIT 1
+)
+WHERE EXISTS (
+  SELECT 1
+  FROM invitations AS i2
+  WHERE i2.steward_id = stewards.id
+    AND i2.revoked_at IS NULL
+)
+''');
+            }
           }
         },
         beforeOpen: (details) async {

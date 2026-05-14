@@ -813,7 +813,7 @@ class VaultRepository {
             s,
             currentDistributionVersion: row.currentDistributionVersion,
             distributionShareRow: distributionSharesByStewardId[s.id],
-            inviteCode: inviteCodeByStewardId[s.id],
+            inviteCode: inviteCodeByStewardId[s.id] ?? s.inviteCode,
           ),
         )
         .toList();
@@ -1121,6 +1121,7 @@ class VaultRepository {
                   contactInfo: Value(s.contactInfo),
                   isOwner: Value(s.isOwner),
                   joinedAt: createdAtMs,
+                  inviteCode: Value(s.inviteCode),
                 ).copyWith(
                   // Clear leftAt so a re-added steward (same ID, previously
                   // soft-retired) becomes visible to activeForVault queries again.
