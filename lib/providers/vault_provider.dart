@@ -476,6 +476,8 @@ class VaultRepository {
                 ? incomingDist
                 : row.currentDistributionVersion,
           ),
+          instructions:
+              share.instructions != null ? Value(share.instructions) : const Value.absent(),
         ),
       );
 
@@ -502,6 +504,18 @@ class VaultRepository {
       'mergeVaultRowFromIncomingShare: vault $vaultId '
       '(threshold=${share.threshold}, totalShares=${share.totalShares})',
     );
+  }
+
+  /// Ensures an `owned_vaults` row exists for [vaultId] (empty encrypted shell).
+  ///
+  /// Used when the vault owner (same device pubkey as [vaults.owner_pubkey])
+  /// ingests a manifest-only 1337 on a fresh install so [isOwnedVault] and
+  /// owner UI gates activate while [saveOwnedVaultContent] has not run yet.
+  Future<void> ensureOwnedVaultShell(String vaultId) async {
+    final existing = await _db.ownedVaultDao.getByVaultId(vaultId);
+    if (existing != null) return;
+    await saveOwnedVaultContent(vaultId, '');
+    Log.info('ensureOwnedVaultShell: inserted owned placeholder for vault $vaultId');
   }
 
   /// Write or replace the NIP-44 [content] ciphertext for an owned vault.

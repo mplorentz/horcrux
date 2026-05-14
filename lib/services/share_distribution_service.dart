@@ -199,6 +199,61 @@ class ShareDistributionService {
         }
       }
 
+      final ownerInRoster = config.stewards.any(
+        (s) => s.isOwner && s.pubkey == ownerPubkey,
+      );
+      if (!ownerInRoster) {
+        final template = shares.firstWhere(
+          (s) => s.payload.isNotEmpty,
+          orElse: () => throw StateError('distributeShares: no payload-bearing share for manifest'),
+        );
+        final manifest = Share(
+          payload: '',
+          threshold: config.threshold,
+          shareIndex: -1,
+          totalShares: config.totalKeys,
+          primeMod: template.primeMod,
+          creatorPubkey: ownerPubkey,
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          vaultId: config.vaultId,
+          vaultName: template.vaultName,
+          ownerName: template.ownerName,
+          instructions: config.instructions,
+          stewards: template.stewards,
+          recipientPubkey: ownerPubkey,
+          relayUrls: config.relays,
+          distributionVersion: config.distributionVersion,
+          pushEnabled: template.pushEnabled,
+        );
+        if (!manifest.isValid) {
+          throw StateError('distributeShares: built manifest share failed validation');
+        }
+        final manifestWithRelays = manifest.copyWith(
+          relayUrls: config.relays,
+          distributionVersion: config.distributionVersion,
+        );
+        final manifestString = json.encode(shareToJson(manifestWithRelays));
+        final publishedManifest = await _ndkService.publishEncryptedEvent(
+          content: manifestString,
+          kind: NostrKind.shareData.value,
+          recipientPubkey: ownerPubkey,
+          relays: config.relays,
+          tags: [
+            ['d', 'manifest_${config.vaultId}'],
+            ['backup_config_id', config.vaultId],
+            ['shard_index', '-1'],
+          ],
+          customPubkey: ownerPubkey,
+          nip40Expiration: Duration.zero,
+        );
+        if (publishedManifest == null) {
+          throw Exception('Failed to publish owner manifest share event');
+        }
+        Log.info(
+          'Published manifest-only 1337 for vault ${config.vaultId} (owner not self-steward)',
+        );
+      }
+
       return shareEvents;
     } catch (e) {
       Log.error('Error distributing shares', e);

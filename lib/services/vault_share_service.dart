@@ -33,6 +33,9 @@ int _shardSlotZeroBasedFromEmbedded({
   }
   final pk = steward['pubkey'];
   if (recipientPubkeyHex != null && pk == recipientPubkeyHex) {
+    // Manifest shares use shareIndex -1 (no Shamir slot); never propagate -1
+    // into steward slot derivation.
+    if (share.isManifest) return filteredEnumerationIndex;
     return share.shareIndex;
   }
   return filteredEnumerationIndex;
@@ -98,6 +101,9 @@ class VaultShareService {
   /// version gate inside [_upsertStewardVaultAndSelf]).
   Future<void> addVaultShare(String vaultId, Share share) async {
     if (!share.isValid) throw ArgumentError('Invalid shard data');
+    if (share.isManifest) {
+      throw ArgumentError('Manifest shares must use processVaultShare');
+    }
 
     final ownedByThisDevice = await repository.isOwnedVaultForCurrentUser(vaultId);
 
@@ -115,11 +121,16 @@ class VaultShareService {
 
   /// Process a received vault share (invitation flow).
   ///
-  /// Full flow:
+  /// Full flow for a normal shard:
   /// 1. Dedup check — skip if we already have this nostrEventId.
   /// 2. [addVaultShare] — upsert vault/steward rows + write held_share.
   /// 3. Opt into push if the owner has push enabled.
   /// 4. Send share confirmation event to owner.
+  ///
+  /// **Manifest-only** shares ([Share.isManifest]): metadata-only 1337 for
+  /// owner rehydration — skips `held_shares`, confirmation (1342), and
+  /// phantom self-steward upsert; may insert an `owned_vaults` shell when the
+  /// ingesting pubkey is the vault owner on a fresh device.
   Future<void> processVaultShare(String vaultId, Share shardData) async {
     if (!shardData.isValid) throw ArgumentError('Invalid shard data');
 
@@ -141,6 +152,20 @@ class VaultShareService {
       } on ArgumentError {
         // Vault not found — first time seeing this vault; proceed to create it.
       }
+    }
+
+    if (shardData.isManifest) {
+      final ownedBefore = await repository.isOwnedVaultForCurrentUser(vaultId);
+      await _upsertStewardVaultAndSelf(vaultId, shardData, isManifestIngest: true);
+      final pk = await _getNdkService().getCurrentPubkey();
+      if (!ownedBefore && pk != null && pk == shardData.creatorPubkey) {
+        await repository.ensureOwnedVaultShell(vaultId);
+      }
+      Log.info(
+        'processVaultShare: applied manifest metadata for vault $vaultId '
+        '(distributionVersion=${shardData.distributionVersion})',
+      );
+      return;
     }
 
     await addVaultShare(vaultId, shardData);
@@ -323,8 +348,9 @@ class VaultShareService {
   /// caller before invoking this helper.
   Future<void> _upsertStewardVaultAndSelf(
     String vaultId,
-    Share share,
-  ) async {
+    Share share, {
+    bool isManifestIngest = false,
+  }) async {
     final existing = await repository.getVault(vaultId);
     final incomingVersion = share.distributionVersion ?? 0;
 
@@ -431,7 +457,7 @@ class VaultShareService {
       }
     }
 
-    if (currentPubkey != null && currentPubkey.isNotEmpty) {
+    if (!isManifestIngest && currentPubkey != null && currentPubkey.isNotEmpty) {
       final fallbackSlot = share.shareIndex;
       final idForSelf = selfResolvedId ??
           _resolvedEmbeddedStewardRowId(
@@ -447,11 +473,11 @@ class VaultShareService {
         name: selfName ?? 'Unknown',
         isOwner: currentPubkey == share.creatorPubkey,
       );
+      Log.debug(
+        '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
+        'shareIndex=$selfShareIndex',
+      );
     }
-    Log.debug(
-      '_upsertStewardVaultAndSelf: upserted self-steward for vault $vaultId '
-      'shareIndex=$selfShareIndex',
-    );
 
     // Persist Shamir params from the wire share onto `vaults`. Without this,
     // steward bootstrap rows stay at threshold/total_shares = 0 (no

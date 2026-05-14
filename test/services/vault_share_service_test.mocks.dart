@@ -436,6 +436,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
     List<List<String>>? tags,
     String? customPubkey,
     String? vaultId,
+    Duration? nip40Expiration,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -449,6 +450,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
             #tags: tags,
             #customPubkey: customPubkey,
             #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
           },
         ),
         returnValue: _i5.Future<_i3.Nip01Event?>.value(),
@@ -463,6 +465,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
     List<List<String>>? tags,
     String? customPubkey,
     String? vaultId,
+    Duration? nip40Expiration,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -476,6 +479,7 @@ class MockNdkService extends _i1.Mock implements _i7.NdkService {
             #tags: tags,
             #customPubkey: customPubkey,
             #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
           },
         ),
         returnValue: _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),

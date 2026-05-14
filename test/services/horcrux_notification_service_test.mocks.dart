@@ -546,6 +546,16 @@ class MockVaultRepository extends _i1.Mock implements _i6.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> ensureOwnedVaultShell(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #ensureOwnedVaultShell,
+          [vaultId],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
   _i4.Future<void> saveOwnedVaultContent(
     String? vaultId,
     String? content,

@@ -942,6 +942,16 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> ensureOwnedVaultShell(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #ensureOwnedVaultShell,
+          [vaultId],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
   _i4.Future<void> saveOwnedVaultContent(
     String? vaultId,
     String? content,
@@ -1481,6 +1491,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
     List<List<String>>? tags,
     String? customPubkey,
     String? vaultId,
+    Duration? nip40Expiration,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1494,6 +1505,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
             #tags: tags,
             #customPubkey: customPubkey,
             #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
           },
         ),
         returnValue: _i4.Future<_i2.Nip01Event?>.value(),
@@ -1508,6 +1520,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
     List<List<String>>? tags,
     String? customPubkey,
     String? vaultId,
+    Duration? nip40Expiration,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1521,6 +1534,7 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
             #tags: tags,
             #customPubkey: customPubkey,
             #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
           },
         ),
         returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),

@@ -50,10 +50,19 @@ class Share with _$Share {
 
   const Share._();
 
+  /// Wire-level "manifest-only" 1337: empty Shamir payload with sentinel index.
+  ///
+  /// Used when the owner is not a self-steward so relays can still carry a
+  /// gift-wrapped recovery-plan snapshot to the owner's pubkey. Distinct from
+  /// a real share (`payload` non-empty, `shareIndex` in `0..totalShares-1`).
+  /// A future format revision may add an explicit `manifest` flag on the JSON
+  /// ([horcrux_app-8yw]); v1 discriminates only on this pair.
+  bool get isManifest => payload.isEmpty && shareIndex == -1;
+
   /// Check if this share is valid
   bool get isValid {
     try {
-      if (payload.isEmpty) {
+      if (payload.isEmpty && !isManifest) {
         Log.error('Share validation failed: payload is empty');
         return false;
       }
@@ -73,14 +82,21 @@ class Share with _$Share {
         return false;
       }
 
-      if (shareIndex < 0) {
+      if (!isManifest && shareIndex < 0) {
         Log.error(
           'Share validation failed: shareIndex ($shareIndex) is negative',
         );
         return false;
       }
 
-      if (shareIndex >= totalShares) {
+      if (isManifest && shareIndex != -1) {
+        Log.error(
+          'Share validation failed: manifest shares must use shareIndex -1 (got $shareIndex)',
+        );
+        return false;
+      }
+
+      if (!isManifest && shareIndex >= totalShares) {
         Log.error(
           'Share validation failed: shareIndex ($shareIndex) is out of bounds (should be 0 to ${totalShares - 1})',
         );
