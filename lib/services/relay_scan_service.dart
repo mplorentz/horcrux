@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
@@ -78,6 +77,9 @@ class RelayScanService {
   final NdkService ndkService;
   final AppDatabase _database;
 
+  /// The default Horcrux relay seeded on a fresh install.
+  static const String defaultHorcruxRelayUrl = 'wss://dev.horcruxbackup.com';
+
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
   List<RelayConfiguration>? _cachedRelays;
@@ -86,10 +88,8 @@ class RelayScanService {
   Timer? _scanTimer;
   ScanningStatus? _scanningStatus;
 
-  RelayScanService({
-    required this.ndkService,
-    required AppDatabase database,
-  }) : _database = database;
+  RelayScanService({required this.ndkService, required AppDatabase database})
+      : _database = database;
 
   /// Cancels the periodic scan timer immediately (see [ndkServiceProvider] dispose notes).
   void disposeSync() {
@@ -105,66 +105,51 @@ class RelayScanService {
     try {
       await _loadRelayConfigurations();
 
-      // In debug mode, if no relays are configured, add localhost relay
-      if (kDebugMode && (_cachedRelays == null || _cachedRelays!.isEmpty)) {
-        const localhostRelay = RelayConfiguration(
-          id: 'localhost-debug',
-          url: 'wss://dev.horcruxbackup.com',
-          name: 'Localhost (Debug)',
+      // Seed the default Horcrux relay on a fresh install (empty relay list).
+      // We only seed when the list is genuinely empty so that a user who
+      // deliberately removes the relay is not forced back onto it after restart.
+      if (_cachedRelays!.isEmpty) {
+        const defaultRelay = RelayConfiguration(
+          id: 'horcrux-default',
+          url: defaultHorcruxRelayUrl,
+          name: 'Horcrux Relay',
           isEnabled: true,
           isTrusted: false,
         );
 
         try {
-          // Directly add to cache and save without calling initialize recursively
-          _cachedRelays!.add(localhostRelay);
+          _cachedRelays!.add(defaultRelay);
           await _saveRelayConfigurations();
-          Log.info(
-            'Auto-added localhost relay in debug mode: ws://localhost:10547',
-          );
+          Log.info('Seeded default Horcrux relay: $defaultHorcruxRelayUrl');
         } catch (e) {
-          Log.error('Error auto-adding localhost relay', e);
+          Log.error('Error seeding default Horcrux relay', e);
         }
       }
 
       await _loadScanningStatus();
       _isInitialized = true;
 
-      // In debug mode with newly added localhost relay, start scanning automatically
-      if (kDebugMode && _cachedRelays!.length == 1 && _cachedRelays![0].id == 'localhost-debug') {
-        try {
-          await startRelayScanning();
-          Log.info('Auto-started scanning with localhost relay');
-        } catch (e) {
-          Log.error('Error auto-starting scanning with localhost relay', e);
-        }
-      } else {
-        // Auto-start scanning if there are enabled relays and scanning isn't already active
-        // Only auto-start if scanning was never explicitly stopped (isActive was true or null/never set)
-        final enabledRelays = _cachedRelays!.where((r) => r.isEnabled).toList();
-        if (enabledRelays.isNotEmpty && !_isScanning) {
-          // Check if scanning was previously active (user didn't explicitly stop it)
-          // If scanningStatus is null or isActive was true, auto-start
-          // If isActive was false, respect the user's explicit stop
-          final shouldAutoStart = _scanningStatus == null || _scanningStatus!.isActive;
-
-          if (shouldAutoStart) {
-            try {
-              await startRelayScanning();
-              Log.info(
-                'Auto-started relay scanning on initialization with ${enabledRelays.length} enabled relay(s)',
-              );
-            } catch (e) {
-              Log.error(
-                'Error auto-starting relay scanning on initialization',
-                e,
-              );
-            }
-          } else {
-            Log.debug(
-              'Skipping auto-start: scanning was explicitly stopped by user',
+      // Auto-start scanning if there are enabled relays and scanning was not
+      // explicitly stopped by the user in a previous session.
+      final enabledRelays = _cachedRelays!.where((r) => r.isEnabled).toList();
+      if (enabledRelays.isNotEmpty && !_isScanning) {
+        final shouldAutoStart = _scanningStatus == null || _scanningStatus!.isActive;
+        if (shouldAutoStart) {
+          try {
+            await startRelayScanning();
+            Log.info(
+              'Auto-started relay scanning on initialization with ${enabledRelays.length} enabled relay(s)',
+            );
+          } catch (e) {
+            Log.error(
+              'Error auto-starting relay scanning on initialization',
+              e,
             );
           }
+        } else {
+          Log.debug(
+            'Skipping auto-start: scanning was explicitly stopped by user',
+          );
         }
       }
       Log.info(
