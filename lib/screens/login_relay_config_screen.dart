@@ -110,6 +110,9 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   // ── scanning ───────────────────────────────────────────────────────────────
 
   Future<void> _startScan() async {
+    // Guard against re-entry from rapid taps.
+    if (_state != _ScanState.editing) return;
+
     if (_relays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -119,15 +122,21 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
       return;
     }
 
+    // Flip to scanning immediately so subsequent taps are ignored.
+    setState(() => _state = _ScanState.scanning);
+
     // Persist relay list to service.
     final relayScanService = ref.read(relayScanServiceProvider);
     await relayScanService.clearAll();
+    if (!mounted) return;
+
     for (final relay in _relays) {
       try {
         await relayScanService.addRelayConfiguration(relay);
       } catch (e) {
         Log.error('Error persisting relay during onboarding scan', e);
       }
+      if (!mounted) return;
     }
 
     // Snapshot current vault count.
@@ -137,6 +146,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
 
     // Start live subscriptions via existing service.
     await relayScanService.ensureScanningStarted();
+    if (!mounted) return;
 
     // Fire one-shot historical query (does not block).
     final relayUrls = _relays.map((r) => r.url).toList();
@@ -163,8 +173,6 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
         setState(() => _progressValue = next);
       }
     });
-
-    setState(() => _state = _ScanState.scanning);
   }
 
   void _tryAgain() {
