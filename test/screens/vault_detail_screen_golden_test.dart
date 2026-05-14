@@ -6,6 +6,7 @@ import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
+import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -321,6 +322,85 @@ void main() {
 
       await harness.dispose();
     });
+
+    testGoldens(
+      'owner as steward — no local vault content (held share only)',
+      (tester) async {
+        // [StewardedVaultDetail] + owner pubkey: local `owned_vaults` ciphertext
+        // is gone (e.g. Travel Mode) but this device still holds the owner's shard.
+        final backupConfig = createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 3,
+          stewards: [
+            createSteward(pubkey: testPubkey, name: 'You', isOwner: true).copyWith(
+              status: StewardStatus.holdingKey,
+              acknowledgedDistributionVersion: 1,
+              giftWrapEventId: 'gw-owner',
+            ),
+            createSteward(pubkey: otherPubkey, name: 'Bob').copyWith(
+              status: StewardStatus.holdingKey,
+              acknowledgedDistributionVersion: 1,
+              giftWrapEventId: 'gw-bob',
+            ),
+            createSteward(pubkey: thirdPubkey, name: 'Charlie').copyWith(
+              status: StewardStatus.holdingKey,
+              acknowledgedDistributionVersion: 1,
+              giftWrapEventId: 'gw-charlie',
+            ),
+          ],
+          relays: const ['wss://relay.example.com'],
+        ).copyWith(distributionVersion: 1);
+
+        final ownerStewardVault = Vault(
+          id: 'test-vault',
+          name: 'Keys After Travel',
+          createdAt: DateTime(2024, 10, 5, 9, 0),
+          ownerPubkey: testPubkey,
+          recoveryRequests: [],
+          backupConfig: backupConfig,
+        );
+
+        final harness = await pumpGoldenWidget(
+          tester,
+          const VaultDetailScreen(vaultId: 'test-vault'),
+          overrides: [
+            vaultDetailProvider('test-vault').overrideWith(
+              (ref) => Stream.value(
+                stewardedVaultDetailFromVault(
+                  ownerStewardVault,
+                  latestShare: createTestShard(
+                    shardIndex: 0,
+                    recipientPubkey: testPubkey,
+                    vaultId: 'test-vault',
+                    vaultName: 'Keys After Travel',
+                  ),
+                ),
+              ),
+            ),
+            currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+            recoveryStatusProvider.overrideWith((ref, vaultId) {
+              return const AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: false,
+                  canRecover: false,
+                  activeRecoveryRequest: null,
+                  isInitiator: false,
+                ),
+              );
+            }),
+          ],
+          surfaceSize: const Size(375, 1200),
+        );
+
+        await screenMatchesGolden(
+          tester,
+          'vault_detail_screen_owner_steward_no_local_content',
+        );
+
+        await harness.dispose();
+      },
+    );
 
     testGoldens('shard holder - not in recovery', (tester) async {
       final shardHolderVault = Vault(
