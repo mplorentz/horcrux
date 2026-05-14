@@ -209,6 +209,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
         appBar: const HorcruxAppBar(
           title: 'Load Vaults',
           automaticallyImplyLeading: false,
+          leading: SizedBox.shrink(),
         ),
         body: switch (_state) {
           _ScanState.editing => _buildEditingBody(),
@@ -269,33 +270,31 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   }
 
   Widget _buildScanningBody() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Scanning relays…',
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            LinearProgressIndicator(
-              value: _progressValue,
-              minHeight: 8,
-              color: Theme.of(context).colorScheme.onSurface,
-              backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Scanning relays…',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          LinearProgressIndicator(
+            value: _progressValue,
+            minHeight: 8,
+            color: Theme.of(context).colorScheme.onSurface,
+            backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
