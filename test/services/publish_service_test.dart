@@ -28,8 +28,7 @@ void main() {
         final db = newTestDatabase();
         addTearDown(() async => db.close());
 
-        // NDK supplier whose broadcast future never completes — simulates wss://3.com.
-        final broadcastCompleter = Completer<void>();
+        // NDK supplier that throws on connect — simulates unreachable relay.
         final service = PublishService(
           getNdk: () async {
             throw StateError('Bad state: No element');
@@ -61,8 +60,6 @@ void main() {
         expect(relayRows, hasLength(1));
         expect(relayRows.first.status, 'pending');
         expect(relayRows.first.relayUrl, 'wss://dead.example.com');
-
-        broadcastCompleter.complete(); // allow clean-up if needed
       },
     );
 
@@ -72,11 +69,8 @@ void main() {
         final db = newTestDatabase();
         addTearDown(() async => db.close());
 
-        var broadcastCalls = 0;
         final service = PublishService(
           getNdk: () async {
-            broadcastCalls++;
-            // Return a forever-pending response.
             throw StateError('Bad state: No element');
           },
           database: db,
