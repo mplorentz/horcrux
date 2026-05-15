@@ -1,14 +1,23 @@
+import 'dart:async' show Timer, unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/relay_configuration.dart';
-import '../services/relay_scan_service.dart';
+import '../providers/vault_provider.dart';
 import '../services/logger.dart';
+import '../services/ndk_service.dart';
+import '../services/relay_scan_service.dart';
 import '../utils/invite_code_utils.dart';
 import '../utils/snackbar_helper.dart';
+import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/row_button_stack.dart';
 
-/// Screen for managing Nostr relay configurations
+enum _ScanState { editing, scanning, results }
+
+/// Settings screen for choosing which Nostr relays Horcrux scans.
 class RelayManagementScreen extends ConsumerStatefulWidget {
   const RelayManagementScreen({super.key});
 
@@ -17,37 +26,102 @@ class RelayManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
+  _ScanState _state = _ScanState.editing;
+
   List<RelayConfiguration> _relays = [];
-  ScanningStatus? _scanningStatus;
   bool _isLoading = true;
-  bool _isScanning = false;
+
+  int _baselineVaultCount = 0;
+  int _liveVaultCount = 0;
+
+  Timer? _progressTimer;
+  double _progressValue = 0.0;
+
+  static const Duration _progressDuration = Duration(seconds: 10);
+  static const Duration _progressTickInterval = Duration(milliseconds: 100);
+
+  @override
+  void dispose() {
+    _progressTimer?.cancel();
+    super.dispose();
+  }
+
+  int get _vaultsFound => (_liveVaultCount - _baselineVaultCount).clamp(0, 9999);
+
+  Future<void> _loadRelays() async {
+    try {
+      final relays = await ref.read(relayScanServiceProvider).getRelayConfigurations();
+      if (mounted) {
+        setState(() {
+          _relays = relays;
+          _isLoading = false;
+        });
+      }
+    } catch (e, st) {
+      Log.error('Error loading relay configurations', e, st);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadRelays();
   }
 
-  Future<void> _loadData() async {
-    try {
-      final relays = await ref.read(relayScanServiceProvider).getRelayConfigurations();
-      final scanningStatus = await ref.read(relayScanServiceProvider).getScanningStatus();
-      final isScanning = await ref.read(relayScanServiceProvider).isScanningActive();
-
-      if (mounted) {
-        setState(() {
-          _relays = relays;
-          _scanningStatus = scanningStatus;
-          _isScanning = isScanning;
-          _isLoading = false;
-        });
+  Map<String, Set<String>> _vaultNamesByRelayUrl() {
+    final vaults = ref.read(vaultDetailListProvider).valueOrNull ?? const [];
+    final map = <String, Set<String>>{};
+    for (final v in vaults) {
+      final urls = v.backupConfig?.relays;
+      if (urls == null) continue;
+      for (final url in urls) {
+        map.putIfAbsent(url, () => {}).add(v.name);
       }
-    } catch (e) {
-      Log.error('Error loading relay data', e);
+    }
+    return map;
+  }
+
+  Future<void> _removeRelay(RelayConfiguration relay) async {
+    final inUse = _vaultNamesByRelayUrl()[relay.url];
+    if (inUse != null && inUse.isNotEmpty) {
+      final names = inUse.toList()..sort();
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Cannot remove relay'),
+          content: Text(
+            'This relay is in use by ${inUse.length} vault${inUse.length == 1 ? '' : 's'}: '
+            '${names.join(', ')}. Remove it from those vaults\' backup configs first.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(relayScanServiceProvider).removeRelayConfiguration(relay.id);
+      if (!mounted) return;
+      setState(() => _relays.removeWhere((r) => r.id == relay.id));
+      context.showHorcruxSnackBar(
+        'Removed relay',
+        kind: HorcruxSnackKind.success,
+      );
+    } catch (e, st) {
+      Log.error('Error removing relay', e, st);
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        context.showHorcruxSnackBar(
+          'Error removing relay: $e',
+          kind: HorcruxSnackKind.error,
+        );
       }
     }
   }
@@ -55,430 +129,306 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   Future<void> _addRelay() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => const _AddRelayDialog(),
+      builder: (_) => const _AddRelayDialog(),
+    );
+    if (result == null) return;
+
+    final url = result['url'] as String;
+    if (_relays.any((r) => r.url == url)) {
+      if (mounted) {
+        context.showHorcruxSnackBar(
+          'That relay is already in the list.',
+          kind: HorcruxSnackKind.info,
+        );
+      }
+      return;
+    }
+
+    final relay = RelayConfiguration(
+      id: generateSecureID(),
+      url: url,
+      name: url,
+      isEnabled: true,
+      isTrusted: false,
     );
 
-    if (result != null) {
-      try {
-        // Generate cryptographically secure relay configuration ID
-        final relay = RelayConfiguration(
-          id: generateSecureID(),
-          url: result['url'] as String,
-          name: result['name'] as String,
-          isEnabled: true,
-          isTrusted: result['isTrusted'] as bool? ?? false,
-        );
-
-        await ref.read(relayScanServiceProvider).addRelayConfiguration(relay);
-        await _loadData();
-
-        if (mounted) {
-          context.showHorcruxSnackBar(
-            'Added relay: ${relay.name}',
-            kind: HorcruxSnackKind.success,
-          );
-        }
-      } catch (e) {
-        Log.error('Error adding relay', e);
-        if (mounted) {
-          context.showHorcruxSnackBar(
-            'Error adding relay: $e',
-            kind: HorcruxSnackKind.error,
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _toggleRelay(RelayConfiguration relay) async {
     try {
-      final updatedRelay = relay.copyWith(isEnabled: !relay.isEnabled);
-      await ref.read(relayScanServiceProvider).updateRelayConfiguration(updatedRelay);
-      await _loadData();
-    } catch (e) {
-      Log.error('Error toggling relay', e);
-    }
-  }
-
-  Future<void> _deleteRelay(RelayConfiguration relay) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Relay'),
-        content: Text('Are you sure you want to delete "${relay.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        await ref.read(relayScanServiceProvider).removeRelayConfiguration(relay.id);
-        await _loadData();
-
-        if (mounted) {
-          context.showHorcruxSnackBar('Deleted relay: ${relay.name}');
-        }
-      } catch (e) {
-        Log.error('Error deleting relay', e);
-        if (mounted) {
-          context.showHorcruxSnackBar(
-            'Error deleting relay: $e',
-            kind: HorcruxSnackKind.error,
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _toggleScanning() async {
-    try {
-      if (_isScanning) {
-        await ref.read(relayScanServiceProvider).stopRelayScanning();
-      } else {
-        await ref.read(relayScanServiceProvider).startRelayScanning();
-      }
-      await _loadData();
-
+      await ref.read(relayScanServiceProvider).addRelayConfiguration(relay);
+      if (!mounted) return;
+      setState(() => _relays.add(relay));
+      context.showHorcruxSnackBar(
+        'Added relay',
+        kind: HorcruxSnackKind.success,
+      );
+    } catch (e, st) {
+      Log.error('Error adding relay', e, st);
       if (mounted) {
         context.showHorcruxSnackBar(
-          _isScanning ? 'Scanning stopped' : 'Scanning started',
-        );
-      }
-    } catch (e) {
-      Log.error('Error toggling scanning', e);
-      if (mounted) {
-        context.showHorcruxSnackBar('Error: $e', kind: HorcruxSnackKind.error);
-      }
-    }
-  }
-
-  Future<void> _scanNow() async {
-    try {
-      await ref.read(relayScanServiceProvider).scanNow();
-      await _loadData();
-
-      if (mounted) {
-        context.showHorcruxSnackBar(
-          'Manual scan completed',
-          kind: HorcruxSnackKind.success,
-        );
-      }
-    } catch (e) {
-      Log.error('Error scanning relays', e);
-      if (mounted) {
-        context.showHorcruxSnackBar(
-          'Error scanning: $e',
+          'Error adding relay: $e',
           kind: HorcruxSnackKind.error,
         );
       }
     }
   }
 
+  Future<void> _startScan() async {
+    if (_state != _ScanState.editing) return;
+
+    if (_relays.isEmpty) {
+      context.showHorcruxSnackBar(
+        'Add at least one relay before scanning.',
+        kind: HorcruxSnackKind.info,
+      );
+      return;
+    }
+
+    setState(() => _state = _ScanState.scanning);
+
+    final relayScanService = ref.read(relayScanServiceProvider);
+    await relayScanService.ensureScanningStarted();
+    if (!mounted) return;
+
+    final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
+    _baselineVaultCount = current.length;
+    _liveVaultCount = current.length;
+
+    final relayUrls = _relays.map((r) => r.url).toList();
+    unawaited(
+      ref.read(ndkServiceProvider).queryHistoricalGiftWraps(relayUrls: relayUrls),
+    );
+
+    _progressValue = 0.0;
+    _progressTimer = Timer.periodic(_progressTickInterval, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final next = _progressValue +
+          (_progressTickInterval.inMilliseconds / _progressDuration.inMilliseconds);
+      if (next >= 1.0) {
+        timer.cancel();
+        setState(() {
+          _progressValue = 1.0;
+          _state = _ScanState.results;
+        });
+      } else {
+        setState(() => _progressValue = next);
+      }
+    });
+  }
+
+  void _tryAgain() {
+    _progressTimer?.cancel();
+    setState(() {
+      _state = _ScanState.editing;
+      _progressValue = 0.0;
+    });
+  }
+
+  void _continue() {
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(vaultDetailListProvider, (_, next) {
+      final count = next.valueOrNull?.length ?? 0;
+      if ((_state == _ScanState.scanning || _state == _ScanState.results) && mounted) {
+        setState(() => _liveVaultCount = count);
+      }
+    });
+
     return HorcruxScaffold(
-      appBar: HorcruxAppBar(
-        title: 'Relays',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
+      appBar: const HorcruxAppBar(title: 'Relays'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Scanning status card
-                if (_scanningStatus != null) _buildScanningStatusCard(),
+          : switch (_state) {
+              _ScanState.editing => _buildEditingBody(),
+              _ScanState.scanning => _buildScanningBody(),
+              _ScanState.results => _buildResultsBody(),
+            },
+    );
+  }
 
-                // Scanning controls
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _toggleScanning,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _isScanning ? Colors.red : Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: Icon(
-                            _isScanning ? Icons.stop : Icons.play_arrow,
-                          ),
-                          label: Text(
-                            _isScanning ? 'Stop Scanning' : 'Start Scanning',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: _scanNow,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.search),
-                        label: const Text('Scan Now'),
-                      ),
-                    ],
+  Widget _buildEditingBody() {
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              children: [
+                Text(
+                  'Horcrux scans these relays to listen for vault updates and recovery '
+                  'requests. You can manually enter additional relays to scan here.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ..._relays.map(
+                  (relay) => _RelayRow(
+                    relay: relay,
+                    onDelete: () => _removeRelay(relay),
                   ),
                 ),
-
-                // Relay list
-                Expanded(
-                  child: _relays.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.dns_outlined,
-                                size: 64,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No relays configured',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Tap + to add your first relay',
-                                style: TextStyle(color: Colors.grey[500]),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _relays.length,
-                          itemBuilder: (context, index) {
-                            final relay = _relays[index];
-                            return _buildRelayCard(relay);
-                          },
-                        ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _addRelay,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Relay'),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addRelay,
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildScanningStatusCard() {
-    final status = _scanningStatus!;
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _isScanning ? Icons.sync : Icons.sync_disabled,
-                  color: _isScanning ? Colors.green : Colors.grey,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Scanning Status',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildStatusRow('Total Relays', '${status.totalRelays}'),
-            _buildStatusRow('Active Relays', '${status.activeRelays}'),
-            _buildStatusRow('Shares Found', '${status.sharesFound}'),
-            _buildStatusRow('Requests Found', '${status.requestsFound}'),
-            if (status.lastScan != null)
-              _buildStatusRow('Last Scan', _formatDateTime(status.lastScan!)),
-            if (status.lastError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Error: ${status.lastError}',
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                ),
+          ),
+          RowButtonStack(
+            buttons: [
+              RowButtonConfig(
+                onPressed: _startScan,
+                icon: Icons.search,
+                text: 'Scan for Vaults',
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: Colors.grey[600])),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRelayCard(RelayConfiguration relay) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: relay.isEnabled
-              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-              : Colors.grey[300],
-          child: Icon(
-            Icons.dns,
-            color: relay.isEnabled ? Theme.of(context).primaryColor : Colors.grey,
+  Widget _buildScanningBody() {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Scanning relays…',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
           ),
-        ),
-        title: Text(
-          relay.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              relay.url,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                if (relay.isTrusted)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Trusted',
-                      style: TextStyle(fontSize: 10, color: Colors.green),
-                    ),
-                  ),
-                if (!relay.isEnabled)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    margin: const EdgeInsets.only(left: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Disabled',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ),
-                if (relay.lastScanned != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      'Last scanned: ${_formatDateTime(relay.lastScanned!)}',
-                      style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton(
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'toggle',
-              child: Row(
-                children: [
-                  Icon(relay.isEnabled ? Icons.pause : Icons.play_arrow),
-                  const SizedBox(width: 8),
-                  Text(relay.isEnabled ? 'Disable' : 'Enable'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
-          onSelected: (value) {
-            if (value == 'toggle') {
-              _toggleRelay(relay);
-            } else if (value == 'delete') {
-              _deleteRelay(relay);
-            }
-          },
-        ),
+          const SizedBox(height: 32),
+          LinearProgressIndicator(
+            value: _progressValue,
+            minHeight: 8,
+            color: Theme.of(context).colorScheme.onSurface,
+            backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
+  Widget _buildResultsBody() {
+    final count = _vaultsFound;
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    count > 0 ? Icons.lock_open : Icons.search_off,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    count > 0
+                        ? 'Found $count vault${count == 1 ? '' : 's'}'
+                        : 'No vaults found yet',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    count > 0
+                        ? 'Tap Continue to go back to settings.'
+                        : 'The scan is still running in the background. Vaults may appear '
+                            'as they arrive, or try again with different relays.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          RowButtonStack(
+            buttons: [
+              RowButtonConfig(
+                onPressed: _continue,
+                icon: Icons.arrow_forward,
+                text: 'Continue',
+              ),
+              RowButtonConfig(
+                onPressed: _tryAgain,
+                icon: Icons.refresh,
+                text: 'Try Again',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
-/// Dialog for adding a new relay
+class _RelayRow extends StatelessWidget {
+  final RelayConfiguration relay;
+  final VoidCallback onDelete;
+
+  const _RelayRow({required this.relay, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.dns_outlined,
+            size: 20,
+            color: theme.colorScheme.onSurface,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(relay.url, style: theme.textTheme.bodyMedium),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: onDelete,
+            tooltip: 'Remove relay',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AddRelayDialog extends StatefulWidget {
   const _AddRelayDialog();
 
   @override
-  _AddRelayDialogState createState() => _AddRelayDialogState();
+  State<_AddRelayDialog> createState() => _AddRelayDialogState();
 }
 
 class _AddRelayDialogState extends State<_AddRelayDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _urlController = TextEditingController();
-  bool _isTrusted = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _urlController.dispose();
     super.dispose();
   }
@@ -489,53 +439,22 @@ class _AddRelayDialogState extends State<_AddRelayDialog> {
       title: const Text('Add Relay'),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Relay Name',
-                hintText: 'e.g., My Trusted Relay',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                labelText: 'Relay URL',
-                hintText: 'wss://relay.example.com',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a URL';
-                }
-                if (!value.startsWith('ws://') && !value.startsWith('wss://')) {
-                  return 'URL must start with ws:// or wss://';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            CheckboxListTile(
-              title: const Text('Trusted Relay'),
-              subtitle: const Text('Use for sensitive operations'),
-              value: _isTrusted,
-              onChanged: (value) {
-                setState(() {
-                  _isTrusted = value ?? false;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ],
+        child: TextFormField(
+          controller: _urlController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Relay URL',
+            hintText: 'wss://relay.example.com',
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a URL';
+            }
+            if (!isValidRelayUrl(value.trim())) {
+              return 'URL must start with ws:// or wss://';
+            }
+            return null;
+          },
         ),
       ),
       actions: [
@@ -546,11 +465,7 @@ class _AddRelayDialogState extends State<_AddRelayDialog> {
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, {
-                'name': _nameController.text,
-                'url': _urlController.text,
-                'isTrusted': _isTrusted,
-              });
+              Navigator.pop(context, {'url': _urlController.text.trim()});
             }
           },
           child: const Text('Add'),
