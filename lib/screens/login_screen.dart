@@ -7,7 +7,7 @@ import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../screens/import_success_screen.dart';
+import '../screens/login_relay_config_screen.dart';
 
 /// Screen for importing existing Nostr keys
 class LoginScreen extends ConsumerStatefulWidget {
@@ -91,13 +91,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Initialize services and refresh key providers
       await initializeAppAndRefreshKeys(ref);
 
-      // Navigate to import success screen
+      // Navigate to relay config screen so the user can scan for existing vaults.
       final privateKey = keyPair.privateKeyBech32;
       if (mounted && privateKey != null) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ImportSuccessScreen(nsec: privateKey),
+            builder: (context) => LoginRelayConfigScreen(nsec: privateKey),
           ),
         );
       }

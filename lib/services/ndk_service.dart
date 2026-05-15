@@ -121,10 +121,7 @@ class NdkService {
         _loginService = loginService,
         _processedEventStore = processedEventStore,
         _getInvitationService = getInvitationService {
-    _publishService = PublishService(
-      getNdk: getNdk,
-      database: database,
-    );
+    _publishService = PublishService(getNdk: getNdk, database: database);
     unawaited(_publishService.initialize());
   }
 
@@ -266,7 +263,10 @@ class NdkService {
       _subscriptionStreamSubs.add(
         response.stream.listen(
           (event) => _handleIncomingNostrEvent(event, relayUrl: relayUrl),
-          onError: (error) => Log.error('Error in Nostr subscription stream ($relayUrl)', error),
+          onError: (error) => Log.error(
+            'Error in Nostr subscription stream ($relayUrl)',
+            error,
+          ),
         ),
       );
     }
@@ -320,10 +320,7 @@ class NdkService {
     await _ensureInitialized();
     if (_ndk == null) return null;
 
-    final relays = <String>{
-      ...?relayHints,
-      ..._activeRelays,
-    }.toList();
+    final relays = <String>{...?relayHints, ..._activeRelays}.toList();
     if (relays.isEmpty) {
       Log.warning(
         'fetchGiftWrapByIdForPush: no relays (empty hints and no active subscriptions)',
@@ -342,7 +339,9 @@ class NdkService {
       );
       final events = await response.future;
       if (events.isEmpty) {
-        Log.warning('fetchGiftWrapByIdForPush: relay returned no events for $eventIdHex');
+        Log.warning(
+          'fetchGiftWrapByIdForPush: relay returned no events for $eventIdHex',
+        );
         return null;
       }
       for (final e in events) {
@@ -388,7 +387,11 @@ class NdkService {
       }
       return shareFromJson(json.decode(inner.content) as Map<String, dynamic>);
     } catch (e, st) {
-      Log.warning('loadShareDataFromPublishedDistributionGiftWrap failed', e, st);
+      Log.warning(
+        'loadShareDataFromPublishedDistributionGiftWrap failed',
+        e,
+        st,
+      );
       return null;
     }
   }
@@ -433,8 +436,7 @@ class NdkService {
   /// [NostrKind.recoveryResponse] (1339). Returns `null` when the inner kind
   /// is something else, the payload is missing the id, or unwrap fails.
   Future<({NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
-    Nip01Event giftWrap,
-  ) async {
+      Nip01Event giftWrap) async {
     await _ensureInitialized();
     if (_ndk == null) return null;
     try {
@@ -557,10 +559,9 @@ class NdkService {
       await vaultShareService.processVaultShare(vaultId, shardData);
 
       if (allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShareDataProcessed(
-              event: event,
-              share: shardData,
-            );
+        await _ref
+            .read(localNotificationServiceProvider)
+            .notifyShareDataProcessed(event: event, share: shardData);
       }
     } catch (e) {
       Log.error('Error handling shard data event ${event.id}', e);
@@ -687,7 +688,9 @@ class NdkService {
       );
       final invitationService = _getInvitationService();
       await invitationService.processInvitationAcceptanceEvent(event: event);
-      Log.info('Successfully processed invitation acceptance event: ${event.id}');
+      Log.info(
+        'Successfully processed invitation acceptance event: ${event.id}',
+      );
     } catch (e) {
       Log.error('Error handling invitation acceptance event ${event.id}', e);
     }
@@ -723,10 +726,9 @@ class NdkService {
 
       final vaultId = _firstTagValue(event.tags, 'vault_id');
       if (vaultId != null && allowLocalNotification) {
-        await _ref.read(localNotificationServiceProvider).notifyShareConfirmationProcessed(
-              event: event,
-              vaultId: vaultId,
-            );
+        await _ref
+            .read(localNotificationServiceProvider)
+            .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
       }
     } catch (e) {
       Log.error('Error handling shard confirmation event ${event.id}', e);
@@ -828,6 +830,56 @@ class NdkService {
     return List.unmodifiable(_activeRelays);
   }
 
+  /// Performs a one-shot historical fetch of all gift-wrap events (kind 1059)
+  /// addressed to the current user from [relayUrls].
+  ///
+  /// Uses `_ndk.requests.query` rather than a subscription so relays close
+  /// the response naturally on EOSE. Events are routed through
+  /// [_handleIncomingNostrEvent]; the existing processed-event store dedupes
+  /// anything already delivered via live subscriptions.
+  ///
+  /// This method fires the query and returns immediately — it does **not**
+  /// install any client-side timeout or cancel the underlying request.
+  Future<void> queryHistoricalGiftWraps({
+    required List<String> relayUrls,
+  }) async {
+    await _ensureInitialized();
+    if (_ndk == null) return;
+
+    final keyPair = await _loginService.getStoredNostrKey();
+    if (keyPair == null) {
+      Log.error('queryHistoricalGiftWraps: no key pair available');
+      return;
+    }
+
+    final myPubkey = keyPair.publicKey;
+    Log.info(
+      'queryHistoricalGiftWraps: querying ${relayUrls.length} relay(s) for historical gift wraps',
+    );
+
+    final response = _ndk!.requests.query(
+      filters: [
+        Filter(kinds: [NostrKind.giftWrap.value], pTags: [myPubkey]),
+      ],
+      explicitRelays: relayUrls,
+    );
+
+    // Process events as they arrive; do not await response.future so the
+    // caller is not blocked and the query runs to natural completion.
+    unawaited(
+      response.future.then((events) async {
+        for (final event in events) {
+          await _handleIncomingNostrEvent(event, relayUrl: relayUrls.first);
+        }
+        Log.info(
+          'queryHistoricalGiftWraps: query complete, processed ${events.length} event(s)',
+        );
+      }).catchError((Object e, StackTrace st) {
+        Log.error('queryHistoricalGiftWraps: error during query', e, st);
+      }),
+    );
+  }
+
   /// Ensure NDK is initialized before use
   Future<void> _ensureInitialized() async {
     if (!_isInitialized || _ndk == null) {
@@ -902,9 +954,7 @@ class NdkService {
           'successful relays=${result.successfulRelays.length}, failed=${result.failedRelays.length}',
         );
       } else {
-        Log.info(
-          'Encrypted event published to all relays: ${result.eventId}',
-        );
+        Log.info('Encrypted event published to all relays: ${result.eventId}');
       }
 
       return giftWrap;
