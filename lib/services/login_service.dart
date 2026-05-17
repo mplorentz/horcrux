@@ -36,6 +36,13 @@ class LoginService {
   // Regular constructor - Riverpod manages the singleton behavior
   LoginService();
 
+  /// Resets the in-memory key cache. Used in tests to clear the static cache
+  /// between independent test scenarios.
+  @visibleForTesting
+  static void resetCache() {
+    _cachedKeyPair = null;
+  }
+
   /// Generate a new Nostr key pair and store only the private key securely
   Future<KeyPair> generateAndStoreNostrKey() async {
     Log.info('Generating and storing new Nostr key pair');
