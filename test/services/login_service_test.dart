@@ -23,13 +23,13 @@ void main() {
 
     final loginService = LoginService();
     await loginService.clearStoredKeys();
-    loginService.resetCacheForTest();
+    LoginService.resetCache();
   });
 
   tearDown(() async {
     final loginService = LoginService();
     await loginService.clearStoredKeys();
-    loginService.resetCacheForTest();
+    LoginService.resetCache();
   });
 
   test(
@@ -48,7 +48,7 @@ void main() {
       expect(secureStorageMock.store['nostr_private_key']!.isNotEmpty, isTrue);
 
       // Reset cache to force a storage read path
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final keyPair2 = await loginService.getStoredNostrKey();
       expect(keyPair2, isNotNull);

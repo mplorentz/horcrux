@@ -240,12 +240,6 @@ class LoginService {
     _cachedKeyPair = null;
   }
 
-  /// Test-only helper to reset the in-memory cache without touching storage
-  @visibleForTesting
-  void resetCacheForTest() {
-    _cachedKeyPair = null;
-  }
-
   /// Convert bech32 npub to hex public key
   String? npubToHex(String npub) {
     try {

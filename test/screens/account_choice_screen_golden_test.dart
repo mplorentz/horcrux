@@ -30,7 +30,7 @@ void main() {
     testGoldens('account choice screen - default state', (tester) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = await pumpGoldenWidget(
         tester,
@@ -49,7 +49,7 @@ void main() {
     ) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = GoldenTestHarness.withOverrides([
         loginServiceProvider.overrideWithValue(loginService),
