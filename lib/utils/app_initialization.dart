@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
+import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../services/ndk_service.dart';
+import '../services/relay_scan_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_receiver.dart';
 import '../services/recovery_service.dart';
-import '../services/relay_scan_service.dart';
 import '../services/log_export_service.dart';
 import '../services/vault_export_service.dart';
 
@@ -73,6 +75,13 @@ Future<void> initializeAppServices(
 /// Parameters:
 /// - [ref] - WidgetRef to access providers
 Future<void> initializeAppAndRefreshKeys(WidgetRef ref) async {
+  // [LazyDatabase] caches a failed open (e.g. after logout when providers
+  // rebuild before a new Nostr key exists). Invalidate so service init uses a
+  // fresh connection after the key is in secure storage.
+  ref.invalidate(appDatabaseProvider);
+  ref.invalidate(ndkServiceProvider);
+  ref.invalidate(relayScanServiceProvider);
+
   await initializeAppServices(ref);
 
   // Invalidate providers to trigger rebuild
