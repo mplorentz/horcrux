@@ -31,7 +31,7 @@ void main() {
       // Create a LoginService with no stored key (user not logged in)
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       // Only override loginServiceProvider - other providers won't be accessed
       // during build, only when "Get Started" button is pressed
@@ -51,7 +51,7 @@ void main() {
       // Create a LoginService with no stored key (user not logged in)
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = GoldenTestHarness.withOverrides([
         loginServiceProvider.overrideWithValue(loginService),

@@ -62,7 +62,7 @@ void main() {
       secureStorageMock.clear();
       loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       // Generate a key pair for the test
       final keyPair = await loginService.generateAndStoreNostrKey();
@@ -134,7 +134,7 @@ void main() {
     tearDown(() async {
       await repository.clearAll();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
       await testDb.close();
     });
 
