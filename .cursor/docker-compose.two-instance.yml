@@ -1,0 +1,53 @@
+# Two-instance Docker setup for testing vault backup & recovery flows.
+#
+# Usage:
+#   docker compose -f .cursor/docker-compose.two-instance.yml up -d --build
+#   docker exec horcrux-owner bash -c 'source /setup-x11.sh && flutter run -d linux --debug --host-vmservice-port=8181 &> /tmp/flutter_run.log'
+#   docker exec horcrux-steward bash -c 'source /setup-x11.sh && flutter run -d linux --debug --host-vmservice-port=9181 &> /tmp/flutter_run.log'
+#   # Find VM service URIs in logs:
+#   docker exec horcrux-owner grep 'ws://' /tmp/flutter_run.log
+#   docker exec horcrux-steward grep 'ws://' /tmp/flutter_run.log
+#
+# Teardown:
+#   docker compose -f .cursor/docker-compose.two-instance.yml down -v
+#
+# Notes:
+#   - network_mode: host is required (bridge networking fails on this host)
+#   - Separate Flutter/Pub caches per container to avoid build collisions
+#   - Both containers share the workspace source volume (read-write)
+#   - Each container needs its own D-Bus session + gnome-keyring (handled by /setup-x11.sh)
+
+services:
+  owner:
+    build:
+      context: ..
+      dockerfile: .cursor/Dockerfile
+    container_name: horcrux-owner
+    network_mode: host
+    volumes:
+      - ../:/workspace
+      - flutter-cache-owner:/root/.flutter
+      - pub-cache-owner:/root/.pub-cache
+    environment:
+      - DISPLAY=:99
+    command: tail -f /dev/null
+
+  steward:
+    build:
+      context: ..
+      dockerfile: .cursor/Dockerfile
+    container_name: horcrux-steward
+    network_mode: host
+    volumes:
+      - ../:/workspace
+      - flutter-cache-steward:/root/.flutter
+      - pub-cache-steward:/root/.pub-cache
+    environment:
+      - DISPLAY=:99
+    command: tail -f /dev/null
+
+volumes:
+  flutter-cache-owner:
+  pub-cache-owner:
+  flutter-cache-steward:
+  pub-cache-steward:
