@@ -898,10 +898,12 @@ class NdkService {
   /// Creates a rumor event with the given content and kind, wraps it in a
   /// gift wrap for the recipient, and broadcasts it to the specified relays.
   ///
-  /// Returns the signed gift wrap event on success, or `null` when every
-  /// relay rejected it. Callers that only care about the event ID can read
-  /// `.id` off the result; callers that need to forward the wrap elsewhere
-  /// (e.g. to `horcrux-notifier` for push) can pass the whole event.
+  /// Returns the signed gift wrap once the event is enqueued for relay delivery
+  /// (persistence in the outbox), or `null` only when enqueue fails. Relay
+  /// broadcast outcomes are retried asynchronously and do not block this
+  /// call. Callers that only care about the event ID can read `.id` off the
+  /// result; callers that need to forward the wrap elsewhere (e.g. to
+  /// `horcrux-notifier` for push) can pass the whole event.
   Future<Nip01Event?> publishEncryptedEvent({
     required String content,
     required int kind,
@@ -923,9 +925,6 @@ class NdkService {
     }
 
     try {
-      final pubkeySnippet =
-          recipientPubkey.length > 8 ? recipientPubkey.substring(0, 8) : recipientPubkey;
-
       final giftWrap = await _buildGiftWrapEvent(
         content: content,
         kind: kind,
@@ -941,21 +940,9 @@ class NdkService {
         vaultId: vaultId,
       );
 
-      if (result.successfulRelays.isEmpty) {
-        Log.error(
-          'Failed to publish encrypted event (kind $kind) to $pubkeySnippet after retries',
-        );
-        return null;
-      }
-
-      if (result.failedRelays.isNotEmpty) {
-        Log.warning(
-          'Encrypted event published with partial success (event ${result.eventId}): '
-          'successful relays=${result.successfulRelays.length}, failed=${result.failedRelays.length}',
-        );
-      } else {
-        Log.info('Encrypted event published to all relays: ${result.eventId}');
-      }
+      Log.info(
+        'Encrypted event (kind $kind) enqueued for ${relays.length} relay(s): ${result.eventId}',
+      );
 
       return giftWrap;
     } catch (e, stackTrace) {

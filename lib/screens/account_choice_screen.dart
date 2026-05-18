@@ -111,8 +111,8 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                   final loginService = ref.read(loginServiceProvider);
                   await loginService.initializeKey();
 
-                  // Initialize services
-                  await initializeAppServices(ref);
+                  // Initialize services and refresh key providers
+                  await initializeAppAndRefreshKeys(ref);
 
                   // Navigate to main app, clear onboarding stack
                   navigator.pushAndRemoveUntil(

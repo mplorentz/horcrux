@@ -27,10 +27,8 @@ class PublishQueueResult {
 /// Persists publish work in the `outbox` / `outbox_relays` tables and drains it
 /// with periodic retries (replacing the legacy SharedPreferences queue).
 class PublishService {
-  PublishService({
-    required NdkSupplier getNdk,
-    required AppDatabase database,
-  })  : _getNdk = getNdk,
+  PublishService({required NdkSupplier getNdk, required AppDatabase database})
+      : _getNdk = getNdk,
         _db = database;
 
   static const _maxAttemptsPerRelay = 15;
@@ -40,7 +38,6 @@ class PublishService {
   final NdkSupplier _getNdk;
   final AppDatabase _db;
 
-  final Map<String, Completer<PublishQueueResult>> _completers = {};
   Timer? _workerTimer;
   bool _isProcessing = false;
   bool _isInitialized = false;
@@ -63,6 +60,11 @@ class PublishService {
     Log.info('PublishService initialized ($c pending outbox relay row(s))');
   }
 
+  /// Persists the event + per-relay outbox rows and returns a [PublishQueueResult]
+  /// as soon as the database transaction commits — not after relays respond.
+  ///
+  /// Background relay delivery continues in [_processQueue] and retries up to
+  /// [_maxAttemptsPerRelay] times, but those outcomes do not block the caller.
   Future<PublishQueueResult> enqueueEvent({
     required Nip01Event event,
     required List<String> relays,
@@ -77,21 +79,18 @@ class PublishService {
     final dedupedRelays = relays.toSet().toList();
     final id = event.id;
 
-    final existingCompleter = _completers[id];
-    if (existingCompleter != null) {
-      return existingCompleter.future;
-    }
-
     final existingRow = await _db.outboxDao.getById(id);
     if (existingRow != null) {
-      final c = Completer<PublishQueueResult>();
-      _completers[id] = c;
+      Log.info(
+        'enqueueEvent: $id already queued for ${dedupedRelays.length} relay(s)',
+      );
       _scheduleImmediateWork();
-      return c.future;
+      return PublishQueueResult(
+        eventId: id,
+        successfulRelays: const [],
+        failedRelays: const [],
+      );
     }
-
-    final completer = Completer<PublishQueueResult>();
-    _completers[id] = completer;
 
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -120,22 +119,25 @@ class PublishService {
         }
       });
     } catch (e, st) {
-      _completers.remove(id);
-      if (!completer.isCompleted) {
-        completer.completeError(e, st);
-      }
       Log.error('enqueueEvent: failed to persist outbox for $id', e, st);
       rethrow;
     }
 
+    Log.info('enqueueEvent: $id enqueued for ${dedupedRelays.length} relay(s)');
     _scheduleImmediateWork();
-    return completer.future;
+    return PublishQueueResult(
+      eventId: id,
+      successfulRelays: const [],
+      failedRelays: const [],
+    );
   }
 
   Future<void> onRelayReconnected(String relayUrl) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await (_db.update(_db.outboxRelays)
-          ..where((r) => r.relayUrl.equals(relayUrl) & r.status.equals('pending')))
+          ..where(
+            (r) => r.relayUrl.equals(relayUrl) & r.status.equals('pending'),
+          ))
         .write(OutboxRelaysCompanion(nextAttemptAt: Value(now)));
     _scheduleImmediateWork();
   }
@@ -203,7 +205,10 @@ class PublishService {
     }
   }
 
-  Future<void> _processOneRelay(OutboxRelayRow relayRow, {required int nowMs}) async {
+  Future<void> _processOneRelay(
+    OutboxRelayRow relayRow, {
+    required int nowMs,
+  }) async {
     final out = await _db.outboxDao.getById(relayRow.outboxId);
     if (out == null) {
       return;
@@ -211,7 +216,9 @@ class PublishService {
 
     Nip01Event event;
     try {
-      event = Nip01Event.fromJson(json.decode(out.eventJson) as Map<String, dynamic>);
+      event = Nip01Event.fromJson(
+        json.decode(out.eventJson) as Map<String, dynamic>,
+      );
     } catch (e, st) {
       Log.error('Outbox ${out.id}: invalid event_json', e, st);
       await _markRelayFailed(
@@ -280,6 +287,10 @@ class PublishService {
     );
   }
 
+  /// Cleans up the outbox row once every relay attempt has settled.
+  ///
+  /// The caller future has already resolved when the DB rows were first
+  /// committed, so this only handles storage cleanup.
   Future<void> _finalizeOutboxIfComplete(String outboxId) async {
     final relays = await _db.outboxDao.relaysFor(outboxId);
     if (relays.isEmpty) {
@@ -293,25 +304,11 @@ class PublishService {
       return;
     }
 
-    final out = await _db.outboxDao.getById(outboxId);
-    if (out == null) {
-      return;
-    }
-
-    final successfulRelays =
-        relays.where((r) => r.status == 'success').map((r) => r.relayUrl).toList();
-    final failedRelays = relays.where((r) => r.status == 'failed').map((r) => r.relayUrl).toList();
-
-    final result = PublishQueueResult(
-      eventId: out.eventId,
-      successfulRelays: successfulRelays,
-      failedRelays: failedRelays,
+    final successCount = relays.where((r) => r.status == 'success').length;
+    final failedCount = relays.where((r) => r.status != 'success').length;
+    Log.info(
+      'Outbox $outboxId finalized: $successCount succeeded, $failedCount failed/exhausted',
     );
-
-    final completer = _completers.remove(outboxId);
-    if (completer != null && !completer.isCompleted) {
-      completer.complete(result);
-    }
 
     await _db.outboxDao.deleteOutboxCascade(outboxId);
   }
@@ -345,30 +342,10 @@ class PublishService {
         message: relayResult.msg,
       );
     } catch (e) {
-      final message = e.toString();
-      if (message.contains('Bad state: No element')) {
-        try {
-          final ndk = await _getNdk();
-          final response = ndk.broadcast.broadcast(nostrEvent: event);
-          final results = await response.broadcastDoneFuture;
-          final success = results.any((result) => result.broadcastSuccessful);
-          final fallbackMessage = results.isNotEmpty ? results.first.msg : '';
-          return _RelayAttemptOutcome(
-            success: success,
-            message: success ? '' : (fallbackMessage.isNotEmpty ? fallbackMessage : message),
-          );
-        } catch (fallbackError) {
-          return _RelayAttemptOutcome(
-            success: false,
-            message: fallbackError.toString(),
-          );
-        }
-      }
-
-      return _RelayAttemptOutcome(
-        success: false,
-        message: message,
-      );
+      // Treat all broadcast errors (including NDK's "Bad state: No element"
+      // when no relay connection is established) as a normal per-relay failure.
+      // The worker will retry with exponential backoff up to _maxAttemptsPerRelay.
+      return _RelayAttemptOutcome(success: false, message: e.toString());
     }
   }
 
@@ -384,8 +361,5 @@ class _RelayAttemptOutcome {
   final bool success;
   final String? message;
 
-  _RelayAttemptOutcome({
-    required this.success,
-    required this.message,
-  });
+  _RelayAttemptOutcome({required this.success, required this.message});
 }
