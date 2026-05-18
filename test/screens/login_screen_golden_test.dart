@@ -30,7 +30,7 @@ void main() {
     testGoldens('login screen - empty state', (tester) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = await pumpGoldenWidget(
         tester,
@@ -47,7 +47,7 @@ void main() {
     testGoldens('login screen - with error text', (tester) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = await pumpGoldenWidget(
         tester,
@@ -68,7 +68,7 @@ void main() {
     testGoldens('login screen - multiple device sizes', (tester) async {
       final loginService = LoginService();
       await loginService.clearStoredKeys();
-      loginService.resetCacheForTest();
+      LoginService.resetCache();
 
       final harness = GoldenTestHarness.withOverrides([
         loginServiceProvider.overrideWithValue(loginService),

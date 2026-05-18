@@ -509,15 +509,6 @@ class MockLoginService extends _i1.Mock implements _i10.LoginService {
       ) as _i7.Future<void>);
 
   @override
-  void resetCacheForTest() => super.noSuchMethod(
-        Invocation.method(
-          #resetCacheForTest,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
   String? npubToHex(String? npub) => (super.noSuchMethod(Invocation.method(
         #npubToHex,
         [npub],
