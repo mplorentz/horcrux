@@ -194,7 +194,12 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
     final relayUrls = _relays.map((r) => r.url).toList();
     unawaited(
-      ref.read(ndkServiceProvider).queryHistoricalGiftWraps(relayUrls: relayUrls),
+      ref
+          .read(ndkServiceProvider)
+          .queryHistoricalGiftWraps(relayUrls: relayUrls)
+          .catchError((e, st) {
+        Log.error('Error querying historical gift wraps', e, st);
+      }),
     );
 
     _progressValue = 0.0;
@@ -223,10 +228,6 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       _state = _ScanState.editing;
       _progressValue = 0.0;
     });
-  }
-
-  void _continue() {
-    Navigator.of(context).pop();
   }
 
   @override
@@ -294,30 +295,56 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     );
   }
 
+  void _cancelScan() {
+    _progressTimer?.cancel();
+    setState(() {
+      _state = _ScanState.editing;
+      _progressValue = 0.0;
+    });
+  }
+
   Widget _buildScanningBody() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
+    return SafeArea(
+      bottom: false,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Scanning relays…',
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Scanning relays…',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  LinearProgressIndicator(
+                    value: _progressValue,
+                    minHeight: 8,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 32),
-          LinearProgressIndicator(
-            value: _progressValue,
-            minHeight: 8,
-            color: Theme.of(context).colorScheme.onSurface,
-            backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+          RowButtonStack(
+            buttons: [
+              RowButtonConfig(
+                onPressed: _cancelScan,
+                icon: Icons.close,
+                text: 'Cancel',
+              ),
+            ],
           ),
         ],
       ),
@@ -366,14 +393,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
           RowButtonStack(
             buttons: [
               RowButtonConfig(
-                onPressed: _continue,
-                icon: Icons.arrow_forward,
-                text: 'Continue',
-              ),
-              RowButtonConfig(
                 onPressed: _tryAgain,
-                icon: Icons.refresh,
-                text: 'Try Again',
+                icon: Icons.arrow_back,
+                text: 'Go Back',
               ),
             ],
           ),
