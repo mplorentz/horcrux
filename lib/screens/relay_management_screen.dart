@@ -33,6 +33,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
   int _baselineVaultCount = 0;
   int _liveVaultCount = 0;
+  bool _vaultsLoaded = false;
 
   Timer? _progressTimer;
   double _progressValue = 0.0;
@@ -46,7 +47,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     super.dispose();
   }
 
-  int get _vaultsFound => (_liveVaultCount - _baselineVaultCount).clamp(0, 9999);
+  int get _vaultsFound => (_liveVaultCount - _baselineVaultCount).clamp(0, _liveVaultCount);
 
   Future<void> _loadRelays() async {
     try {
@@ -184,6 +185,11 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       return;
     }
 
+    // Capture baseline before async gap so vault changes during scanning don't skew _vaultsFound.
+    final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
+    _baselineVaultCount = current.length;
+    _liveVaultCount = current.length;
+
     setState(() => _state = _ScanState.scanning);
 
     final relayScanService = ref.read(relayScanServiceProvider);
@@ -192,7 +198,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     } catch (e, st) {
       Log.error('Error starting relay scan', e, st);
       if (!mounted) return;
-      setState(() => _state = _ScanState.editing);
+      _resetToEditing();
       context.showHorcruxSnackBar(
         'Unable to start scanning right now.',
         kind: HorcruxSnackKind.error,
@@ -200,10 +206,6 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       return;
     }
     if (!mounted) return;
-
-    final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
-    _baselineVaultCount = current.length;
-    _liveVaultCount = current.length;
 
     final relayUrls = _relays.map((r) => r.url).toList();
     unawaited(
@@ -235,7 +237,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     });
   }
 
-  void _tryAgain() {
+  void _resetToEditing() {
     _progressTimer?.cancel();
     setState(() {
       _state = _ScanState.editing;
@@ -243,17 +245,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     });
   }
 
-  void _continue() {
-    Navigator.of(context).pop();
-  }
+  void _cancelScan() => _resetToEditing();
 
-  void _cancelScan() {
-    _progressTimer?.cancel();
-    setState(() {
-      _state = _ScanState.editing;
-      _progressValue = 0.0;
-    });
-  }
+  void _goBack() => _resetToEditing();
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +255,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       final count = next.valueOrNull?.length ?? 0;
       if ((_state == _ScanState.scanning || _state == _ScanState.results) && mounted) {
         setState(() => _liveVaultCount = count);
+      }
+      if (next.hasValue && !_vaultsLoaded) {
+        setState(() => _vaultsLoaded = true);
       }
     });
 
@@ -294,7 +291,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
                 ..._relays.map(
                   (relay) => _RelayRow(
                     relay: relay,
-                    onDelete: () => _removeRelay(relay),
+                    onDelete: _vaultsLoaded ? () => _removeRelay(relay) : null,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -397,7 +394,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
                   const SizedBox(height: 12),
                   Text(
                     count > 0
-                        ? 'Tap Continue to go back to settings.'
+                        ? 'Tap Go Back to return to your relay list.'
                         : 'The scan is still running in the background. Vaults may appear '
                             'as they arrive, or try again with different relays.',
                     style: Theme.of(context).textTheme.bodyMedium,
@@ -410,14 +407,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
           RowButtonStack(
             buttons: [
               RowButtonConfig(
-                onPressed: _continue,
-                icon: Icons.arrow_forward,
-                text: 'Continue',
-              ),
-              RowButtonConfig(
-                onPressed: _tryAgain,
-                icon: Icons.refresh,
-                text: 'Try Again',
+                onPressed: _goBack,
+                icon: Icons.arrow_back,
+                text: 'Go Back',
               ),
             ],
           ),
@@ -429,9 +421,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
 class _RelayRow extends StatelessWidget {
   final RelayConfiguration relay;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
 
-  const _RelayRow({required this.relay, required this.onDelete});
+  const _RelayRow({required this.relay, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -464,7 +456,7 @@ class _AddRelayDialog extends StatefulWidget {
   const _AddRelayDialog();
 
   @override
-  State<_AddRelayDialog> createState() => _AddRelayDialogState();
+  _AddRelayDialogState createState() => _AddRelayDialogState();
 }
 
 class _AddRelayDialogState extends State<_AddRelayDialog> {
