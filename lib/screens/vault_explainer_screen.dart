@@ -81,26 +81,24 @@ class VaultExplainerScreen extends StatelessWidget {
                   Center(
                     child: TextButton(
                       onPressed: () async {
-                    try {
-                      final launched = await launchUrl(
-                        Uri.parse('https://horcruxbackup.com/how-it-works'),
-                        mode: LaunchMode.externalApplication,
-                      );
-                      if (!launched) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Could not open link')),
-                        );
-                      }
-                    } catch (_) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Could not open link')),
-                      );
-                    }
-                  },
+                        try {
+                          final launched = await launchUrl(
+                            Uri.parse('https://horcruxbackup.com/how-it-works'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!launched) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not open link')),
+                            );
+                          }
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open link')),
+                          );
+                        }
+                      },
                       child: const Text('Learn more'),
                     ),
                   ),
