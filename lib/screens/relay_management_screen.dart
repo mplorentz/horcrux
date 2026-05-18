@@ -72,7 +72,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   }
 
   Map<String, Set<String>> _vaultNamesByRelayUrl() {
-    final vaults = ref.read(vaultDetailListProvider).valueOrNull ?? const [];
+    final asyncVaults = ref.read(vaultDetailListProvider);
+    if (!asyncVaults.hasValue) return const {};
+    final vaults = asyncVaults.valueOrNull ?? const [];
     final map = <String, Set<String>>{};
     for (final v in vaults) {
       final urls = v.backupConfig?.relays;
@@ -185,7 +187,18 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     setState(() => _state = _ScanState.scanning);
 
     final relayScanService = ref.read(relayScanServiceProvider);
-    await relayScanService.ensureScanningStarted();
+    try {
+      await relayScanService.ensureScanningStarted();
+    } catch (e, st) {
+      Log.error('Error starting relay scan', e, st);
+      if (!mounted) return;
+      setState(() => _state = _ScanState.editing);
+      context.showHorcruxSnackBar(
+        'Unable to start scanning right now.',
+        kind: HorcruxSnackKind.error,
+      );
+      return;
+    }
     if (!mounted) return;
 
     final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
@@ -380,7 +393,7 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
                   const SizedBox(height: 12),
                   Text(
                     count > 0
-                        ? 'Tap Continue to go back to settings.'
+                        ? 'Tap Go Back to return to your relay list.'
                         : 'The scan is still running in the background. Vaults may appear '
                             'as they arrive, or try again with different relays.',
                     style: Theme.of(context).textTheme.bodyMedium,
