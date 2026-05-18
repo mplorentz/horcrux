@@ -12,6 +12,7 @@ import '../services/backup_service.dart';
 import '../services/invitation_service.dart';
 import '../services/invitation_sending_service.dart';
 import '../services/logger.dart';
+import '../services/relay_scan_service.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
@@ -44,7 +45,7 @@ class BackupConfigScreen extends ConsumerStatefulWidget {
 class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   int _threshold = VaultBackupConstraints.defaultThreshold;
   final List<Steward> _stewards = [];
-  final List<String> _relays = ['wss://dev.horcruxbackup.com'];
+  final List<String> _relays = [RelayScanService.defaultHorcruxRelayUrl];
   bool _isCreating = false;
   bool _isLoading = true;
   bool _hasUnsavedChanges = false;

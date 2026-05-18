@@ -53,7 +53,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   void initState() {
     super.initState();
     _relays = [
-      const RelayConfiguration(
+      RelayConfiguration(
         id: 'horcrux-default',
         url: RelayScanService.defaultHorcruxRelayUrl,
         name: 'Horcrux Relay',
