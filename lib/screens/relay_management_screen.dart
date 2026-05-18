@@ -72,7 +72,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   }
 
   Map<String, Set<String>> _vaultNamesByRelayUrl() {
-    final vaults = ref.read(vaultDetailListProvider).valueOrNull ?? const [];
+    final asyncVaults = ref.read(vaultDetailListProvider);
+    if (!asyncVaults.hasValue) return const {};
+    final vaults = asyncVaults.valueOrNull ?? const [];
     final map = <String, Set<String>>{};
     for (final v in vaults) {
       final urls = v.backupConfig?.relays;
@@ -185,7 +187,18 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
     setState(() => _state = _ScanState.scanning);
 
     final relayScanService = ref.read(relayScanServiceProvider);
-    await relayScanService.ensureScanningStarted();
+    try {
+      await relayScanService.ensureScanningStarted();
+    } catch (e, st) {
+      Log.error('Error starting relay scan', e, st);
+      if (!mounted) return;
+      setState(() => _state = _ScanState.editing);
+      context.showHorcruxSnackBar(
+        'Unable to start scanning right now.',
+        kind: HorcruxSnackKind.error,
+      );
+      return;
+    }
     if (!mounted) return;
 
     final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
@@ -194,7 +207,12 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
     final relayUrls = _relays.map((r) => r.url).toList();
     unawaited(
-      ref.read(ndkServiceProvider).queryHistoricalGiftWraps(relayUrls: relayUrls),
+      ref
+          .read(ndkServiceProvider)
+          .queryHistoricalGiftWraps(relayUrls: relayUrls)
+          .catchError((e, st) {
+        Log.error('Error querying historical gift wraps', e, st);
+      }),
     );
 
     _progressValue = 0.0;
@@ -227,6 +245,14 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
   void _continue() {
     Navigator.of(context).pop();
+  }
+
+  void _cancelScan() {
+    _progressTimer?.cancel();
+    setState(() {
+      _state = _ScanState.editing;
+      _progressValue = 0.0;
+    });
   }
 
   @override
@@ -295,29 +321,47 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
   }
 
   Widget _buildScanningBody() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
+    return SafeArea(
+      bottom: false,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Scanning relays…',
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Scanning relays…',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  LinearProgressIndicator(
+                    value: _progressValue,
+                    minHeight: 8,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 32),
-          LinearProgressIndicator(
-            value: _progressValue,
-            minHeight: 8,
-            color: Theme.of(context).colorScheme.onSurface,
-            backgroundColor: Theme.of(context).sliderTheme.inactiveTrackColor,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Found $_vaultsFound vault${_vaultsFound == 1 ? '' : 's'} so far',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+          RowButtonStack(
+            buttons: [
+              RowButtonConfig(
+                onPressed: _cancelScan,
+                icon: Icons.close,
+                text: 'Cancel',
+              ),
+            ],
           ),
         ],
       ),
