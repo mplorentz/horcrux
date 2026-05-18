@@ -122,9 +122,8 @@ class HorcruxNotifierException implements Exception {
 class HorcruxNotificationService {
   /// Default notifier URL. Debug builds use the dev notifier; release builds
   /// use production.
-  static String get defaultBaseUrl => kDebugMode
-      ? 'https://dev-notifier.horcruxbackup.com'
-      : 'https://notifier.horcruxbackup.com';
+  static String get defaultBaseUrl =>
+      kDebugMode ? 'https://dev-notifier.horcruxbackup.com' : 'https://notifier.horcruxbackup.com';
 
   /// Drift `kv` key for a user-overridden base URL. When present,
   /// overrides [defaultBaseUrl]; when absent or empty, the default is used.

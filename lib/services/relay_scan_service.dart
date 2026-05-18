@@ -80,9 +80,8 @@ class RelayScanService {
 
   /// The default Horcrux relay seeded on a fresh install.
   /// Debug builds use the dev relay; release builds use production.
-  static String get defaultHorcruxRelayUrl => kDebugMode
-      ? 'wss://dev.horcruxbackup.com'
-      : 'wss://relay.horcruxbackup.com';
+  static String get defaultHorcruxRelayUrl =>
+      kDebugMode ? 'wss://dev.horcruxbackup.com' : 'wss://relay.horcruxbackup.com';
 
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
