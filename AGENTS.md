@@ -354,7 +354,7 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 
 ### MCP servers
 
-- **Marionette MCP**: `marionette_mcp` (Dart global activation, on PATH via `~/.pub-cache/bin`). Configured in `.cursor/mcp.json`. **Note:** Not currently configured as an MCP server in pi — see QA Testing section below for the VM service WebSocket workaround.
+- **Marionette MCP**: `marionette_mcp` (Dart global activation, on PATH via `~/.pub-cache/bin`). Configured in `.cursor/mcp.json`.
 - **Nostrbook MCP**: `npx -y @nostrbook/mcp@latest`. Configured in `.cursor/mcp.json`.
 
 ### QA Testing (Linux, multi-instance)
@@ -362,12 +362,14 @@ The Dart VM Service URI appears in the output (e.g. `http://127.0.0.1:8181/<toke
 **Use Docker, not native Xvfb.** Each container gets its own D-Bus session + gnome-keyring, so Nostr keypairs don't collide between instances. Native Xvfb shares the keyring across instances — unworkable for multi-instance testing (invitations, shard distribution, recovery).
 
 **Docker build & run:**
+
 ```bash
 docker build --network=host -f .cursor/Dockerfile -t horcrux-dev .  # Bridge networking is broken on this host; must use --network=host
 docker run -d --name horcrux-dev --network=host -v /home/gascity/horcrux:/workspace horcrux-dev tail -f /dev/null
 ```
 
 **Inside container, launch the app:**
+
 ```bash
 Xvfb :99 -screen 0 600x1024x24 &
 export DISPLAY=:99
@@ -380,7 +382,7 @@ flutter run -d linux --debug --host-vmservice-port=8181 --no-dds
 
 **Marionette via VM service WebSocket:** Since `marionette_mcp` is not in pi's MCP server config, interact with the app by calling Marionette extension RPCs directly through the Dart VM service WebSocket (`ws://127.0.0.1:PORT/TOKEN/ws`). Available RPCs: `ext.flutter.marionette.interactiveElements`, `ext.flutter.marionette.tap` (params: key, type, x, y), `ext.flutter.marionette.enterText` (params: key, type, **input** — not 'text'), `ext.flutter.marionette.scrollTo`, `ext.flutter.marionette.getLogs`, `ext.flutter.marionette.takeScreenshots`. Tap-by-key does NOT match visible text — use x/y coordinates from `interactiveElements` bounds instead. Fields with keys (`vault_name_field`, `owner_name_field`, `vault_content_field`, `self_steward_switch`) work with key-based operations. See bead `horcrux_app-f1h7` for adding marionette_mcp to pi's config.
 
-**Multi-instance testing:** Use docker-compose with separate containers per app instance (each on its own VM service port) plus a local Nostr relay (e.g. strfry) so instances can exchange events without depending on external dev relays.
+**Multi-instance testing:** Use docker-compose with separate containers per app instance (each on its own VM service port).
 
 ### Standard commands reference
 
@@ -424,6 +426,7 @@ bd close <id>         # Complete work
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    git push
@@ -431,6 +434,7 @@ bd close <id>         # Complete work
    ```
 
    Beads: With the configured remote Dolt server, updating issues via normal `bd` commands is sufficient; agents do not need to run `bd dolt push`.
+
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
