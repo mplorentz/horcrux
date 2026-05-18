@@ -35,6 +35,10 @@ RUN apt-get update && apt-get install -y \
     # Required by flutter_secure_storage_linux plugin (build + runtime libsecret)
     libsecret-1-dev \
     libjsoncpp-dev \
+    # Required by sqlcipher_flutter_libs (OpenSSL for SQLCipher)
+    libssl-dev \
+    # Required by drift database (SQLite for in-memory tests)
+    libsqlite3-dev \
     # Secret Service for libsecret: session D-Bus + gnome-keyring (headless Docker)
     dbus-x11 \
     gnome-keyring \

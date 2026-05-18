@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -76,11 +77,27 @@ class VaultExplainerScreen extends StatelessWidget {
                         'If you lose access to your data or your stewards lose access to you (🪦) any steward can initiate a recovery process. All stewards will receive a notification requesting them to share their key. Assemble enough keys and the steward can unlock the vault.',
                   ),
                   const SizedBox(height: 24),
-                  // Learn more button (placeholder)
+                  // Learn more button linking to how-it-works page
                   Center(
                     child: TextButton(
-                      onPressed: () {
-                        // Placeholder for now
+                      onPressed: () async {
+                        try {
+                          final launched = await launchUrl(
+                            Uri.parse('https://horcruxbackup.com/how-it-works'),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!launched) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not open link')),
+                            );
+                          }
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open link')),
+                          );
+                        }
                       },
                       child: const Text('Learn more'),
                     ),

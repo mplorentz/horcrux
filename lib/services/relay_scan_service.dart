@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../models/relay_configuration.dart';
@@ -78,7 +79,9 @@ class RelayScanService {
   final AppDatabase _database;
 
   /// The default Horcrux relay seeded on a fresh install.
-  static const String defaultHorcruxRelayUrl = 'wss://dev.horcruxbackup.com';
+  /// Debug builds use the dev relay; release builds use production.
+  static String get defaultHorcruxRelayUrl =>
+      kDebugMode ? 'wss://dev.horcruxbackup.com' : 'wss://relay.horcruxbackup.com';
 
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
@@ -109,7 +112,7 @@ class RelayScanService {
       // We only seed when the list is genuinely empty so that a user who
       // deliberately removes the relay is not forced back onto it after restart.
       if (_cachedRelays!.isEmpty) {
-        const defaultRelay = RelayConfiguration(
+        final defaultRelay = RelayConfiguration(
           id: 'horcrux-default',
           url: defaultHorcruxRelayUrl,
           name: 'Horcrux Relay',
