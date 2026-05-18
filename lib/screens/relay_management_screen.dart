@@ -184,18 +184,18 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
     setState(() => _state = _ScanState.scanning);
 
-    final relayScanService = ref.read(relayScanServiceProvider);
-    await relayScanService.ensureScanningStarted();
-    if (!mounted) return;
-
     final current = ref.read(vaultDetailListProvider).valueOrNull ?? [];
     _baselineVaultCount = current.length;
     _liveVaultCount = current.length;
 
+    final relayScanService = ref.read(relayScanServiceProvider);
+    await relayScanService.ensureScanningStarted();
+    if (!mounted) return;
+
     final relayUrls = _relays.map((r) => r.url).toList();
     unawaited(
       ref.read(ndkServiceProvider).queryHistoricalGiftWraps(relayUrls: relayUrls),
-    );
+
 
     _progressValue = 0.0;
     _progressTimer = Timer.periodic(_progressTickInterval, (timer) {
