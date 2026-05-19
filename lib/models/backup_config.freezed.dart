@@ -27,14 +27,12 @@ mixin _$BackupConfig {
   /// Create a copy of BackupConfig
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $BackupConfigCopyWith<BackupConfig> get copyWith =>
-      throw _privateConstructorUsedError;
+  $BackupConfigCopyWith<BackupConfig> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $BackupConfigCopyWith<$Res> {
-  factory $BackupConfigCopyWith(
-          BackupConfig value, $Res Function(BackupConfig) then) =
+  factory $BackupConfigCopyWith(BackupConfig value, $Res Function(BackupConfig) then) =
       _$BackupConfigCopyWithImpl<$Res, BackupConfig>;
   @useResult
   $Res call(
@@ -104,8 +102,7 @@ class _$BackupConfigCopyWithImpl<$Res, $Val extends BackupConfig>
 }
 
 /// @nodoc
-abstract class _$$BackupConfigImplCopyWith<$Res>
-    implements $BackupConfigCopyWith<$Res> {
+abstract class _$$BackupConfigImplCopyWith<$Res> implements $BackupConfigCopyWith<$Res> {
   factory _$$BackupConfigImplCopyWith(
           _$BackupConfigImpl value, $Res Function(_$BackupConfigImpl) then) =
       __$$BackupConfigImplCopyWithImpl<$Res>;
@@ -228,16 +225,13 @@ class _$BackupConfigImpl extends _BackupConfig {
         (other.runtimeType == runtimeType &&
             other is _$BackupConfigImpl &&
             (identical(other.vaultId, vaultId) || other.vaultId == vaultId) &&
-            (identical(other.threshold, threshold) ||
-                other.threshold == threshold) &&
+            (identical(other.threshold, threshold) || other.threshold == threshold) &&
             const DeepCollectionEquality().equals(other._stewards, _stewards) &&
             const DeepCollectionEquality().equals(other._relays, _relays) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.distributionVersion, distributionVersion) ||
                 other.distributionVersion == distributionVersion) &&
-            (identical(other.instructions, instructions) ||
-                other.instructions == instructions));
+            (identical(other.instructions, instructions) || other.instructions == instructions));
   }
 
   @override

@@ -27,7 +27,9 @@ import '../helpers/test_database.dart';
 import 'recovery_service_test.mocks.dart';
 
 class MockVaultDetailRepository extends Mock implements VaultDetailRepository {}
+
 class MockShareDistributionService extends Mock implements ShareDistributionService {}
+
 class MockRelayScanService extends Mock implements RelayScanService {}
 
 /// Minimal BackupService stub for performRecovery tests that need
@@ -1092,10 +1094,8 @@ void main() {
         threshold: 2,
         totalKeys: 2,
         stewards: [
-          createSteward(pubkey: testKeyHolder1)
-              .copyWith(status: StewardStatus.holdingKey),
-          createSteward(pubkey: testKeyHolder2)
-              .copyWith(status: StewardStatus.holdingKey),
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+          createSteward(pubkey: testKeyHolder2).copyWith(status: StewardStatus.holdingKey),
         ],
         relays: ['wss://relay.example.com'],
       );
@@ -1216,8 +1216,7 @@ void main() {
 
     test('reassembles secret from threshold shares', () async {
       // Configure the stub to return a known reconstructed value
-      (backupService as _StubBackupService).onReconstruct =
-          (_) => 'reconstructed-secret-data';
+      (backupService as _StubBackupService).onReconstruct = (_) => 'reconstructed-secret-data';
 
       final recoveryRequest = await recoveryService.initiateRecovery(
         testVaultId,
