@@ -235,12 +235,9 @@ void main() {
         expect(shardData.ownerName, 'Owner');
         expect(shardData.recipientPubkey, isNull,
             reason: 'recipientPubkey is not in wire JSON anymore');
-        expect(shardData.isReceived, isNull,
-            reason: 'isReceived is not in wire JSON anymore');
-        expect(shardData.receivedAt, isNull,
-            reason: 'receivedAt is not in wire JSON anymore');
-        expect(shardData.nostrEventId, isNull,
-            reason: 'nostrEventId is not in wire JSON anymore');
+        expect(shardData.isReceived, isNull, reason: 'isReceived is not in wire JSON anymore');
+        expect(shardData.receivedAt, isNull, reason: 'receivedAt is not in wire JSON anymore');
+        expect(shardData.nostrEventId, isNull, reason: 'nostrEventId is not in wire JSON anymore');
       },
     );
 
@@ -320,12 +317,9 @@ void main() {
       expect(decodedShare.ownerName, originalShare.ownerName);
       expect(decodedShare.recipientPubkey, isNull,
           reason: 'recipientPubkey is not in wire JSON anymore');
-      expect(decodedShare.isReceived, isNull,
-          reason: 'isReceived is not in wire JSON anymore');
-      expect(decodedShare.receivedAt, isNull,
-          reason: 'receivedAt is not in wire JSON anymore');
-      expect(decodedShare.nostrEventId, isNull,
-          reason: 'nostrEventId is not in wire JSON anymore');
+      expect(decodedShare.isReceived, isNull, reason: 'isReceived is not in wire JSON anymore');
+      expect(decodedShare.receivedAt, isNull, reason: 'receivedAt is not in wire JSON anymore');
+      expect(decodedShare.nostrEventId, isNull, reason: 'nostrEventId is not in wire JSON anymore');
     });
 
     test('shareFromJson handles null receivedAt correctly', () {
@@ -873,7 +867,8 @@ void main() {
   group('Nostr wire format - shareToNostrTags', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 
-    Share _sampleShare({bool withStewards = false, bool withRelays = false, bool withPush = false}) {
+    Share _sampleShare(
+        {bool withStewards = false, bool withRelays = false, bool withPush = false}) {
       return Share(
         payload: 'raw-shamir-payload',
         threshold: 2,
