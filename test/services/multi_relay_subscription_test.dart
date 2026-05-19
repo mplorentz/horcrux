@@ -2,9 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
+import 'package:ndk/shared/nips/nip01/bip340.dart';
+import 'package:ndk/shared/nips/nip01/key_pair.dart';
+import 'package:ndk/shared/nips/nip01/helpers.dart';
 
+import 'package:horcrux/services/login_service.dart';
+import 'package:horcrux/services/ndk_service.dart';
+import 'package:horcrux/services/processed_nostr_event_store.dart';
+
+import '../fixtures/test_keys.dart';
 import '../helpers/fake_nostr_relay.dart';
+import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
 // Mock EventVerifier — accepts all events (avoids Bip340 crypto)
@@ -24,6 +34,27 @@ Ndk _createTestNdk() {
       bootstrapRelays: [],
     ),
   );
+}
+
+/// Captures a [Ref] for constructing services in unit tests.
+final _testRefProvider = Provider<Ref>((ref) => ref);
+
+class _LoginServiceWithTestKey extends Fake implements LoginService {
+  _LoginServiceWithTestKey(this._keyPair);
+
+  final KeyPair _keyPair;
+
+  @override
+  Future<KeyPair?> getStoredNostrKey() async => _keyPair;
+}
+
+/// Avoids [path_provider] in plain Dart tests while satisfying [_setupSubscriptions].
+class _InMemoryProcessedEventStore extends ProcessedNostrEventStore {
+  @override
+  Future<void> ensureLoaded() async {}
+
+  @override
+  Future<int?> getLastSeen(String relayUrl) async => null;
 }
 
 void main() {
@@ -339,30 +370,82 @@ void main() {
   });
 
   group('ndk_service fix verification', () {
+    Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 500));
+
     test(
-      'ndk_service.closeSubscriptions now calls _ndk.requests.closeSubscription',
+      'closeSubscriptions closes NDK wire subs and cancels Dart listeners',
       () async {
-        // This test verifies the code change in ndk_service.dart.
-        //
-        // BEFORE FIX:
-        //   closeSubscriptions() only cancelled Dart stream subscriptions
-        //   and cleared local lists. It NEVER called
-        //   _ndk.requests.closeSubscription() — meaning orphaned
-        //   RequestState entries were left in NDK's globalState.inFlightRequests.
-        //
-        // AFTER FIX:
-        //   closeSubscriptions() reads NDK's inFlightRequests (subscriptions
-        //   only) and calls _ndk.requests.closeSubscription(state.id) for each.
-        //
-        // The NDK-level integration tests above prove both fix behaviors:
-        // - "closeSubscription + re-add with cacheRead:false works"
-        // - "re-subscribe without close leaves orphaned subscription"
-        //
-        // The fix passes cacheRead:false to subscription() calls which is
-        // validated by:
-        // - "cacheRead:false — two relays both deliver events independently"
-        // - "cacheRead:true — second subscription stream is replaced"
-        expect(true, isTrue, reason: 'fixes applied to ndk_service.dart');
+        final relay = FakeNostrRelay();
+        await relay.start();
+
+        final alicePrivHex = Helpers.decodeBech32(TestNsecKeys.alice)[0];
+        final alicePubHex = Bip340.getPublicKey(alicePrivHex);
+        final keyPair = KeyPair(
+          alicePrivHex,
+          alicePubHex,
+          TestNsecKeys.alice,
+          TestNpubKeys.alice,
+        );
+
+        final container = ProviderContainer();
+        final db = newTestDatabase();
+        final ndkService = NdkService(
+          ref: container.read(_testRefProvider),
+          loginService: _LoginServiceWithTestKey(keyPair),
+          processedEventStore: _InMemoryProcessedEventStore(),
+          database: db,
+          getInvitationService: () => throw StateError('not used in this test'),
+        );
+        ndkService.setNdkForTesting(_createTestNdk());
+
+        try {
+          await ndkService.addRelay(relay.url);
+          await settle();
+
+          final ndk = await ndkService.getNdk();
+          final subIdsBefore = ndk.relays.globalState.inFlightRequests.values
+              .where((state) => state.isSubscription)
+              .map((state) => state.id)
+              .toSet();
+          expect(subIdsBefore, isNotEmpty);
+          expect(relay.activeSubscriptionIds, subIdsBefore);
+
+          await ndkService.closeSubscriptions();
+
+          final openSubIdsAfter = ndk.relays.globalState.inFlightRequests.values
+              .where((state) => state.isSubscription)
+              .map((state) => state.id)
+              .toList();
+          expect(openSubIdsAfter, isEmpty);
+          for (final requestId in subIdsBefore) {
+            expect(
+              ndk.relays.globalState.inFlightRequests.containsKey(requestId),
+              isFalse,
+              reason: 'closeSubscriptions should remove $requestId from inFlightRequests',
+            );
+          }
+
+          // Re-subscribe via removeRelay → addRelay: if wire CLOSE was not sent,
+          // the relay would accumulate a second active subscription id.
+          await ndkService.removeRelay(relay.url);
+          await ndkService.addRelay(relay.url);
+          await settle();
+
+          final subIdsAfterReAdd = ndk.relays.globalState.inFlightRequests.values
+              .where((state) => state.isSubscription)
+              .map((state) => state.id)
+              .toSet();
+          expect(subIdsAfterReAdd, isNotEmpty);
+          expect(subIdsAfterReAdd.intersection(subIdsBefore), isEmpty);
+          expect(relay.activeSubscriptionIds, subIdsAfterReAdd);
+          expect(relay.activeSubscriptionIds, hasLength(1));
+        } finally {
+          ndkService.disposePublishWorkerSync();
+          await ndkService.dispose();
+          await db.close();
+          container.dispose();
+          await relay.stop();
+        }
       },
     );
   });
