@@ -248,6 +248,10 @@ class NdkService {
 
       // Subscribe to all gift wrap events (kind 1059)
       // All Horcrux data (shards, recovery requests, recovery responses) are sent as gift wraps
+      //
+      // cacheRead: false prevents NDK's ConcurrencyCheck from deduplicating
+      // subscriptions with identical filters (e.g. when subscribing to a second
+      // relay). We handle our own dedup via ProcessedNostrEventStore.
       final response = _ndk!.requests.subscription(
         filters: [
           Filter(
@@ -257,6 +261,7 @@ class NdkService {
           ),
         ],
         explicitRelays: [relayUrl],
+        cacheRead: false,
       );
       _subscriptionResponses.add(response);
 
@@ -817,6 +822,18 @@ class NdkService {
 
   /// Close all active subscriptions
   Future<void> closeSubscriptions() async {
+    // Close NDK-level subscriptions for each active response so CLOSE is sent
+    // to relays and inFlightRequests entries are cleaned up.
+    if (_ndk != null) {
+      for (final response in _subscriptionResponses) {
+        try {
+          await _ndk!.requests.closeSubscription(response.requestId);
+        } catch (e) {
+          Log.warning('Error closing NDK subscription ${response.requestId}', e);
+        }
+      }
+    }
+
     for (final sub in _subscriptionStreamSubs) {
       await sub.cancel();
     }
