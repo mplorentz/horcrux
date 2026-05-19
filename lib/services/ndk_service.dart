@@ -106,7 +106,6 @@ class NdkService {
 
   Ndk? _ndk;
   bool _isInitialized = false;
-  final List<NdkResponse> _subscriptionResponses = [];
   final List<StreamSubscription<Nip01Event>> _subscriptionStreamSubs = [];
   final List<String> _activeRelays = [];
 
@@ -264,7 +263,6 @@ class NdkService {
         explicitRelays: [relayUrl],
         cacheRead: false,
       );
-      _subscriptionResponses.add(response);
 
       _subscriptionStreamSubs.add(
         response.stream.listen(
@@ -278,7 +276,7 @@ class NdkService {
     }
 
     Log.info(
-      'NDK subscriptions setup for ${_subscriptionResponses.length} relays',
+      'NDK subscriptions setup for ${_subscriptionStreamSubs.length} relays',
     );
   }
 
@@ -830,19 +828,20 @@ class NdkService {
     }
   }
 
-  /// Close all active subscriptions
+  /// Close all active gift-wrap subscriptions.
   Future<void> closeSubscriptions() async {
-    // Close NDK-level subscriptions for each active response so CLOSE is sent
-    // to relays and inFlightRequests entries are cleaned up.
+    // Close wire-level REQs via NDK's registry so CLOSE is sent to relays and
+    // inFlightRequests entries are cleaned up. Filter to subscriptions only —
+    // do not use closeAllSubscription(), which also closes one-shot queries.
     if (_ndk != null) {
-      for (final response in _subscriptionResponses) {
+      final openSubs = _ndk!.relays.globalState.inFlightRequests.values
+          .where((state) => state.isSubscription)
+          .toList();
+      for (final state in openSubs) {
         try {
-          await _ndk!.requests.closeSubscription(response.requestId);
+          await _ndk!.requests.closeSubscription(state.id);
         } catch (e) {
-          Log.warning(
-            'Error closing NDK subscription ${response.requestId}',
-            e,
-          );
+          Log.warning('Error closing NDK subscription ${state.id}', e);
         }
       }
     }
@@ -851,7 +850,6 @@ class NdkService {
       await sub.cancel();
     }
     _subscriptionStreamSubs.clear();
-    _subscriptionResponses.clear();
     Log.info('Stopped all NDK subscriptions');
   }
 

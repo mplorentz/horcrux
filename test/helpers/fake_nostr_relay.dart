@@ -75,16 +75,15 @@ class FakeNostrRelay {
   }
 
   List<String> _getPTags(Nip01Event event) {
-    return event.tags
-        .where((t) => t.length >= 2 && t[0] == 'p')
-        .map((t) => t[1])
-        .toList();
+    return event.tags.where((t) => t.length >= 2 && t[0] == 'p').map((t) => t[1]).toList();
   }
+
+  /// Active subscription IDs registered via REQ (for test assertions).
+  Set<String> get activeSubscriptionIds => Set<String>.unmodifiable(_activeSubscriptions.keys);
 
   /// Start the WebSocket server on a random port.
   Future<void> start() async {
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0,
-        shared: true);
+    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0, shared: true);
     _port = _server!.port;
 
     _server!.transform(WebSocketTransformer()).listen((webSocket) {

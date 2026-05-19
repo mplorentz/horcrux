@@ -211,13 +211,9 @@ class RelayScanService {
     final jsonData = await _loadStateString(_scanningStatusKey);
 
     if (jsonData == null || jsonData.isEmpty) {
-      _scanningStatus = const ScanningStatus(
-        isActive: false,
-        totalRelays: 0,
-        activeRelays: 0,
-        sharesFound: 0,
-        requestsFound: 0,
-      );
+      // Leave _scanningStatus as null so initialize() treats this as
+      // 'no previous session' and auto-starts scanning.
+      _scanningStatus = null;
       return;
     }
 
@@ -227,13 +223,9 @@ class RelayScanService {
       Log.info('Loaded scanning status from storage');
     } catch (e) {
       Log.error('Error loading scanning status', e);
-      _scanningStatus = const ScanningStatus(
-        isActive: false,
-        totalRelays: 0,
-        activeRelays: 0,
-        sharesFound: 0,
-        requestsFound: 0,
-      );
+      // Leave _scanningStatus as null rather than defaulting to
+      // isActive: false, so initialize() will auto-start on errors.
+      _scanningStatus = null;
     }
   }
 
