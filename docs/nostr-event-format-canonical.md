@@ -444,7 +444,6 @@ Empty content with no `is_practice`.
 | Tag | Required | Example | Notes |
 |-----|----------|---------|-------|
 | `vault_id` | ✅ | `"<uuid>"` | |
-| `removed_pubkey` | ✅ | `"<hex_64>"` | The steward being removed (NOT the sender) |
 
 **Example rumor:**
 
@@ -454,8 +453,7 @@ Empty content with no `is_practice`.
   "pubkey": "<owner_hex_64>",
   "content": "",
   "tags": [
-    ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["removed_pubkey", "<removed_steward_hex_64>"]
+    ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]
   ],
   "created_at": 1734568500
 }
@@ -482,6 +480,7 @@ Empty content with no `is_practice`.
 | Removed `steward` roster from 1338 tags | 1338 | Each steward gets their own gift-wrapped copy; they don't need the roster |
 | Removed `approved` from 1339 tags | 1339 | Derivable: non-empty content = approved, `is_practice=true` = practice approved, otherwise denied |
 | Removed all `*_at` timestamp tags (`responded_at`, `confirmed_at`, `reported_at`, `invalidated_at`, `removed_at`) | 1340–1345 | Redundant with `rumor.created_at` |
+| Removed `removed_pubkey` from 1345 tags | 1345 | Recipient is the removed steward (gift wrap targets them); they already know it's themselves |
 | Unified tag names: `vault_id`, `share_index` everywhere | all | Was `backup_config_id` / `vault` / `shard` depending on kind |
 | `distribution_version` required on share confirmation | 1342 | Enables stale-ack detection |
 | No default NIP-40 expiration | all | Defer to NIP recommendation |
