@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../providers/vault_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
 import 'login_service.dart';
@@ -412,8 +413,7 @@ class NdkService {
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
-          final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String?;
+          final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
         case 1339: // [NostrKind.recoveryResponse]
           final m = json.decode(inner.content) as Map<String, dynamic>;
@@ -448,8 +448,7 @@ class NdkService {
       if (kind != NostrKind.recoveryRequest && kind != NostrKind.recoveryResponse) {
         return null;
       }
-      final payload = json.decode(inner.content) as Map<String, dynamic>;
-      final id = payload['recovery_request_id'] as String?;
+      final id = _firstTagValue(inner.tags, 'recovery_request_id');
       if (id == null || id.isEmpty) return null;
       return (kind: kind!, recoveryRequestId: id);
     } catch (e, st) {
@@ -582,23 +581,35 @@ class NdkService {
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    final requestData = json.decode(event.content) as Map<String, dynamic>;
+    // New canonical format: read tags + event metadata instead of JSON content
     final senderPubkey = event.pubKey;
 
-    final requestedAtRaw = requestData['requested_at'] as String?;
-    final expiresRaw = requestData['expires_at'] as String?;
-    final thresholdRaw = requestData['threshold'];
-    final threshold = thresholdRaw is int
-        ? thresholdRaw
-        : thresholdRaw is num
-            ? thresholdRaw.toInt()
-            : 1;
+    final recoveryRequestId = _firstTagValue(event.tags, 'recovery_request_id') ?? event.id;
+    final vaultId = _firstTagValue(event.tags, 'vault_id');
+    final isPractice = _firstTagValue(event.tags, 'is_practice') == 'true';
+
+    if (vaultId == null) {
+      Log.error('Missing vault_id tag in recovery request event');
+      return;
+    }
+
+    // Threshold: look up the local vault's held share for this vault
+    int threshold;
+    try {
+      final vault = await _ref.read(vaultRepositoryProvider).getVault(vaultId);
+      threshold = vault?.backupConfig?.threshold ?? 1;
+    } catch (_) {
+      threshold = 1;
+    }
 
     final recoveryRequest = RecoveryRequest.makeFromParticipants(
-      id: (requestData['recovery_request_id'] as String?) ?? event.id,
-      vaultId: requestData['vault_id'] as String,
+      id: recoveryRequestId,
+      vaultId: vaultId,
       initiatorPubkey: senderPubkey,
-      requestedAt: DateTime.parse(requestedAtRaw!),
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(
+        event.createdAt * 1000,
+        isUtc: true,
+      ),
       status: RecoveryRequestStatus.sent,
       threshold: threshold,
       stewardPubkeys: const [],
@@ -607,8 +618,7 @@ class NdkService {
         event.createdAt * 1000,
         isUtc: true,
       ),
-      expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-      isPractice: requestData['is_practice'] as bool? ?? false,
+      isPractice: isPractice,
     );
 
     await _ref.read(recoveryServiceProvider).processRecoveryRequest(
@@ -751,73 +761,6 @@ class NdkService {
     }
   }
 
-  /// Publish a recovery request to stewards
-  Future<String?> publishRecoveryRequest({
-    required String vaultId,
-    required List<String> stewardPubkeys,
-    DateTime? expiresAt,
-  }) async {
-    if (!_isInitialized || _ndk == null) {
-      throw Exception('NDK not initialized');
-    }
-
-    try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair == null) {
-        throw Exception('No key pair available');
-      }
-
-      // Create recovery request payload
-      final requestPayload = {
-        'vaultId': vaultId,
-        'requestType': 'recovery',
-        'expiresAt': expiresAt?.toIso8601String(),
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-
-      final requestJson = json.encode(requestPayload);
-
-      // Send encrypted DM to each steward
-      final publishedEventIds = <String>[];
-
-      for (final keyHolderPubkey in stewardPubkeys) {
-        // Encrypt the request for this steward
-        final encryptedContent = await _loginService.encryptForRecipient(
-          plaintext: requestJson,
-          recipientPubkey: keyHolderPubkey,
-        );
-
-        // Create kind 4 DM event
-        final dmEvent = Nip01Event(
-          kind: NostrKind.recoveryRequest.value,
-          pubKey: keyPair.publicKey,
-          content: encryptedContent,
-          tags: [
-            ['p', keyHolderPubkey], // Recipient
-          ],
-          createdAt: secondsSinceEpoch(),
-        );
-
-        // Sign and broadcast the event
-        await _ndk!.accounts.sign(dmEvent);
-        _ndk!.broadcast.broadcast(
-          nostrEvent: dmEvent,
-          specificRelays: _activeRelays.isNotEmpty ? _activeRelays : null,
-        );
-
-        publishedEventIds.add(dmEvent.id);
-        Log.info(
-          'Published recovery request to $keyHolderPubkey: ${dmEvent.id}',
-        );
-      }
-
-      return publishedEventIds.isNotEmpty ? publishedEventIds.first : null;
-    } catch (e) {
-      Log.error('Error publishing recovery request', e);
-      return null;
-    }
-  }
-
   /// Close all active gift-wrap subscriptions.
   Future<void> closeSubscriptions() async {
     // Close wire-level REQs via NDK's registry so CLOSE is sent to relays and
@@ -835,12 +778,6 @@ class NdkService {
         }
       }
     }
-
-    for (final sub in _subscriptionStreamSubs) {
-      await sub.cancel();
-    }
-    _subscriptionStreamSubs.clear();
-    Log.info('Stopped all NDK subscriptions');
   }
 
   /// Get the list of active relays

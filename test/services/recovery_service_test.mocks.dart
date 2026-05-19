@@ -545,10 +545,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
   _i5.Future<
       List<
           ({
-            String backupConfigId,
             DateTime createdAt,
-            String encryptedContent,
-            String eventId,
+            String giftWrapEventId,
             DateTime? publishedAt,
             String recipientPubkey,
             int shareIndex,
@@ -571,19 +569,15 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
         returnValue: _i5.Future<
             List<
                 ({
-                  String backupConfigId,
                   DateTime createdAt,
-                  String encryptedContent,
-                  String eventId,
+                  String giftWrapEventId,
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shareIndex,
                   _i16.EventStatus status
                 })>>.value(<({
-          String backupConfigId,
           DateTime createdAt,
-          String encryptedContent,
-          String eventId,
+          String giftWrapEventId,
           DateTime? publishedAt,
           String recipientPubkey,
           int shareIndex,
@@ -592,10 +586,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
       ) as _i5.Future<
           List<
               ({
-                String backupConfigId,
                 DateTime createdAt,
-                String encryptedContent,
-                String eventId,
+                String giftWrapEventId,
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shareIndex,
@@ -607,10 +599,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
     required String? vaultId,
     required List<
             ({
-              String backupConfigId,
               DateTime createdAt,
-              String encryptedContent,
-              String eventId,
+              String giftWrapEventId,
               DateTime? publishedAt,
               String recipientPubkey,
               int shareIndex,
@@ -766,25 +756,6 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
             ),
             returnValue: _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
           ) as _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>);
-
-  @override
-  _i5.Future<String?> publishRecoveryRequest({
-    required String? vaultId,
-    required List<String>? stewardPubkeys,
-    DateTime? expiresAt,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #publishRecoveryRequest,
-          [],
-          {
-            #vaultId: vaultId,
-            #stewardPubkeys: stewardPubkeys,
-            #expiresAt: expiresAt,
-          },
-        ),
-        returnValue: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
 
   @override
   _i5.Future<void> closeSubscriptions() => (super.noSuchMethod(
