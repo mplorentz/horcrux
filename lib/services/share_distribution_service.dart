@@ -353,7 +353,7 @@ class ShareDistributionService {
 
   /// Processes share confirmation event received from steward (kind 1342).
   ///
-  /// Validates vault ID and share index from tags ([shard_index] on wire).
+  /// Validates vault ID and share index from tags ([share_index] on wire).
   /// Updates steward status to "holding key".
   Future<void> processShareConfirmationEvent({
     required Nip01Event event,
@@ -376,7 +376,7 @@ class ShareDistributionService {
     // Extract vault ID, share index, and distribution version from tags
     // All confirmation data is stored in tags (no content)
     final vaultId = _extractTagValue(event.tags, 'vault_id');
-    final shareIndexStr = _extractTagValue(event.tags, 'shard_index');
+    final shareIndexStr = _extractTagValue(event.tags, 'share_index');
     final distributionVersionStr = _extractTagValue(
       event.tags,
       'distribution_version',
@@ -388,7 +388,7 @@ class ShareDistributionService {
 
     if (shareIndexStr == null) {
       throw ArgumentError(
-        'Missing shard_index tag in share confirmation event',
+        'Missing share_index tag in share confirmation event',
       );
     }
 
@@ -421,7 +421,7 @@ class ShareDistributionService {
 
   /// Processes share error event received from steward (kind 1343).
   ///
-  /// Wire tags keep historical names (`shard`, `shard_index` in payload).
+  /// Wire tag format: vault_id, share_index, error from tags.
   Future<void> processShareErrorEvent({required Nip01Event event}) async {
     // Validate event kind
     if (event.kind != NostrKind.shareError.value) {
