@@ -991,7 +991,7 @@ class RecoveryService {
           ['d', 'recovery_request_${request.id}'],
           ['vault_id', request.vaultId],
           ['recovery_request_id', request.id],
-          if (request.isPractice) ['is_practice', 'true'],
+          ['is_practice', request.isPractice.toString()],
         ],
         customPubkey: currentPubkey,
         vaultId: request.vaultId,
