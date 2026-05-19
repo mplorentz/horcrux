@@ -12,6 +12,9 @@ class VaultRelayDao extends DatabaseAccessor<AppDatabase> with _$VaultRelayDaoMi
   Future<List<VaultRelayRow>> forVault(String vaultId) =>
       (select(vaultRelays)..where((r) => r.vaultId.equals(vaultId))).get();
 
+  Future<List<VaultRelayRow>> forVaultByRole(String vaultId, String role) =>
+      (select(vaultRelays)..where((r) => r.vaultId.equals(vaultId) & r.role.equals(role))).get();
+
   Stream<List<VaultRelayRow>> watchForVault(String vaultId) =>
       (select(vaultRelays)..where((r) => r.vaultId.equals(vaultId))).watch();
 
