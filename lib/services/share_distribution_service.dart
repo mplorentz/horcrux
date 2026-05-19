@@ -82,6 +82,10 @@ class ShareDistributionService {
         }
 
         try {
+          // Capture before publish/push/repo so [updateDistributionStatus]'s
+          // `since` lower bound is not shifted past fast steward acknowledgments.
+          final shareDistributionStartedAt = DateTime.now();
+
           // Update share with relay URLs and distribution version from backup config
           final shareWithRelays = share.copyWith(
             relayUrls: config.relays,
@@ -184,7 +188,7 @@ class ShareDistributionService {
             giftWrapEventId: eventId,
             recipientPubkey: keyHolder.pubkey!,
             shareIndex: i,
-            createdAt: DateTime.now(),
+            createdAt: shareDistributionStartedAt,
             publishedAt: null,
             status: EventStatus.created,
           );
@@ -194,8 +198,8 @@ class ShareDistributionService {
             giftWrapEventId: shareEvent.giftWrapEventId,
             recipientPubkey: shareEvent.recipientPubkey,
             shareIndex: shareEvent.shareIndex,
-            createdAt: shareEvent.createdAt,
-            publishedAt: DateTime.now(),
+            createdAt: shareDistributionStartedAt,
+            publishedAt: shareDistributionStartedAt,
             status: EventStatus.published,
           );
 
