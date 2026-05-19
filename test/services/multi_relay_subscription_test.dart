@@ -351,8 +351,8 @@ void main() {
         //   RequestState entries were left in NDK's globalState.inFlightRequests.
         //
         // AFTER FIX:
-        //   closeSubscriptions() iterates _subscriptionResponses and calls
-        //   _ndk.requests.closeSubscription(response.requestId) for each.
+        //   closeSubscriptions() reads NDK's inFlightRequests (subscriptions
+        //   only) and calls _ndk.requests.closeSubscription(state.id) for each.
         //
         // The NDK-level integration tests above prove both fix behaviors:
         // - "closeSubscription + re-add with cacheRead:false works"

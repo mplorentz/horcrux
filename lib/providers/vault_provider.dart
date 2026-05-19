@@ -806,10 +806,14 @@ class VaultRepository {
 
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
-    // Only read owner-role relay rows so that steward-side bookkeeping
-    // (e.g. relays synced by mergeVaultRowFromIncomingShare) never pollutes
-    // the user-facing relay list on the vault's backup config.
-    final relayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
+    // Owner-role rows are authoritative once the owner has saved backup config
+    // on this device. Steward-role rows (from mergeVaultRowFromIncomingShare)
+    // are a wire snapshot used when owner rows are absent — e.g. fresh install
+    // from kind-1337 — without letting stale steward snapshots override edits.
+    final ownerRelayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
+    final relayRows = ownerRelayRows.isNotEmpty
+        ? ownerRelayRows
+        : await _db.vaultRelayDao.forVaultByRole(row.id, 'steward');
     final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
       vaultId: row.id,
       distributionVersion: row.currentDistributionVersion,
