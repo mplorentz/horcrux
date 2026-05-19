@@ -16,8 +16,8 @@ import 'ndk_service.dart';
 import 'logger.dart';
 
 /// Provider for [ShareDistributionService]
-final Provider<ShareDistributionService> shareDistributionServiceProvider =
-    Provider<ShareDistributionService>((ref) {
+final Provider<ShareDistributionService>
+shareDistributionServiceProvider = Provider<ShareDistributionService>((ref) {
   // Watching repository and notification providers ensures that invalidating
   // [appDatabaseProvider] (logout) cascades through and rebuilds this service
   // against the fresh database.
@@ -58,7 +58,8 @@ class ShareDistributionService {
   /// (empty payload, sentinel `shareIndex` -1) to [ownerPubkey] so the owner
   /// can rehydrate recovery metadata without holding a steward slot.
   Future<List<ShareEvent>> distributeShares({
-    required String ownerPubkey, // Hex format - vault owner's pubkey for signing
+    required String
+    ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
     required List<Share> shares,
   }) async {
@@ -100,10 +101,14 @@ class ShareDistributionService {
           final publishedEvent = await _ndkService.publishEncryptedEvent(
             content: shareString,
             kind: NostrKind.shareData.value,
-            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
+            recipientPubkey: keyHolder
+                .pubkey!, // Hex format - safe because we checked null above
             relays: config.relays,
             tags: [
-              ['d', 'shard_${config.vaultId}_$i'], // Wire distinguisher (stable)
+              [
+                'd',
+                'shard_${config.vaultId}_$i',
+              ], // Wire distinguisher (stable)
               ['backup_config_id', config.vaultId],
               ['shard_index', i.toString()],
             ],
@@ -182,8 +187,10 @@ class ShareDistributionService {
           // Create ShareEvent record
           final shareEvent = createShareEvent(
             eventId: eventId,
-            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
-            encryptedContent: shareString, // Store original content for reference
+            recipientPubkey: keyHolder
+                .pubkey!, // Hex format - safe because we checked null above
+            encryptedContent:
+                shareString, // Store original content for reference
             backupConfigId: config.vaultId,
             shareIndex: i,
           );
@@ -214,7 +221,9 @@ class ShareDistributionService {
       if (!ownerInRoster) {
         final template = shares.firstWhere(
           (s) => s.payload.isNotEmpty,
-          orElse: () => throw StateError('distributeShares: no payload-bearing share for manifest'),
+          orElse: () => throw StateError(
+            'distributeShares: no payload-bearing share for manifest',
+          ),
         );
         final manifest = Share(
           payload: '',
@@ -235,7 +244,9 @@ class ShareDistributionService {
           pushEnabled: template.pushEnabled,
         );
         if (!manifest.isValid) {
-          throw StateError('distributeShares: built manifest share failed validation');
+          throw StateError(
+            'distributeShares: built manifest share failed validation',
+          );
         }
         final manifestString = json.encode(shareToJson(manifest));
         final publishedManifest = await _ndkService.publishEncryptedEvent(
@@ -307,7 +318,8 @@ class ShareDistributionService {
             // Get the backup config to get the current distribution version
             final vault = await _repository.getVault(vaultId);
             final backupConfig = vault?.backupConfig;
-            final currentDistributionVersion = backupConfig?.distributionVersion;
+            final currentDistributionVersion =
+                backupConfig?.distributionVersion;
 
             // Update steward status to holdingKey (confirmed receipt)
             await _repository.updateStewardStatus(
@@ -388,8 +400,9 @@ class ShareDistributionService {
       );
     }
 
-    final distributionVersion =
-        distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null;
+    final distributionVersion = distributionVersionStr != null
+        ? int.tryParse(distributionVersionStr)
+        : null;
 
     // Update steward status
     final keyHolderPubkey = event.pubKey;
@@ -426,16 +439,17 @@ class ShareDistributionService {
       );
     }
 
-    // Extract vault ID and share index from tags (wire `shard` tag)
-    final vaultId = _extractTagValue(event.tags, 'vault');
-    final shareIndexStr = _extractTagValue(event.tags, 'shard');
+    // New canonical format: read vault_id, share_index, and error from tags (no content parsing)
+    final vaultId = _extractTagValue(event.tags, 'vault_id');
+    final shareIndexStr = _extractTagValue(event.tags, 'share_index');
+    final error = _extractTagValue(event.tags, 'error') ?? 'Unknown error';
 
     if (vaultId == null) {
-      throw ArgumentError('Missing vault tag in share error event');
+      throw ArgumentError('Missing vault_id tag in share error event');
     }
 
     if (shareIndexStr == null) {
-      throw ArgumentError('Missing shard tag in share error event');
+      throw ArgumentError('Missing share_index tag in share error event');
     }
 
     final shareIndex = int.tryParse(shareIndexStr);
@@ -443,46 +457,6 @@ class ShareDistributionService {
       throw ArgumentError(
         'Invalid share index in share error event: $shareIndexStr',
       );
-    }
-
-    // Verify we're the recipient (p tag should be owner)
-    final recipientPubkey = _extractTagValue(event.tags, 'p');
-    if (recipientPubkey != ownerPubkey) {
-      throw ArgumentError('Share error event not addressed to current user');
-    }
-
-    // Decrypt event content
-    String decryptedContent;
-    try {
-      decryptedContent = await _loginService.decryptFromSender(
-        encryptedText: event.content,
-        senderPubkey: event.pubKey,
-      );
-    } catch (e) {
-      Log.error('Error decrypting share error event content', e);
-      throw Exception('Failed to decrypt share error event content: $e');
-    }
-
-    // Parse decrypted JSON
-    Map<String, dynamic> payload;
-    try {
-      payload = jsonDecode(decryptedContent) as Map<String, dynamic>;
-    } catch (e) {
-      Log.error('Error parsing share error event JSON', e);
-      throw Exception('Invalid JSON in share error event content: $e');
-    }
-
-    // Validate payload (wire keys remain snake_case shard_* )
-    final payloadVaultId = payload['vault_id'] as String?;
-    final payloadShareIndex = payload['shard_index'] as int?;
-    final error = payload['error'] as String? ?? 'Unknown error';
-
-    if (payloadVaultId != vaultId) {
-      throw ArgumentError('Vault ID mismatch in share error event payload');
-    }
-
-    if (payloadShareIndex != shareIndex) {
-      throw ArgumentError('Share index mismatch in share error event payload');
     }
 
     // Update steward status to error
