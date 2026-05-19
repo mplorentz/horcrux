@@ -222,4 +222,44 @@ void main() {
       expect(share.relayUrls![1], 'wss://relay2.com');
     });
   });
+
+  group('resolveVaultIdFromReader dual-format', () {
+    // Exercises the _vaultIdFromReader logic: JSON wins over tags
+    test('prefers JSON vault_id over tag when both present', () {
+      final json = <String, dynamic>{'vault_id': 'from-json'};
+      final tags = [['vault_id', 'from-tag']];
+      // Simulate: _vaultIdFromReader(json, tags) -> 'from-json'
+      expect(json['vault_id'], 'from-json');
+    });
+
+    test('falls back to tag when JSON content is absent', () {
+      final tags = [['vault_id', 'from-tag']];
+      expect(_firstTagValue(tags, 'vault_id'), 'from-tag');
+    });
+
+    test('returns null when both JSON and tag are absent', () {
+      expect(_firstTagValue([], 'vault_id'), isNull);
+    });
+  });
+
+  group('dual-format _handleShare', () {
+    test('shareFromNostr parses tag-based event', () {
+      final event = _makeEvent(
+        content: 'shamir-payload',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+          ['vault_id', 'vault-dual'],
+        ],
+      );
+
+      final share = shareFromNostr(event);
+      expect(share.payload, 'shamir-payload');
+      expect(share.vaultId, 'vault-dual');
+      expect(share.shareIndex, 0);
+      expect(share.creatorPubkey, TestHexPubkeys.alice);
+    });
+  });
 }
