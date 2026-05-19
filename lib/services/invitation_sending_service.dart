@@ -125,32 +125,14 @@ class InvitationSendingService {
     int? distributionVersion,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending shard confirmation event');
-        return null;
-      }
-
-      // Create shard confirmation event payload
-      final confirmationData = {
-        'type': 'shard_confirmation',
-        'vault_id': vaultId,
-        'shard_index': shareIndex,
-        'steward_pubkey': currentPubkey,
-        'confirmed_at': DateTime.now().toIso8601String(),
-      };
-
-      final confirmationJson = json.encode(confirmationData);
-
       Log.info(
         'Sending share confirmation event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
-      // Publish using NdkService
+      // Publish with empty content, data in tags
       final tags = [
-        ['d', 'shard_confirmation_${vaultId}_$shareIndex'],
         ['vault_id', vaultId],
-        ['shard_index', shareIndex.toString()],
+        ['share_index', shareIndex.toString()],
       ];
 
       // Include distribution version if provided
@@ -159,7 +141,7 @@ class InvitationSendingService {
       }
 
       final event = await ndkService.publishEncryptedEvent(
-        content: confirmationJson,
+        content: '',
         kind: NostrKind.shareConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
@@ -167,15 +149,14 @@ class InvitationSendingService {
       );
       return event?.id;
     } catch (e) {
-      Log.error('Error sending shard confirmation event', e);
+      Log.error('Error sending share confirmation event', e);
       return null;
     }
   }
 
-  /// Creates and publishes shard error event
+  /// Creates and publishes share error event
   ///
-  /// Creates error event payload.
-  /// Encrypts using NIP-44.
+  /// Creates error event with empty content, data in tags.
   /// Creates Nostr event (kind 1343).
   /// Signs with steward's private key.
   /// Publishes to relays.
@@ -188,43 +169,25 @@ class InvitationSendingService {
     required String error,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending shard error event');
-        return null;
-      }
-
-      // Create shard error event payload
-      final errorData = {
-        'type': 'shard_error',
-        'vault_id': vaultId,
-        'shard_index': shareIndex,
-        'steward_pubkey': currentPubkey,
-        'error': error,
-        'reported_at': DateTime.now().toIso8601String(),
-      };
-
-      final errorJson = json.encode(errorData);
-
       Log.warning(
         'Sending share error event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
-      // Publish using NdkService
+      // Publish with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: errorJson,
+        content: '',
         kind: NostrKind.shareError.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'shard_error_${vaultId}_$shareIndex'],
+          ['d', 'share_error_${vaultId}_$shareIndex'],
           ['vault_id', vaultId],
-          ['shard_index', shareIndex.toString()],
+          ['error', error],
         ],
       );
       return event?.id;
     } catch (e) {
-      Log.error('Error sending shard error event', e);
+      Log.error('Error sending share error event', e);
       return null;
     }
   }
@@ -244,36 +207,19 @@ class InvitationSendingService {
     required String reason,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending invitation invalid event');
-        return null;
-      }
-
-      // Create invitation invalid event payload
-      final invalidData = {
-        'type': 'invitation_invalid',
-        'invite_code': inviteCode,
-        'owner_pubkey': currentPubkey,
-        'reason': reason,
-        'invalidated_at': DateTime.now().toIso8601String(),
-      };
-
-      final invalidJson = json.encode(invalidData);
-
       Log.warning(
         'Sending invitation invalid event for invite code: ${inviteCode.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Publish using NdkService with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: invalidJson,
+        content: '',
         kind: NostrKind.invitationInvalid.value,
         recipientPubkey: inviteePubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'invitation_invalid_$inviteCode'],
           ['invite_code', inviteCode],
+          ['reason', reason],
         ],
       );
       return event?.id;
@@ -285,8 +231,7 @@ class InvitationSendingService {
 
   /// Creates and publishes steward removed event
   ///
-  /// Creates removal event payload.
-  /// Encrypts using NIP-44.
+  /// Creates removal event with empty content, data in tags.
   /// Creates Nostr event (kind 1345).
   /// Signs with vault owner's private key.
   /// Publishes to relays.
@@ -297,37 +242,18 @@ class InvitationSendingService {
     required List<String> relayUrls,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending steward removal event');
-        return null;
-      }
-
-      // Create steward removal event payload
-      final removalData = {
-        'type': 'steward_removed',
-        'vault_id': vaultId,
-        'removed_pubkey': removedStewardPubkey,
-        'owner_pubkey': currentPubkey,
-        'removed_at': DateTime.now().toIso8601String(),
-      };
-
-      final removalJson = json.encode(removalData);
-
       Log.warning(
         'Sending steward removal event for vault: ${vaultId.substring(0, 8)}..., removed: ${removedStewardPubkey.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Publish using NdkService with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: removalJson,
+        content: '',
         kind: NostrKind.keyHolderRemoved.value,
         recipientPubkey: removedStewardPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'steward_removed_${vaultId}_$removedStewardPubkey'],
           ['vault_id', vaultId],
-          ['removed_pubkey', removedStewardPubkey],
         ],
       );
       return event?.id;

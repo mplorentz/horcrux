@@ -198,26 +198,18 @@ void main() {
 
           // Verify first shard event structure
           final firstShareEvent = result[0];
-          expect(firstShareEvent.eventId, isA<String>());
-          expect(firstShareEvent.eventId.length, greaterThan(0));
+          expect(firstShareEvent.giftWrapEventId, isA<String>());
+          expect(firstShareEvent.giftWrapEventId.length, greaterThan(0));
           expect(firstShareEvent.recipientPubkey, TestHexPubkeys.alice);
-          expect(
-            firstShareEvent.backupConfigId,
-            TestBackupConfigs.simple2of2VaultId,
-          );
           expect(firstShareEvent.shareIndex, 0);
           expect(firstShareEvent.createdAt, isA<DateTime>());
           expect(firstShareEvent.status, isA<EventStatus>());
 
           // Verify second shard event structure
           final secondShareEvent = result[1];
-          expect(secondShareEvent.eventId, isA<String>());
-          expect(secondShareEvent.eventId.length, greaterThan(0));
+          expect(secondShareEvent.giftWrapEventId, isA<String>());
+          expect(secondShareEvent.giftWrapEventId.length, greaterThan(0));
           expect(secondShareEvent.recipientPubkey, TestHexPubkeys.bob);
-          expect(
-            secondShareEvent.backupConfigId,
-            TestBackupConfigs.simple2of2VaultId,
-          );
           expect(secondShareEvent.shareIndex, 1);
           expect(secondShareEvent.createdAt, isA<DateTime>());
           expect(secondShareEvent.status, isA<EventStatus>());
@@ -322,34 +314,26 @@ void main() {
 
       // Verify first shard event structure
       final firstShareEvent = result[0];
-      expect(firstShareEvent.eventId, isA<String>());
-      expect(firstShareEvent.eventId.length, equals(64)); // Valid hex event ID
+      expect(firstShareEvent.giftWrapEventId, isA<String>());
+      expect(firstShareEvent.giftWrapEventId.length, equals(64)); // Valid hex event ID
       // Note: recipientPubkey should match the first steward in testConfig
       expect(
         firstShareEvent.recipientPubkey,
         alicePubHex,
       ); // Use the derived pubkey from setUp
-      expect(
-        firstShareEvent.backupConfigId,
-        TestBackupConfigs.simple2of2VaultId,
-      );
       expect(firstShareEvent.shareIndex, 0);
       expect(firstShareEvent.createdAt, isA<DateTime>());
       expect(firstShareEvent.status, EventStatus.published);
 
       // Verify second shard event structure
       final secondShareEvent = result[1];
-      expect(secondShareEvent.eventId, isA<String>());
-      expect(secondShareEvent.eventId.length, equals(64)); // Valid hex event ID
+      expect(secondShareEvent.giftWrapEventId, isA<String>());
+      expect(secondShareEvent.giftWrapEventId.length, equals(64)); // Valid hex event ID
       // Note: recipientPubkey should match the second steward in testConfig
       expect(
         secondShareEvent.recipientPubkey,
         bobPubHex,
       ); // Use the derived pubkey
-      expect(
-        secondShareEvent.backupConfigId,
-        TestBackupConfigs.simple2of2VaultId,
-      );
       expect(secondShareEvent.shareIndex, 1);
       expect(secondShareEvent.createdAt, isA<DateTime>());
       expect(secondShareEvent.status, EventStatus.published);
