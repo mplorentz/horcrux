@@ -73,6 +73,11 @@ is simply omitted from manifest tags.
 `recovery_request_id` is a cryptographically random string with no embedded
 vault ID. (Previously: `<secureId>_<vaultId>`.)
 
+### Timestamps
+
+No `*_at` tags (e.g. `responded_at`, `confirmed_at`, `reported_at`, etc.).
+The rumor's `created_at` is the authoritative timestamp for all event types.
+
 ---
 
 ## Kind 1337 — Share Data
@@ -216,9 +221,8 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `recovery_request_id` | ✅ | `"a1b2c3d4e5f6"` | Matches the request |
 | `vault_id` | ✅ | `"<uuid>"` | |
-| `approved` | ✅ | `"true"` / `"false"` | |
 | `is_practice` | ❌ | `"false"` | Absent = `false` |
-| `share_index` | conditional | `"1"` | Required when `approved` = `"true"` and `is_practice` ≠ `"true"` |
+| `share_index` | conditional | `"1"` | Required when content is non-empty |
 | `total_shares` | conditional | `"3"` | Same conditions as `share_index` |
 | `threshold` | conditional | `"2"` | Same conditions as `share_index` |
 | `prime_mod` | conditional | `"<hex>"` | Same conditions as `share_index` |
@@ -228,6 +232,8 @@ omitted, and `content` is empty.
 
 **Example rumor — approval with share:**
 
+Approval is implicit: `content` is non-empty (real share payload).
+
 ```jsonc
 {
   "kind": 1339,
@@ -236,7 +242,6 @@ omitted, and `content` is empty.
   "tags": [
     ["recovery_request_id", "a1b2c3d4e5f6"],
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["approved", "true"],
     ["share_index", "1"],
     ["total_shares", "3"],
     ["threshold", "2"],
@@ -251,7 +256,9 @@ omitted, and `content` is empty.
 }
 ```
 
-**Example rumor — denial:**
+**Example rumor — practice approval:**
+
+No share payload; `is_practice=true` signals approval.
 
 ```jsonc
 {
@@ -261,7 +268,24 @@ omitted, and `content` is empty.
   "tags": [
     ["recovery_request_id", "a1b2c3d4e5f6"],
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["approved", "false"]
+    ["is_practice", "true"]
+  ],
+  "created_at": 1734567900
+}
+```
+
+**Example rumor — denial:**
+
+Empty content with no `is_practice`.
+
+```jsonc
+{
+  "kind": 1339,
+  "pubkey": "<steward_hex_64>",
+  "content": "",
+  "tags": [
+    ["recovery_request_id", "a1b2c3d4e5f6"],
+    ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]
   ],
   "created_at": 1734567900
 }
@@ -279,7 +303,6 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `invite_code` | ✅ | `"<code>"` | |
 | `vault_id` | ✅ | `"<uuid>"` | |
-| `responded_at` | ✅ | `"2025-11-18T16:00:00.000Z"` | ISO-8601 |
 
 **Example rumor:**
 
@@ -290,8 +313,7 @@ omitted, and `content` is empty.
   "content": "",
   "tags": [
     ["invite_code", "abc123def456"],
-    ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["responded_at", "2025-11-18T16:00:00.000Z"]
+    ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"]
   ],
   "created_at": 1734568000
 }
@@ -308,8 +330,6 @@ omitted, and `content` is empty.
 | Tag | Required | Example | Notes |
 |-----|----------|---------|-------|
 | `invite_code` | ✅ | `"<code>"` | |
-| `responded_at` | ✅ | `"2025-11-18T16:00:00.000Z"` | ISO-8601 |
-| `reason` | ❌ | `"I can't help right now"` | |
 
 **Example rumor:**
 
@@ -319,9 +339,7 @@ omitted, and `content` is empty.
   "pubkey": "<invitee_hex_64>",
   "content": "",
   "tags": [
-    ["invite_code", "abc123def456"],
-    ["responded_at", "2025-11-18T16:00:00.000Z"],
-    ["reason", "I can't help right now"]
+    ["invite_code", "abc123def456"]
   ],
   "created_at": 1734568100
 }
@@ -340,7 +358,6 @@ omitted, and `content` is empty.
 | `vault_id` | ✅ | `"<uuid>"` | |
 | `share_index` | ✅ | `"2"` | Confirmed share slot |
 | `distribution_version` | ✅ | `"1"` | Enables stale-ack detection |
-| `confirmed_at` | ✅ | `"2025-11-18T16:10:00.000Z"` | ISO-8601 |
 
 **Example rumor:**
 
@@ -352,8 +369,7 @@ omitted, and `content` is empty.
   "tags": [
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
     ["share_index", "2"],
-    ["distribution_version", "1"],
-    ["confirmed_at", "2025-11-18T16:10:00.000Z"]
+    ["distribution_version", "1"]
   ],
   "created_at": 1734568200
 }
@@ -372,7 +388,6 @@ omitted, and `content` is empty.
 | `vault_id` | ✅ | `"<uuid>"` | |
 | `share_index` | ✅ | `"2"` | |
 | `error` | ✅ | `"Failed to decrypt share"` | |
-| `reported_at` | ✅ | `"2025-11-18T16:15:00.000Z"` | ISO-8601 |
 
 **Example rumor:**
 
@@ -384,8 +399,7 @@ omitted, and `content` is empty.
   "tags": [
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
     ["share_index", "2"],
-    ["error", "Failed to decrypt share"],
-    ["reported_at", "2025-11-18T16:15:00.000Z"]
+    ["error", "Failed to decrypt share"]
   ],
   "created_at": 1734568300
 }
@@ -403,7 +417,6 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `invite_code` | ✅ | `"<code>"` | |
 | `reason` | ✅ | `"Already used"` | |
-| `invalidated_at` | ✅ | `"2025-11-18T16:20:00.000Z"` | ISO-8601 |
 
 **Example rumor:**
 
@@ -414,8 +427,7 @@ omitted, and `content` is empty.
   "content": "",
   "tags": [
     ["invite_code", "abc123def456"],
-    ["reason", "This invitation has already been used"],
-    ["invalidated_at", "2025-11-18T16:20:00.000Z"]
+    ["reason", "This invitation has already been used"]
   ],
   "created_at": 1734568400
 }
@@ -433,7 +445,6 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `vault_id` | ✅ | `"<uuid>"` | |
 | `removed_pubkey` | ✅ | `"<hex_64>"` | The steward being removed (NOT the sender) |
-| `removed_at` | ✅ | `"2025-11-18T16:25:00.000Z"` | ISO-8601 |
 
 **Example rumor:**
 
@@ -444,8 +455,7 @@ omitted, and `content` is empty.
   "content": "",
   "tags": [
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["removed_pubkey", "<removed_steward_hex_64>"],
-    ["removed_at", "2025-11-18T16:25:00.000Z"]
+    ["removed_pubkey", "<removed_steward_hex_64>"]
   ],
   "created_at": 1734568500
 }
@@ -470,6 +480,8 @@ omitted, and `content` is empty.
 | Removed `expires_at` from 1338 tags | 1338 | Would collide with NIP-40 `expiration` tag on the gift wrap |
 | Removed `threshold` from 1338 tags | 1338 | Steward derives it from their held share; initiator already has it locally |
 | Removed `steward` roster from 1338 tags | 1338 | Each steward gets their own gift-wrapped copy; they don't need the roster |
+| Removed `approved` from 1339 tags | 1339 | Derivable: non-empty content = approved, `is_practice=true` = practice approved, otherwise denied |
+| Removed all `*_at` timestamp tags (`responded_at`, `confirmed_at`, `reported_at`, `invalidated_at`, `removed_at`) | 1340–1345 | Redundant with `rumor.created_at` |
 | Unified tag names: `vault_id`, `share_index` everywhere | all | Was `backup_config_id` / `vault` / `shard` depending on kind |
 | `distribution_version` required on share confirmation | 1342 | Enables stale-ack detection |
 | No default NIP-40 expiration | all | Defer to NIP recommendation |
