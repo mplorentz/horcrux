@@ -185,8 +185,6 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `recovery_request_id` | ✅ | `"<secure_random_id>"` | No embedded vault ID |
 | `vault_id` | ✅ | `"<uuid>"` | |
-| `expires_at` | ❌ | `"2025-11-25T15:30:00.000Z"` | ISO-8601; absent = no expiry |
-| `threshold` | ✅ | `"2"` | |
 | `is_practice` | ❌ | `"false"` | Absent = `false` |
 
 **Example rumor:**
@@ -199,7 +197,6 @@ omitted, and `content` is empty.
   "tags": [
     ["recovery_request_id", "a1b2c3d4e5f6"],
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["threshold", "2"],
     ["is_practice", "false"]
   ],
   "created_at": 1734567890
@@ -470,6 +467,8 @@ omitted, and `content` is empty.
 | Removed `is_received`, `received_at`, `nostr_event_id` from 1337 content | 1337 | Ingest-side metadata; never should have been published |
 | `recovery_request_id` is bare random ID | 1338 | No embedded vault ID suffix |
 | Removed `requested_at` from 1338 tags | 1338 | Redundant with `rumor.created_at` |
+| Removed `expires_at` from 1338 tags | 1338 | Would collide with NIP-40 `expiration` tag on the gift wrap |
+| Removed `threshold` from 1338 tags | 1338 | Steward derives it from their held share; initiator already has it locally |
 | Removed `steward` roster from 1338 tags | 1338 | Each steward gets their own gift-wrapped copy; they don't need the roster |
 | Unified tag names: `vault_id`, `share_index` everywhere | all | Was `backup_config_id` / `vault` / `shard` depending on kind |
 | `distribution_version` required on share confirmation | 1342 | Enables stale-ack detection |
