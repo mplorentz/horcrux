@@ -806,7 +806,14 @@ class VaultRepository {
 
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
-    final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    // Owner-role rows are authoritative once the owner has saved backup config
+    // on this device. Steward-role rows (from mergeVaultRowFromIncomingShare)
+    // are a wire snapshot used when owner rows are absent — e.g. fresh install
+    // from kind-1337 — without letting stale steward snapshots override edits.
+    final ownerRelayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
+    final relayRows = ownerRelayRows.isNotEmpty
+        ? ownerRelayRows
+        : await _db.vaultRelayDao.forVaultByRole(row.id, 'steward');
     final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
       vaultId: row.id,
       distributionVersion: row.currentDistributionVersion,
