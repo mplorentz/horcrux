@@ -99,8 +99,8 @@ The rumor's `created_at` is the authoritative timestamp for all event types.
 | `owner_name` | ❌ | `"Alice"` | Display name of the vault owner |
 | `instructions` | ❌ | `"Keep this safe!"` | Free text for stewards |
 | `distribution_version` | ✅ | `"1"` | Monotonically increasing; used for stale-detection |
-| `push_enabled` | ❌ | `"true"` | Whether the owner has opted in to push notifications |
-| `steward` | ✅ (≥1) | `"0"`, `"Alice"`, `"<hex>"` | Repeated tag: `["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]`; 5th element (contact info) optional, max 500 chars |
+| `push_enabled` | ❌ | `"true"` | Whether the owner has opted in to push notifications. Auto-redistributed on change, so always reflects current state |
+| `steward` | ✅ (≥1) | `"0"`, `"Alice"`, `"<hex>"` | Repeated tag: `["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]`; 5th element always present — empty string `""` if no contact info |
 | `relay` | ✅ (≥1) | `"wss://relay.example.com"` | Repeated tag, one per relay |
 
 **Example rumor:**
@@ -121,9 +121,9 @@ The rumor's `created_at` is the authoritative timestamp for all event types.
     ["instructions", "Keep this safe!"],
     ["distribution_version", "1"],
     ["push_enabled", "true"],
-    ["steward", "0", "Alice",   "<alice_hex_64>"],
+    ["steward", "0", "Alice",   "<alice_hex_64>", ""],
     ["steward", "1", "Bob",     "<bob_hex_64>",  "bob@example.com"],
-    ["steward", "2", "Carol",   "<carol_hex_64>"],
+    ["steward", "2", "Carol",   "<carol_hex_64>", ""],
     ["relay", "wss://relay.damus.io"],
     ["relay", "wss://relay.nostr.band"]
   ],
@@ -169,9 +169,9 @@ omitted, and `content` is empty.
     ["instructions", "Keep this safe!"],
     ["distribution_version", "1"],
     ["push_enabled", "true"],
-    ["steward", "0", "Alice",   "<alice_hex_64>"],
-    ["steward", "1", "Bob",     "<bob_hex_64>"],
-    ["steward", "2", "Carol",   "<carol_hex_64>"],
+    ["steward", "0", "Alice",   "<alice_hex_64>", ""],
+    ["steward", "1", "Bob",     "<bob_hex_64>", ""],
+    ["steward", "2", "Carol",   "<carol_hex_64>", ""],
     ["relay", "wss://relay.damus.io"]
   ],
   "created_at": 1734567890
@@ -247,9 +247,9 @@ Approval is implicit: `content` is non-empty (real share payload).
     ["threshold", "2"],
     ["prime_mod", "<hex_prime>"],
     ["distribution_version", "1"],
-    ["steward", "0", "Alice",   "<alice_hex_64>"],
-    ["steward", "1", "Bob",     "<bob_hex_64>"],
-    ["steward", "2", "Carol",   "<carol_hex_64>"],
+    ["steward", "0", "Alice",   "<alice_hex_64>", ""],
+    ["steward", "1", "Bob",     "<bob_hex_64>", ""],
+    ["steward", "2", "Carol",   "<carol_hex_64>", ""],
     ["relay", "wss://relay.damus.io"]
   ],
   "created_at": 1734567900
