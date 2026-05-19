@@ -47,8 +47,18 @@ class _FakeBackupConfig_0 extends _i1.SmartFake implements _i2.BackupConfig {
         );
 }
 
-class _FakeNip01Event_1 extends _i1.SmartFake implements _i3.Nip01Event {
-  _FakeNip01Event_1(
+class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
+  _FakeNdk_1(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeNip01Event_2 extends _i1.SmartFake implements _i3.Nip01Event {
+  _FakeNip01Event_2(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -654,6 +664,12 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   }
 
   @override
+  bool get isInitialized => (super.noSuchMethod(
+        Invocation.getter(#isInitialized),
+        returnValue: false,
+      ) as bool);
+
+  @override
   _i5.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
@@ -774,6 +790,137 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
   _i5.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeSubscriptions,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  List<String> getActiveRelays() => (super.noSuchMethod(
+        Invocation.method(
+          #getActiveRelays,
+          [],
+        ),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  _i5.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #queryHistoricalGiftWraps,
+          [],
+          {#relayUrls: relayUrls},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentPubkey,
+          [],
+        ),
+        returnValue: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
+
+  @override
+  _i5.Future<_i3.Nip01Event?> publishEncryptedEvent({
+    required String? content,
+    required int? kind,
+    required String? recipientPubkey,
+    required List<String>? relays,
+    List<List<String>>? tags,
+    String? customPubkey,
+    String? vaultId,
+    Duration? nip40Expiration,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #publishEncryptedEvent,
+          [],
+          {
+            #content: content,
+            #kind: kind,
+            #recipientPubkey: recipientPubkey,
+            #relays: relays,
+            #tags: tags,
+            #customPubkey: customPubkey,
+            #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
+          },
+        ),
+        returnValue: _i5.Future<_i3.Nip01Event?>.value(),
+      ) as _i5.Future<_i3.Nip01Event?>);
+
+  @override
+  _i5.Future<List<_i3.Nip01Event?>> publishEncryptedEventToMultiple({
+    required String? content,
+    required int? kind,
+    required List<String>? recipientPubkeys,
+    required List<String>? relays,
+    List<List<String>>? tags,
+    String? customPubkey,
+    String? vaultId,
+    Duration? nip40Expiration,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #publishEncryptedEventToMultiple,
+          [],
+          {
+            #content: content,
+            #kind: kind,
+            #recipientPubkeys: recipientPubkeys,
+            #relays: relays,
+            #tags: tags,
+            #customPubkey: customPubkey,
+            #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
+          },
+        ),
+        returnValue: _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
+      ) as _i5.Future<List<_i3.Nip01Event?>>);
+
+  @override
+  _i5.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
+        Invocation.method(
+          #getNdk,
+          [],
+        ),
+        returnValue: _i5.Future<_i3.Ndk>.value(_FakeNdk_1(
+          this,
+          Invocation.method(
+            #getNdk,
+            [],
+          ),
+        )),
+      ) as _i5.Future<_i3.Ndk>);
+
+  @override
+  void setNdkForTesting(_i3.Ndk? ndk) => super.noSuchMethod(
+        Invocation.method(
+          #setNdkForTesting,
+          [ndk],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  _i5.Future<void> dispose() => (super.noSuchMethod(
+        Invocation.method(
+          #dispose,
           [],
         ),
         returnValue: _i5.Future<void>.value(),
@@ -1194,7 +1341,7 @@ class MockNip01Event extends _i1.Mock implements _i3.Nip01Event {
             #sources: sources,
           },
         ),
-        returnValue: _FakeNip01Event_1(
+        returnValue: _FakeNip01Event_2(
           this,
           Invocation.method(
             #copyWith,

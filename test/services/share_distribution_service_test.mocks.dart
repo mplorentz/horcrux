@@ -75,6 +75,16 @@ class _FakeKeyPair_3 extends _i1.SmartFake implements _i3.KeyPair {
         );
 }
 
+class _FakeNdk_4 extends _i1.SmartFake implements _i2.Ndk {
+  _FakeNdk_4(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [Broadcast].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -1322,6 +1332,12 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
   }
 
   @override
+  bool get isInitialized => (super.noSuchMethod(
+        Invocation.getter(#isInitialized),
+        returnValue: false,
+      ) as bool);
+
+  @override
   _i4.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
@@ -1442,6 +1458,137 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
   _i4.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeSubscriptions,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  List<String> getActiveRelays() => (super.noSuchMethod(
+        Invocation.method(
+          #getActiveRelays,
+          [],
+        ),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  _i4.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #queryHistoricalGiftWraps,
+          [],
+          {#relayUrls: relayUrls},
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentPubkey,
+          [],
+        ),
+        returnValue: _i4.Future<String?>.value(),
+      ) as _i4.Future<String?>);
+
+  @override
+  _i4.Future<_i2.Nip01Event?> publishEncryptedEvent({
+    required String? content,
+    required int? kind,
+    required String? recipientPubkey,
+    required List<String>? relays,
+    List<List<String>>? tags,
+    String? customPubkey,
+    String? vaultId,
+    Duration? nip40Expiration,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #publishEncryptedEvent,
+          [],
+          {
+            #content: content,
+            #kind: kind,
+            #recipientPubkey: recipientPubkey,
+            #relays: relays,
+            #tags: tags,
+            #customPubkey: customPubkey,
+            #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
+          },
+        ),
+        returnValue: _i4.Future<_i2.Nip01Event?>.value(),
+      ) as _i4.Future<_i2.Nip01Event?>);
+
+  @override
+  _i4.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
+    required String? content,
+    required int? kind,
+    required List<String>? recipientPubkeys,
+    required List<String>? relays,
+    List<List<String>>? tags,
+    String? customPubkey,
+    String? vaultId,
+    Duration? nip40Expiration,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #publishEncryptedEventToMultiple,
+          [],
+          {
+            #content: content,
+            #kind: kind,
+            #recipientPubkeys: recipientPubkeys,
+            #relays: relays,
+            #tags: tags,
+            #customPubkey: customPubkey,
+            #vaultId: vaultId,
+            #nip40Expiration: nip40Expiration,
+          },
+        ),
+        returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+      ) as _i4.Future<List<_i2.Nip01Event?>>);
+
+  @override
+  _i4.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
+        Invocation.method(
+          #getNdk,
+          [],
+        ),
+        returnValue: _i4.Future<_i2.Ndk>.value(_FakeNdk_4(
+          this,
+          Invocation.method(
+            #getNdk,
+            [],
+          ),
+        )),
+      ) as _i4.Future<_i2.Ndk>);
+
+  @override
+  void setNdkForTesting(_i2.Ndk? ndk) => super.noSuchMethod(
+        Invocation.method(
+          #setNdkForTesting,
+          [ndk],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void disposePublishWorkerSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposePublishWorkerSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  _i4.Future<void> dispose() => (super.noSuchMethod(
+        Invocation.method(
+          #dispose,
           [],
         ),
         returnValue: _i4.Future<void>.value(),
