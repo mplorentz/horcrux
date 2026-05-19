@@ -191,7 +191,6 @@ class BackupService {
       // Generate shares using Base64Url encoding (isBase64 = true)
       // The ntcdcrypto library returns shares as Base64Url-encoded strings
       final shareStrings = sss.create(threshold, totalShards, content, true);
-      Log.debug('Share Strings: $shareStrings');
 
       // The prime modulus is fixed in ntcdcrypto, convert to base64url for storage
       // This matches the format expected by skb.py

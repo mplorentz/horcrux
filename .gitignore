@@ -90,3 +90,6 @@ fastlane/README.md
 # Gas City
 !.beads/metadata.json
 test-reports/
+
+# FVM Version Cache
+.fvm/
