@@ -179,18 +179,23 @@ class ShareDistributionService {
             );
           }
 
+          // Create ShareEventId",
           // Create ShareEvent record
-          final shareEvent = createShareEvent(
-            eventId: eventId,
-            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
-            encryptedContent: shareString, // Store original content for reference
-            backupConfigId: config.vaultId,
+          final shareEvent = (
+            giftWrapEventId: eventId,
+            recipientPubkey: keyHolder.pubkey!,
             shareIndex: i,
+            createdAt: DateTime.now(),
+            publishedAt: null,
+            status: EventStatus.created,
           );
 
           // Update status to published
-          final publishedShareEvent = copyShareEvent(
-            shareEvent,
+          final publishedShareEvent = (
+            giftWrapEventId: shareEvent.giftWrapEventId,
+            recipientPubkey: shareEvent.recipientPubkey,
+            shareIndex: shareEvent.shareIndex,
+            createdAt: shareEvent.createdAt,
             publishedAt: DateTime.now(),
             status: EventStatus.published,
           );
