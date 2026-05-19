@@ -42,35 +42,20 @@ class InvitationSendingService {
     required List<String> relayUrls,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending invitation acceptance event');
-        return null;
-      }
-
-      // Create invitation acceptance event payload
-      final acceptanceData = {
-        'invite_code': inviteCode,
-        'vault_id': vaultId,
-        'invitee_pubkey': currentPubkey,
-        'responded_at': DateTime.now().toIso8601String(),
-      };
-
-      final acceptanceJson = json.encode(acceptanceData);
-
       Log.info(
         'Sending invitation acceptance event for invite code: ${inviteCode.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Publish with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: acceptanceJson,
+        content: '',
         kind: NostrKind.invitationAcceptance.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
           ['d', 'invitation_acceptance_$inviteCode'],
-          ['invite', inviteCode],
+          ['invite_code', inviteCode],
+          ['vault_id', vaultId],
         ],
       );
       return event?.id;
@@ -82,8 +67,7 @@ class InvitationSendingService {
 
   /// Creates and publishes denial event to decline invitation
   ///
-  /// Creates denial event payload.
-  /// Encrypts using NIP-44.
+  /// Creates denial event with empty content, data in tags.
   /// Creates Nostr event (kind 1341).
   /// Signs with invitee's private key.
   /// Publishes to relays.
@@ -95,39 +79,28 @@ class InvitationSendingService {
     String? reason,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending denial event');
-        return null;
-      }
-
-      // Create denial event payload
-      final denialData = {
-        'invite_code': inviteCode,
-        'invitee_pubkey': currentPubkey,
-        'responded_at': DateTime.now().toIso8601String(),
-      };
-
-      if (reason != null && reason.isNotEmpty) {
-        denialData['reason'] = reason;
-      }
-
-      final denialJson = json.encode(denialData);
-
       Log.info(
         'Sending denial event for invite code: ${inviteCode.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Build tags
+      final tags = <List<String>>[
+        ['d', 'invitation_denial_$inviteCode'],
+        ['invite_code', inviteCode],
+      ];
+
+      // Include reason in tags if provided
+      if (reason != null && reason.isNotEmpty) {
+        tags.add(['reason', reason]);
+      }
+
+      // Publish with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: denialJson,
+        content: '',
         kind: NostrKind.invitationDenial.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
-        tags: [
-          ['d', 'invitation_denial_$inviteCode'],
-          ['invite', inviteCode],
-        ],
+        tags: tags,
       );
       return event?.id;
     } catch (e) {
