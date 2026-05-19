@@ -185,11 +185,9 @@ omitted, and `content` is empty.
 |-----|----------|---------|-------|
 | `recovery_request_id` | ✅ | `"<secure_random_id>"` | No embedded vault ID |
 | `vault_id` | ✅ | `"<uuid>"` | |
-| `requested_at` | ✅ | `"2025-11-18T15:30:00.000Z"` | ISO-8601 |
 | `expires_at` | ❌ | `"2025-11-25T15:30:00.000Z"` | ISO-8601; absent = no expiry |
 | `threshold` | ✅ | `"2"` | |
 | `is_practice` | ❌ | `"false"` | Absent = `false` |
-| `steward` | ✅ (≥1) | `"<hex_64>"` | Repeated tag: `["steward", "<pubkey>"]` — the stewards being asked |
 
 **Example rumor:**
 
@@ -201,11 +199,8 @@ omitted, and `content` is empty.
   "tags": [
     ["recovery_request_id", "a1b2c3d4e5f6"],
     ["vault_id", "f47ac10b-58cc-4372-a567-0e02b2c3d479"],
-    ["requested_at", "2025-11-18T15:30:00.000Z"],
     ["threshold", "2"],
-    ["is_practice", "false"],
-    ["steward", "<bob_hex_64>"],
-    ["steward", "<carol_hex_64>"]
+    ["is_practice", "false"]
   ],
   "created_at": 1734567890
 }
@@ -474,7 +469,8 @@ omitted, and `content` is empty.
 | Removed `initiator_pubkey`, `responder_pubkey`, `steward_pubkey`, `invitee_pubkey`, `owner_pubkey`, `creator_pubkey`, `recipient_pubkey` | all | Redundant with `rumor.pubkey` or gift wrap `p` tag |
 | Removed `is_received`, `received_at`, `nostr_event_id` from 1337 content | 1337 | Ingest-side metadata; never should have been published |
 | `recovery_request_id` is bare random ID | 1338 | No embedded vault ID suffix |
-| Added `steward` tags to recovery request | 1338 | Initiator can reconstruct participant roster from their own event |
+| Removed `requested_at` from 1338 tags | 1338 | Redundant with `rumor.created_at` |
+| Removed `steward` roster from 1338 tags | 1338 | Each steward gets their own gift-wrapped copy; they don't need the roster |
 | Unified tag names: `vault_id`, `share_index` everywhere | all | Was `backup_config_id` / `vault` / `shard` depending on kind |
 | `distribution_version` required on share confirmation | 1342 | Enables stale-ack detection |
 | No default NIP-40 expiration | all | Defer to NIP recommendation |
