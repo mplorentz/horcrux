@@ -152,32 +152,15 @@ class InvitationSendingService {
     int? distributionVersion,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending shard confirmation event');
-        return null;
-      }
-
-      // Create shard confirmation event payload
-      final confirmationData = {
-        'type': 'shard_confirmation',
-        'vault_id': vaultId,
-        'shard_index': shareIndex,
-        'steward_pubkey': currentPubkey,
-        'confirmed_at': DateTime.now().toIso8601String(),
-      };
-
-      final confirmationJson = json.encode(confirmationData);
-
       Log.info(
         'Sending share confirmation event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
-      // Publish using NdkService
+      // Publish with empty content, data in tags
       final tags = [
-        ['d', 'shard_confirmation_${vaultId}_$shareIndex'],
+        ['d', 'share_confirmation_${vaultId}_$shareIndex'],
         ['vault_id', vaultId],
-        ['shard_index', shareIndex.toString()],
+        ['share_index', shareIndex.toString()],
       ];
 
       // Include distribution version if provided
@@ -186,7 +169,7 @@ class InvitationSendingService {
       }
 
       final event = await ndkService.publishEncryptedEvent(
-        content: confirmationJson,
+        content: '',
         kind: NostrKind.shareConfirmation.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
@@ -194,15 +177,14 @@ class InvitationSendingService {
       );
       return event?.id;
     } catch (e) {
-      Log.error('Error sending shard confirmation event', e);
+      Log.error('Error sending share confirmation event', e);
       return null;
     }
   }
 
-  /// Creates and publishes shard error event
+  /// Creates and publishes share error event
   ///
-  /// Creates error event payload.
-  /// Encrypts using NIP-44.
+  /// Creates error event with empty content, data in tags.
   /// Creates Nostr event (kind 1343).
   /// Signs with steward's private key.
   /// Publishes to relays.
@@ -215,43 +197,25 @@ class InvitationSendingService {
     required String error,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending shard error event');
-        return null;
-      }
-
-      // Create shard error event payload
-      final errorData = {
-        'type': 'shard_error',
-        'vault_id': vaultId,
-        'shard_index': shareIndex,
-        'steward_pubkey': currentPubkey,
-        'error': error,
-        'reported_at': DateTime.now().toIso8601String(),
-      };
-
-      final errorJson = json.encode(errorData);
-
       Log.warning(
         'Sending share error event for vault: ${vaultId.substring(0, 8)}..., share: $shareIndex',
       );
 
-      // Publish using NdkService
+      // Publish with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: errorJson,
+        content: '',
         kind: NostrKind.shareError.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'shard_error_${vaultId}_$shareIndex'],
+          ['d', 'share_error_${vaultId}_$shareIndex'],
           ['vault_id', vaultId],
-          ['shard_index', shareIndex.toString()],
+          ['error', error],
         ],
       );
       return event?.id;
     } catch (e) {
-      Log.error('Error sending shard error event', e);
+      Log.error('Error sending share error event', e);
       return null;
     }
   }
