@@ -806,7 +806,10 @@ class VaultRepository {
 
   Future<Vault> _hydrate(VaultRow row) async {
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
-    final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    // Only read owner-role relay rows so that steward-side bookkeeping
+    // (e.g. relays synced by mergeVaultRowFromIncomingShare) never pollutes
+    // the user-facing relay list on the vault's backup config.
+    final relayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
     final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
       vaultId: row.id,
       distributionVersion: row.currentDistributionVersion,
