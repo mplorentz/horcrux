@@ -271,36 +271,20 @@ class InvitationSendingService {
     required String reason,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending invitation invalid event');
-        return null;
-      }
-
-      // Create invitation invalid event payload
-      final invalidData = {
-        'type': 'invitation_invalid',
-        'invite_code': inviteCode,
-        'owner_pubkey': currentPubkey,
-        'reason': reason,
-        'invalidated_at': DateTime.now().toIso8601String(),
-      };
-
-      final invalidJson = json.encode(invalidData);
-
       Log.warning(
         'Sending invitation invalid event for invite code: ${inviteCode.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Publish using NdkService with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: invalidJson,
+        content: '',
         kind: NostrKind.invitationInvalid.value,
         recipientPubkey: inviteePubkey,
         relays: relayUrls,
         tags: [
           ['d', 'invitation_invalid_$inviteCode'],
           ['invite_code', inviteCode],
+          ['reason', reason],
         ],
       );
       return event?.id;
@@ -312,8 +296,7 @@ class InvitationSendingService {
 
   /// Creates and publishes steward removed event
   ///
-  /// Creates removal event payload.
-  /// Encrypts using NIP-44.
+  /// Creates removal event with empty content, data in tags.
   /// Creates Nostr event (kind 1345).
   /// Signs with vault owner's private key.
   /// Publishes to relays.
@@ -324,37 +307,19 @@ class InvitationSendingService {
     required List<String> relayUrls,
   }) async {
     try {
-      final currentPubkey = await ndkService.getCurrentPubkey();
-      if (currentPubkey == null) {
-        Log.error('No key pair available for sending steward removal event');
-        return null;
-      }
-
-      // Create steward removal event payload
-      final removalData = {
-        'type': 'steward_removed',
-        'vault_id': vaultId,
-        'removed_pubkey': removedStewardPubkey,
-        'owner_pubkey': currentPubkey,
-        'removed_at': DateTime.now().toIso8601String(),
-      };
-
-      final removalJson = json.encode(removalData);
-
       Log.warning(
         'Sending steward removal event for vault: ${vaultId.substring(0, 8)}..., removed: ${removedStewardPubkey.substring(0, 8)}...',
       );
 
-      // Publish using NdkService
+      // Publish using NdkService with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
-        content: removalJson,
+        content: '',
         kind: NostrKind.keyHolderRemoved.value,
         recipientPubkey: removedStewardPubkey,
         relays: relayUrls,
         tags: [
           ['d', 'steward_removed_${vaultId}_$removedStewardPubkey'],
           ['vault_id', vaultId],
-          ['removed_pubkey', removedStewardPubkey],
         ],
       );
       return event?.id;
