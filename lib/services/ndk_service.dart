@@ -389,7 +389,7 @@ class NdkService {
         );
         return null;
       }
-      return shareFromJson(json.decode(inner.content) as Map<String, dynamic>);
+      return shareFromNostr(inner);
     } catch (e, st) {
       Log.warning(
         'loadShareDataFromPublishedDistributionGiftWrap failed',
@@ -409,12 +409,7 @@ class NdkService {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
         case 1337: // [NostrKind.shareData]
-          // Try JSON content first (legacy), fall back to tags (new format)
-          Map<String, dynamic>? m;
-          try {
-            m = json.decode(inner.content) as Map<String, dynamic>;
-          } catch (_) {}
-          final id = _vaultIdFromReader(m, inner.tags);
+          final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
           final id = _firstTagValue(inner.tags, 'vault_id');
