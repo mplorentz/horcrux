@@ -57,6 +57,17 @@ kind.
 The `"type"` field is removed from all event content. The Nostr kind number is
 the type discriminator.
 
+### Share vs manifest on kind 1337
+
+No explicit `share_kind` tag is needed. The `content` field is the discriminator:
+
+- `content != ""` → normal share (the content is the Shamir payload)
+- `content == ""` → manifest (no Shamir material)
+
+This is unambiguous because a real share always has non-empty Shamir bytes.
+The old v1 implicit sentinel (`shareIndex == -1`) is retired; `share_index`
+is simply omitted from manifest tags.
+
 ### Recovery request ID
 
 `recovery_request_id` is a cryptographically random string with no embedded
@@ -74,7 +85,6 @@ vault ID. (Previously: `<secureId>_<vaultId>`.)
 
 | Tag | Required | Example | Notes |
 |-----|----------|---------|-------|
-| `share_kind` | ✅ | `share` | Explicit discriminator; always `"share"` for normal shares |
 | `share_index` | ✅ | `"2"` | 0-based slot index (string) |
 | `total_shares` | ✅ | `"3"` | |
 | `threshold` | ✅ | `"2"` | |
@@ -96,7 +106,6 @@ vault ID. (Previously: `<secureId>_<vaultId>`.)
   "pubkey": "<owner_hex_64>",
   "content": "aGVsbG8gd29ybGQ=",    // raw share payload
   "tags": [
-    ["share_kind", "share"],
     ["share_index", "2"],
     ["total_shares", "3"],
     ["threshold", "2"],
@@ -121,12 +130,11 @@ vault ID. (Previously: `<secureId>_<vaultId>`.)
 
 **Content:** `""` (empty string).
 
-**Tags:** Same as above except `share_kind` = `"manifest"`, `share_index` =
+**Tags:** Same as above except `share_index` is
 omitted, and `content` is empty.
 
 | Tag | Required | Example | Notes |
 |-----|----------|---------|-------|
-| `share_kind` | ✅ | `"manifest"` | |
 | `total_shares` | ✅ | `"3"` | |
 | `threshold` | ✅ | `"2"` | |
 | `prime_mod` | ✅ | `"<hex>"` | From the first real share |
@@ -147,7 +155,6 @@ omitted, and `content` is empty.
   "pubkey": "<owner_hex_64>",
   "content": "",
   "tags": [
-    ["share_kind", "manifest"],
     ["total_shares", "3"],
     ["threshold", "2"],
     ["prime_mod", "<hex_prime>"],
@@ -459,7 +466,7 @@ omitted, and `content` is empty.
 | Change | Affected kinds | Rationale |
 |--------|---------------|-----------|
 | `shard` → `share` in all wire keys and tag names | 1337, 1338, 1339 | Consistency with Dart model; no deployed clients require backward compat |
-| Added explicit `share_kind` tag (`"share"` / `"manifest"`) | 1337 | Replaces implicit `shard_index == -1` sentinel |
+| No `share_kind` tag — `content` emptiness discriminates share vs manifest | 1337 | Empty content = manifest, non-empty = share; unambiguous since real shares always have Shamir bytes |
 | Removed all tags from 1337 rumor (old tags); new tags carry all data | 1337 | Old tags (`backup_config_id`, `shard_index`, `d`) were redundant with content |
 | `content` is raw payload string, not JSON | 1337, 1339 | Tags carry structure; content carries the one large blob |
 | `content` is empty | 1338, 1340–1345 | All data in tags; no JSON in content |
@@ -478,8 +485,9 @@ omitted, and `content` is empty.
 Since Horcrux is alpha software with no other deployed clients, no backward
 compatibility layer is required. The receiver should accept only the new
 format. If a transition period is needed, receivers can fall back to the old
-format when `share_kind` is absent (treat missing `share_kind` as old format,
-use `shard_index == -1` sentinel for manifest detection).
+format when `content` contains JSON (old format) instead of a raw payload
+string (new format). The `shareIndex == -1` sentinel still identifies
+manifests in the old format.
 
 ---
 
