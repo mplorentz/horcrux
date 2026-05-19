@@ -26,12 +26,6 @@ import '../helpers/secure_storage_mock.dart';
 import '../helpers/test_database.dart';
 import 'recovery_service_test.mocks.dart';
 
-class MockVaultDetailRepository extends Mock implements VaultDetailRepository {}
-
-class MockShareDistributionService extends Mock implements ShareDistributionService {}
-
-class MockRelayScanService extends Mock implements RelayScanService {}
-
 /// Minimal BackupService stub for performRecovery tests that need
 /// a controlled reconstructFromShares response. Avoids mockito 5.4's
 /// inability to match non-nullable typed parameters with any().
@@ -77,6 +71,8 @@ class _StubBackupService extends BackupService {
   NdkService,
   HorcruxNotificationService,
   Nip01Event,
+  VaultDetailRepository,
+  RelayScanService,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
