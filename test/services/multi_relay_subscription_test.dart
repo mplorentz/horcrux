@@ -57,7 +57,7 @@ void main() {
       // Relay sends an event
       final testEvent = makeGiftWrapEvent(
         recipientPubkey: 'abc123',
-        id: 'ff' + 'f' * 62,
+        id: 'ff${"f" * 62}',
       );
       relay.sendEvent(testEvent);
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -116,12 +116,12 @@ void main() {
           // Send an event to each relay
           final e1 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'aa' + 'a' * 62,
+            id: 'aa${"a" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           final e2 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'bb' + 'b' * 62,
+            id: 'bb${"b" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
 
@@ -181,12 +181,12 @@ void main() {
 
           final e1 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'cc' + 'c' * 62,
+            id: 'cc${"c" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           final e2 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'dd' + 'd' * 62,
+            id: 'dd${"d" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
 
@@ -253,7 +253,7 @@ void main() {
 
           final event = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'ee' + 'e' * 62,
+            id: 'ee${"e" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           relay.sendEvent(event);
@@ -316,7 +316,7 @@ void main() {
 
           final event = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-            id: 'ff' + 'f' * 62,
+            id: 'ff${"f" * 62}',
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           relay.sendEvent(event);
