@@ -91,20 +91,14 @@ echo ""
 # Step 4: Start Xvfb, VNC, and Flutter app
 echo -e "${GREEN}[4/5] Starting Xvfb, VNC server, and Flutter app...${NC}"
 
-# Start Xvfb if not running
+# Start Xvfb if not running (needed for VNC server)
 docker exec "$CONTAINER_NAME" bash -c "
     if ! pgrep -x Xvfb > /dev/null; then
         Xvfb :99 -screen 0 600x1024x24 > /dev/null 2>&1 &
         sleep 2
         echo 'Xvfb started with resolution 600x1024 (portrait)'
     else
-        CURRENT_RES=\$(xdpyinfo -display :99 2>/dev/null | grep dimensions | awk '{print \$2}' || echo '')
-        if [ \"\$CURRENT_RES\" != \"600x1024\" ]; then
-            pkill -x Xvfb
-            sleep 1
-            Xvfb :99 -screen 0 600x1024x24 > /dev/null 2>&1 &
-            sleep 2
-        fi
+        echo 'Xvfb already running'
     fi
 "
 
@@ -195,29 +189,11 @@ cd /workspace
     
     ABS_BUNDLE=$(cd "$BUNDLE_DIR" && pwd)
     cd /workspace
-    export DISPLAY=:99
     export PATH="/tmp:$ABS_BUNDLE:/opt/flutter/bin:$PATH"
     export LD_LIBRARY_PATH="$ABS_BUNDLE/lib:$LD_LIBRARY_PATH"
 
-    # flutter_secure_storage_linux uses libsecret, which needs D-Bus + an unlocked keyring.
-    echo 'Starting session D-Bus and gnome-keyring for libsecret...' >> /tmp/flutter_run.log
-    eval "$(dbus-launch --sh-syntax)"
-    export DBUS_SESSION_BUS_ADDRESS
-    mkdir -p ~/.cache ~/.local/share/keyrings
-    printf '\n' | gnome-keyring-daemon --unlock >> /tmp/flutter_run.log 2>&1 \
-        || echo 'WARNING: gnome-keyring unlock failed (empty password)' >> /tmp/flutter_run.log
-    gnome-keyring-daemon --start --components=secrets --daemonize >> /tmp/flutter_run.log 2>&1 \
-        || echo 'WARNING: gnome-keyring daemon start failed' >> /tmp/flutter_run.log
-
-    # Exposes org.freedesktop.Notifications on the session bus for flutter_local_notifications.
-    echo 'Starting notification-daemon...' >> /tmp/flutter_run.log
-    if command -v notification-daemon >/dev/null 2>&1; then
-        notification-daemon >> /tmp/flutter_run.log 2>&1 &
-    elif [ -x /usr/lib/notification-daemon/notification-daemon ]; then
-        /usr/lib/notification-daemon/notification-daemon >> /tmp/flutter_run.log 2>&1 &
-    else
-        echo 'WARNING: notification-daemon not installed; Linux notifications disabled' >> /tmp/flutter_run.log
-    fi
+    # Setup X11, D-Bus, gnome-keyring, and notification daemon
+    SETUP_X11_LOG=/tmp/flutter_run.log source /workspace/scripts/setup-x11.sh
     sleep 1
     
     echo "Running Flutter app with hot reload support..." >> /tmp/flutter_run.log
