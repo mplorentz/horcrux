@@ -53,7 +53,6 @@ class InvitationSendingService {
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'invitation_acceptance_$inviteCode'],
           ['invite_code', inviteCode],
           ['vault_id', vaultId],
         ],
@@ -76,23 +75,11 @@ class InvitationSendingService {
     required String inviteCode,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
-    String? reason,
   }) async {
     try {
       Log.info(
         'Sending denial event for invite code: ${inviteCode.substring(0, 8)}...',
       );
-
-      // Build tags
-      final tags = <List<String>>[
-        ['d', 'invitation_denial_$inviteCode'],
-        ['invite_code', inviteCode],
-      ];
-
-      // Include reason in tags if provided
-      if (reason != null && reason.isNotEmpty) {
-        tags.add(['reason', reason]);
-      }
 
       // Publish with empty content, data in tags
       final event = await ndkService.publishEncryptedEvent(
@@ -100,7 +87,9 @@ class InvitationSendingService {
         kind: NostrKind.invitationDenial.value,
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
-        tags: tags,
+        tags: [
+          ['invite_code', inviteCode],
+        ],
       );
       return event?.id;
     } catch (e) {
