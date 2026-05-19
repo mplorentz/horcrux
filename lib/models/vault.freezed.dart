@@ -21,8 +21,7 @@ mixin _$Vault {
   DateTime get createdAt => throw _privateConstructorUsedError;
   String get ownerPubkey => throw _privateConstructorUsedError;
   String? get ownerName => throw _privateConstructorUsedError;
-  List<RecoveryRequest> get recoveryRequests =>
-      throw _privateConstructorUsedError;
+  List<RecoveryRequest> get recoveryRequests => throw _privateConstructorUsedError;
   BackupConfig? get backupConfig => throw _privateConstructorUsedError;
   DateTime? get archivedAt => throw _privateConstructorUsedError;
   String? get archivedReason =>
@@ -46,8 +45,7 @@ mixin _$Vault {
 
 /// @nodoc
 abstract class $VaultCopyWith<$Res> {
-  factory $VaultCopyWith(Vault value, $Res Function(Vault) then) =
-      _$VaultCopyWithImpl<$Res, Vault>;
+  factory $VaultCopyWith(Vault value, $Res Function(Vault) then) = _$VaultCopyWithImpl<$Res, Vault>;
   @useResult
   $Res call(
       {String id,
@@ -65,8 +63,7 @@ abstract class $VaultCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$VaultCopyWithImpl<$Res, $Val extends Vault>
-    implements $VaultCopyWith<$Res> {
+class _$VaultCopyWithImpl<$Res, $Val extends Vault> implements $VaultCopyWith<$Res> {
   _$VaultCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -151,8 +148,7 @@ class _$VaultCopyWithImpl<$Res, $Val extends Vault>
 
 /// @nodoc
 abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
-  factory _$$VaultImplCopyWith(
-          _$VaultImpl value, $Res Function(_$VaultImpl) then) =
+  factory _$$VaultImplCopyWith(_$VaultImpl value, $Res Function(_$VaultImpl) then) =
       __$$VaultImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -173,11 +169,9 @@ abstract class _$$VaultImplCopyWith<$Res> implements $VaultCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$VaultImplCopyWithImpl<$Res>
-    extends _$VaultCopyWithImpl<$Res, _$VaultImpl>
+class __$$VaultImplCopyWithImpl<$Res> extends _$VaultCopyWithImpl<$Res, _$VaultImpl>
     implements _$$VaultImplCopyWith<$Res> {
-  __$$VaultImplCopyWithImpl(
-      _$VaultImpl _value, $Res Function(_$VaultImpl) _then)
+  __$$VaultImplCopyWithImpl(_$VaultImpl _value, $Res Function(_$VaultImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of Vault
@@ -272,8 +266,7 @@ class _$VaultImpl extends _Vault {
   @override
   @JsonKey()
   List<RecoveryRequest> get recoveryRequests {
-    if (_recoveryRequests is EqualUnmodifiableListView)
-      return _recoveryRequests;
+    if (_recoveryRequests is EqualUnmodifiableListView) return _recoveryRequests;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_recoveryRequests);
   }
@@ -310,22 +303,15 @@ class _$VaultImpl extends _Vault {
             other is _$VaultImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.ownerPubkey, ownerPubkey) ||
-                other.ownerPubkey == ownerPubkey) &&
-            (identical(other.ownerName, ownerName) ||
-                other.ownerName == ownerName) &&
-            const DeepCollectionEquality()
-                .equals(other._recoveryRequests, _recoveryRequests) &&
-            (identical(other.backupConfig, backupConfig) ||
-                other.backupConfig == backupConfig) &&
-            (identical(other.archivedAt, archivedAt) ||
-                other.archivedAt == archivedAt) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.ownerPubkey, ownerPubkey) || other.ownerPubkey == ownerPubkey) &&
+            (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
+            const DeepCollectionEquality().equals(other._recoveryRequests, _recoveryRequests) &&
+            (identical(other.backupConfig, backupConfig) || other.backupConfig == backupConfig) &&
+            (identical(other.archivedAt, archivedAt) || other.archivedAt == archivedAt) &&
             (identical(other.archivedReason, archivedReason) ||
                 other.archivedReason == archivedReason) &&
-            (identical(other.pushEnabled, pushEnabled) ||
-                other.pushEnabled == pushEnabled));
+            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -400,6 +386,5 @@ abstract class _Vault extends Vault {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$VaultImplCopyWith<_$VaultImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$VaultImplCopyWith<_$VaultImpl> get copyWith => throw _privateConstructorUsedError;
 }
