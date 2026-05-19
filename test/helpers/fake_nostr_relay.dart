@@ -78,6 +78,9 @@ class FakeNostrRelay {
     return event.tags.where((t) => t.length >= 2 && t[0] == 'p').map((t) => t[1]).toList();
   }
 
+  /// Active subscription IDs registered via REQ (for test assertions).
+  Set<String> get activeSubscriptionIds => Set<String>.unmodifiable(_activeSubscriptions.keys);
+
   /// Start the WebSocket server on a random port.
   Future<void> start() async {
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0, shared: true);
