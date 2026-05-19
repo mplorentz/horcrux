@@ -212,6 +212,7 @@ class LoginService {
     }
 
     // Use NIP-44 to encrypt to ourselves (same key for sender and recipient)
+    // ignore: experimental_member_use
     return await Nip44.encryptMessage(
       plaintext,
       keyPair!.privateKey!,
@@ -227,6 +228,7 @@ class LoginService {
     }
 
     // Use NIP-44 to decrypt from ourselves (same key for sender and recipient)
+    // ignore: experimental_member_use
     return await Nip44.decryptMessage(
       encryptedText,
       keyPair!.privateKey!,
@@ -262,6 +264,7 @@ class LoginService {
     }
 
     // Use NIP-44 to encrypt to the recipient
+    // ignore: experimental_member_use
     return await Nip44.encryptMessage(
       plaintext,
       keyPair!.privateKey!,
@@ -280,6 +283,7 @@ class LoginService {
     }
 
     // Use NIP-44 to decrypt from the sender
+    // ignore: experimental_member_use
     return await Nip44.decryptMessage(
       encryptedText,
       keyPair!.privateKey!,
