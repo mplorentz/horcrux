@@ -1063,24 +1063,29 @@ class RecoveryService {
         throw Exception('Unable to get current user keys for signing');
       }
 
-      // Prepare recovery response data
-      final responseData = {
-        'type': 'recovery_response',
-        'recovery_request_id': request.id,
-        'vault_id': request.vaultId,
-        'responder_pubkey': currentPubkey,
-        'approved': approved,
-        'responded_at': DateTime.now().toIso8601String(),
-        'is_practice': request.isPractice,
-      };
-
-      // Include shard data if approved and NOT a practice request
-      // Practice requests should never include shard data
+      // New Nostr wire format: content is raw payload string (empty for denial/practice), metadata in tags
+      final String nostrContent;
       if (approved && !request.isPractice && share != null) {
-        responseData['shard_data'] = shareToJson(share);
+        nostrContent = shareToNostrContent(share);
+      } else {
+        nostrContent = '';
       }
 
-      final responseJson = json.encode(responseData);
+      // Build tags: recovery_request_id, vault_id, is_practice, and share metadata
+      final tags = <List<String>>[
+        ['d', 'recovery_response_${request.id}_$currentPubkey'],
+        ['recovery_request_id', request.id],
+        ['vault_id', request.vaultId],
+      ];
+
+      if (request.isPractice) {
+        tags.add(['is_practice', 'true']);
+      }
+
+      // Share metadata tags when approved with content
+      if (approved && !request.isPractice && share != null) {
+        tags.addAll(shareToNostrTags(share));
+      }
 
       Log.debug(
         'Sending recovery response to ${request.initiatorPubkey.substring(0, 8)}...',
@@ -1089,16 +1094,11 @@ class RecoveryService {
       // Publish using NdkService. The returned event is the signed gift
       // wrap, which we forward to the notifier without rebuilding.
       final publishedEvent = await _ndkService.publishEncryptedEvent(
-        content: responseJson,
+        content: nostrContent,
         kind: NostrKind.recoveryResponse.value,
         recipientPubkey: request.initiatorPubkey,
         relays: relays,
-        tags: [
-          ['d', 'recovery_response_${request.id}_$currentPubkey'],
-          ['vault_id', request.vaultId],
-          ['recovery_request_id', request.id],
-          ['approved', approved.toString()],
-        ],
+        tags: tags,
         vaultId: request.vaultId,
       );
 
