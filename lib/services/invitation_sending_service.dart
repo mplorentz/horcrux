@@ -282,7 +282,6 @@ class InvitationSendingService {
         recipientPubkey: inviteePubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'invitation_invalid_$inviteCode'],
           ['invite_code', inviteCode],
           ['reason', reason],
         ],
@@ -318,7 +317,6 @@ class InvitationSendingService {
         recipientPubkey: removedStewardPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'steward_removed_${vaultId}_$removedStewardPubkey'],
           ['vault_id', vaultId],
         ],
       );
