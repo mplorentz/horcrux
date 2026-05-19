@@ -16,8 +16,8 @@ import 'ndk_service.dart';
 import 'logger.dart';
 
 /// Provider for [ShareDistributionService]
-final Provider<ShareDistributionService>
-shareDistributionServiceProvider = Provider<ShareDistributionService>((ref) {
+final Provider<ShareDistributionService> shareDistributionServiceProvider =
+    Provider<ShareDistributionService>((ref) {
   // Watching repository and notification providers ensures that invalidating
   // [appDatabaseProvider] (logout) cascades through and rebuilds this service
   // against the fresh database.
@@ -58,8 +58,7 @@ class ShareDistributionService {
   /// (empty payload, sentinel `shareIndex` -1) to [ownerPubkey] so the owner
   /// can rehydrate recovery metadata without holding a steward slot.
   Future<List<ShareEvent>> distributeShares({
-    required String
-    ownerPubkey, // Hex format - vault owner's pubkey for signing
+    required String ownerPubkey, // Hex format - vault owner's pubkey for signing
     required BackupConfig config,
     required List<Share> shares,
   }) async {
@@ -317,8 +316,7 @@ class ShareDistributionService {
             // Get the backup config to get the current distribution version
             final vault = await _repository.getVault(vaultId);
             final backupConfig = vault?.backupConfig;
-            final currentDistributionVersion =
-                backupConfig?.distributionVersion;
+            final currentDistributionVersion = backupConfig?.distributionVersion;
 
             // Update steward status to holdingKey (confirmed receipt)
             await _repository.updateStewardStatus(
@@ -399,9 +397,8 @@ class ShareDistributionService {
       );
     }
 
-    final distributionVersion = distributionVersionStr != null
-        ? int.tryParse(distributionVersionStr)
-        : null;
+    final distributionVersion =
+        distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null;
 
     // Update steward status
     final keyHolderPubkey = event.pubKey;

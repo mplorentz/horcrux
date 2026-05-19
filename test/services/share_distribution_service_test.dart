@@ -614,8 +614,7 @@ void main() {
       mockRepository = MockVaultRepository();
       mockNotificationService = MockHorcruxNotificationService();
 
-      when(mockLoginService.getCurrentPublicKey())
-          .thenAnswer((_) async => ownerPubkey);
+      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => ownerPubkey);
 
       service = ShareDistributionService(
         mockRepository,
