@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../providers/vault_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
 import 'login_service.dart';
@@ -412,8 +413,7 @@ class NdkService {
           final id = m['vault_id'] as String?;
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
-          final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String?;
+          final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
         case 1339: // [NostrKind.recoveryResponse]
           final m = json.decode(inner.content) as Map<String, dynamic>;
@@ -448,8 +448,7 @@ class NdkService {
       if (kind != NostrKind.recoveryRequest && kind != NostrKind.recoveryResponse) {
         return null;
       }
-      final payload = json.decode(inner.content) as Map<String, dynamic>;
-      final id = payload['recovery_request_id'] as String?;
+      final id = _firstTagValue(inner.tags, 'recovery_request_id');
       if (id == null || id.isEmpty) return null;
       return (kind: kind!, recoveryRequestId: id);
     } catch (e, st) {
@@ -582,23 +581,35 @@ class NdkService {
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    final requestData = json.decode(event.content) as Map<String, dynamic>;
+    // New canonical format: read tags + event metadata instead of JSON content
     final senderPubkey = event.pubKey;
 
-    final requestedAtRaw = requestData['requested_at'] as String?;
-    final expiresRaw = requestData['expires_at'] as String?;
-    final thresholdRaw = requestData['threshold'];
-    final threshold = thresholdRaw is int
-        ? thresholdRaw
-        : thresholdRaw is num
-            ? thresholdRaw.toInt()
-            : 1;
+    final recoveryRequestId = _firstTagValue(event.tags, 'recovery_request_id') ?? event.id;
+    final vaultId = _firstTagValue(event.tags, 'vault_id');
+    final isPractice = _firstTagValue(event.tags, 'is_practice') == 'true';
+
+    if (vaultId == null) {
+      Log.error('Missing vault_id tag in recovery request event');
+      return;
+    }
+
+    // Threshold: look up the local vault's held share for this vault
+    int threshold;
+    try {
+      final vault = await _ref.read(vaultRepositoryProvider).getVault(vaultId);
+      threshold = vault?.backupConfig?.threshold ?? 1;
+    } catch (_) {
+      threshold = 1;
+    }
 
     final recoveryRequest = RecoveryRequest.makeFromParticipants(
-      id: (requestData['recovery_request_id'] as String?) ?? event.id,
-      vaultId: requestData['vault_id'] as String,
+      id: recoveryRequestId,
+      vaultId: vaultId,
       initiatorPubkey: senderPubkey,
-      requestedAt: DateTime.parse(requestedAtRaw!),
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(
+        event.createdAt * 1000,
+        isUtc: true,
+      ),
       status: RecoveryRequestStatus.sent,
       threshold: threshold,
       stewardPubkeys: const [],
@@ -607,8 +618,7 @@ class NdkService {
         event.createdAt * 1000,
         isUtc: true,
       ),
-      expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-      isPractice: requestData['is_practice'] as bool? ?? false,
+      isPractice: isPractice,
     );
 
     await _ref.read(recoveryServiceProvider).processRecoveryRequest(
