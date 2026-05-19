@@ -751,84 +751,23 @@ class NdkService {
     }
   }
 
-  /// Publish a recovery request to stewards
-  Future<String?> publishRecoveryRequest({
-    required String vaultId,
-    required List<String> stewardPubkeys,
-    DateTime? expiresAt,
-  }) async {
-    if (!_isInitialized || _ndk == null) {
-      throw Exception('NDK not initialized');
-    }
-
-    try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair == null) {
-        throw Exception('No key pair available');
-      }
-
-      // Create recovery request payload
-      final requestPayload = {
-        'vaultId': vaultId,
-        'requestType': 'recovery',
-        'expiresAt': expiresAt?.toIso8601String(),
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-
-      final requestJson = json.encode(requestPayload);
-
-      // Send encrypted DM to each steward
-      final publishedEventIds = <String>[];
-
-      for (final keyHolderPubkey in stewardPubkeys) {
-        // Encrypt the request for this steward
-        final encryptedContent = await _loginService.encryptForRecipient(
-          plaintext: requestJson,
-          recipientPubkey: keyHolderPubkey,
-        );
-
-        // Create kind 4 DM event
-        final dmEvent = Nip01Event(
-          kind: NostrKind.recoveryRequest.value,
-          pubKey: keyPair.publicKey,
-          content: encryptedContent,
-          tags: [
-            ['p', keyHolderPubkey], // Recipient
-          ],
-          createdAt: secondsSinceEpoch(),
-        );
-
-        // Sign and broadcast the event
-        await _ndk!.accounts.sign(dmEvent);
-        _ndk!.broadcast.broadcast(
-          nostrEvent: dmEvent,
-          specificRelays: _activeRelays.isNotEmpty ? _activeRelays : null,
-        );
-
-        publishedEventIds.add(dmEvent.id);
-        Log.info(
-          'Published recovery request to $keyHolderPubkey: ${dmEvent.id}',
-        );
-      }
-
-      return publishedEventIds.isNotEmpty ? publishedEventIds.first : null;
-    } catch (e) {
-      Log.error('Error publishing recovery request', e);
-      return null;
-    }
-  }
-
   /// Close all active gift-wrap subscriptions.
   Future<void> closeSubscriptions() async {
+    // Close wire-level REQs via NDK's registry so CLOSE is sent to relays and
+    // inFlightRequests entries are cleaned up. Filter to subscriptions only —
+    // do not use closeAllSubscription(), which also closes one-shot queries.
+    if (_ndk != null) {
+      final openSubs = _ndk!.relays.globalState.inFlightRequests.values
+          .where((state) => state.isSubscription)
+          .toList();
+      for (final state in openSubs) {
+        try {
+          await _ndk!.requests.closeSubscription(state.id);
+        } catch (e) {
+          Log.warning('Error closing NDK subscription ${state.id}', e);
         }
       }
     }
-
-    for (final sub in _subscriptionStreamSubs) {
-      await sub.cancel();
-    }
-    _subscriptionStreamSubs.clear();
-    Log.info('Stopped all NDK subscriptions');
   }
 
   /// Get the list of active relays
