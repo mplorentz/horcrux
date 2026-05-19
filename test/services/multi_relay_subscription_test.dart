@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-<<<<<<< HEAD
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
@@ -16,11 +15,6 @@ import 'package:horcrux/services/processed_nostr_event_store.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/fake_nostr_relay.dart';
 import '../helpers/test_database.dart';
-=======
-import 'package:ndk/ndk.dart';
-
-import '../helpers/fake_nostr_relay.dart';
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
 
 // ---------------------------------------------------------------------------
 // Mock EventVerifier — accepts all events (avoids Bip340 crypto)
@@ -42,7 +36,6 @@ Ndk _createTestNdk() {
   );
 }
 
-<<<<<<< HEAD
 /// Captures a [Ref] for constructing services in unit tests.
 final _testRefProvider = Provider<Ref>((ref) => ref);
 
@@ -64,8 +57,6 @@ class _InMemoryProcessedEventStore extends ProcessedNostrEventStore {
   Future<int?> getLastSeen(String relayUrl) async => null;
 }
 
-=======
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
 void main() {
   group('FakeNostrRelay', () {
     test('starts, accepts WebSocket connections, and relays events', () async {
@@ -97,11 +88,7 @@ void main() {
       // Relay sends an event
       final testEvent = makeGiftWrapEvent(
         recipientPubkey: 'abc123',
-<<<<<<< HEAD
         id: 'ff${"f" * 62}',
-=======
-        id: 'ff${'f' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
       );
       relay.sendEvent(testEvent);
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -160,20 +147,12 @@ void main() {
           // Send an event to each relay
           final e1 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'aa${"a" * 62}',
-=======
-            id: 'aa${'a' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           final e2 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'bb${"b" * 62}',
-=======
-            id: 'bb${'b' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
 
@@ -233,20 +212,12 @@ void main() {
 
           final e1 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'cc${"c" * 62}',
-=======
-            id: 'cc${'c' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           final e2 = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'dd${"d" * 62}',
-=======
-            id: 'dd${'d' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
 
@@ -313,11 +284,7 @@ void main() {
 
           final event = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'ee${"e" * 62}',
-=======
-            id: 'ee${'e' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           relay.sendEvent(event);
@@ -380,11 +347,7 @@ void main() {
 
           final event = makeGiftWrapEvent(
             recipientPubkey: testPubkey,
-<<<<<<< HEAD
             id: 'ff${"f" * 62}',
-=======
-            id: 'ff${'f' * 62}',
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           );
           relay.sendEvent(event);
@@ -407,7 +370,6 @@ void main() {
   });
 
   group('ndk_service fix verification', () {
-<<<<<<< HEAD
     Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 500));
 
     test(
@@ -484,32 +446,6 @@ void main() {
           container.dispose();
           await relay.stop();
         }
-=======
-    test(
-      'ndk_service.closeSubscriptions now calls _ndk.requests.closeSubscription',
-      () async {
-        // This test verifies the code change in ndk_service.dart.
-        //
-        // BEFORE FIX:
-        //   closeSubscriptions() only cancelled Dart stream subscriptions
-        //   and cleared local lists. It NEVER called
-        //   _ndk.requests.closeSubscription() — meaning orphaned
-        //   RequestState entries were left in NDK's globalState.inFlightRequests.
-        //
-        // AFTER FIX:
-        //   closeSubscriptions() iterates _subscriptionResponses and calls
-        //   _ndk.requests.closeSubscription(response.requestId) for each.
-        //
-        // The NDK-level integration tests above prove both fix behaviors:
-        // - "closeSubscription + re-add with cacheRead:false works"
-        // - "re-subscribe without close leaves orphaned subscription"
-        //
-        // The fix passes cacheRead:false to subscription() calls which is
-        // validated by:
-        // - "cacheRead:false — two relays both deliver events independently"
-        // - "cacheRead:true — second subscription stream is replaced"
-        expect(true, isTrue, reason: 'fixes applied to ndk_service.dart');
->>>>>>> 4b6ef25eb502c83a0cd7984303696dd0fe87af69
       },
     );
   });
