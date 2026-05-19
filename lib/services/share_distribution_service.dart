@@ -179,7 +179,6 @@ class ShareDistributionService {
             );
           }
 
-          // Create ShareEventId",
           // Create ShareEvent record
           final shareEvent = (
             giftWrapEventId: eventId,
