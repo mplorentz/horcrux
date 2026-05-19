@@ -95,7 +95,7 @@ vault ID. (Previously: `<secureId>_<vaultId>`.)
 | `instructions` | ❌ | `"Keep this safe!"` | Free text for stewards |
 | `distribution_version` | ✅ | `"1"` | Monotonically increasing; used for stale-detection |
 | `push_enabled` | ❌ | `"true"` | Whether the owner has opted in to push notifications |
-| `steward` | ✅ (≥1) | `"0"`, `"Alice"`, `"<hex>"` | Repeated tag: `["steward", "<slot>", "<name>", "<pubkey>"]` |
+| `steward` | ✅ (≥1) | `"0"`, `"Alice"`, `"<hex>"` | Repeated tag: `["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]`; 5th element (contact info) optional, max 500 chars |
 | `relay` | ✅ (≥1) | `"wss://relay.example.com"` | Repeated tag, one per relay |
 
 **Example rumor:**
@@ -117,7 +117,7 @@ vault ID. (Previously: `<secureId>_<vaultId>`.)
     ["distribution_version", "1"],
     ["push_enabled", "true"],
     ["steward", "0", "Alice",   "<alice_hex_64>"],
-    ["steward", "1", "Bob",     "<bob_hex_64>"],
+    ["steward", "1", "Bob",     "<bob_hex_64>",  "bob@example.com"],
     ["steward", "2", "Carol",   "<carol_hex_64>"],
     ["relay", "wss://relay.damus.io"],
     ["relay", "wss://relay.nostr.band"]
