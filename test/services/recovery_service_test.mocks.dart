@@ -115,7 +115,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<_i2.BackupConfig>);
 
   @override
-  _i5.Future<_i2.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i5.Future<_i2.BackupConfig?> getBackupConfig(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
@@ -124,16 +125,19 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<_i2.BackupConfig?>);
 
   @override
-  _i5.Future<List<_i2.BackupConfig>> getAllBackupConfigs() => (super.noSuchMethod(
+  _i5.Future<List<_i2.BackupConfig>> getAllBackupConfigs() =>
+      (super.noSuchMethod(
         Invocation.method(
           #getAllBackupConfigs,
           [],
         ),
-        returnValue: _i5.Future<List<_i2.BackupConfig>>.value(<_i2.BackupConfig>[]),
+        returnValue:
+            _i5.Future<List<_i2.BackupConfig>>.value(<_i2.BackupConfig>[]),
       ) as _i5.Future<List<_i2.BackupConfig>>);
 
   @override
-  _i5.Future<void> updateBackupConfig(_i2.BackupConfig? config) => (super.noSuchMethod(
+  _i5.Future<void> updateBackupConfig(_i2.BackupConfig? config) =>
+      (super.noSuchMethod(
         Invocation.method(
           #updateBackupConfig,
           [config],
@@ -186,7 +190,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<List<_i7.Share>>);
 
   @override
-  _i5.Future<String> reconstructFromShares({required List<_i7.Share>? shares}) =>
+  _i5.Future<String> reconstructFromShares(
+          {required List<_i7.Share>? shares}) =>
       (super.noSuchMethod(
         Invocation.method(
           #reconstructFromShares,
@@ -302,7 +307,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> redistributeForPushPreferenceChange({required String? vaultId}) =>
+  _i5.Future<void> redistributeForPushPreferenceChange(
+          {required String? vaultId}) =>
       (super.noSuchMethod(
         Invocation.method(
           #redistributeForPushPreferenceChange,
@@ -314,7 +320,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> distributeKeysIfNecessary(String? vaultId) => (super.noSuchMethod(
+  _i5.Future<void> distributeKeysIfNecessary(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #distributeKeysIfNecessary,
           [vaultId],
@@ -363,7 +370,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
       ) as _i5.Future<_i2.BackupConfig>);
 
   @override
-  _i5.Future<_i2.BackupConfig> createAndDistributeBackup({required String? vaultId}) =>
+  _i5.Future<_i2.BackupConfig> createAndDistributeBackup(
+          {required String? vaultId}) =>
       (super.noSuchMethod(
         Invocation.method(
           #createAndDistributeBackup,
@@ -384,7 +392,8 @@ class MockBackupService extends _i1.Mock implements _i4.BackupService {
 /// A class which mocks [LocalNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotificationService {
+class MockLocalNotificationService extends _i1.Mock
+    implements _i11.LocalNotificationService {
   MockLocalNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -400,7 +409,8 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> notifyRecoveryRequestProcessed(_i12.RecoveryRequest? request) =>
+  _i5.Future<void> notifyRecoveryRequestProcessed(
+          _i12.RecoveryRequest? request) =>
       (super.noSuchMethod(
         Invocation.method(
           #notifyRecoveryRequestProcessed,
@@ -411,7 +421,8 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> notifyRecoveryResponseProcessed(_i13.RecoveryResponseEvent? response) =>
+  _i5.Future<void> notifyRecoveryResponseProcessed(
+          _i13.RecoveryResponseEvent? response) =>
       (super.noSuchMethod(
         Invocation.method(
           #notifyRecoveryResponseProcessed,
@@ -458,7 +469,8 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<bool> requestPlatformNotificationPermissions() => (super.noSuchMethod(
+  _i5.Future<bool> requestPlatformNotificationPermissions() =>
+      (super.noSuchMethod(
         Invocation.method(
           #requestPlatformNotificationPermissions,
           [],
@@ -536,7 +548,8 @@ class MockLocalNotificationService extends _i1.Mock implements _i11.LocalNotific
 /// A class which mocks [ShareDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistributionService {
+class MockShareDistributionService extends _i1.Mock
+    implements _i15.ShareDistributionService {
   MockShareDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -545,10 +558,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
   _i5.Future<
       List<
           ({
-            String backupConfigId,
             DateTime createdAt,
-            String encryptedContent,
-            String eventId,
+            String giftWrapEventId,
             DateTime? publishedAt,
             String recipientPubkey,
             int shareIndex,
@@ -571,19 +582,15 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
         returnValue: _i5.Future<
             List<
                 ({
-                  String backupConfigId,
                   DateTime createdAt,
-                  String encryptedContent,
-                  String eventId,
+                  String giftWrapEventId,
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shareIndex,
                   _i16.EventStatus status
                 })>>.value(<({
-          String backupConfigId,
           DateTime createdAt,
-          String encryptedContent,
-          String eventId,
+          String giftWrapEventId,
           DateTime? publishedAt,
           String recipientPubkey,
           int shareIndex,
@@ -592,10 +599,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
       ) as _i5.Future<
           List<
               ({
-                String backupConfigId,
                 DateTime createdAt,
-                String encryptedContent,
-                String eventId,
+                String giftWrapEventId,
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shareIndex,
@@ -607,10 +612,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
     required String? vaultId,
     required List<
             ({
-              String backupConfigId,
               DateTime createdAt,
-              String encryptedContent,
-              String eventId,
+              String giftWrapEventId,
               DateTime? publishedAt,
               String recipientPubkey,
               int shareIndex,
@@ -632,7 +635,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processShareConfirmationEvent({required _i3.Nip01Event? event}) =>
+  _i5.Future<void> processShareConfirmationEvent(
+          {required _i3.Nip01Event? event}) =>
       (super.noSuchMethod(
         Invocation.method(
           #processShareConfirmationEvent,
@@ -644,7 +648,8 @@ class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistrib
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> processShareErrorEvent({required _i3.Nip01Event? event}) => (super.noSuchMethod(
+  _i5.Future<void> processShareErrorEvent({required _i3.Nip01Event? event}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #processShareErrorEvent,
           [],
@@ -749,7 +754,8 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as _i5.Future<_i7.Share?>);
 
   @override
-  _i5.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
+  _i5.Future<String?> resolveVaultIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+      (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
@@ -759,12 +765,14 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
 
   @override
   _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>
-      resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
+      resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) =>
+          (super.noSuchMethod(
             Invocation.method(
               #resolveRecoveryRequestIdForGiftWrap,
               [giftWrap],
             ),
-            returnValue: _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
+            returnValue: _i5.Future<
+                ({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
           ) as _i5.Future<({_i14.NostrKind kind, String recoveryRequestId})?>);
 
   @override
@@ -806,7 +814,8 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
       ) as List<String>);
 
   @override
-  _i5.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
+  _i5.Future<void> queryHistoricalGiftWraps(
+          {required List<String>? relayUrls}) =>
       (super.noSuchMethod(
         Invocation.method(
           #queryHistoricalGiftWraps,
@@ -881,7 +890,8 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue: _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
+        returnValue:
+            _i5.Future<List<_i3.Nip01Event?>>.value(<_i3.Nip01Event?>[]),
       ) as _i5.Future<List<_i3.Nip01Event?>>);
 
   @override
@@ -931,7 +941,8 @@ class MockNdkService extends _i1.Mock implements _i13.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock
+    implements _i17.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1008,7 +1019,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNot
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
+  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) =>
+      (super.noSuchMethod(
         Invocation.method(
           #replaceConsents,
           [authorizedSenders],
