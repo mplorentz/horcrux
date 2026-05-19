@@ -158,7 +158,6 @@ class InvitationSendingService {
 
       // Publish with empty content, data in tags
       final tags = [
-        ['d', 'share_confirmation_${vaultId}_$shareIndex'],
         ['vault_id', vaultId],
         ['share_index', shareIndex.toString()],
       ];
