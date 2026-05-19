@@ -544,10 +544,8 @@ class MockShareDistributionService extends _i1.Mock implements _i12.ShareDistrib
   _i6.Future<
       List<
           ({
-            String backupConfigId,
             DateTime createdAt,
-            String encryptedContent,
-            String eventId,
+            String giftWrapEventId,
             DateTime? publishedAt,
             String recipientPubkey,
             int shareIndex,
@@ -570,19 +568,15 @@ class MockShareDistributionService extends _i1.Mock implements _i12.ShareDistrib
         returnValue: _i6.Future<
             List<
                 ({
-                  String backupConfigId,
                   DateTime createdAt,
-                  String encryptedContent,
-                  String eventId,
+                  String giftWrapEventId,
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shareIndex,
                   _i13.EventStatus status
                 })>>.value(<({
-          String backupConfigId,
           DateTime createdAt,
-          String encryptedContent,
-          String eventId,
+          String giftWrapEventId,
           DateTime? publishedAt,
           String recipientPubkey,
           int shareIndex,
@@ -591,10 +585,8 @@ class MockShareDistributionService extends _i1.Mock implements _i12.ShareDistrib
       ) as _i6.Future<
           List<
               ({
-                String backupConfigId,
                 DateTime createdAt,
-                String encryptedContent,
-                String eventId,
+                String giftWrapEventId,
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shareIndex,
@@ -606,10 +598,8 @@ class MockShareDistributionService extends _i1.Mock implements _i12.ShareDistrib
     required String? vaultId,
     required List<
             ({
-              String backupConfigId,
               DateTime createdAt,
-              String encryptedContent,
-              String eventId,
+              String giftWrapEventId,
               DateTime? publishedAt,
               String recipientPubkey,
               int shareIndex,
