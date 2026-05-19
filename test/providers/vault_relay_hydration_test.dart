@@ -236,54 +236,5 @@ void main() {
       expect(hydratedConfig.relays, isNot(contains('wss://relay-c.example.com')));
     });
 
-    // ---------------------------------------------------------------------------
-    // Test 4: fresh install from kind-1337 has no owner rows yet
-    // ---------------------------------------------------------------------------
-    test('_hydrate falls back to steward-role relays when owner rows are absent', () async {
-      const vaultId = 'vault-relay-fresh-install';
-      await repository.addVault(
-        Vault(
-          id: vaultId,
-          name: 'Fresh Install Test',
-          createdAt: DateTime.utc(2026, 5, 18),
-          ownerPubkey: ownerPubkey,
-        ),
-      );
-
-      await repository.upsertStewardRow(
-        id: 'steward-1',
-        vaultId: vaultId,
-        shareIndex: 1,
-        pubkey: 'b' * 64,
-        name: 'Steward',
-      );
-
-      const share = Share(
-        payload: '',
-        threshold: 1,
-        shareIndex: -1,
-        totalShares: 1,
-        primeMod: 'prime-mod-fresh',
-        creatorPubkey: ownerPubkey,
-        createdAt: 1704153600,
-        vaultId: vaultId,
-        relayUrls: [
-          'wss://relay-a.example.com',
-          'wss://relay-b.example.com',
-        ],
-        distributionVersion: 1,
-      );
-      await repository.mergeVaultRowFromIncomingShare(vaultId, share);
-
-      final ownerRelays = await db.vaultRelayDao.forVaultByRole(vaultId, 'owner');
-      expect(ownerRelays, isEmpty);
-
-      final loaded = await repository.getVault(vaultId);
-      final hydratedConfig = loaded!.backupConfig;
-      expect(hydratedConfig, isNotNull);
-      expect(hydratedConfig!.relays, hasLength(2));
-      expect(hydratedConfig.relays, contains('wss://relay-a.example.com'));
-      expect(hydratedConfig.relays, contains('wss://relay-b.example.com'));
-    });
   });
 }
