@@ -41,7 +41,10 @@ void main() {
       ws.add(jsonEncode([
         'REQ',
         'test_sub',
-        {'kinds': [1059], '#p': ['abc123']},
+        {
+          'kinds': [1059],
+          '#p': ['abc123']
+        },
       ]));
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
@@ -72,12 +75,10 @@ void main() {
   });
 
   group('NDK subscription dedup behavior', () {
-    const testPubkey =
-        'abc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abc1';
+    const testPubkey = 'abc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abc1';
 
     /// Settle time for WebSocket connection + EOSE.
-    Future<void> settle() =>
-        Future<void>.delayed(const Duration(milliseconds: 500));
+    Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 500));
 
     test(
       'cacheRead:false — two relays both deliver events independently',
@@ -137,10 +138,8 @@ void main() {
               reason: 'sub1 (relay1, cacheRead:false) should receive event');
           expect(events2, hasLength(1),
               reason: 'sub2 (relay2, cacheRead:false) should receive event');
-          expect(events1.first.id, e1.id,
-              reason: 'sub1 should get relay1 event');
-          expect(events2.first.id, e2.id,
-              reason: 'sub2 should get relay2 event');
+          expect(events1.first.id, e1.id, reason: 'sub1 should get relay1 event');
+          expect(events2.first.id, e2.id, reason: 'sub2 should get relay2 event');
         } finally {
           await relay1.stop();
           await relay2.stop();
@@ -201,14 +200,12 @@ void main() {
           await ndk.requests.closeAllSubscription();
 
           // sub1 should get its event
-          expect(events1, hasLength(1),
-              reason: 'sub1 (relay1) should receive event');
+          expect(events1, hasLength(1), reason: 'sub1 (relay1) should receive event');
 
           // BUG: sub2's stream was replaced by sub1's stream via ConcurrencyCheck.
           // REQ was NEVER sent to relay2, so event2 never arrives.
           expect(events2.where((e) => e.id == e2.id), isEmpty,
-              reason:
-                  'BUG: With cacheRead:true, relay2 subscription is deduped');
+              reason: 'BUG: With cacheRead:true, relay2 subscription is deduped');
         } finally {
           await relay1.stop();
           await relay2.stop();
@@ -266,8 +263,7 @@ void main() {
           await s2.cancel();
           await ndk.requests.closeAllSubscription();
 
-          expect(events1, isEmpty,
-              reason: 'closed sub should not receive new events');
+          expect(events1, isEmpty, reason: 'closed sub should not receive new events');
           expect(events2, hasLength(1),
               reason: 're-added sub (cacheRead:false) should receive events');
         } finally {
@@ -334,8 +330,7 @@ void main() {
           // This is why closeSubscription MUST send CLOSE to the relay
           // and clean up inFlightRequests.
           expect(events2, isEmpty,
-              reason:
-                  'BUG: orphaned subscription received the event, not the new one');
+              reason: 'BUG: orphaned subscription received the event, not the new one');
         } finally {
           await relay.stop();
         }
