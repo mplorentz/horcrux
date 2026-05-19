@@ -632,24 +632,37 @@ class NdkService {
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    final responseData = json.decode(event.content) as Map<String, dynamic>;
+    // New canonical format: read tags + raw content instead of JSON
     final senderPubkey = event.pubKey;
 
-    final recoveryRequestId = responseData['recovery_request_id'] as String;
-    final vaultId = responseData['vault_id'] as String;
-    final approved = responseData['approved'] as bool;
+    final recoveryRequestId = _extractTagValue(event.tags, 'recovery_request_id');
+    final vaultId = _extractTagValue(event.tags, 'vault_id');
+    final isPracticeStr = _extractTagValue(event.tags, 'is_practice');
+    final isPractice = isPracticeStr == 'true';
+
+    if (recoveryRequestId == null) {
+      Log.error('Missing recovery_request_id tag in recovery response event');
+      return;
+    }
+    if (vaultId == null) {
+      Log.error('Missing vault_id tag in recovery response event');
+      return;
+    }
+
+    // approved: content non-empty = approved with share, content empty + is_practice tag = practice,
+    // content empty + no is_practice = denial
+    final hasContent = event.content.isNotEmpty;
+    final approved = hasContent || isPractice;
 
     Log.info(
-      'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
+      'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved (isPractice=$isPractice, hasContent=$hasContent)',
     );
 
     Share? shardData;
 
-    final shardPayload = responseData['shard_data'];
-    if (approved && shardPayload != null) {
-      final shardDataJson = shardPayload as Map<String, dynamic>;
-      shardData = shareFromJson(shardDataJson);
-
+    if (hasContent) {
+      // Content is raw share payload — use shareFromNostr to build the Share from tags + content
+      shardData = shareFromNostr(event);
       Log.info(
         'Decoded recovery shard from $senderPubkey for recovery request $recoveryRequestId '
         '(persists via RecoveryService)',
@@ -1113,4 +1126,12 @@ class NdkService {
     _isInitialized = false;
     Log.info('NDK service disposed');
   }
+  /// Helper: extract first value of a named tag from event tags.
+  String? _extractTagValue(List<List<String>> tags, String name) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == name && tag.length >= 2) return tag[1];
+    }
+    return null;
+  }
+
 }
