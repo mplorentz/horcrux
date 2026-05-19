@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/utils/date_time_extensions.dart';
+import 'package:ndk/ndk.dart';
 
 import '../fixtures/test_keys.dart';
 
@@ -32,6 +33,7 @@ void main() {
       expect(m.isManifest, isTrue);
 
       expect(_validRealShare().isManifest, isFalse);
+      // Empty payload with shareIndex 0 is also a manifest now.
       expect(
         Share(
           payload: '',
@@ -42,7 +44,7 @@ void main() {
           creatorPubkey: 'a' * 64,
           createdAt: secondsSinceEpoch(),
         ).isManifest,
-        isFalse,
+        isTrue,
       );
     });
   });
@@ -231,22 +233,14 @@ void main() {
           'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         );
         expect(shardData.ownerName, 'Owner');
-        expect(
-          shardData.recipientPubkey,
-          validJsonWithRecoveryMetadata['recipient_pubkey'],
-        );
-        expect(
-          shardData.isReceived,
-          validJsonWithRecoveryMetadata['is_received'],
-        );
-        expect(
-          shardData.receivedAt,
-          DateTime.parse(validJsonWithRecoveryMetadata['received_at'] as String),
-        );
-        expect(
-          shardData.nostrEventId,
-          validJsonWithRecoveryMetadata['nostr_event_id'],
-        );
+        expect(shardData.recipientPubkey, isNull,
+            reason: 'recipientPubkey is not in wire JSON anymore');
+        expect(shardData.isReceived, isNull,
+            reason: 'isReceived is not in wire JSON anymore');
+        expect(shardData.receivedAt, isNull,
+            reason: 'receivedAt is not in wire JSON anymore');
+        expect(shardData.nostrEventId, isNull,
+            reason: 'nostrEventId is not in wire JSON anymore');
       },
     );
 
@@ -294,16 +288,14 @@ void main() {
         expect(json['stewards'], isNotNull);
         expect(json['stewards'], isA<List>());
         expect(json['owner_name'], 'Owner');
-        expect(
-          json['recipient_pubkey'],
-          validJsonWithRecoveryMetadata['recipient_pubkey'],
-        );
-        expect(json['is_received'], validJsonWithRecoveryMetadata['is_received']);
-        expect(json['received_at'], validJsonWithRecoveryMetadata['received_at']);
-        expect(
-          json['nostr_event_id'],
-          validJsonWithRecoveryMetadata['nostr_event_id'],
-        );
+        expect(json.containsKey('recipient_pubkey'), isFalse,
+            reason: 'recipientPubkey no longer serialized to wire JSON');
+        expect(json.containsKey('is_received'), isFalse,
+            reason: 'isReceived no longer serialized to wire JSON');
+        expect(json.containsKey('received_at'), isFalse,
+            reason: 'receivedAt no longer serialized to wire JSON');
+        expect(json.containsKey('nostr_event_id'), isFalse,
+            reason: 'nostrEventId no longer serialized to wire JSON');
       },
     );
 
@@ -326,13 +318,14 @@ void main() {
       expect(decodedShare.stewards, isNotNull);
       expect(decodedShare.stewards!.length, originalShare.stewards!.length);
       expect(decodedShare.ownerName, originalShare.ownerName);
-      expect(
-        decodedShare.recipientPubkey,
-        originalShare.recipientPubkey,
-      );
-      expect(decodedShare.isReceived, originalShare.isReceived);
-      expect(decodedShare.receivedAt, originalShare.receivedAt);
-      expect(decodedShare.nostrEventId, originalShare.nostrEventId);
+      expect(decodedShare.recipientPubkey, isNull,
+          reason: 'recipientPubkey is not in wire JSON anymore');
+      expect(decodedShare.isReceived, isNull,
+          reason: 'isReceived is not in wire JSON anymore');
+      expect(decodedShare.receivedAt, isNull,
+          reason: 'receivedAt is not in wire JSON anymore');
+      expect(decodedShare.nostrEventId, isNull,
+          reason: 'nostrEventId is not in wire JSON anymore');
     });
 
     test('shareFromJson handles null receivedAt correctly', () {
@@ -874,6 +867,462 @@ void main() {
       };
       final decoded = shareFromJson(legacyJson);
       expect(decoded.pushEnabled, isNull);
+    });
+  });
+
+  group('Nostr wire format - shareToNostrTags', () {
+    const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+
+    Share _sampleShare({bool withStewards = false, bool withRelays = false, bool withPush = false}) {
+      return Share(
+        payload: 'raw-shamir-payload',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        primeMod: 'abc123',
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+        vaultId: 'vault-1',
+        vaultName: 'My Vault',
+        ownerName: 'Alice',
+        instructions: 'Keep this safe',
+        distributionVersion: 1,
+        pushEnabled: withPush ? true : null,
+        stewards: withStewards
+            ? [
+                {'name': 'Bob', 'pubkey': 'b' * 64, 'contactInfo': 'bob@test'},
+                {'name': 'Charlie', 'pubkey': 'c' * 64},
+              ]
+            : null,
+        relayUrls: withRelays ? ['wss://relay1.com', 'wss://relay2.com'] : null,
+      );
+    }
+
+    test('includes required tags', () {
+      final tags = shareToNostrTags(_sampleShare());
+      expect(tags.any((t) => t[0] == 'share_index' && t[1] == '0'), isTrue,
+          reason: 'should have share_index tag');
+      expect(tags.any((t) => t[0] == 'total_shares' && t[1] == '3'), isTrue,
+          reason: 'should have total_shares tag');
+      expect(tags.any((t) => t[0] == 'threshold' && t[1] == '2'), isTrue,
+          reason: 'should have threshold tag');
+      expect(tags.any((t) => t[0] == 'prime_mod' && t[1] == 'abc123'), isTrue,
+          reason: 'should have prime_mod tag');
+    });
+
+    test('includes optional string tags when present', () {
+      final tags = shareToNostrTags(_sampleShare());
+      expect(tags.any((t) => t[0] == 'vault_id' && t[1] == 'vault-1'), isTrue);
+      expect(tags.any((t) => t[0] == 'vault_name' && t[1] == 'My Vault'), isTrue);
+      expect(tags.any((t) => t[0] == 'owner_name' && t[1] == 'Alice'), isTrue);
+      expect(tags.any((t) => t[0] == 'instructions' && t[1] == 'Keep this safe'), isTrue);
+    });
+
+    test('includes distribution_version when present', () {
+      final tags = shareToNostrTags(_sampleShare());
+      expect(tags.any((t) => t[0] == 'distribution_version' && t[1] == '1'), isTrue);
+    });
+
+    test('includes push_enabled when present', () {
+      final tags = shareToNostrTags(_sampleShare(withPush: true));
+      expect(tags.any((t) => t[0] == 'push_enabled' && t[1] == 'true'), isTrue);
+    });
+
+    test('omits push_enabled when null', () {
+      final tags = shareToNostrTags(_sampleShare());
+      expect(tags.any((t) => t[0] == 'push_enabled'), isFalse);
+    });
+
+    test('includes repeated steward tags', () {
+      final tags = shareToNostrTags(_sampleShare(withStewards: true));
+      expect(
+        tags.any((t) =>
+            t[0] == 'steward' &&
+            t[1] == '0' &&
+            t[2] == 'Bob' &&
+            t[3] == 'b' * 64 &&
+            t[4] == 'bob@test'),
+        isTrue,
+        reason: 'should have Bob steward tag',
+      );
+      expect(
+        tags.any((t) =>
+            t[0] == 'steward' &&
+            t[1] == '1' &&
+            t[2] == 'Charlie' &&
+            t[3] == 'c' * 64 &&
+            t[4] == ''),
+        isTrue,
+        reason: 'should have Charlie steward tag',
+      );
+    });
+
+    test('includes repeated relay tags', () {
+      final tags = shareToNostrTags(_sampleShare(withRelays: true));
+      expect(tags.any((t) => t[0] == 'relay' && t[1] == 'wss://relay1.com'), isTrue);
+      expect(tags.any((t) => t[0] == 'relay' && t[1] == 'wss://relay2.com'), isTrue);
+    });
+
+    test('omits optional tags when null', () {
+      final share = Share(
+        payload: 'p',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+      );
+      final tags = shareToNostrTags(share);
+      expect(tags.any((t) => t[0] == 'vault_id'), isFalse);
+      expect(tags.any((t) => t[0] == 'vault_name'), isFalse);
+      expect(tags.any((t) => t[0] == 'owner_name'), isFalse);
+      expect(tags.any((t) => t[0] == 'steward'), isFalse);
+      expect(tags.any((t) => t[0] == 'relay'), isFalse);
+      expect(tags.any((t) => t[0] == 'distribution_version'), isFalse);
+      expect(tags.any((t) => t[0] == 'push_enabled'), isFalse);
+    });
+  });
+
+  group('Nostr wire format - shareToNostrContent', () {
+    test('returns payload for normal share', () {
+      final share = Share(
+        payload: 'shamir-data',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: 'a' * 64,
+        createdAt: 1759759657,
+      );
+      expect(shareToNostrContent(share), 'shamir-data');
+    });
+
+    test('returns empty string for manifest share', () {
+      final share = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: 'a' * 64,
+        createdAt: 1759759657,
+      );
+      expect(shareToNostrContent(share), '');
+    });
+
+    test('empty payload with shareIndex 0 is also manifest', () {
+      final share = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: 'a' * 64,
+        createdAt: 1759759657,
+      );
+      expect(shareToNostrContent(share), '');
+    });
+  });
+
+  group('Nostr wire format - shareFromNostr', () {
+    const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+
+    Nip01Event _makeRumor({
+      required String content,
+      List<List<String>> tags = const [],
+      String pubKey = creatorPubkey,
+      int createdAt = 1759759657,
+    }) {
+      return Nip01Event(
+        pubKey: pubKey,
+        kind: 1337,
+        tags: tags,
+        content: content,
+        createdAt: createdAt,
+      );
+    }
+
+    test('parses required tags and content from rumor', () {
+      final rumor = _makeRumor(
+        content: 'shamir-data',
+        tags: [
+          ['share_index', '2'],
+          ['total_shares', '5'],
+          ['threshold', '3'],
+          ['prime_mod', 'xyz789'],
+        ],
+      );
+      final share = shareFromNostr(rumor, recipientPubkey: 'r' * 64);
+
+      expect(share.payload, 'shamir-data');
+      expect(share.shareIndex, 2);
+      expect(share.totalShares, 5);
+      expect(share.threshold, 3);
+      expect(share.primeMod, 'xyz789');
+      expect(share.creatorPubkey, creatorPubkey);
+      expect(share.createdAt, 1759759657);
+      expect(share.recipientPubkey, 'r' * 64);
+      expect(share.isManifest, isFalse);
+    });
+
+    test('parses manifest from empty content', () {
+      final rumor = _makeRumor(
+        content: '',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.payload, '');
+      expect(share.isManifest, isTrue);
+    });
+
+    test('parses optional string tags', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+          ['vault_id', 'vault-42'],
+          ['vault_name', 'Secret Vault'],
+          ['owner_name', 'Alice'],
+          ['instructions', 'Handle with care'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.vaultId, 'vault-42');
+      expect(share.vaultName, 'Secret Vault');
+      expect(share.ownerName, 'Alice');
+      expect(share.instructions, 'Handle with care');
+    });
+
+    test('parses distribution_version and push_enabled', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+          ['distribution_version', '5'],
+          ['push_enabled', 'true'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.distributionVersion, 5);
+      expect(share.pushEnabled, isTrue);
+    });
+
+    test('parses repeated steward tags', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+          ['steward', '0', 'Bob', 'b' * 64, 'bob@test'],
+          ['steward', '1', 'Charlie', 'c' * 64, ''],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.stewards, hasLength(2));
+      expect(share.stewards![0]['name'], 'Bob');
+      expect(share.stewards![0]['pubkey'], 'b' * 64);
+      expect(share.stewards![0]['contactInfo'], 'bob@test');
+      expect(share.stewards![1]['name'], 'Charlie');
+      expect(share.stewards![1]['pubkey'], 'c' * 64);
+    });
+
+    test('parses repeated relay tags', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+          ['relay', 'wss://relay1.com'],
+          ['relay', 'wss://relay2.com'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.relayUrls, hasLength(2));
+      expect(share.relayUrls![0], 'wss://relay1.com');
+      expect(share.relayUrls![1], 'wss://relay2.com');
+    });
+
+    test('sets null for absent optional fields', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.vaultId, isNull);
+      expect(share.vaultName, isNull);
+      expect(share.ownerName, isNull);
+      expect(share.instructions, isNull);
+      expect(share.stewards, isNull);
+      expect(share.relayUrls, isNull);
+      expect(share.distributionVersion, isNull);
+      expect(share.pushEnabled, isNull);
+      expect(share.recipientPubkey, isNull);
+    });
+
+    test('uses rumor.pubKey as creatorPubkey', () {
+      final rumor = _makeRumor(
+        content: 'data',
+        pubKey: 'b' * 64,
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['prime_mod', 'abc'],
+        ],
+      );
+      final share = shareFromNostr(rumor);
+
+      expect(share.creatorPubkey, 'b' * 64);
+    });
+  });
+
+  group('Nostr wire format - round trip', () {
+    const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+
+    test('shareToNostrTags + shareToNostrContent -> shareFromNostr round-trips', () {
+      final original = Share(
+        payload: 'shamir-secret-data',
+        threshold: 3,
+        shareIndex: 1,
+        totalShares: 5,
+        primeMod: 'prime-mod-value',
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+        vaultId: 'vault-1',
+        vaultName: 'My Vault',
+        ownerName: 'Alice',
+        instructions: 'Keep safe',
+        distributionVersion: 2,
+        pushEnabled: true,
+        stewards: [
+          {'name': 'Bob', 'pubkey': 'b' * 64, 'contactInfo': 'bob@test'},
+        ],
+        relayUrls: ['wss://relay1.com'],
+      );
+
+      final tags = shareToNostrTags(original);
+      final content = shareToNostrContent(original);
+
+      final rumor = Nip01Event(
+        pubKey: creatorPubkey,
+        kind: 1337,
+        tags: tags,
+        content: content,
+        createdAt: 1759759657,
+      );
+
+      final decoded = shareFromNostr(rumor, recipientPubkey: 'r' * 64);
+
+      expect(decoded.payload, original.payload);
+      expect(decoded.threshold, original.threshold);
+      expect(decoded.shareIndex, original.shareIndex);
+      expect(decoded.totalShares, original.totalShares);
+      expect(decoded.primeMod, original.primeMod);
+      expect(decoded.creatorPubkey, original.creatorPubkey);
+      expect(decoded.createdAt, original.createdAt);
+      expect(decoded.vaultId, original.vaultId);
+      expect(decoded.vaultName, original.vaultName);
+      expect(decoded.ownerName, original.ownerName);
+      expect(decoded.instructions, original.instructions);
+      expect(decoded.distributionVersion, original.distributionVersion);
+      expect(decoded.pushEnabled, original.pushEnabled);
+      expect(decoded.recipientPubkey, 'r' * 64);
+      expect(decoded.stewards, hasLength(1));
+      expect(decoded.stewards![0]['name'], 'Bob');
+      expect(decoded.stewards![0]['pubkey'], 'b' * 64);
+      expect(decoded.stewards![0]['contactInfo'], 'bob@test');
+      expect(decoded.relayUrls, hasLength(1));
+      expect(decoded.relayUrls![0], 'wss://relay1.com');
+    });
+
+    test('manifest round-trip', () {
+      final original = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 3,
+        primeMod: 'abc',
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+        vaultId: 'vault-m',
+        vaultName: 'Manifest Vault',
+        ownerName: 'Alice',
+        stewards: [
+          {'name': 'Bob', 'pubkey': 'b' * 64},
+        ],
+      );
+
+      final tags = shareToNostrTags(original);
+      final content = shareToNostrContent(original);
+
+      expect(content, '');
+
+      final rumor = Nip01Event(
+        pubKey: creatorPubkey,
+        kind: 1337,
+        tags: tags,
+        content: content,
+        createdAt: 1759759657,
+      );
+
+      final decoded = shareFromNostr(rumor);
+
+      expect(decoded.isManifest, isTrue);
+      expect(decoded.payload, '');
+      expect(decoded.vaultId, 'vault-m');
+      expect(decoded.stewards, hasLength(1));
+    });
+  });
+
+  group('Nostr wire format - stewardToNostrTag', () {
+    test('produces steward tag with slot', () {
+      final tag = stewardToNostrTag(
+        {'name': 'Bob', 'pubkey': 'b' * 64, 'contactInfo': 'bob@test'},
+        slot: '0',
+      );
+      expect(tag, orderedEquals(['steward', '0', 'Bob', 'b' * 64, 'bob@test']));
+    });
+
+    test('produces steward tag without slot', () {
+      final tag = stewardToNostrTag(
+        {'name': 'Alice', 'pubkey': 'a' * 64},
+      );
+      expect(tag, orderedEquals(['steward', 'Alice', 'a' * 64, '']));
+    });
+
+    test('handles missing contactInfo', () {
+      final tag = stewardToNostrTag(
+        {'name': 'Charlie', 'pubkey': 'c' * 64},
+        slot: '2',
+      );
+      expect(tag, orderedEquals(['steward', '2', 'Charlie', 'c' * 64, '']));
     });
   });
 }
