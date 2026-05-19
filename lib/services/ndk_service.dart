@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../providers/vault_provider.dart';
 import '../utils/date_time_extensions.dart';
 import 'local_notification_service.dart';
 import 'login_service.dart';
@@ -416,11 +417,7 @@ class NdkService {
           final id = _vaultIdFromReader(m, inner.tags);
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
-          Map<String, dynamic>? m;
-          try {
-            m = json.decode(inner.content) as Map<String, dynamic>;
-          } catch (_) {}
-          final id = _vaultIdFromReader(m, inner.tags);
+          final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
         case 1339: // [NostrKind.recoveryResponse]
           Map<String, dynamic>? m;
@@ -458,8 +455,7 @@ class NdkService {
       if (kind != NostrKind.recoveryRequest && kind != NostrKind.recoveryResponse) {
         return null;
       }
-      final payload = json.decode(inner.content) as Map<String, dynamic>;
-      final id = payload['recovery_request_id'] as String?;
+      final id = _firstTagValue(inner.tags, 'recovery_request_id');
       if (id == null || id.isEmpty) return null;
       return (kind: kind!, recoveryRequestId: id);
     } catch (e, st) {
@@ -606,51 +602,35 @@ class NdkService {
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    Map<String, dynamic>? requestData;
-    try {
-      requestData = json.decode(event.content) as Map<String, dynamic>;
-    } catch (_) {}
-
+    // New canonical format: read tags + event metadata instead of JSON content
     final senderPubkey = event.pubKey;
 
-    // Prefer JSON fields (legacy), fall back to tags (new format)
-    String recoveryRequestId;
-    String vaultId;
-    int threshold;
-    bool isPractice;
-    DateTime? expiresAt;
-    DateTime requestedAt;
+    final recoveryRequestId = _firstTagValue(event.tags, 'recovery_request_id') ?? event.id;
+    final vaultId = _firstTagValue(event.tags, 'vault_id');
+    final isPractice = _firstTagValue(event.tags, 'is_practice') == 'true';
 
-    if (requestData != null) {
-      // Legacy JSON format
-      final requestedAtRaw = requestData['requested_at'] as String?;
-      final expiresRaw = requestData['expires_at'] as String?;
-      final thresholdRaw = requestData['threshold'];
-      recoveryRequestId = (requestData['recovery_request_id'] as String?) ?? event.id;
-      vaultId = requestData['vault_id'] as String;
-      threshold = thresholdRaw is int
-          ? thresholdRaw
-          : thresholdRaw is num
-              ? thresholdRaw.toInt()
-              : 1;
-      requestedAt = DateTime.parse(requestedAtRaw ?? DateTime.now().toIso8601String());
-      expiresAt = expiresRaw != null ? DateTime.parse(expiresRaw) : null;
-      isPractice = requestData['is_practice'] as bool? ?? false;
-    } else {
-      // Canonical tag-based format
-      recoveryRequestId = _firstTagValue(event.tags, 'recovery_request_id') ?? event.id;
-      vaultId = _firstTagValue(event.tags, 'vault_id') ?? '';
-      threshold = int.tryParse(_firstTagValue(event.tags, 'threshold') ?? '') ?? 1;
-      isPractice = _firstTagValue(event.tags, 'is_practice') == 'true';
-      requestedAt = DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000, isUtc: true);
-      expiresAt = null;
+    if (vaultId == null) {
+      Log.error('Missing vault_id tag in recovery request event');
+      return;
+    }
+
+    // Threshold: look up the local vault's held share for this vault
+    int threshold;
+    try {
+      final vault = await _ref.read(vaultRepositoryProvider).getVault(vaultId);
+      threshold = vault?.backupConfig?.threshold ?? 1;
+    } catch (_) {
+      threshold = 1;
     }
 
     final recoveryRequest = RecoveryRequest.makeFromParticipants(
       id: recoveryRequestId,
       vaultId: vaultId,
       initiatorPubkey: senderPubkey,
-      requestedAt: requestedAt,
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(
+        event.createdAt * 1000,
+        isUtc: true,
+      ),
       status: RecoveryRequestStatus.sent,
       threshold: threshold,
       stewardPubkeys: const [],
@@ -659,7 +639,6 @@ class NdkService {
         event.createdAt * 1000,
         isUtc: true,
       ),
-      expiresAt: expiresAt,
       isPractice: isPractice,
     );
 
