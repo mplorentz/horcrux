@@ -33,18 +33,12 @@ class _StubBackupService extends BackupService {
   String Function(List<Share> shares)? onReconstruct;
 
   _StubBackupService(
-    VaultRepository repository,
-    VaultDetailRepository vaultDetailRepository,
-    ShareDistributionService shareDistributionService,
-    LoginService loginService,
-    RelayScanService relayScanService,
-  ) : super(
-          repository,
-          vaultDetailRepository,
-          shareDistributionService,
-          loginService,
-          relayScanService,
-        );
+    super._repository,
+    super._vaultDetailRepository,
+    super._shareDistributionService,
+    super._loginService,
+    super._relayScanService,
+  );
 
   @override
   Future<String> reconstructFromShares({required List<Share> shares}) async {
