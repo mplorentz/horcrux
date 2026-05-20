@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io' show Platform;
@@ -49,7 +51,7 @@ class FeedbackService {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: body,
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 200) {
