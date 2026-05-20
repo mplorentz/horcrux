@@ -716,6 +716,28 @@ class InvitationService {
       return;
     }
 
+    // Check if invitation is already redeemed by a different user
+    if (!invitation.status.canRedeem &&
+        invitation.redeemedBy != null &&
+        invitation.redeemedBy != inviteePubkey) {
+      Log.warning(
+        'Invitation $inviteCode already redeemed by ${invitation.redeemedBy}. '
+        'Rejecting acceptance from $inviteePubkey',
+      );
+      // Send invalid event to notify the second invitee
+      try {
+        await invitationSendingService.sendInvitationInvalidEvent(
+          inviteCode: inviteCode,
+          inviteePubkey: inviteePubkey,
+          relayUrls: invitation.relayUrls,
+          reason: 'This invitation has already been redeemed by another user',
+        );
+      } catch (e) {
+        Log.error('Error sending invalid event for duplicate redemption', e);
+      }
+      return;
+    }
+
     // Persist redemption only after backup stewards are updated: marking acceptedAt first makes
     // later hydration treat the invitation as redeemed mid-flight and [_addKeyHolderToBackupConfig]
     // could not match the invited placeholder (duplicate steward appended instead).
