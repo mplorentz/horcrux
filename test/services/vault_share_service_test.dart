@@ -33,10 +33,8 @@ void main() {
 
   late MockLoginService mockLoginService;
   late MockNdkService mockNdkService;
-  late MockHorcruxNotificationService mockNotificationService;
   late MockPushNotificationReceiver mockPushReceiver;
   late MockRelayScanService mockRelayScanService;
-  late VaultRepository repository;
 
   setUp(() {
     mockLoginService = MockLoginService();
@@ -47,11 +45,9 @@ void main() {
 
     mockNdkService = MockNdkService();
     when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
-    mockNotificationService = MockHorcruxNotificationService();
     mockPushReceiver = MockPushNotificationReceiver();
     when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
     mockRelayScanService = MockRelayScanService();
-    repository = VaultRepository(mockLoginService);
   });
 
   group('VaultShareService.addVaultShare pushEnabled propagation', () {
