@@ -421,5 +421,121 @@ void main() {
         expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
       },
     );
+
+    test(
+      'Duplicate invitation acceptance from different pubkey is rejected and sends invalid event',
+      () async {
+        // Arrange: Create a vault with an invitation accepted by Device B
+        const vaultId = 'vault-duplicate-invite';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const deviceBPubkey = TestHexPubkeys.bob; // First to redeem
+        const deviceCPubkey = TestHexPubkeys.charlie; // Second to redeem
+
+        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any))
+            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(mockLoginService.decryptText(any))
+            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+
+        // Stub sendInvitationInvalidEvent to succeed
+        when(mockInvitationSendingService.sendInvitationInvalidEvent(
+          inviteCode: anyNamed('inviteCode'),
+          inviteePubkey: anyNamed('inviteePubkey'),
+          relayUrls: anyNamed('relayUrls'),
+          reason: anyNamed('reason'),
+        )).thenAnswer((_) async => 'invalid-event-id');
+
+        // Create vault
+        final testVault = Vault(
+          id: vaultId,
+          name: 'Duplicate Invite Vault',
+          createdAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+        );
+        await realRepository.addVault(testVault);
+
+        // Create a backup config with Device B already as a steward
+        final deviceBSteward = createSteward(
+          pubkey: deviceBPubkey,
+          name: 'Device B',
+        );
+        final backupConfig = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 1,
+          totalKeys: 1,
+          stewards: [deviceBSteward],
+          relays: ['wss://relay.example.com'],
+        );
+        await realRepository.updateBackupConfig(vaultId, backupConfig);
+
+        // Create invitation
+        await invitationService.generateInvitationLink(
+          vaultId: vaultId,
+          inviteeName: 'New User',
+          relayUrls: ['wss://relay.example.com'],
+        );
+        final invitations = await invitationService.getPendingInvitations(vaultId);
+        final invitation = invitations.first;
+        final inviteCode = invitation.inviteCode;
+
+        // Device B accepts first (via invitation acceptance event)
+        final firstAcceptancePayload = json.encode({
+          'invite_code': inviteCode,
+          'invitee_pubkey': deviceBPubkey,
+          'responded_at': DateTime.now().toIso8601String(),
+        });
+        final firstEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
+          pubKey: deviceBPubkey,
+          tags: [],
+          createdAt: secondsSinceEpoch(),
+          content: firstAcceptancePayload,
+        );
+        await invitationService.processInvitationAcceptanceEvent(event: firstEvent);
+
+        // Verify first acceptance stored the redeemed pubkey
+        final invitationsAfterFirst = await invitationService.getPendingInvitations(vaultId);
+        expect(invitationsAfterFirst, isEmpty,
+            reason: 'Invitation should not be in pending after first redemption');
+
+        // Device C tries to accept the same invitation
+        final secondAcceptancePayload = json.encode({
+          'invite_code': inviteCode,
+          'invitee_pubkey': deviceCPubkey,
+          'responded_at': DateTime.now().toIso8601String(),
+        });
+        final secondEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
+          pubKey: deviceCPubkey,
+          tags: [],
+          createdAt: secondsSinceEpoch(),
+          content: secondAcceptancePayload,
+        );
+
+        // Act: Second acceptance should be silently rejected (no exception)
+        await invitationService.processInvitationAcceptanceEvent(event: secondEvent);
+
+        // Assert: The invitation was not overwritten — redeemedBy is still Device B
+        final storedInvitation = await invitationService.lookupInvitationByCode(inviteCode);
+        expect(storedInvitation, isNotNull);
+        expect(storedInvitation!.redeemedBy, equals(deviceBPubkey),
+            reason: 'Invitation should still be redeemed by Device B, not overwritten');
+
+        // Assert: sendInvitationInvalidEvent was called for Device C with correct parameters
+        verify(mockInvitationSendingService.sendInvitationInvalidEvent(
+          inviteCode: inviteCode,
+          inviteePubkey: deviceCPubkey,
+          relayUrls: anyNamed('relayUrls'),
+          reason: anyNamed('reason'),
+        )).called(1);
+
+        // Assert: Device C was NOT added to the backup config
+        final config = await realRepository.getBackupConfig(vaultId);
+        expect(config, isNotNull);
+        expect(config!.stewards.any((s) => s.pubkey == deviceCPubkey), isFalse,
+            reason: 'Device C should not be in the backup config');
+      },
+    );
   });
 }
