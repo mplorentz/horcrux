@@ -792,7 +792,9 @@ void main() {
 
         // Assert: Tags carry metadata in canonical format
         expect(capturedTags, isNotNull);
-        expect(capturedTags!.any((t) => t[0] == 'recovery_request_id' && t[1] == recoveryRequest.id), true);
+        expect(
+            capturedTags!.any((t) => t[0] == 'recovery_request_id' && t[1] == recoveryRequest.id),
+            true);
         expect(capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == testVaultId), true);
         expect(capturedTags!.any((t) => t[0] == 'is_practice' && t[1] == 'true'), true);
 
