@@ -3,7 +3,6 @@ import 'package:mockito/mockito.dart';
 
 import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/models/backup_config.dart';
-import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/vault.dart';
 import 'package:horcrux/providers/vault_provider.dart';
