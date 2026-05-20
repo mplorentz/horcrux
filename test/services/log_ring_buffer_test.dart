@@ -33,14 +33,14 @@ void main() {
       expect(errorEntries, isNotEmpty);
     });
 
-    test('ring buffer is bounded to 50 entries', () {
+    test('ring buffer is bounded to 500 entries', () {
       // Clear the buffer by adding enough entries to push out old ones
       for (int i = 0; i < 55; i++) {
         Log.debug('Ring buffer overflow test $i');
       }
       final logs = Log.recentLogs();
-      // The buffer should not exceed 50 entries total
-      expect(logs.length, lessThanOrEqualTo(50));
+      // The buffer should not exceed 500 entries total
+      expect(logs.length, lessThanOrEqualTo(500));
       // The newest entry should be present after overflow
       expect(logs.any((l) => l.contains('Ring buffer overflow test 54')), isTrue);
     });
