@@ -47,14 +47,16 @@ class FeedbackService {
         body['_diagnostics'] = await _buildDiagnostics();
       }
 
-      final response = await _httpClient.post(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await _httpClient
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         Log.info('Feedback submitted successfully');
