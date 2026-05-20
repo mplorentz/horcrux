@@ -17,12 +17,46 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/services/share_distribution_service.dart';
+import 'package:horcrux/services/relay_scan_service.dart';
+import 'package:horcrux/providers/vault_detail_repository.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/local_notification_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
 import '../helpers/secure_storage_mock.dart';
 import '../helpers/test_database.dart';
 import 'recovery_service_test.mocks.dart';
+
+/// Minimal BackupService stub for performRecovery tests that need
+/// a controlled reconstructFromShares response. Avoids mockito 5.4's
+/// inability to match non-nullable typed parameters with any().
+class _StubBackupService extends BackupService {
+  String Function(List<Share> shares)? onReconstruct;
+
+  _StubBackupService(
+    super._repository,
+    super._vaultDetailRepository,
+    super._shareDistributionService,
+    super._loginService,
+    super._relayScanService,
+  );
+
+  @override
+  Future<String> reconstructFromShares({required List<Share> shares}) async {
+    if (onReconstruct != null) return onReconstruct!(shares);
+    // Default behavior: validate parameters (same as real implementation)
+    if (shares.isEmpty) throw ArgumentError('At least one share is required');
+    final first = shares.first;
+    for (final share in shares) {
+      if (share.threshold != first.threshold ||
+          share.totalShares != first.totalShares ||
+          share.primeMod != first.primeMod ||
+          share.creatorPubkey != first.creatorPubkey) {
+        throw ArgumentError('All shares must have the same parameters');
+      }
+    }
+    return 'recovered-content';
+  }
+}
 
 @GenerateMocks([
   BackupService,
@@ -31,6 +65,8 @@ import 'recovery_service_test.mocks.dart';
   NdkService,
   HorcruxNotificationService,
   Nip01Event,
+  VaultDetailRepository,
+  RelayScanService,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -957,5 +993,309 @@ void main() {
         expect(vault.backupConfig!.stewards.isNotEmpty, isTrue);
       },
     );
+  });
+
+  group('RecoveryService - performRecovery', () {
+    late String testCreatorPubkey;
+    late LoginService loginService;
+    late VaultRepository repository;
+    late BackupService backupService;
+    late NdkService ndkService;
+    late MockLocalNotificationService mockLocalNotificationService;
+    late RecoveryService recoveryService;
+    late AppDatabase testDb;
+    const testKeyHolder1 = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const testKeyHolder2 = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const testVaultId = 'vault-perform-recovery-test';
+
+    setUp(() async {
+      secureStorageMock.clear();
+      loginService = LoginService();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      testCreatorPubkey = keyPair.publicKey;
+
+      testDb = newTestDatabase();
+      repository = VaultRepository(loginService, db: testDb);
+      final mockNdkService = MockNdkService();
+      mockLocalNotificationService = MockLocalNotificationService();
+      when(
+        mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
+      ).thenAnswer((_) async {});
+      when(
+        mockLocalNotificationService.notifyRecoveryResponseProcessed(any),
+      ).thenAnswer((_) async {});
+
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => testCreatorPubkey);
+
+      backupService = _StubBackupService(
+        repository,
+        MockVaultDetailRepository(),
+        MockShareDistributionService(),
+        loginService,
+        MockRelayScanService(),
+      );
+      ndkService = mockNdkService;
+      final mockHorcruxNotificationService = MockHorcruxNotificationService();
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      recoveryService = RecoveryService(
+        repository,
+        backupService,
+        ndkService,
+        ProcessedNostrEventStore(),
+        mockLocalNotificationService,
+        mockHorcruxNotificationService,
+        testDb,
+      );
+      await recoveryService.clearAll();
+      await repository.clearAll();
+
+      final testVault = Vault(
+        id: testVaultId,
+        name: 'Test Vault',
+        createdAt: DateTime.now(),
+        ownerPubkey: testCreatorPubkey,
+      );
+      await repository.addVault(testVault);
+
+      final relayPlan = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 2,
+        totalKeys: 2,
+        stewards: [
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+          createSteward(pubkey: testKeyHolder2).copyWith(status: StewardStatus.holdingKey),
+        ],
+        relays: ['wss://relay.example.com'],
+      );
+      await repository.updateBackupConfig(testVaultId, relayPlan);
+    });
+
+    test('insufficient shares throws', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 3,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: createShare(
+          payload: 'share-data-1',
+          threshold: 3,
+          shareIndex: 0,
+          totalShares: 3,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+
+      await expectLater(
+        () => recoveryService.performRecovery(recoveryRequest.id),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('approved shares collected from threshold responses', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: createShare(
+          payload: 'share-data-1',
+          threshold: 2,
+          shareIndex: 0,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder2,
+        true,
+        share: createShare(
+          payload: 'share-data-2',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+
+      final request = await recoveryService.getRecoveryRequest(recoveryRequest.id);
+      expect(request, isNotNull);
+      expect(request!.approvedCount, 2);
+      expect(request.approvedSharesWithPayload.length, 2);
+
+      final status = await recoveryService.getRecoveryStatus(recoveryRequest.id);
+      expect(status, isNotNull);
+      expect(status!.canRecover, isTrue);
+    });
+
+    test('denied response does not collect share data', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: createShare(
+          payload: 'share-data-1',
+          threshold: 2,
+          shareIndex: 0,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder2,
+        false,
+      );
+
+      final request = await recoveryService.getRecoveryRequest(recoveryRequest.id);
+      expect(request, isNotNull);
+      expect(request!.approvedCount, 1);
+      expect(request.deniedCount, 1);
+      expect(request.approvedSharesWithPayload.length, 1);
+    });
+
+    test('reassembles secret from threshold shares', () async {
+      // Configure the stub to return a known reconstructed value
+      (backupService as _StubBackupService).onReconstruct = (_) => 'reconstructed-secret-data';
+
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: createShare(
+          payload: 'share-data-1',
+          threshold: 2,
+          shareIndex: 0,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder2,
+        true,
+        share: createShare(
+          payload: 'share-data-2',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+
+      final content = await recoveryService.performRecovery(
+        recoveryRequest.id,
+      );
+
+      expect(content, 'reconstructed-secret-data');
+    });
+
+    test('throws when shares have mismatched parameters', () async {
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      // First share with one creatorPubkey
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: createShare(
+          payload: 'share-data-1',
+          threshold: 2,
+          shareIndex: 0,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+        ),
+      );
+
+      // Second share with a different creatorPubkey — reconstructFromShares
+      // validates that all shares have the same parameters
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder2,
+        true,
+        share: createShare(
+          payload: 'share-data-2',
+          threshold: 2,
+          shareIndex: 1,
+          totalShares: 2,
+          primeMod: 'prime123',
+          creatorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+          vaultId: testVaultId,
+        ),
+      );
+
+      await expectLater(
+        () => recoveryService.performRecovery(recoveryRequest.id),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
   });
 }

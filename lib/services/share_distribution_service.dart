@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../models/backup_config.dart';
@@ -219,7 +218,9 @@ class ShareDistributionService {
       if (!ownerInRoster) {
         final template = shares.firstWhere(
           (s) => s.payload.isNotEmpty,
-          orElse: () => throw StateError('distributeShares: no payload-bearing share for manifest'),
+          orElse: () => throw StateError(
+            'distributeShares: no payload-bearing share for manifest',
+          ),
         );
         final manifest = Share(
           payload: '',
@@ -240,7 +241,9 @@ class ShareDistributionService {
           pushEnabled: template.pushEnabled,
         );
         if (!manifest.isValid) {
-          throw StateError('distributeShares: built manifest share failed validation');
+          throw StateError(
+            'distributeShares: built manifest share failed validation',
+          );
         }
         // New Nostr wire format for manifest: empty content, tags from shareToNostrTags
         final manifestContent = shareToNostrContent(manifest);
@@ -346,8 +349,9 @@ class ShareDistributionService {
   /// Processes share confirmation event received from steward (kind 1342).
   ///
   /// Tag-only wire (empty content): [vault_id], [share_index],
-  /// optional [distribution_version], [confirmed_at]. Steward identity is
-  /// [Nip01Event.pubKey] (gift-wrap seal author), not a redundant tag.
+  /// optional [distribution_version]. Steward identity is [Nip01Event.pubKey]
+  /// (gift-wrap seal author), not a redundant tag. Status is derived from ack
+  /// version vs current distribution version.
   Future<void> processShareConfirmationEvent({
     required Nip01Event event,
   }) async {
@@ -378,7 +382,9 @@ class ShareDistributionService {
     }
 
     if (shareIndexStr == null) {
-      throw ArgumentError('Missing share_index tag in share confirmation event');
+      throw ArgumentError(
+        'Missing share_index tag in share confirmation event',
+      );
     }
 
     final shareIndex = int.tryParse(shareIndexStr);
@@ -423,7 +429,7 @@ class ShareDistributionService {
 
   /// Processes share error event received from steward (kind 1343).
   ///
-  /// Wire tags keep historical names (`shard`, `shard_index` in payload).
+  /// Wire tag format: vault_id, share_index, error from tags.
   Future<void> processShareErrorEvent({required Nip01Event event}) async {
     // Validate event kind
     if (event.kind != NostrKind.shareError.value) {
@@ -440,16 +446,17 @@ class ShareDistributionService {
       );
     }
 
-    // Extract vault ID and share index from tags (wire `shard` tag)
-    final vaultId = _extractTagValue(event.tags, 'vault');
-    final shareIndexStr = _extractTagValue(event.tags, 'shard');
+    // New canonical format: read vault_id, share_index, and error from tags (no content parsing)
+    final vaultId = _extractTagValue(event.tags, 'vault_id');
+    final shareIndexStr = _extractTagValue(event.tags, 'share_index');
+    final error = _extractTagValue(event.tags, 'error') ?? 'Unknown error';
 
     if (vaultId == null) {
-      throw ArgumentError('Missing vault tag in share error event');
+      throw ArgumentError('Missing vault_id tag in share error event');
     }
 
     if (shareIndexStr == null) {
-      throw ArgumentError('Missing shard tag in share error event');
+      throw ArgumentError('Missing share_index tag in share error event');
     }
 
     final shareIndex = int.tryParse(shareIndexStr);
@@ -457,46 +464,6 @@ class ShareDistributionService {
       throw ArgumentError(
         'Invalid share index in share error event: $shareIndexStr',
       );
-    }
-
-    // Verify we're the recipient (p tag should be owner)
-    final recipientPubkey = _extractTagValue(event.tags, 'p');
-    if (recipientPubkey != ownerPubkey) {
-      throw ArgumentError('Share error event not addressed to current user');
-    }
-
-    // Decrypt event content
-    String decryptedContent;
-    try {
-      decryptedContent = await _loginService.decryptFromSender(
-        encryptedText: event.content,
-        senderPubkey: event.pubKey,
-      );
-    } catch (e) {
-      Log.error('Error decrypting share error event content', e);
-      throw Exception('Failed to decrypt share error event content: $e');
-    }
-
-    // Parse decrypted JSON
-    Map<String, dynamic> payload;
-    try {
-      payload = jsonDecode(decryptedContent) as Map<String, dynamic>;
-    } catch (e) {
-      Log.error('Error parsing share error event JSON', e);
-      throw Exception('Invalid JSON in share error event content: $e');
-    }
-
-    // Validate payload (wire keys remain snake_case shard_* )
-    final payloadVaultId = payload['vault_id'] as String?;
-    final payloadShareIndex = payload['shard_index'] as int?;
-    final error = payload['error'] as String? ?? 'Unknown error';
-
-    if (payloadVaultId != vaultId) {
-      throw ArgumentError('Vault ID mismatch in share error event payload');
-    }
-
-    if (payloadShareIndex != shareIndex) {
-      throw ArgumentError('Share index mismatch in share error event payload');
     }
 
     // Update steward status to error
