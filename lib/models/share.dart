@@ -434,7 +434,6 @@ Share shareFromJson(Map<String, dynamic> json) {
     stewards: _embeddedStewardMapsFromWire(stewardsData),
     ownerName: json['owner_name'] as String?,
     instructions: json['instructions'] as String?,
-
     relayUrls: json['relay_urls'] != null ? List<String>.from(json['relay_urls'] as List) : null,
     distributionVersion: _readIntFlexibleNullable(
       json['distribution_version'],
