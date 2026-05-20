@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:ndk/ndk.dart';
 
 import 'vault.dart';
 import '../services/logger.dart';
@@ -50,14 +51,13 @@ class Share with _$Share {
 
   const Share._();
 
-  /// Wire-level "manifest-only" 1337: empty Shamir payload with sentinel index.
+  /// Wire-level "manifest-only" 1337: empty Shamir payload.
   ///
   /// Used when the owner is not a self-steward so relays can still carry a
-  /// gift-wrapped recovery-plan snapshot to the owner's pubkey. Distinct from
-  /// a real share (`payload` non-empty, `shareIndex` in `0..totalShares-1`).
-  /// A future format revision may add an explicit `manifest` flag on the JSON
-  /// ([horcrux_app-8yw]); v1 discriminates only on this pair.
-  bool get isManifest => payload.isEmpty && shareIndex == -1;
+  /// gift-wrapped recovery-plan snapshot to the owner's pubkey. A manifest
+  /// share has empty content (the Nostr rumor content is ''), while real
+  /// shares carry the raw Shamir payload as the rumor content.
+  bool get isManifest => payload.isEmpty;
 
   /// Check if this share is valid
   bool get isValid {
@@ -421,8 +421,6 @@ Share shareFromJson(Map<String, dynamic> json) {
   final totalShares = _readIntFlexible(json['total_shards']);
   final createdAt = _readIntFlexible(json['created_at']);
 
-  final receivedRaw = json['received_at'];
-
   return Share(
     payload: json['shard'] as String,
     threshold: _readIntFlexible(json['threshold']),
@@ -436,10 +434,6 @@ Share shareFromJson(Map<String, dynamic> json) {
     stewards: _embeddedStewardMapsFromWire(stewardsData),
     ownerName: json['owner_name'] as String?,
     instructions: json['instructions'] as String?,
-    recipientPubkey: json['recipient_pubkey'] as String?,
-    isReceived: _readBoolNullable(json['is_received']),
-    receivedAt: receivedRaw != null ? DateTime.parse(receivedRaw as String) : null,
-    nostrEventId: json['nostr_event_id'] as String?,
     relayUrls: json['relay_urls'] != null ? List<String>.from(json['relay_urls'] as List) : null,
     distributionVersion: _readIntFlexibleNullable(
       json['distribution_version'],
@@ -452,4 +446,173 @@ Share shareFromJson(Map<String, dynamic> json) {
 String shareToString(Share share) {
   return 'Share(shareIndex: ${share.shareIndex}/${share.totalShares}, '
       'threshold: ${share.threshold}, creator: ${share.creatorPubkey.substring(0, 8)}...)';
+}
+
+// ---------------------------------------------------------------------------
+// Nostr wire format (canonical tag-based format)
+// ---------------------------------------------------------------------------
+
+/// Converts a steward map to a Nostr tag list entry.
+///
+/// Format: ["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]
+/// When [slot] is null or empty, the slot position is omitted (legacy compat).
+List<String> stewardToNostrTag(Map<String, String> steward, {String? slot}) {
+  final tag = <String>['steward'];
+  if (slot != null && slot.isNotEmpty) {
+    tag.add(slot);
+  }
+  tag.add(steward['name'] ?? '');
+  tag.add(steward['pubkey'] ?? '');
+  tag.add(steward['contactInfo'] ?? '');
+  return tag;
+}
+
+/// Produces the Nostr rumor tag list for a [Share].
+///
+/// The content field should be set via [shareToNostrContent].
+/// creatorPubkey comes from rumor.pubKey (set by caller).
+/// recipientPubkey comes from gift wrap p-tag (set by caller).
+List<List<String>> shareToNostrTags(Share share) {
+  final tags = <List<String>>[];
+
+  tags.add(['share_index', share.shareIndex.toString()]);
+  tags.add(['total_shares', share.totalShares.toString()]);
+  tags.add(['threshold', share.threshold.toString()]);
+  tags.add(['prime_mod', share.primeMod]);
+
+  if (share.vaultId != null && share.vaultId!.isNotEmpty) {
+    tags.add(['vault_id', share.vaultId!]);
+  }
+  if (share.vaultName != null && share.vaultName!.isNotEmpty) {
+    tags.add(['vault_name', share.vaultName!]);
+  }
+  if (share.ownerName != null && share.ownerName!.isNotEmpty) {
+    tags.add(['owner_name', share.ownerName!]);
+  }
+  if (share.instructions != null && share.instructions!.isNotEmpty) {
+    tags.add(['instructions', share.instructions!]);
+  }
+  if (share.distributionVersion != null) {
+    tags.add(['distribution_version', share.distributionVersion.toString()]);
+  }
+  if (share.pushEnabled != null) {
+    tags.add(['push_enabled', share.pushEnabled.toString()]);
+  }
+
+  // Repeated steward tags
+  if (share.stewards != null) {
+    for (int i = 0; i < share.stewards!.length; i++) {
+      tags.add(stewardToNostrTag(share.stewards![i], slot: i.toString()));
+    }
+  }
+
+  // Repeated relay tags
+  if (share.relayUrls != null) {
+    for (final url in share.relayUrls!) {
+      tags.add(['relay', url]);
+    }
+  }
+
+  return tags;
+}
+
+/// Returns the Nostr rumor content string for a [Share].
+///
+/// For a normal share, this is the raw Shamir payload.
+/// For a manifest share (no local self-steward), this is empty string.
+String shareToNostrContent(Share share) {
+  return share.isManifest ? '' : share.payload;
+}
+
+/// Builds a [Share] from a Nostr rumor's tags and content.
+///
+/// [rumor] is the unwrapped inner event (not the gift wrap).
+/// The rumor's pubKey becomes [Share.creatorPubkey].
+/// The rumor's content is the raw Shamir payload (or empty for manifest).
+/// [recipientPubkey] is extracted from the gift wrap p-tag and passed
+/// separately since it is not in the rumor itself.
+Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
+  // Helper: read first value of a tag by name
+  String? tagValue(String name) {
+    for (final tag in rumor.tags) {
+      if (tag.isNotEmpty && tag[0] == name && tag.length >= 2) return tag[1];
+    }
+    return null;
+  }
+
+  // Helper: read all values of a repeated tag by name
+  List<List<String>> tagValues(String name) {
+    return rumor.tags
+        .where((t) => t.isNotEmpty && t[0] == name && t.length >= 2)
+        .map((t) => t.sublist(1))
+        .toList();
+  }
+
+  final shareIndexStr = tagValue('share_index');
+  final totalSharesStr = tagValue('total_shares');
+  final thresholdStr = tagValue('threshold');
+  final primeMod = tagValue('prime_mod');
+
+  // Parse steward tags: ["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]
+  final stewardTagLists = tagValues('steward');
+  List<Map<String, String>>? stewards;
+  if (stewardTagLists.isNotEmpty) {
+    stewards = [];
+    for (final parts in stewardTagLists) {
+      final map = <String, String>{};
+      // parts[0] is the slot (numeric index)
+      // parts[1] is the name
+      // parts[2] is the pubkey
+      // parts[3] is contactInfo (optional)
+      if (parts.length >= 2 && parts[1].isNotEmpty) {
+        map['name'] = parts[1];
+      }
+      if (parts.length >= 3 && parts[2].isNotEmpty) {
+        map['pubkey'] = parts[2];
+      }
+      // Only add if we have both name and pubkey
+      if (map.containsKey('name') && map.containsKey('pubkey')) {
+        if (parts.length >= 4 && parts[3].isNotEmpty) {
+          map['contactInfo'] = parts[3];
+        }
+        stewards.add(map);
+      }
+    }
+    if (stewards.isEmpty) stewards = null;
+  }
+
+  // Parse relay tags: ["relay", "<url>"]
+  final relayTagLists = tagValues('relay');
+  List<String>? relayUrls;
+  if (relayTagLists.isNotEmpty) {
+    relayUrls = relayTagLists.map((parts) => parts[0]).toList();
+  }
+
+  final distributionVersionStr = tagValue('distribution_version');
+  final pushEnabledStr = tagValue('push_enabled');
+
+  final content = rumor.content;
+  final shareIndex = shareIndexStr != null ? int.tryParse(shareIndexStr) ?? 0 : 0;
+  final totalShares = totalSharesStr != null ? int.tryParse(totalSharesStr) ?? 1 : 1;
+  final threshold = thresholdStr != null ? int.tryParse(thresholdStr) ?? 1 : 1;
+
+  return Share(
+    payload: content,
+    threshold: threshold,
+    shareIndex: shareIndex,
+    totalShares: totalShares,
+    primeMod: primeMod ?? '',
+    creatorPubkey: rumor.pubKey,
+    createdAt: rumor.createdAt,
+    vaultId: tagValue('vault_id'),
+    vaultName: tagValue('vault_name'),
+    stewards: stewards,
+    ownerName: tagValue('owner_name'),
+    instructions: tagValue('instructions'),
+    recipientPubkey: recipientPubkey,
+    relayUrls: relayUrls,
+    distributionVersion:
+        distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null,
+    pushEnabled: pushEnabledStr != null ? pushEnabledStr == 'true' : null,
+  );
 }
