@@ -33,7 +33,6 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
 
   int _baselineVaultCount = 0;
   int _liveVaultCount = 0;
-  bool _vaultsLoaded = false;
 
   Timer? _progressTimer;
   double _progressValue = 0.0;
@@ -256,9 +255,6 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       if ((_state == _ScanState.scanning || _state == _ScanState.results) && mounted) {
         setState(() => _liveVaultCount = count);
       }
-      if (next.hasValue && !_vaultsLoaded) {
-        setState(() => _vaultsLoaded = true);
-      }
     });
 
     return HorcruxScaffold(
@@ -291,7 +287,9 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
                 ..._relays.map(
                   (relay) => _RelayRow(
                     relay: relay,
-                    onDelete: _vaultsLoaded ? () => _removeRelay(relay) : null,
+                    onDelete: ref.read(vaultDetailListProvider).hasValue
+                        ? () => _removeRelay(relay)
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 8),
