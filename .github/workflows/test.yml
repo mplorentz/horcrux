@@ -67,7 +67,8 @@ jobs:
           if [ -n "$CHANGED" ]; then
             echo "::warning ::Formatting/codegen differences detected. Files changed: $CHANGED"
             # Check if any changes are from codegen (generated files)
-            CODEGEN_CHANGED=$(git diff --name-only | grep '\.g\.dart\|\.mocks\.dart\|drift_schemas')
+            # Use grep || true to avoid set -e failure when no matches found
+            CODEGEN_CHANGED=$(git diff --name-only | grep -E '\.g\.dart|\.mocks\.dart|drift_schemas' || true)
             if [ -n "$CODEGEN_CHANGED" ]; then
               echo "::error ::Codegen is out of date. Run 'flutter pub run build_runner build --delete-conflicting-outputs && dart format .' and commit the changes."
               exit 1
