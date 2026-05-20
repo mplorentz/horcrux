@@ -884,11 +884,21 @@ class RecoveryService {
       );
     }
 
+    // Normalize all shares' creatorPubkey to the vault owner's pubkey.
+    // Shares from different stewards may have different creatorPubkey values
+    // (set from each steward's rumor.pubKey on ingest), but Shamir combine
+    // only needs matching threshold/totalShares/primeMod. Normalizing here
+    // ensures consistency even with legacy events.
+    final vault = await repository.getVault(request.vaultId);
+    final ownerPubkey = vault?.ownerPubkey;
+    final normalizedShares = ownerPubkey != null
+        ? shares.map((s) => s.copyWith(creatorPubkey: ownerPubkey)).toList()
+        : shares;
+
     // Reconstruct the vault content from the shares
-    final content = await backupService.reconstructFromShares(shares: shares);
+    final content = await backupService.reconstructFromShares(shares: normalizedShares);
 
     // Update the vault with recovered content
-    final vault = await repository.getVault(request.vaultId);
     if (vault != null) {
       await repository.updateVault(request.vaultId, vault.name, content);
     }

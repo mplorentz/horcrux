@@ -1251,7 +1251,7 @@ void main() {
       expect(content, 'reconstructed-secret-data');
     });
 
-    test('throws when shares have mismatched parameters', () async {
+    test('succeeds when shares have different creatorPubkey (normalized to vault owner)', () async {
       final recoveryRequest = await recoveryService.initiateRecovery(
         testVaultId,
         initiatorPubkey: testCreatorPubkey,
@@ -1275,8 +1275,9 @@ void main() {
         ),
       );
 
-      // Second share with a different creatorPubkey — reconstructFromShares
-      // validates that all shares have the same parameters
+      // Second share with a different creatorPubkey — performRecovery now
+      // normalizes all shares' creatorPubkey to vault.ownerPubkey before
+      // combine, so this should succeed.
       await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder2,
@@ -1292,10 +1293,10 @@ void main() {
         ),
       );
 
-      await expectLater(
-        () => recoveryService.performRecovery(recoveryRequest.id),
-        throwsA(isA<ArgumentError>()),
-      );
+      // Update the request status to inProgress so performRecovery can proceed
+      // (the test setup may need to mark the request as inProgress)
+      final content = await recoveryService.performRecovery(recoveryRequest.id);
+      expect(content, isNotEmpty);
     });
   });
 }

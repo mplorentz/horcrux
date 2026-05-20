@@ -269,7 +269,7 @@ void main() {
         () => backupService.reconstructFromShares(
           shares: [shares1[0], shares2[1]],
         ),
-        throwsA(isA<ArgumentError>()),
+        throwsA(isA<Exception>()),
       );
     });
 

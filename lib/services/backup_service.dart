@@ -237,17 +237,18 @@ class BackupService {
         throw ArgumentError('At least one share is required');
       }
 
-      // Validate that all shares have the same threshold and totalShards
+      // Validate that all shares have the same threshold, totalShards, and primeMod
+      // creatorPubkey is intentionally NOT checked — shares from different stewards
+      // will have different creatorPubkey values, but Shamir combine only needs
+      // matching threshold/totalShares/primeMod.
       final threshold = shares.first.threshold;
       final totalSharesCount = shares.first.totalShares;
       final primeMod = shares.first.primeMod;
-      final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
         if (share.threshold != threshold ||
             share.totalShares != totalSharesCount ||
-            share.primeMod != primeMod ||
-            share.creatorPubkey != creatorPubkey) {
+            share.primeMod != primeMod) {
           throw ArgumentError('All shares must have the same parameters');
         }
       }
