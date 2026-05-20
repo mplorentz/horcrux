@@ -351,7 +351,12 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      await backupService.createAndDistributeBackup(vaultId: vault.id);
+      final config = vault.backupConfig;
+      if (config != null && config.hasBeenDistributed) {
+        await backupService.redistributeKeys(vaultId: vault.id);
+      } else {
+        await backupService.createAndDistributeBackup(vaultId: vault.id);
+      }
 
       // Close dialog using root navigator key (works even if context is unmounted)
       navigatorKey.currentState?.pop();

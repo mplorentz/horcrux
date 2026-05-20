@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -406,26 +404,21 @@ void main() {
 
       verify(
         mockNdkService.publishEncryptedEvent(
-          content: argThat(
-            predicate<String>(
-              (raw) {
-                final m = json.decode(raw) as Map<String, dynamic>;
-                return m['shard'] == '' &&
-                    m['shard_index'] == -1 &&
-                    m['vault_id'] == cfg.vaultId &&
-                    m['distribution_version'] == cfg.distributionVersion;
-              },
-              'manifest-only 1337 wire JSON for owner rehydration',
-            ),
-            named: 'content',
-          ),
+          content: '',
           kind: NostrKind.shareData.value,
           recipientPubkey: alicePubHex,
           relays: cfg.relays,
           tags: [
             ['d', 'manifest_${cfg.vaultId}'],
-            ['backup_config_id', cfg.vaultId],
-            ['shard_index', '-1'],
+            ['share_index', '-1'],
+            ['total_shares', '2'],
+            ['threshold', '2'],
+            ['prime_mod', TestShare.testPrimeMod],
+            ['vault_id', cfg.vaultId],
+            ['distribution_version', cfg.distributionVersion.toString()],
+            ['steward', '0', 'Bob', bobPubHex, ''],
+            ['steward', '1', 'Charlie', charliePubHex, ''],
+            ['relay', cfg.relays[0]],
           ],
           customPubkey: alicePubHex,
           vaultId: anyNamed('vaultId'),
@@ -582,7 +575,6 @@ void main() {
           mockRepository.updateStewardStatus(
             vaultId: vaultId,
             pubkey: alicePubHex,
-            status: StewardStatus.holdingKey,
             acknowledgedAt: anyNamed('acknowledgedAt'),
             acknowledgmentEventId: null,
             acknowledgedDistributionVersion: 42,
@@ -603,5 +595,471 @@ void main() {
         ).called(1);
       },
     );
+  });
+
+  group('ShareDistributionService inbound handlers', () {
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockVaultRepository mockRepository;
+    late MockHorcruxNotificationService mockNotificationService;
+    late ShareDistributionService service;
+    late String alicePubHex;
+    late String bobPubHex;
+    const vaultId = 'test-vault-123';
+    const shareIndex = '2';
+
+    setUp(() {
+      mockLoginService = MockLoginService();
+      mockNdkService = MockNdkService();
+      mockRepository = MockVaultRepository();
+      mockNotificationService = MockHorcruxNotificationService();
+      service = ShareDistributionService(
+        mockRepository,
+        mockLoginService,
+        mockNdkService,
+        mockNotificationService,
+      );
+      alicePubHex = TestHexPubkeys.alice;
+      bobPubHex = TestHexPubkeys.bob;
+      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => alicePubHex);
+    });
+
+    Nip01Event makeEvent({
+      int kind = 1342,
+      List<List<String>> tags = const [],
+      String pubKey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      String content = '',
+    }) {
+      return Nip01Event(
+        pubKey: pubKey,
+        kind: kind,
+        tags: tags,
+        content: content,
+      );
+    }
+
+    Nip01Event confirmationEvent({
+      required String stewardPubkey,
+      List<List<String>>? tags,
+    }) {
+      return Nip01Event(
+        kind: NostrKind.shareConfirmation.value,
+        pubKey: stewardPubkey,
+        tags: tags ??
+            [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '3'],
+            ],
+        createdAt: 1,
+        content: '',
+      );
+    }
+
+    Future<void> stubVaultForConfirmation({
+      required String id,
+      required BackupConfig config,
+    }) async {
+      when(mockRepository.getVault(id)).thenAnswer((_) async {
+        return Vault(
+          id: id,
+          name: 'Test',
+          createdAt: DateTime.utc(2024),
+          ownerPubkey: alicePubHex,
+          backupConfig: config,
+        );
+      });
+      when(
+        mockRepository.updateStewardStatus(
+          vaultId: anyNamed('vaultId'),
+          pubkey: anyNamed('pubkey'),
+          status: anyNamed('status'),
+          acknowledgedAt: anyNamed('acknowledgedAt'),
+          acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+          acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+          giftWrapEventId: anyNamed('giftWrapEventId'),
+        ),
+      ).thenAnswer((_) async {});
+    }
+
+    group('processShareConfirmationEvent', () {
+      test('extracts vault_id and share_index from tags', () async {
+        final cfg = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 1);
+        await stubVaultForConfirmation(id: vaultId, config: cfg);
+
+        final event = makeEvent(tags: [
+          ['vault_id', vaultId],
+          ['share_index', shareIndex],
+          ['distribution_version', '1'],
+        ]);
+
+        await service.processShareConfirmationEvent(event: event);
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: vaultId,
+            pubkey: event.pubKey,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: event.id,
+            acknowledgedDistributionVersion: 1,
+          ),
+        ).called(1);
+      });
+
+      test('uses gift-wrap author pubkey for steward lookup', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(stewardPubkey: bobPubHex),
+        );
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: 'vault-confirm',
+            pubkey: bobPubHex,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: 3,
+          ),
+        ).called(1);
+      });
+
+      test('includes distribution_version from tags when present', () async {
+        final cfg = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 5);
+        await stubVaultForConfirmation(id: vaultId, config: cfg);
+
+        final event = makeEvent(tags: [
+          ['vault_id', vaultId],
+          ['share_index', shareIndex],
+          ['distribution_version', '5'],
+        ]);
+
+        await service.processShareConfirmationEvent(event: event);
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: vaultId,
+            pubkey: event.pubKey,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: event.id,
+            acknowledgedDistributionVersion: 5,
+          ),
+        ).called(1);
+      });
+
+      test('works without distribution_version tag', () async {
+        final cfg = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 2);
+        await stubVaultForConfirmation(id: vaultId, config: cfg);
+
+        final event = makeEvent(tags: [
+          ['vault_id', vaultId],
+          ['share_index', shareIndex],
+        ]);
+
+        await service.processShareConfirmationEvent(event: event);
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: vaultId,
+            pubkey: event.pubKey,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: event.id,
+            acknowledgedDistributionVersion: 2,
+          ),
+        ).called(1);
+      });
+
+      test('throws when share_index tag is missing', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        );
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(
+            event: confirmationEvent(
+              stewardPubkey: bobPubHex,
+              tags: [
+                ['vault_id', 'vault-confirm'],
+                ['distribution_version', '3'],
+              ],
+            ),
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('stores stale distribution_version ack', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '2'],
+            ],
+          ),
+        );
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: 'vault-confirm',
+            pubkey: bobPubHex,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: 2,
+          ),
+        ).called(1);
+      });
+
+      test('drops confirmation for future distribution_version', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '99'],
+            ],
+          ),
+        );
+
+        verifyNever(
+          mockRepository.updateStewardStatus(
+            vaultId: anyNamed('vaultId'),
+            pubkey: anyNamed('pubkey'),
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: anyNamed('giftWrapEventId'),
+          ),
+        );
+      });
+
+      test('defaults ack version to current when tag is absent', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+            ],
+          ),
+        );
+
+        verify(
+          mockRepository.updateStewardStatus(
+            vaultId: 'vault-confirm',
+            pubkey: bobPubHex,
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: 3,
+          ),
+        ).called(1);
+      });
+
+      test('throws when only legacy shard_index tag is present', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        );
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(
+            event: confirmationEvent(
+              stewardPubkey: bobPubHex,
+              tags: [
+                ['vault_id', 'vault-confirm'],
+                ['shard_index', '1'],
+              ],
+            ),
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('throws on missing vault_id tag', () async {
+        final event = makeEvent(tags: [
+          ['share_index', shareIndex],
+        ]);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('throws on missing share_index tag', () async {
+        final event = makeEvent(tags: [
+          ['vault_id', vaultId],
+        ]);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('throws on non-numeric share_index', () async {
+        final event = makeEvent(tags: [
+          ['vault_id', vaultId],
+          ['share_index', 'not-a-number'],
+        ]);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('throws on wrong event kind', () async {
+        final event = makeEvent(kind: 9999, tags: [
+          ['vault_id', vaultId],
+          ['share_index', shareIndex],
+        ]);
+
+        await expectLater(
+          () => service.processShareConfirmationEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
+
+    group('processShareErrorEvent', () {
+      test('extracts vault_id and share_index from tags', () async {
+        final event = makeEvent(
+          kind: 1343,
+          tags: [
+            ['vault_id', vaultId],
+            ['share_index', shareIndex],
+            ['error', 'Decryption failed'],
+          ],
+        );
+        when(mockRepository.updateStewardStatus(
+          vaultId: anyNamed('vaultId'),
+          pubkey: anyNamed('pubkey'),
+          status: anyNamed('status'),
+        )).thenAnswer((_) async {});
+
+        await service.processShareErrorEvent(event: event);
+
+        verify(mockRepository.updateStewardStatus(
+          vaultId: vaultId,
+          pubkey: event.pubKey,
+          status: StewardStatus.error,
+        )).called(1);
+      });
+
+      test('throws on wrong event kind', () async {
+        final event = makeEvent(kind: 9999, tags: [
+          ['vault_id', vaultId],
+          ['share_index', shareIndex],
+        ]);
+
+        await expectLater(
+          () => service.processShareErrorEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('throws on missing vault_id tag', () async {
+        final event = makeEvent(kind: 1343, tags: [
+          ['share_index', shareIndex],
+        ]);
+
+        await expectLater(
+          () => service.processShareErrorEvent(event: event),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
   });
 }

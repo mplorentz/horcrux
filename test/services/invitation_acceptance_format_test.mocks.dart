@@ -124,6 +124,16 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveRelays,
+          [relayUrls],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
   _i7.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #removeRelay,
@@ -717,7 +727,7 @@ class MockVaultRepository extends _i1.Mock implements _i12.VaultRepository {
   _i7.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i14.StewardStatus? status,
+    _i14.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -1059,7 +1069,6 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
     required String? inviteCode,
     required String? ownerPubkey,
     required List<String>? relayUrls,
-    String? reason,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1069,7 +1078,6 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
             #inviteCode: inviteCode,
             #ownerPubkey: ownerPubkey,
             #relayUrls: relayUrls,
-            #reason: reason,
           },
         ),
         returnValue: _i7.Future<String?>.value(),
@@ -1574,6 +1582,17 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
         Invocation.method(
           #handleContentChange,
           [vaultId],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
+  _i7.Future<void> redistributeKeys({required String? vaultId}) => (super.noSuchMethod(
+        Invocation.method(
+          #redistributeKeys,
+          [],
+          {#vaultId: vaultId},
         ),
         returnValue: _i7.Future<void>.value(),
         returnValueForMissingStub: _i7.Future<void>.value(),

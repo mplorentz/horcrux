@@ -22,6 +22,25 @@ enum StewardStatus {
   revoked,
 }
 
+/// Derives steward status from ack version vs the vault's current distribution.
+///
+/// Used when hydrating from DB ([VaultRepository._stewardFromRow]) and when
+/// persisting kind-1342 confirmations so read and write paths stay aligned.
+StewardStatus stewardStatusFromDistributionAck({
+  required int? acknowledgedDistributionVersion,
+  required int currentDistributionVersion,
+}) {
+  if (acknowledgedDistributionVersion != null &&
+      acknowledgedDistributionVersion == currentDistributionVersion) {
+    return StewardStatus.holdingKey;
+  }
+  if (acknowledgedDistributionVersion != null &&
+      acknowledgedDistributionVersion < currentDistributionVersion) {
+    return StewardStatus.awaitingNewKey;
+  }
+  return StewardStatus.awaitingKey;
+}
+
 /// Extension methods for StewardStatus
 extension StewardStatusExtension on StewardStatus {
   /// Get a human-readable description of the status

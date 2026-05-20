@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
-import '../models/steward_status.dart';
 import '../models/vault.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
@@ -258,8 +255,7 @@ class VaultShareService {
 
       final tags = [
         ['vault_id', vaultId],
-        ['shard_index', shareIndex.toString()],
-        ['steward_pubkey', currentPubkey],
+        ['share_index', shareIndex.toString()],
         ['confirmed_at', DateTime.now().toIso8601String()],
         if (distributionVersion != null) ['distribution_version', distributionVersion.toString()],
       ];
@@ -320,20 +316,10 @@ class VaultShareService {
         );
       }
 
-      Map<String, dynamic> payload;
-      try {
-        Log.debug('Key holder removed event content: ${event.content}');
-        payload = json.decode(event.content) as Map<String, dynamic>;
-      } catch (e) {
-        Log.error('processKeyHolderRemoval: failed to parse event JSON', e);
-        throw Exception(
-          'Failed to parse steward removed event content: $e',
-        );
-      }
-
-      final vaultId = payload['vault_id'] as String?;
+      // New canonical format: read vault_id from tags, owner from event.pubKey
+      final vaultId = _extractTagValue(event.tags, 'vault_id');
       if (vaultId == null || vaultId.isEmpty) {
-        throw ArgumentError('Missing vault_id in steward removed event payload');
+        throw ArgumentError('Missing vault_id tag in steward removed event');
       }
 
       Log.info(
@@ -545,7 +531,6 @@ class VaultShareService {
       await repository.updateStewardStatus(
         vaultId: vaultId,
         pubkey: ownerPk,
-        status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now(),
         acknowledgmentEventId: null,
         acknowledgedDistributionVersion: shareDist,
@@ -558,5 +543,13 @@ class VaultShareService {
         st,
       );
     }
+  }
+
+  /// Helper: extract first value of a named tag from event tags.
+  String? _extractTagValue(List<List<String>> tags, String name) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == name && tag.length >= 2) return tag[1];
+    }
+    return null;
   }
 }

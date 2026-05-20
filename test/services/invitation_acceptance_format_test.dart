@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -78,7 +77,7 @@ void main() {
     });
 
     test(
-      'sendInvitationAcceptanceEvent creates JSON that processInvitationAcceptanceEvent can parse',
+      'sendInvitationAcceptanceEvent creates tag-based event that processInvitationAcceptanceEvent can parse',
       () async {
         // Arrange
         const inviteCode = 'test-invite-code-123';
@@ -91,8 +90,9 @@ void main() {
           mockNdkService.getCurrentPubkey(),
         ).thenAnswer((_) async => inviteePubkey);
 
-        // Capture the content passed to publishEncryptedEvent
+        // Capture the content and tags passed to publishEncryptedEvent
         String? capturedContent;
+        List<List<String>>? capturedTags;
         when(
           mockNdkService.publishEncryptedEvent(
             content: anyNamed('content'),
@@ -103,6 +103,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedContent = invocation.namedArguments[#content] as String;
+          capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
           return _stubGiftWrap();
         });
 
@@ -114,24 +115,20 @@ void main() {
           relayUrls: relayUrls,
         );
 
-        // Verify content was captured
-        expect(capturedContent, isNotNull);
-        final content = capturedContent!;
+        // Verify content is empty (canonical format uses tags, not JSON)
+        expect(capturedContent, isEmpty);
+        expect(capturedTags, isNotNull);
 
-        // Parse the captured JSON to verify its structure
-        final parsedJson = json.decode(content) as Map<String, dynamic>;
-        expect(parsedJson['invite_code'], inviteCode);
-        expect(parsedJson['vault_id'], 'test-vault-id');
-        expect(parsedJson['invitee_pubkey'], inviteePubkey);
-        expect(parsedJson['responded_at'], isA<String>());
-
-        // Now create a mock event with this content (simulating NDK unwrapping)
+        // Now create a mock event using the tag-based format
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
-          tags: [],
+          tags: [
+            ['invite_code', inviteCode],
+            ['vault_id', 'test-vault-id'],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: content,
+          content: '',
         );
 
         // Mock LoginService.getCurrentPublicKey() to return owner pubkey
@@ -167,7 +164,7 @@ void main() {
         );
         await realRepository.addVault(testVault);
 
-        // Act: Call processInvitationAcceptanceEvent with the JSON created by sendInvitationAcceptanceEvent
+        // Act: Call processInvitationAcceptanceEvent with the tag-based event
         await invitationService.processInvitationAcceptanceEvent(event: mockEvent);
 
         // Verify it succeeded (no exception thrown)
@@ -180,24 +177,19 @@ void main() {
     );
 
     test(
-      'processInvitationAcceptanceEvent throws ArgumentError for missing inviteCode',
+      'processInvitationAcceptanceEvent throws ArgumentError for missing inviteCode tag',
       () async {
         // Arrange
         const ownerPubkey = TestHexPubkeys.alice;
         const inviteePubkey = TestHexPubkeys.bob;
 
-        // Create event with missing invite_code
-        final invalidJson = json.encode({
-          'invitee_pubkey': inviteePubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
-
+        // Create event with missing invite_code tag (empty tags)
         final mockEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: inviteePubkey,
           tags: [],
           createdAt: secondsSinceEpoch(),
-          content: invalidJson,
+          content: '',
         );
 
         when(
@@ -223,19 +215,15 @@ void main() {
       const ownerPubkey = TestHexPubkeys.alice;
       const inviteCode = 'test-invite-code';
 
-      // Create event with invalid pubkey (wrong length)
-      final invalidJson = json.encode({
-        'invite_code': inviteCode,
-        'invitee_pubkey': 'short', // Should be 64 chars
-        'responded_at': DateTime.now().toIso8601String(),
-      });
-
+      // Create event with invalid pubkey (wrong length) on event.pubKey
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
-        pubKey: 'short',
-        tags: [],
+        pubKey: 'short', // Should be 64 chars
+        tags: [
+          ['invite_code', inviteCode],
+        ],
         createdAt: secondsSinceEpoch(),
-        content: invalidJson,
+        content: '',
       );
 
       when(
@@ -249,49 +237,67 @@ void main() {
           isA<ArgumentError>().having(
             (e) => e.toString(),
             'toString',
-            contains('Invalid invitee_pubkey'),
+            contains('Invalid invitee pubkey'),
           ),
         ),
       );
     });
 
-    test('processInvitationAcceptanceEvent throws ArgumentError for pubkey mismatch', () async {
+    test('processInvitationAcceptanceEvent catches pubkey mismatch via event author', () async {
       // Arrange
       const ownerPubkey = TestHexPubkeys.alice;
-      const inviteePubkey = TestHexPubkeys.bob;
       const differentPubkey = TestHexPubkeys.charlie;
-      const inviteCode = 'test-invite-code';
+      // Use a valid Base64URL invite code
+      const inviteCode = 'dGVzdF9iYXNlNjRfY29kZQ';
 
-      // Create event where payload pubkey doesn't match event pubkey
-      final mismatchJson = json.encode({
-        'invite_code': inviteCode,
-        'invitee_pubkey': inviteePubkey,
-        'responded_at': DateTime.now().toIso8601String(),
-      });
+      // In the new canonical format, the invitee pubkey comes from event.pubKey.
+      // Create a received invitation first.
+      await invitationService.createReceivedInvitation(
+        inviteCode: inviteCode,
+        vaultId: 'test-vault-id',
+        ownerPubkey: ownerPubkey,
+        relayUrls: ['ws://localhost:10547'],
+        vaultName: 'Test Vault',
+      );
 
+      final testVault = Vault(
+        id: 'test-vault-id',
+        name: 'Test Vault',
+        createdAt: DateTime.now(),
+        ownerPubkey: ownerPubkey,
+      );
+      await realRepository.addVault(testVault);
+
+      // Create event where event.pubKey doesn't match expected invitee
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
-        pubKey: differentPubkey, // Different from payload
-        tags: [],
+        pubKey: differentPubkey, // Different from what invitation expects
+        tags: [
+          ['invite_code', inviteCode],
+          ['vault_id', 'test-vault-id'],
+        ],
         createdAt: secondsSinceEpoch(),
-        content: mismatchJson,
+        content: '',
       );
 
       when(
         mockLoginService.getCurrentPublicKey(),
       ).thenAnswer((_) async => ownerPubkey);
 
-      // Act & Assert
-      expect(
-        () => invitationService.processInvitationAcceptanceEvent(event: mockEvent),
-        throwsA(
-          isA<ArgumentError>().having(
-            (e) => e.toString(),
-            'toString',
-            contains('pubkey mismatch'),
-          ),
-        ),
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
       );
+
+      // Act - The event author (differentPubkey) won't match the invited
+      // steward pubkey, but the code handles this gracefully by adding
+      // the new pubkey as a steward. It should not throw an ArgumentError.
+      await invitationService.processInvitationAcceptanceEvent(event: mockEvent);
+
+      // Verify the invitation was processed (steward added for differentPubkey)
+      final invitation = await invitationService.lookupInvitationByCode(inviteCode);
+      expect(invitation, isNotNull);
+      expect(invitation!.status.name, 'redeemed');
+      expect(invitation.redeemedBy, differentPubkey);
     });
 
     test('processInvitationAcceptanceEvent silently ignores unknown invitation', () async {
@@ -301,18 +307,14 @@ void main() {
       // Use a valid Base64URL invite code (no padding, Base64URL format)
       const inviteCode = 'dGVzdF9iYXNlNjRfY29kZQ'; // Base64URL without padding
 
-      final validJson = json.encode({
-        'invite_code': inviteCode,
-        'invitee_pubkey': inviteePubkey,
-        'responded_at': DateTime.now().toIso8601String(),
-      });
-
       final mockEvent = Nip01Event(
         kind: NostrKind.invitationAcceptance.value,
         pubKey: inviteePubkey,
-        tags: [],
+        tags: [
+          ['invite_code', inviteCode],
+        ],
         createdAt: secondsSinceEpoch(),
-        content: validJson,
+        content: '',
       );
 
       when(
@@ -329,7 +331,7 @@ void main() {
       expect(invitation, isNull);
     });
 
-    test('sendInvitationAcceptanceEvent JSON format matches expected structure', () async {
+    test('sendInvitationAcceptanceEvent publishes canonical tags', () async {
       // Arrange
       const inviteCode = 'test-code-xyz';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -341,6 +343,7 @@ void main() {
       ).thenAnswer((_) async => inviteePubkey);
 
       String? capturedContent;
+      List<List<String>>? capturedTags;
       when(
         mockNdkService.publishEncryptedEvent(
           content: anyNamed('content'),
@@ -351,6 +354,7 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         capturedContent = invocation.namedArguments[#content] as String;
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
         return _stubGiftWrap();
       });
 
@@ -362,20 +366,14 @@ void main() {
         relayUrls: relayUrls,
       );
 
-      // Assert: Verify JSON structure
-      expect(capturedContent, isNotNull);
-      final content = capturedContent!;
-      final parsed = json.decode(content) as Map<String, dynamic>;
-      expect(parsed['invite_code'], isA<String>());
-      expect(parsed['vault_id'], isA<String>());
-      expect(parsed['invitee_pubkey'], isA<String>());
-      expect(parsed['responded_at'], isA<String>());
-      expect((parsed['invitee_pubkey'] as String).length, 64);
-
-      // Verify values match
-      expect(parsed['invite_code'], inviteCode);
-      expect(parsed['vault_id'], 'vault-for-structure-test');
-      expect(parsed['invitee_pubkey'], inviteePubkey);
+      // Assert: Content is empty (canonical format), tags carry metadata
+      expect(capturedContent, isEmpty);
+      expect(capturedTags, isNotNull);
+      expect(capturedTags!.any((t) => t[0] == 'invite_code' && t[1] == inviteCode), true);
+      expect(
+        capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == 'vault-for-structure-test'),
+        true,
+      );
     });
   });
 
@@ -405,6 +403,7 @@ void main() {
         String? capturedRecipientPubkey;
         List<String>? capturedRelays;
         List<List<String>>? capturedTags;
+        String? capturedContent;
 
         when(
           mockNdkService.publishEncryptedEvent(
@@ -416,6 +415,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedKind = invocation.namedArguments[#kind] as int;
+          capturedContent = invocation.namedArguments[#content] as String;
           capturedRecipientPubkey = invocation.namedArguments[#recipientPubkey] as String;
           capturedRelays = invocation.namedArguments[#relays] as List<String>;
           capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -435,14 +435,15 @@ void main() {
         expect(capturedKind, NostrKind.invitationAcceptance.value);
         expect(capturedRecipientPubkey, ownerPubkey);
         expect(capturedRelays, relayUrls);
+        expect(capturedContent, isEmpty);
         expect(capturedTags, isNotNull);
         expect(capturedTags!.length, 2);
-        expect(capturedTags![0], ['d', 'invitation_acceptance_$inviteCode']);
-        expect(capturedTags![1], ['invite', inviteCode]);
+        expect(capturedTags![0], ['invite_code', inviteCode]);
+        expect(capturedTags![1], ['vault_id', 'vault-param-test']);
       },
     );
 
-    test('sendInvitationAcceptanceEvent creates payload with correct field names', () async {
+    test('sendInvitationAcceptanceEvent creates payload with correct tags', () async {
       // Arrange
       const inviteCode = 'test-code-123';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -454,6 +455,7 @@ void main() {
       ).thenAnswer((_) async => inviteePubkey);
 
       String? capturedContent;
+      List<List<String>>? capturedTags;
       when(
         mockNdkService.publishEncryptedEvent(
           content: anyNamed('content'),
@@ -464,6 +466,7 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         capturedContent = invocation.namedArguments[#content] as String;
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
         return _stubGiftWrap();
       });
 
@@ -475,50 +478,37 @@ void main() {
         relayUrls: relayUrls,
       );
 
-      // Assert: Verify payload structure
-      expect(capturedContent, isNotNull);
-      final payload = json.decode(capturedContent!) as Map<String, dynamic>;
+      // Assert: Content is empty, tags have the right structure
+      expect(capturedContent, isEmpty);
+      expect(capturedTags, isNotNull);
 
-      // Verify all required fields exist with correct names
+      // Verify tag structure: [invite_code, code], [vault_id, vaultId]
       expect(
-        payload.containsKey('invite_code'),
+        capturedTags!.any((t) => t[0] == 'invite_code' && t[1] == inviteCode),
         true,
-        reason: 'Payload must contain invite_code field',
+        reason: 'Tags must contain invite_code',
       );
       expect(
-        payload.containsKey('vault_id'),
+        capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == 'vault-field-names-test'),
         true,
-        reason: 'Payload must contain vault_id field',
-      );
-      expect(
-        payload.containsKey('invitee_pubkey'),
-        true,
-        reason: 'Payload must contain invitee_pubkey field',
-      );
-      expect(
-        payload.containsKey('responded_at'),
-        true,
-        reason: 'Payload must contain responded_at field',
+        reason: 'Tags must contain vault_id',
       );
 
-      // Verify field values
-      expect(payload['invite_code'], inviteCode);
-      expect(payload['vault_id'], 'vault-field-names-test');
-      expect(payload['invitee_pubkey'], inviteePubkey);
-      expect(payload['responded_at'], isA<String>());
-
-      // Verify no extra fields that might confuse parsing
-      expect(
-        payload.keys.length,
-        4,
-        reason:
-            'Payload should only have 4 fields: invite_code, vault_id, invitee_pubkey, responded_at',
-      );
+      // Verify no extra unexpected tags
+      expect(capturedTags!.length, 2);
     });
 
-    test('sendInvitationAcceptanceEvent returns null when getCurrentPubkey fails', () async {
+    test('sendInvitationAcceptanceEvent returns null when publishEncryptedEvent fails', () async {
       // Arrange
-      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => null);
+      when(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenThrow(Exception('publish failed'));
 
       // Act
       final result = await invitationSendingService.sendInvitationAcceptanceEvent(
@@ -530,15 +520,6 @@ void main() {
 
       // Assert
       expect(result, isNull);
-      verifyNever(
-        mockNdkService.publishEncryptedEvent(
-          content: anyNamed('content'),
-          kind: anyNamed('kind'),
-          recipientPubkey: anyNamed('recipientPubkey'),
-          relays: anyNamed('relays'),
-          tags: anyNamed('tags'),
-        ),
-      );
     });
 
     test(
@@ -575,7 +556,7 @@ void main() {
       },
     );
 
-    test('sendInvitationAcceptanceEvent includes invite code in tags', () async {
+    test('sendInvitationAcceptanceEvent includes invite code and vault_id in tags', () async {
       // Arrange
       const inviteCode = 'special-invite-code-xyz';
       const ownerPubkey = TestHexPubkeys.alice;
@@ -607,18 +588,20 @@ void main() {
         relayUrls: ['ws://localhost:10547'],
       );
 
-      // Assert: Verify invite code is in tags
+      // Assert: Verify invite code and vault_id are in tags
       expect(capturedTags, isNotNull);
-      final inviteTag = capturedTags!.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'invite',
-        orElse: () => [],
+      expect(
+        capturedTags!.any((t) => t.length >= 2 && t[0] == 'invite_code' && t[1] == inviteCode),
+        true,
       );
-      expect(inviteTag.isNotEmpty, true);
-      expect(inviteTag[1], inviteCode);
+      expect(
+        capturedTags!.any((t) => t.length >= 2 && t[0] == 'vault_id' && t[1] == 'vault-tags-test'),
+        true,
+      );
     });
 
     test(
-      'sendInvitationAcceptanceEvent JSON payload can be roundtrip encoded/decoded',
+      'sendInvitationAcceptanceEvent uses canonical tag-based format (no JSON content)',
       () async {
         // Arrange
         const inviteCode = 'roundtrip-test-code';
@@ -630,6 +613,7 @@ void main() {
         ).thenAnswer((_) async => inviteePubkey);
 
         String? capturedContent;
+        List<List<String>>? capturedTags;
         when(
           mockNdkService.publishEncryptedEvent(
             content: anyNamed('content'),
@@ -640,6 +624,7 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedContent = invocation.namedArguments[#content] as String;
+          capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
           return _stubGiftWrap();
         });
 
@@ -651,17 +636,17 @@ void main() {
           relayUrls: ['ws://localhost:10547'],
         );
 
-        // Assert: Verify JSON roundtrip
-        expect(capturedContent, isNotNull);
-        final payload1 = json.decode(capturedContent!) as Map<String, dynamic>;
-        final encoded = json.encode(payload1);
-        final payload2 = json.decode(encoded) as Map<String, dynamic>;
-
-        // Verify roundtrip preserves data
-        expect(payload2['invite_code'], payload1['invite_code']);
-        expect(payload2['vault_id'], payload1['vault_id']);
-        expect(payload2['invitee_pubkey'], payload1['invitee_pubkey']);
-        expect(payload2['responded_at'], payload1['responded_at']);
+        // Assert: Content is empty (no JSON), tags carry all data
+        expect(capturedContent, isEmpty);
+        expect(capturedTags, isNotNull);
+        expect(
+          capturedTags!.any((t) => t[0] == 'invite_code' && t[1] == inviteCode),
+          true,
+        );
+        expect(
+          capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == 'vault-roundtrip-test'),
+          true,
+        );
       },
     );
   });

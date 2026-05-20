@@ -1184,7 +1184,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     await _sendRemovalEventsForStewards([steward]);
 
     setState(() {
-      _stewards.remove(steward);
+      _stewards.removeWhere((s) => s.id == steward.id);
       if (steward.name != null) {
         _invitationLinksByInviteeName.remove(steward.name);
       }

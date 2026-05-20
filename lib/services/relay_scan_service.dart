@@ -393,11 +393,11 @@ class RelayScanService {
       await ndkService.initialize();
       Log.info('NDK initialized for relay scanning');
 
-      // Add all enabled relays to NDK for real-time listening
+      // Add all enabled relays to NDK in one batched call so subscriptions
+      // are built exactly once instead of N times (the per-call teardown can
+      // leave the first relay's NDK REQ in a bad state).
       final enabledRelays = _cachedRelays!.where((r) => r.isEnabled).toList();
-      for (final relay in enabledRelays) {
-        await ndkService.addRelay(relay.url);
-      }
+      await ndkService.setActiveRelays(enabledRelays.map((r) => r.url).toList());
       Log.info('Added ${enabledRelays.length} enabled relays to NDK');
     } catch (e) {
       Log.error('Error initializing NDK', e);
