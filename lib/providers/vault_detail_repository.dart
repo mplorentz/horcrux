@@ -152,7 +152,13 @@ class VaultDetailRepository {
   Future<VaultDetail> _hydrateDetail(VaultRow row) async {
     final ownedRow = await _db.ownedVaultDao.getByVaultId(row.id);
     final stewardRows = await _db.stewardDao.activeForVault(row.id);
-    final relayRows = await _db.vaultRelayDao.forVault(row.id);
+    /* Owner-first relay hydration: use owner-role rows when present,
+       fall back to steward-role rows for fresh-install scenarios where
+       the owner hasn't set their own relay config yet. */
+    final ownerRelayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
+    final relayRows = ownerRelayRows.isNotEmpty
+        ? ownerRelayRows
+        : await _db.vaultRelayDao.forVaultByRole(row.id, 'steward');
     final heldShareRows = await _db.heldShareDao.forVault(row.id);
     final distributionSharesByStewardId = await _distributionSharesByStewardForVersion(
       vaultId: row.id,
@@ -306,16 +312,13 @@ class VaultDetailRepository {
     final acknowledgedAt =
         acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
     final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
-    final isCurrentAck =
-        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
 
     final status = isInvited
         ? StewardStatus.invited
-        : isCurrentAck
-            ? StewardStatus.holdingKey
-            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
-                ? StewardStatus.awaitingNewKey
-                : StewardStatus.awaitingKey;
+        : stewardStatusFromDistributionAck(
+            acknowledgedDistributionVersion: acknowledgedVersion,
+            currentDistributionVersion: currentDistributionVersion,
+          );
     final giftWrapEventId = distributionShareRow?.giftWrapEventId;
 
     return Steward(

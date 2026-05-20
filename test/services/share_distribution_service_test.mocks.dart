@@ -818,7 +818,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   _i4.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i10.StewardStatus? status,
+    _i10.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -1352,6 +1352,16 @@ class MockNdkService extends _i1.Mock implements _i14.NdkService {
         Invocation.method(
           #addRelay,
           [relayUrl],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  _i4.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveRelays,
+          [relayUrls],
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
