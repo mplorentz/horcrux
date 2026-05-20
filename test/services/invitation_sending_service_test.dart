@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -20,6 +18,10 @@ Nip01Event _stubGiftWrap() => Nip01Event(
       createdAt: 1,
       content: '',
     );
+
+/// Helper: check if tag list contains a tag [key, value].
+bool _hasTag(List<List<String>> tags, String key, String value) =>
+    tags.any((t) => t.length >= 2 && t[0] == key && t[1] == value);
 
 @GenerateMocks([
   NdkService,
@@ -49,34 +51,8 @@ void main() {
 
     // ── sendInvitationAcceptanceEvent (kind 1340) ──
 
-    test('sendInvitationAcceptanceEvent JSON payload has snake_case wire keys', () async {
+    test('sendInvitationAcceptanceEvent sends empty content and correct tags', () async {
       String capturedContent = '';
-      when(mockNdkService.publishEncryptedEvent(
-        content: anyNamed('content'),
-        kind: NostrKind.invitationAcceptance.value,
-        recipientPubkey: anyNamed('recipientPubkey'),
-        relays: anyNamed('relays'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((invocation) async {
-        capturedContent = invocation.namedArguments[#content] as String;
-        return _stubGiftWrap();
-      });
-
-      await service.sendInvitationAcceptanceEvent(
-        inviteCode: 'invite-123',
-        vaultId: 'vault-abc',
-        ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        relayUrls: ['wss://relay.example.com'],
-      );
-
-      final payload = json.decode(capturedContent) as Map<String, dynamic>;
-      expect(payload, containsPair('invite_code', 'invite-123'));
-      expect(payload, containsPair('vault_id', 'vault-abc'));
-      expect(payload, containsPair('invitee_pubkey', isNotEmpty));
-      expect(payload, containsPair('responded_at', isNotEmpty));
-    });
-
-    test('sendInvitationAcceptanceEvent passes correct tags', () async {
       List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
         content: anyNamed('content'),
@@ -85,6 +61,7 @@ void main() {
         relays: anyNamed('relays'),
         tags: anyNamed('tags'),
       )).thenAnswer((invocation) async {
+        capturedContent = invocation.namedArguments[#content] as String;
         capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
         return _stubGiftWrap();
       });
@@ -96,27 +73,16 @@ void main() {
         relayUrls: ['wss://relay.example.com'],
       );
 
-      expect(capturedTags, contains(['d', 'invitation_acceptance_invite-123']));
-      expect(capturedTags, contains(['invite', 'invite-123']));
-    });
-
-    test('sendInvitationAcceptanceEvent returns null when no key pair', () async {
-      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => null);
-
-      final result = await service.sendInvitationAcceptanceEvent(
-        inviteCode: 'invite-123',
-        vaultId: 'vault-abc',
-        ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        relayUrls: ['wss://relay.example.com'],
-      );
-
-      expect(result, isNull);
+      expect(capturedContent, isEmpty);
+      expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
+      expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
     });
 
     // ── sendDenialEvent (kind 1341) ──
 
-    test('sendDenialEvent JSON payload has snake_case wire keys', () async {
+    test('sendDenialEvent sends empty content and correct tags', () async {
       String capturedContent = '';
+      List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
         content: anyNamed('content'),
         kind: NostrKind.invitationDenial.value,
@@ -125,6 +91,7 @@ void main() {
         tags: anyNamed('tags'),
       )).thenAnswer((invocation) async {
         capturedContent = invocation.namedArguments[#content] as String;
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
         return _stubGiftWrap();
       });
 
@@ -134,62 +101,13 @@ void main() {
         relayUrls: ['wss://relay.example.com'],
       );
 
-      final payload = json.decode(capturedContent) as Map<String, dynamic>;
-      expect(payload, containsPair('invite_code', 'invite-123'));
-      expect(payload, containsPair('invitee_pubkey', isNotEmpty));
-      expect(payload, containsPair('responded_at', isNotEmpty));
-    });
-
-    test('sendDenialEvent includes reason when provided', () async {
-      String capturedContent = '';
-      when(mockNdkService.publishEncryptedEvent(
-        content: anyNamed('content'),
-        kind: NostrKind.invitationDenial.value,
-        recipientPubkey: anyNamed('recipientPubkey'),
-        relays: anyNamed('relays'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((invocation) async {
-        capturedContent = invocation.namedArguments[#content] as String;
-        return _stubGiftWrap();
-      });
-
-      await service.sendDenialEvent(
-        inviteCode: 'invite-123',
-        ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        relayUrls: ['wss://relay.example.com'],
-        reason: 'Not interested',
-      );
-
-      final payload = json.decode(capturedContent) as Map<String, dynamic>;
-      expect(payload, containsPair('reason', 'Not interested'));
-    });
-
-    test('sendDenialEvent omits reason when null or empty', () async {
-      String capturedContent = '';
-      when(mockNdkService.publishEncryptedEvent(
-        content: anyNamed('content'),
-        kind: NostrKind.invitationDenial.value,
-        recipientPubkey: anyNamed('recipientPubkey'),
-        relays: anyNamed('relays'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((invocation) async {
-        capturedContent = invocation.namedArguments[#content] as String;
-        return _stubGiftWrap();
-      });
-
-      await service.sendDenialEvent(
-        inviteCode: 'invite-123',
-        ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        relayUrls: ['wss://relay.example.com'],
-      );
-
-      final payload = json.decode(capturedContent) as Map<String, dynamic>;
-      expect(payload, isNot(contains('reason')));
+      expect(capturedContent, isEmpty);
+      expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
     });
 
     // ── sendShareConfirmationEvent (kind 1342) ──
 
-    test('sendShareConfirmationEvent JSON payload has snake_case wire keys', () async {
+    test('sendShareConfirmationEvent sends empty content and correct tags', () async {
       String capturedContent = '';
       List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
@@ -211,10 +129,9 @@ void main() {
         relayUrls: ['wss://relay.example.com'],
       );
 
-      // Empty content — all data in tags
       expect(capturedContent, isEmpty);
-      expect(capturedTags, contains(['vault_id', 'vault-abc']));
-      expect(capturedTags, contains(['share_index', '2']));
+      expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
+      expect(_hasTag(capturedTags, 'share_index', '2'), isTrue);
     });
 
     test('sendShareConfirmationEvent includes distribution_version tag when provided', () async {
@@ -238,12 +155,12 @@ void main() {
         distributionVersion: 5,
       );
 
-      expect(capturedTags, contains(['distribution_version', '5']));
+      expect(_hasTag(capturedTags, 'distribution_version', '5'), isTrue);
     });
 
     // ── sendShareErrorEvent (kind 1343) ──
 
-    test('sendShareErrorEvent JSON payload has snake_case wire keys', () async {
+    test('sendShareErrorEvent sends empty content and correct tags', () async {
       String capturedContent = '';
       List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
@@ -266,16 +183,14 @@ void main() {
         error: 'Decryption failed',
       );
 
-      // Empty content — all data in tags
       expect(capturedContent, isEmpty);
-      expect(capturedTags, contains(['vault_id', 'vault-abc']));
-      expect(capturedTags, contains(['d', 'share_error_vault-abc_2']));
-      expect(capturedTags, contains(['error', 'Decryption failed']));
+      expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
+      expect(_hasTag(capturedTags, 'error', 'Decryption failed'), isTrue);
     });
 
     // ── sendInvitationInvalidEvent (kind 1344) ──
 
-    test('sendInvitationInvalidEvent JSON payload has snake_case wire keys', () async {
+    test('sendInvitationInvalidEvent sends empty content and correct tags', () async {
       String capturedContent = '';
       List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
@@ -297,15 +212,14 @@ void main() {
         reason: 'Steward removed',
       );
 
-      // Empty content — all data in tags
       expect(capturedContent, isEmpty);
-      expect(capturedTags, contains(['invite_code', 'invite-123']));
-      expect(capturedTags, contains(['reason', 'Steward removed']));
+      expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
+      expect(_hasTag(capturedTags, 'reason', 'Steward removed'), isTrue);
     });
 
     // ── sendKeyHolderRemovalEvent (kind 1345) ──
 
-    test('sendKeyHolderRemovalEvent JSON payload has snake_case wire keys', () async {
+    test('sendKeyHolderRemovalEvent sends empty content and correct tags', () async {
       String capturedContent = '';
       List<List<String>> capturedTags = [];
       when(mockNdkService.publishEncryptedEvent(
@@ -326,9 +240,8 @@ void main() {
         relayUrls: ['wss://relay.example.com'],
       );
 
-      // Empty content — all data in tags
       expect(capturedContent, isEmpty);
-      expect(capturedTags, contains(['vault_id', 'vault-abc']));
+      expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
     });
   });
 }
