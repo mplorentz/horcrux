@@ -63,7 +63,9 @@ class ScanningStatus {
   factory ScanningStatus.fromJson(Map<String, dynamic> json) {
     return ScanningStatus(
       isActive: json['isActive'] as bool,
-      lastScan: json['lastScan'] != null ? DateTime.parse(json['lastScan'] as String) : null,
+      lastScan: json['lastScan'] != null
+          ? DateTime.parse(json['lastScan'] as String)
+          : null,
       totalRelays: json['totalRelays'] as int,
       activeRelays: json['activeRelays'] as int,
       sharesFound: json['sharesFound'] as int,
@@ -80,8 +82,9 @@ class RelayScanService {
 
   /// The default Horcrux relay seeded on a fresh install.
   /// Debug builds use the dev relay; release builds use production.
-  static String get defaultHorcruxRelayUrl =>
-      kDebugMode ? 'wss://dev.horcruxbackup.com' : 'wss://relay.horcruxbackup.com';
+  static String get defaultHorcruxRelayUrl => kDebugMode
+      ? 'wss://dev.horcruxbackup.com'
+      : 'wss://relay.horcruxbackup.com';
 
   static const String _relayConfigsKey = 'relay_configurations';
   static const String _scanningStatusKey = 'scanning_status';
@@ -92,7 +95,7 @@ class RelayScanService {
   ScanningStatus? _scanningStatus;
 
   RelayScanService({required this.ndkService, required AppDatabase database})
-      : _database = database;
+    : _database = database;
 
   /// Cancels the periodic scan timer immediately (see [ndkServiceProvider] dispose notes).
   void disposeSync() {
@@ -136,7 +139,8 @@ class RelayScanService {
       // explicitly stopped by the user in a previous session.
       final enabledRelays = _cachedRelays!.where((r) => r.isEnabled).toList();
       if (enabledRelays.isNotEmpty && !_isScanning) {
-        final shouldAutoStart = _scanningStatus == null || _scanningStatus!.isActive;
+        final shouldAutoStart =
+            _scanningStatus == null || _scanningStatus!.isActive;
         if (shouldAutoStart) {
           try {
             await startRelayScanning();
@@ -291,7 +295,9 @@ class RelayScanService {
     }
 
     // Check for duplicate URL
-    final existingRelay = _cachedRelays!.where((r) => r.url == relay.url).firstOrNull;
+    final existingRelay = _cachedRelays!
+        .where((r) => r.url == relay.url)
+        .firstOrNull;
     if (existingRelay != null) {
       throw ArgumentError('Relay with URL ${relay.url} already exists');
     }
@@ -357,7 +363,8 @@ class RelayScanService {
 
     final relay = _cachedRelays!.firstWhere(
       (r) => r.id == relayId,
-      orElse: () => throw ArgumentError('Relay configuration not found: $relayId'),
+      orElse: () =>
+          throw ArgumentError('Relay configuration not found: $relayId'),
     );
 
     _cachedRelays!.removeWhere((r) => r.id == relayId);
@@ -401,6 +408,8 @@ class RelayScanService {
       Log.info('Added ${enabledRelays.length} enabled relays to NDK');
     } catch (e) {
       Log.error('Error initializing NDK', e);
+      _isScanning = false;
+      return;
     }
 
     // Update scanning status
@@ -606,7 +615,9 @@ class RelayScanService {
       }
 
       // Check if relay already exists by URL
-      final existingRelay = _cachedRelays!.where((r) => r.url == relayUrl).firstOrNull;
+      final existingRelay = _cachedRelays!
+          .where((r) => r.url == relayUrl)
+          .firstOrNull;
 
       if (existingRelay == null) {
         // Generate a name from the URL (hostname or full URL if hostname is empty)
