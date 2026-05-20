@@ -212,8 +212,7 @@ void main() {
 class _FakeFeedbackService extends FeedbackService {
   final bool shouldSucceed;
 
-  _FakeFeedbackService({this.shouldSucceed = true})
-      : super(formspreeFormId: 'fake');
+  _FakeFeedbackService({this.shouldSucceed = true}) : super(formspreeFormId: 'fake');
 
   @override
   Future<bool> submitFeedback({
@@ -224,4 +223,3 @@ class _FakeFeedbackService extends FeedbackService {
     return shouldSucceed;
   }
 }
-

@@ -87,7 +87,6 @@ class FeedbackService {
     buffer.writeln('Platform: ${Platform.operatingSystem}');
     buffer.writeln('OS version: ${Platform.operatingSystemVersion}');
 
-
     // Recent log entries
     final logs = Log.recentLogs();
     buffer.writeln('--- recent logs (${logs.length}) ---');

@@ -93,3 +93,7 @@ test-reports/
 
 # FVM Version Cache
 .fvm/
+
+# Broken directories from docker permission issues
+.dart_tool_broken/
+build_broken/
