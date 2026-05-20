@@ -934,4 +934,147 @@ void main() {
       },
     );
   });
+
+  group('processKeyHolderRemoval', () {
+    const ownerPubkey = TestHexPubkeys.alice;
+    const stewardPubkey = TestHexPubkeys.bob;
+    const vaultId = 'test-removal-vault';
+
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
+    late MockPushNotificationReceiver mockPushReceiver;
+    late VaultRepository repository;
+    late VaultShareService service;
+
+    setUp(() {
+      mockLoginService = MockLoginService();
+      when(mockLoginService.encryptText(any))
+          .thenAnswer((inv) async => inv.positionalArguments[0] as String);
+      when(mockLoginService.decryptText(any))
+          .thenAnswer((inv) async => inv.positionalArguments[0] as String);
+
+      mockNdkService = MockNdkService();
+      when(mockNdkService.getCurrentPubkey())
+          .thenAnswer((_) async => stewardPubkey);
+      mockNotificationService = MockHorcruxNotificationService();
+      mockPushReceiver = MockPushNotificationReceiver();
+
+      repository = VaultRepository(mockLoginService);
+      service = VaultShareService(
+        repository,
+        () => mockNdkService,
+        () => mockNotificationService,
+        () => mockPushReceiver,
+      );
+    });
+
+    tearDown(() async {
+      await repository.clearAll();
+    });
+
+    Nip01Event makeRemovalEvent({String? vaultIdTag}) {
+      return Nip01Event(
+        kind: NostrKind.keyHolderRemoved.value,
+        pubKey: ownerPubkey,
+        tags: [
+          ['vault_id', vaultIdTag ?? vaultId],
+        ],
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        content: '', // canonical format: vault_id is in tags, not content
+      );
+    }
+
+    Future<void> addTestVaultWithShare() async {
+      final vault = Vault(
+        id: vaultId,
+        name: 'Test Vault',
+        createdAt: DateTime.now(),
+        ownerPubkey: ownerPubkey,
+      );
+      await repository.addVault(vault);
+      final share = createShare(
+        payload: 'test-shard-payload',
+        threshold: 1,
+        shareIndex: 0,
+        totalShares: 2,
+        primeMod: 'test-prime-mod',
+        creatorPubkey: ownerPubkey,
+        vaultId: vaultId,
+      );
+      await repository.addShareToVault(vaultId, share);
+    }
+
+    test('archives the vault with reason Removed by owner', () async {
+      await addTestVaultWithShare();
+      final event = makeRemovalEvent();
+      await service.processKeyHolderRemoval(event: event);
+
+      final vault = await repository.getVault(vaultId);
+      expect(vault, isNotNull);
+      expect(vault!.isArchived, isTrue);
+      expect(vault.archivedReason, 'Removed by owner');
+    });
+
+    test('removes the held share', () async {
+      await addTestVaultWithShare();
+      // Verify share exists before removal
+      final sharesBefore = await repository.getSharesForVault(vaultId);
+      expect(sharesBefore, isNotEmpty);
+
+      final event = makeRemovalEvent();
+      await service.processKeyHolderRemoval(event: event);
+
+      final sharesAfter = await repository.getSharesForVault(vaultId);
+      expect(sharesAfter, isEmpty);
+    });
+
+    test('reads vault_id from tags (canonical format)', () async {
+      await addTestVaultWithShare();
+      // The fix for T1: vault_id comes from tags, not JSON content
+      final event = makeRemovalEvent();
+      expect(event.content, isEmpty); // content is empty in canonical format
+      await service.processKeyHolderRemoval(event: event);
+
+      // Verify it processed successfully by checking the vault is archived
+      final vault = await repository.getVault(vaultId);
+      expect(vault!.isArchived, isTrue);
+    });
+
+    test('throws ArgumentError when vault_id tag is missing', () async {
+      final event = Nip01Event(
+        kind: NostrKind.keyHolderRemoved.value,
+        pubKey: ownerPubkey,
+        tags: [], // no vault_id tag
+        createdAt: 1,
+        content: '',
+      );
+
+      expect(
+        () => service.processKeyHolderRemoval(event: event),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('throws ArgumentError on wrong event kind', () async {
+      final event = Nip01Event(
+        kind: 9999, // wrong kind
+        pubKey: ownerPubkey,
+        tags: [['vault_id', vaultId]],
+        createdAt: 1,
+        content: '',
+      );
+
+      expect(
+        () => service.processKeyHolderRemoval(event: event),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('no-ops when vault not found (already deleted)', () async {
+      final event = makeRemovalEvent(vaultIdTag: 'nonexistent-vault');
+      // Should not throw, just log and return
+      await service.processKeyHolderRemoval(event: event);
+    });
+  });
 }
