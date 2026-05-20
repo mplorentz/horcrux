@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -418,8 +416,8 @@ void main() {
             ['prime_mod', TestShare.testPrimeMod],
             ['vault_id', cfg.vaultId],
             ['distribution_version', cfg.distributionVersion.toString()],
-            ['steward',  '0', 'Bob', bobPubHex, ''],
-            ['steward',  '1', 'Charlie', charliePubHex, ''],
+            ['steward', '0', 'Bob', bobPubHex, ''],
+            ['steward', '1', 'Charlie', charliePubHex, ''],
             ['relay', cfg.relays[0]],
           ],
           customPubkey: alicePubHex,
