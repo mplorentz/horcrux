@@ -1059,7 +1059,6 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
     required String? inviteCode,
     required String? ownerPubkey,
     required List<String>? relayUrls,
-    String? reason,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1069,7 +1068,6 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
             #inviteCode: inviteCode,
             #ownerPubkey: ownerPubkey,
             #relayUrls: relayUrls,
-            #reason: reason,
           },
         ),
         returnValue: _i7.Future<String?>.value(),

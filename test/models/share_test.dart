@@ -867,8 +867,7 @@ void main() {
   group('Nostr wire format - shareToNostrTags', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 
-    Share sampleShare(
-        {bool withStewards = false, bool withRelays = false, bool withPush = false}) {
+    Share sampleShare({bool withStewards = false, bool withRelays = false, bool withPush = false}) {
       return Share(
         payload: 'raw-shamir-payload',
         threshold: 2,
@@ -1318,6 +1317,148 @@ void main() {
         slot: '2',
       );
       expect(tag, orderedEquals(['steward', '2', 'Charlie', 'c' * 64, '']));
+    });
+  });
+
+  group('Share.isValid edge cases', () {
+    Share baseShare() {
+      return Share(
+        payload: 'abc123',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        primeMod: 'xyz',
+        creatorPubkey: 'a' * 64,
+        createdAt: secondsSinceEpoch(),
+      );
+    }
+
+    test('isValid returns false for zero threshold', () {
+      final share = baseShare().copyWith(threshold: 0);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false for negative createdAt', () {
+      final share = baseShare().copyWith(createdAt: -1);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false for empty primeMod', () {
+      final share = baseShare().copyWith(primeMod: '');
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false for empty creatorPubkey', () {
+      final share = baseShare().copyWith(creatorPubkey: '');
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false for shareIndex >= totalShares', () {
+      final share = baseShare().copyWith(shareIndex: 3, totalShares: 3);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false when steward pubkey is not 64-char hex', () {
+      final share = baseShare().copyWith(stewards: [
+        {'name': 'Alice', 'pubkey': 'tooshort'},
+      ]);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false when steward name is empty', () {
+      final share = baseShare().copyWith(stewards: [
+        {'name': '', 'pubkey': 'b' * 64},
+      ]);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false when steward contactInfo exceeds 500 chars', () {
+      final share = baseShare().copyWith(stewards: [
+        {
+          'name': 'Alice',
+          'pubkey': 'b' * 64,
+          'contactInfo': 'x' * 501,
+        },
+      ]);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns false for negative steward shard_index', () {
+      final share = baseShare().copyWith(stewards: [
+        {
+          'name': 'Alice',
+          'pubkey': 'b' * 64,
+          'shard_index': '-1',
+        },
+      ]);
+      expect(share.isValid, isFalse);
+    });
+
+    test('isValid returns true for steward with valid optional contactInfo', () {
+      final share = baseShare().copyWith(stewards: [
+        {
+          'name': 'Alice',
+          'pubkey': 'b' * 64,
+          'contactInfo': 'alice@example.test',
+        },
+      ]);
+      expect(share.isValid, isTrue);
+    });
+
+    test('shareFromJson reads distributionVersion as int or num', () {
+      final asInt = shareFromJson({
+        'shard': 'abc',
+        'threshold': 2,
+        'shard_index': 0,
+        'total_shards': 3,
+        'prime_mod': 'xyz',
+        'creator_pubkey': 'a' * 64,
+        'created_at': 1759759657,
+        'distribution_version': 5,
+      });
+      expect(asInt.distributionVersion, 5);
+
+      // Pass a double to test the num -> int path in _readIntFlexible
+      final asNum = shareFromJson({
+        'shard': 'abc',
+        'threshold': 2,
+        'shard_index': 0,
+        'total_shards': 3,
+        'prime_mod': 'xyz',
+        'creator_pubkey': 'a' * 64,
+        'created_at': 1759759657,
+        'distribution_version': 5.0,
+      });
+      expect(asNum.distributionVersion, 5);
+    });
+
+    test('shareFromJson ignores legacy is_received wire key', () {
+      final legacy = shareFromJson({
+        'shard': 'abc',
+        'threshold': 2,
+        'shard_index': 0,
+        'total_shards': 3,
+        'prime_mod': 'xyz',
+        'creator_pubkey': 'a' * 64,
+        'created_at': 1759759657,
+        'is_received': true,
+      });
+      expect(legacy.isReceived, isNull);
+    });
+
+    test('shareFromJson throws on non-int threshold', () {
+      expect(
+        () => shareFromJson({
+          'shard': 'abc',
+          'threshold': 'not-a-number',
+          'shard_index': 0,
+          'total_shards': 3,
+          'prime_mod': 'xyz',
+          'creator_pubkey': 'a' * 64,
+          'created_at': 1759759657,
+        }),
+        throwsA(isA<TypeError>()),
+      );
     });
   });
 }
