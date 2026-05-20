@@ -11,8 +11,7 @@ import '../helpers/test_database.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const ownerPubkey =
-      'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+  const ownerPubkey = 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
 
   group('VaultDetailRepository relay hydration', () {
     late AppDatabase db;
@@ -174,8 +173,7 @@ void main() {
     // -------------------------------------------------------------------------
     // Test 3: removed relay does not reappear via VaultDetailRepository
     // -------------------------------------------------------------------------
-    test('removed relay does not reappear in VaultDetail after owner-role update',
-        () async {
+    test('removed relay does not reappear in VaultDetail after owner-role update', () async {
       const vaultId = 'vdr-relay-test-3';
       final now = DateTime.now().millisecondsSinceEpoch;
 

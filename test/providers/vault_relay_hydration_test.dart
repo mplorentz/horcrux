@@ -235,6 +235,5 @@ void main() {
       expect(hydratedConfig.relays, contains('wss://relay-b.example.com'));
       expect(hydratedConfig.relays, isNot(contains('wss://relay-c.example.com')));
     });
-
   });
 }
