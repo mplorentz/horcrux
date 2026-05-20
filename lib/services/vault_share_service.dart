@@ -9,6 +9,7 @@ import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
 import 'push_notification_receiver.dart';
+import 'relay_scan_service.dart';
 
 /// Resolves the Shamir slot (0-based) for an embedded steward entry.
 ///
@@ -57,6 +58,7 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
     () => ref.read(ndkServiceProvider),
     () => ref.read(horcruxNotificationServiceProvider),
     () => ref.read(pushNotificationReceiverProvider),
+    () => ref.read(relayScanServiceProvider),
   );
 });
 
@@ -70,12 +72,14 @@ class VaultShareService {
   final NdkService Function() _getNdkService;
   final HorcruxNotificationService Function() _getNotificationService;
   final PushNotificationReceiver Function() _getPushReceiver;
+  final RelayScanService Function() _getRelayScanService;
 
   VaultShareService(
     this.repository,
     this._getNdkService,
     this._getNotificationService,
     this._getPushReceiver,
+    this._getRelayScanService,
   );
 
   // ── Steward-side share management (backed by `held_shares` table) ──
@@ -189,6 +193,12 @@ class VaultShareService {
         'processVaultShare: applied manifest metadata for vault $vaultId '
         '(distributionVersion=${shardData.distributionVersion})',
       );
+
+      // Sync relay URLs so the steward subscribes to the updated relay set
+      if (shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
+        await _getRelayScanService().syncRelaysFromUrls(shardData.relayUrls!);
+      }
+
       return;
     }
 
@@ -205,6 +215,9 @@ class VaultShareService {
 
     try {
       if (shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
+        // Sync the share's relay URLs so the steward subscribes to them
+        await _getRelayScanService().syncRelaysFromUrls(shardData.relayUrls!);
+
         final eventId = await sendShareConfirmationEvent(
           vaultId: vaultId,
           shareIndex: shardData.shareIndex,

@@ -15,6 +15,7 @@ import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/push_notification_receiver.dart';
+import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:horcrux/services/vault_share_service.dart';
 import '../fixtures/test_keys.dart';
 import '../helpers/test_database.dart';
@@ -25,9 +26,29 @@ import 'vault_share_service_test.mocks.dart';
   NdkService,
   HorcruxNotificationService,
   PushNotificationReceiver,
+  RelayScanService,
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  late MockLoginService mockLoginService;
+  late MockNdkService mockNdkService;
+  late MockPushNotificationReceiver mockPushReceiver;
+  late MockRelayScanService mockRelayScanService;
+
+  setUp(() {
+    mockLoginService = MockLoginService();
+    when(mockLoginService.encryptText(any))
+        .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+    when(mockLoginService.decryptText(any))
+        .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+
+    mockNdkService = MockNdkService();
+    when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+    mockPushReceiver = MockPushNotificationReceiver();
+    when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
+    mockRelayScanService = MockRelayScanService();
+  });
 
   group('VaultShareService.addVaultShare pushEnabled propagation', () {
     const ownerPubkey = TestHexPubkeys.alice;
@@ -37,6 +58,7 @@ void main() {
     late MockNdkService mockNdkService;
     late MockHorcruxNotificationService mockNotificationService;
     late MockPushNotificationReceiver mockPushReceiver;
+    late MockRelayScanService mockRelayScanService;
     late VaultRepository repository;
     late VaultShareService service;
 
@@ -52,12 +74,14 @@ void main() {
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
       when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
+      mockRelayScanService = MockRelayScanService();
       repository = VaultRepository(mockLoginService);
       service = VaultShareService(
         repository,
         () => mockNdkService,
         () => mockNotificationService,
         () => mockPushReceiver,
+        () => mockRelayScanService,
       );
     });
 
@@ -241,6 +265,7 @@ void main() {
     late MockLoginService mockLoginService;
     late MockNdkService mockNdkService;
     late MockHorcruxNotificationService mockNotificationService;
+    late MockRelayScanService mockRelayScanService;
     late VaultShareService service;
     List<List<String>>? capturedTags;
 
@@ -248,6 +273,7 @@ void main() {
       mockLoginService = MockLoginService();
       mockNdkService = MockNdkService();
       mockNotificationService = MockHorcruxNotificationService();
+      mockRelayScanService = MockRelayScanService();
       capturedTags = null;
       when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
       when(
@@ -273,6 +299,7 @@ void main() {
         () => mockNdkService,
         () => mockNotificationService,
         () => MockPushNotificationReceiver(),
+        () => mockRelayScanService,
       );
     });
 
@@ -301,6 +328,7 @@ void main() {
     late MockNdkService mockNdkService;
     late MockHorcruxNotificationService mockNotificationService;
     late MockPushNotificationReceiver mockPushReceiver;
+    late MockRelayScanService mockRelayScanService;
     late VaultRepository repository;
     late VaultShareService service;
 
@@ -316,6 +344,7 @@ void main() {
       when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
+      mockRelayScanService = MockRelayScanService();
 
       repository = VaultRepository(mockLoginService, db: db);
       service = VaultShareService(
@@ -323,6 +352,7 @@ void main() {
         () => mockNdkService,
         () => mockNotificationService,
         () => mockPushReceiver,
+        () => mockRelayScanService,
       );
     });
 
@@ -662,6 +692,7 @@ void main() {
       when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
+      mockRelayScanService = MockRelayScanService();
 
       repository = VaultRepository(mockLoginService, db: db);
       service = VaultShareService(
@@ -669,6 +700,7 @@ void main() {
         () => mockNdkService,
         () => mockNotificationService,
         () => mockPushReceiver,
+        () => mockRelayScanService,
       );
     });
 
@@ -735,6 +767,7 @@ void main() {
     late MockNdkService mockNdkService;
     late MockHorcruxNotificationService mockNotificationService;
     late MockPushNotificationReceiver mockPushReceiver;
+    late MockRelayScanService mockRelayScanService;
     late VaultRepository repository;
     late VaultShareService service;
 
@@ -751,6 +784,7 @@ void main() {
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
       when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
+      mockRelayScanService = MockRelayScanService();
 
       repository = VaultRepository(mockLoginService);
       service = VaultShareService(
@@ -758,6 +792,7 @@ void main() {
         () => mockNdkService,
         () => mockNotificationService,
         () => mockPushReceiver,
+        () => mockRelayScanService,
       );
     });
 
@@ -935,6 +970,7 @@ void main() {
     );
   });
 
+
   group('processKeyHolderRemoval', () {
     const ownerPubkey = TestHexPubkeys.alice;
     const stewardPubkey = TestHexPubkeys.bob;
@@ -981,7 +1017,7 @@ void main() {
           ['vault_id', vaultIdTag ?? vaultId],
         ],
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        content: '', // canonical format: vault_id is in tags, not content
+        content: '',
       );
     }
 
@@ -1018,7 +1054,6 @@ void main() {
 
     test('removes the held share', () async {
       await addTestVaultWithShare();
-      // Verify share exists before removal
       final sharesBefore = await repository.getSharesForVault(vaultId);
       expect(sharesBefore, isNotEmpty);
 
@@ -1031,12 +1066,10 @@ void main() {
 
     test('reads vault_id from tags (canonical format)', () async {
       await addTestVaultWithShare();
-      // The fix for T1: vault_id comes from tags, not JSON content
       final event = makeRemovalEvent();
-      expect(event.content, isEmpty); // content is empty in canonical format
+      expect(event.content, isEmpty);
       await service.processKeyHolderRemoval(event: event);
 
-      // Verify it processed successfully by checking the vault is archived
       final vault = await repository.getVault(vaultId);
       expect(vault!.isArchived, isTrue);
     });
@@ -1045,7 +1078,7 @@ void main() {
       final event = Nip01Event(
         kind: NostrKind.keyHolderRemoved.value,
         pubKey: ownerPubkey,
-        tags: [], // no vault_id tag
+        tags: [],
         createdAt: 1,
         content: '',
       );
@@ -1058,7 +1091,7 @@ void main() {
 
     test('throws ArgumentError on wrong event kind', () async {
       final event = Nip01Event(
-        kind: 9999, // wrong kind
+        kind: 9999,
         pubKey: ownerPubkey,
         tags: [['vault_id', vaultId]],
         createdAt: 1,
@@ -1073,8 +1106,98 @@ void main() {
 
     test('no-ops when vault not found (already deleted)', () async {
       final event = makeRemovalEvent(vaultIdTag: 'nonexistent-vault');
-      // Should not throw, just log and return
       await service.processKeyHolderRemoval(event: event);
+    });
+  });
+
+  group('VaultShareService.processVaultShare relay sync', () {
+    const vaultId = 'relay-sync-vault';
+    const ownerPubkey = TestHexPubkeys.alice;
+    const relayUrl = 'wss://test.relay.example.com';
+
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
+    late MockPushNotificationReceiver mockPushReceiver;
+    late MockRelayScanService mockRelayScanService;
+    late VaultRepository repository;
+    late VaultShareService service;
+
+    setUp(() {
+      mockLoginService = MockLoginService();
+      when(mockLoginService.encryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.decryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => TestHexPubkeys.bob);
+
+      mockNdkService = MockNdkService();
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(mockNdkService.publishEncryptedEvent(
+        content: anyNamed('content'),
+        kind: anyNamed('kind'),
+        recipientPubkey: anyNamed('recipientPubkey'),
+        relays: anyNamed('relays'),
+        tags: anyNamed('tags'),
+      )).thenAnswer((_) async => Nip01Event(
+            kind: NostrKind.shareConfirmation.value,
+            pubKey: TestHexPubkeys.bob,
+            tags: const [],
+            content: '',
+            createdAt: 1,
+          ));
+
+      mockNotificationService = MockHorcruxNotificationService();
+      mockPushReceiver = MockPushNotificationReceiver();
+      when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
+      mockRelayScanService = MockRelayScanService();
+
+      repository = VaultRepository(mockLoginService);
+      service = VaultShareService(
+        repository,
+        () => mockNdkService,
+        () => mockNotificationService,
+        () => mockPushReceiver,
+        () => mockRelayScanService,
+      );
+
+      when(mockRelayScanService.syncRelaysFromUrls(any)).thenAnswer((_) async => {});
+    });
+
+    test('syncs relay URLs from share data to RelayScanService', () async {
+      final shard = createShare(
+        payload: 'shard-data',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 2,
+        primeMod: 'prime',
+        creatorPubkey: ownerPubkey,
+        vaultId: vaultId,
+        vaultName: 'Relay Test',
+        relayUrls: [relayUrl],
+      );
+
+      await service.processVaultShare(vaultId, shard);
+
+      verify(mockRelayScanService.syncRelaysFromUrls([relayUrl])).called(1);
+    });
+
+    test('does not call syncRelaysFromUrls when relayUrls is null', () async {
+      final shard = createShare(
+        payload: 'shard-data-no-relay',
+        threshold: 2,
+        shareIndex: 1,
+        totalShares: 2,
+        primeMod: 'prime',
+        creatorPubkey: ownerPubkey,
+        vaultId: vaultId,
+        vaultName: 'No Relay',
+        relayUrls: null,
+      );
+
+      await service.processVaultShare(vaultId, shard);
+
+      verifyNever(mockRelayScanService.syncRelaysFromUrls(any));
     });
   });
 }
