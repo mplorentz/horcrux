@@ -26,11 +26,16 @@ class InlineTimePrinter extends LogPrinter {
 
     final output = <String>[message];
 
+    // Push the plain (uncolored) message to the ring buffer for diagnostics
+    Log._addLog('$timeStr $emoji ${event.message}');
+
     // Add error information if present
     if (event.error != null) {
       final errorColor = colors ? levelColor : '';
       final resetColor = colors ? '\x1B[0m' : '';
-      output.add('$errorColor  Error: ${event.error}$resetColor');
+      final errorLine = '  Error: ${event.error}';
+      output.add('$errorColor$errorLine$resetColor');
+      Log._addLog(errorLine);
     }
 
     // Add stack trace if present
@@ -41,6 +46,7 @@ class InlineTimePrinter extends LogPrinter {
       for (final line in stackLines) {
         if (line.isNotEmpty) {
           output.add('$traceColor  $line$resetColor');
+          Log._addLog('  $line');
         }
       }
     }
@@ -101,6 +107,21 @@ class Log {
   static Logger _logger = Logger(
     printer: InlineTimePrinter(colors: true, printEmojis: true),
   );
+
+  /// Ring buffer holding the last 50 formatted log lines for diagnostics.
+  static const int _maxRecentLogs = 50;
+  static final List<String> _recentLogs = [];
+
+  /// Append a formatted log line to the ring buffer.
+  static void _addLog(String line) {
+    _recentLogs.add(line);
+    if (_recentLogs.length > _maxRecentLogs) {
+      _recentLogs.removeAt(0);
+    }
+  }
+
+  /// Returns the most recent log lines (up to [_maxRecentLogs]).
+  static List<String> recentLogs() => List.unmodifiable(_recentLogs);
 
   /// Replaces the backing [Logger]'s output (e.g. console plus file).
   ///

@@ -4,6 +4,7 @@ import '../widgets/debug_info_sheet.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'account_management_screen.dart';
+import 'feedback_screen.dart';
 import 'push_notification_settings_screen.dart';
 import 'relay_management_screen.dart';
 
@@ -112,6 +113,31 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('View keys and app information'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showDebugInfo(context, ref),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.feedback_outlined,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            title: const Text('Send Feedback'),
+            subtitle: const Text('Share your thoughts or report a bug'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FeedbackScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
