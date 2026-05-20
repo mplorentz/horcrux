@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:ndk/ndk.dart';
 
 import 'package:horcrux/database/app_database.dart';
@@ -13,11 +14,10 @@ import 'package:horcrux/services/recovery_service.dart';
 
 import '../fixtures/test_keys.dart';
 
-/// Records every call to [getVault] so the tests can assert that the
-/// self-origin filter short-circuits before any vault lookup happens. The
-/// rest of [VaultRepository] is intentionally left unimplemented -- the
-/// service code under test only reaches `getVault` once the pre-filter
-/// passes, and the test verifies it never does for a self-signed event.
+/// Stub [FlutterLocalNotificationsPlatform] so notification tests don't crash
+/// with a LateInitializationError on the platform _instance.
+class _StubFlutterLocalNotificationsPlatform extends FlutterLocalNotificationsPlatform {}
+
 class _SpyingVaultRepository extends Fake implements VaultRepository {
   final List<String> getVaultCalls = <String>[];
 
@@ -97,6 +97,7 @@ void main() {
   late _FakeRecoveryService recoveryService;
 
   setUp(() {
+    FlutterLocalNotificationsPlatform.instance = _StubFlutterLocalNotificationsPlatform();
     // The shard-data and shard-confirmation paths consult `getFirstAppOpenUtc`
     vaultRepository = _SpyingVaultRepository();
     recoveryService = _FakeRecoveryService();
