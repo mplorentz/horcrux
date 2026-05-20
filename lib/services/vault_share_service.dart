@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../models/invitation_link.dart';
@@ -320,20 +318,10 @@ class VaultShareService {
         );
       }
 
-      Map<String, dynamic> payload;
-      try {
-        Log.debug('Key holder removed event content: ${event.content}');
-        payload = json.decode(event.content) as Map<String, dynamic>;
-      } catch (e) {
-        Log.error('processKeyHolderRemoval: failed to parse event JSON', e);
-        throw Exception(
-          'Failed to parse steward removed event content: $e',
-        );
-      }
-
-      final vaultId = payload['vault_id'] as String?;
+      // New canonical format: read vault_id from tags, owner from event.pubKey
+      final vaultId = _extractTagValue(event.tags, 'vault_id');
       if (vaultId == null || vaultId.isEmpty) {
-        throw ArgumentError('Missing vault_id in steward removed event payload');
+        throw ArgumentError('Missing vault_id tag in steward removed event');
       }
 
       Log.info(
@@ -558,5 +546,13 @@ class VaultShareService {
         st,
       );
     }
+  }
+
+  /// Helper: extract first value of a named tag from event tags.
+  String? _extractTagValue(List<List<String>> tags, String name) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == name && tag.length >= 2) return tag[1];
+    }
+    return null;
   }
 }
