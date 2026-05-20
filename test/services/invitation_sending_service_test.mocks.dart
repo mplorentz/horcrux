@@ -70,6 +70,16 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveRelays,
+          [relayUrls],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
   _i4.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #removeRelay,
