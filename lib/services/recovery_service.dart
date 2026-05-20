@@ -978,26 +978,12 @@ class RecoveryService {
 
       Log.info('Sending recovery request ${request.id} to ${request.totalStewards} stewards');
 
-      // Prepare recovery request data
-      final requestData = {
-        'type': 'recovery_request',
-        'recovery_request_id': request.id,
-        'vault_id': request.vaultId,
-        'initiator_pubkey': request.initiatorPubkey,
-        'requested_at': request.requestedAt.toIso8601String(),
-        'expires_at': request.expiresAt?.toIso8601String(),
-        'threshold': request.threshold,
-        'is_practice': request.isPractice,
-      };
-
-      final requestJson = json.encode(requestData);
-
-      // Send gift wrap to each steward using NdkService. The signed events
-      // come back positionally aligned with the recipient list so we can
+      // Send gift wrap to each steward using NdkService with empty content, data in tags.
+      // The signed events come back positionally aligned with the recipient list so we can
       // pipe each one into [tryPushForEvent] without rebuilding it.
       final recipients = request.stewardPubkeys.toList();
       final publishedEvents = await _ndkService.publishEncryptedEventToMultiple(
-        content: requestJson,
+        content: '',
         kind: NostrKind.recoveryRequest.value,
         recipientPubkeys: recipients,
         relays: relays,
@@ -1005,6 +991,7 @@ class RecoveryService {
           ['d', 'recovery_request_${request.id}'],
           ['vault_id', request.vaultId],
           ['recovery_request_id', request.id],
+          ['is_practice', request.isPractice.toString()],
         ],
         customPubkey: currentPubkey,
         vaultId: request.vaultId,
