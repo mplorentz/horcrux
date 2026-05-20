@@ -33,9 +33,7 @@ void main() {
 
     setUp(() {
       mockNdkService = MockNdkService();
-      service = InvitationSendingService(
-        ndkService: mockNdkService,
-      );
+      service = InvitationSendingService(mockNdkService);
 
       // Default stub: publish succeeds
       when(mockNdkService.getCurrentPubkey()).thenAnswer(
