@@ -370,7 +370,7 @@ class ShareDistributionService {
     // Extract vault ID, share index, and distribution version from tags
     // All confirmation data is stored in tags (no content)
     final vaultId = _extractTagValue(event.tags, 'vault_id');
-    final shareIndexStr = _extractTagValue(event.tags, 'shard_index');
+    final shareIndexStr = _extractTagValue(event.tags, 'share_index');
     final distributionVersionStr = _extractTagValue(
       event.tags,
       'distribution_version',
@@ -431,16 +431,17 @@ class ShareDistributionService {
       );
     }
 
-    // Extract vault ID and share index from tags (wire `shard` tag)
-    final vaultId = _extractTagValue(event.tags, 'vault');
-    final shareIndexStr = _extractTagValue(event.tags, 'shard');
+    // New canonical format: read vault_id, share_index, and error from tags (no content parsing)
+    final vaultId = _extractTagValue(event.tags, 'vault_id');
+    final shareIndexStr = _extractTagValue(event.tags, 'share_index');
+    final error = _extractTagValue(event.tags, 'error') ?? 'Unknown error';
 
     if (vaultId == null) {
-      throw ArgumentError('Missing vault tag in share error event');
+      throw ArgumentError('Missing vault_id tag in share error event');
     }
 
     if (shareIndexStr == null) {
-      throw ArgumentError('Missing shard tag in share error event');
+      throw ArgumentError('Missing share_index tag in share error event');
     }
 
     final shareIndex = int.tryParse(shareIndexStr);
@@ -448,46 +449,6 @@ class ShareDistributionService {
       throw ArgumentError(
         'Invalid share index in share error event: $shareIndexStr',
       );
-    }
-
-    // Verify we're the recipient (p tag should be owner)
-    final recipientPubkey = _extractTagValue(event.tags, 'p');
-    if (recipientPubkey != ownerPubkey) {
-      throw ArgumentError('Share error event not addressed to current user');
-    }
-
-    // Decrypt event content
-    String decryptedContent;
-    try {
-      decryptedContent = await _loginService.decryptFromSender(
-        encryptedText: event.content,
-        senderPubkey: event.pubKey,
-      );
-    } catch (e) {
-      Log.error('Error decrypting share error event content', e);
-      throw Exception('Failed to decrypt share error event content: $e');
-    }
-
-    // Parse decrypted JSON
-    Map<String, dynamic> payload;
-    try {
-      payload = jsonDecode(decryptedContent) as Map<String, dynamic>;
-    } catch (e) {
-      Log.error('Error parsing share error event JSON', e);
-      throw Exception('Invalid JSON in share error event content: $e');
-    }
-
-    // Validate payload (wire keys remain snake_case shard_* )
-    final payloadVaultId = payload['vault_id'] as String?;
-    final payloadShareIndex = payload['shard_index'] as int?;
-    final error = payload['error'] as String? ?? 'Unknown error';
-
-    if (payloadVaultId != vaultId) {
-      throw ArgumentError('Vault ID mismatch in share error event payload');
-    }
-
-    if (payloadShareIndex != shareIndex) {
-      throw ArgumentError('Share index mismatch in share error event payload');
     }
 
     // Update steward status to error
