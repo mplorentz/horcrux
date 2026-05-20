@@ -868,6 +868,43 @@ void main() {
         ).called(1);
       });
 
+      test('drops confirmation for future distribution_version', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '99'],
+            ],
+          ),
+        );
+
+        verifyNever(
+          mockRepository.updateStewardStatus(
+            vaultId: anyNamed('vaultId'),
+            pubkey: anyNamed('pubkey'),
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: anyNamed('giftWrapEventId'),
+          ),
+        );
+      });
+
       test('defaults ack version to current when tag is absent', () async {
         final cfg = createBackupConfig(
           vaultId: 'vault-confirm',

@@ -350,7 +350,8 @@ class ShareDistributionService {
   ///
   /// Tag-only wire (empty content): [vault_id], [share_index],
   /// optional [distribution_version]. Steward identity is [Nip01Event.pubKey]
-  /// (gift-wrap seal author), not a redundant tag. Status is derived from ack
+  /// (gift-wrap seal author), not a redundant tag. Confirmations tagged with a
+  /// future [distribution_version] are dropped. Status is derived from ack
   /// version vs current distribution version.
   Future<void> processShareConfirmationEvent({
     required Nip01Event event,
@@ -402,13 +403,16 @@ class ShareDistributionService {
     final currentDistributionVersion = config?.distributionVersion ?? 0;
     final keyHolderPubkey = event.pubKey;
 
-    final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
     if (tagDistributionVersion != null && tagDistributionVersion > currentDistributionVersion) {
-      Log.warning(
-        'Share confirmation for future distribution v$tagDistributionVersion '
-        '(current v$currentDistributionVersion) on vault $vaultId',
+      // Return without throwing so NDK records the gift wrap processed (no retry).
+      Log.error(
+        'Cannot process share confirmation for future distribution v$tagDistributionVersion '
+        '(current v$currentDistributionVersion) on vault $vaultId, share $shareIndex',
       );
+      return;
     }
+
+    final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
     await _repository.updateStewardStatus(
       vaultId: vaultId,
       pubkey: keyHolderPubkey,
