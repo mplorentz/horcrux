@@ -744,6 +744,7 @@ void main() {
         // Mock the NDK service to capture what's being sent
         final mockNdk = ndkService as MockNdkService;
         String? capturedContent;
+        List<List<String>>? capturedTags;
         when(
           mockNdk.publishEncryptedEvent(
             content: anyNamed('content'),
@@ -755,6 +756,7 @@ void main() {
           ),
         ).thenAnswer((invocation) {
           capturedContent = invocation.namedArguments[#content] as String?;
+          capturedTags = invocation.namedArguments[#tags] as List<List<String>>?;
           return Future.value(
             Nip01Event(
               kind: NostrKind.giftWrap.value,
@@ -785,28 +787,19 @@ void main() {
           ),
         ).called(1);
 
-        // Assert: Verify the captured content does NOT contain shard data
-        expect(capturedContent, isNotNull);
-        final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
+        // Assert: Content is empty (no shard data)
+        expect(capturedContent, '');
 
-        // Should have the basic response fields
-        expect(decodedContent['type'], 'recovery_response');
-        expect(decodedContent['recovery_request_id'], recoveryRequest.id);
-        expect(decodedContent['vault_id'], testVaultId);
-        expect(
-          decodedContent['responder_pubkey'],
-          testCreatorPubkey,
-        ); // The current user responding
-        expect(decodedContent['approved'], true);
-        expect(decodedContent['is_practice'], true);
-
-        // CRITICAL: Should NOT contain shard_data field
-        expect(decodedContent.containsKey('shard_data'), false);
+        // Assert: Tags carry metadata in canonical format
+        expect(capturedTags, isNotNull);
+        expect(capturedTags!.any((t) => t[0] == 'recovery_request_id' && t[1] == recoveryRequest.id), true);
+        expect(capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == testVaultId), true);
+        expect(capturedTags!.any((t) => t[0] == 'is_practice' && t[1] == 'true'), true);
 
         // Log the captured content for verification
         // ignore: avoid_print
         print(
-          'Captured practice recovery response (no shard data): $capturedContent',
+          'Captured practice recovery response (empty content): $capturedContent, tags: $capturedTags',
         );
       },
     );
@@ -838,6 +831,7 @@ void main() {
       // Mock the NDK service to capture what's being sent
       final mockNdk = ndkService as MockNdkService;
       String? capturedContent;
+      List<List<String>>? capturedTags;
       when(
         mockNdk.publishEncryptedEvent(
           content: anyNamed('content'),
@@ -849,6 +843,7 @@ void main() {
         ),
       ).thenAnswer((invocation) {
         capturedContent = invocation.namedArguments[#content] as String?;
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>?;
         return Future.value(
           Nip01Event(
             kind: NostrKind.giftWrap.value,
@@ -879,36 +874,44 @@ void main() {
         ),
       ).called(1);
 
-      // Assert: Verify the captured content DOES contain shard data
-      expect(capturedContent, isNotNull);
-      final decodedContent = json.decode(capturedContent!) as Map<String, dynamic>;
+      // Assert: Content is raw payload (not JSON)
+      expect(capturedContent, 'real_shard_secret_BBB=');
 
-      // Should have the basic response fields
-      expect(decodedContent['type'], 'recovery_response');
-      expect(decodedContent['recovery_request_id'], recoveryRequest.id);
-      expect(decodedContent['vault_id'], testVaultId);
+      // Assert: Tags carry share metadata in canonical format
+      expect(capturedTags, isNotNull);
       expect(
-        decodedContent['responder_pubkey'],
-        testCreatorPubkey,
-      ); // The current user responding
-      expect(decodedContent['approved'], true);
-      expect(decodedContent['is_practice'], false);
-
-      // CRITICAL: Should contain shard_data field for real recovery
-      expect(decodedContent.containsKey('shard_data'), true);
-      expect(decodedContent['shard_data'], isNotNull);
-
-      // Verify shard data structure
-      final sentShare = decodedContent['shard_data'] as Map<String, dynamic>;
-      expect(sentShare['shard'], 'real_shard_secret_BBB=');
-      expect(sentShare['threshold'], 1);
-      expect(sentShare['shard_index'], 0);
-      expect(sentShare['total_shards'], 1);
+        capturedTags!.any((t) => t[0] == 'recovery_request_id' && t[1] == recoveryRequest.id),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'vault_id' && t[1] == testVaultId),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'share_index' && t[1] == '0'),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'total_shares' && t[1] == '1'),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'threshold' && t[1] == '1'),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'prime_mod' && t[1] == 'test_prime_FFF='),
+        true,
+      );
+      expect(
+        capturedTags!.any((t) => t[0] == 'vault_name' && t[1] == 'Test Vault'),
+        true,
+      );
 
       // Log the captured content for verification
       // ignore: avoid_print
       print(
-        'Captured real recovery response (with shard data): $capturedContent',
+        'Captured real recovery response (raw payload): $capturedContent, tags: $capturedTags',
       );
     });
 
