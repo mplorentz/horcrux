@@ -124,6 +124,16 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveRelays,
+          [relayUrls],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
   _i7.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #removeRelay,
@@ -1572,6 +1582,17 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
         Invocation.method(
           #handleContentChange,
           [vaultId],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
+  _i7.Future<void> redistributeKeys({required String? vaultId}) => (super.noSuchMethod(
+        Invocation.method(
+          #redistributeKeys,
+          [],
+          {#vaultId: vaultId},
         ),
         returnValue: _i7.Future<void>.value(),
         returnValueForMissingStub: _i7.Future<void>.value(),

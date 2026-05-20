@@ -326,6 +326,17 @@ class MockBackupService extends _i1.Mock implements _i6.BackupService {
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<void> redistributeKeys({required String? vaultId}) => (super.noSuchMethod(
+        Invocation.method(
+          #redistributeKeys,
+          [],
+          {#vaultId: vaultId},
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
   _i7.Future<void> redistributeForPushPreferenceChange({required String? vaultId}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -698,6 +709,16 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
         Invocation.method(
           #addRelay,
           [relayUrl],
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
+  _i7.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveRelays,
+          [relayUrls],
         ),
         returnValue: _i7.Future<void>.value(),
         returnValueForMissingStub: _i7.Future<void>.value(),
