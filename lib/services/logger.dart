@@ -109,7 +109,7 @@ class Log {
   );
 
   /// Ring buffer holding the last 50 formatted log lines for diagnostics.
-  static const int _maxRecentLogs = 50;
+  static const int _maxRecentLogs = 500;
   static final List<String> _recentLogs = [];
 
   /// Append a formatted log line to the ring buffer.
