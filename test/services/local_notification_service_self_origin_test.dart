@@ -49,7 +49,7 @@ class _FakeRecoveryService extends Fake implements RecoveryService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  /// Builds a kind-1342 shard-confirmation rumor signed by [senderPubkey].
+  /// Builds a kind-718 shard-confirmation rumor signed by [senderPubkey].
   /// Only the fields the production code reads (`pubKey`, `id`, `createdAt`)
   /// matter for these tests; everything else is filler.
   Nip01Event buildShardConfirmation({
@@ -59,7 +59,7 @@ void main() {
   }) {
     return Nip01Event(
       pubKey: senderPubkey,
-      kind: 1342,
+      kind: 718,
       tags: const [],
       createdAt: createdAt,
       content: '',
@@ -73,7 +73,7 @@ void main() {
   }) {
     return Nip01Event(
       pubKey: senderPubkey,
-      kind: 1337,
+      kind: 713,
       tags: const [],
       createdAt: createdAt,
       content: '',
@@ -122,7 +122,7 @@ void main() {
       'shard confirmation signed by the current user does not trigger a '
       'vault lookup or notification',
       () async {
-        // Owner is a steward of their own vault, so a kind-1342 they just
+        // Owner is a steward of their own vault, so a kind-718 they just
         // published gets gift-wrapped to themselves and round-trips back. The
         // filter must drop it before composing "{self} has confirmed they
         // have the latest data..." -- the bug from horcrux_app-3b0.
@@ -145,7 +145,7 @@ void main() {
       'shard data signed by the current user does not trigger a vault '
       'lookup or notification',
       () async {
-        // Mirrors the confirmation case for the kind-1337 leg of the loop:
+        // Mirrors the confirmation case for the kind-713 leg of the loop:
         // the owner publishes shard data to every steward, which includes
         // themselves; the gift wrap echoes back and would otherwise read
         // "Open Horcrux to save the latest data for {self}'s vault X".
@@ -237,7 +237,7 @@ void main() {
 
   group('LocalNotificationService foreground shard suppression (horcrux_app-tur)', () {
     test(
-      'kind-1337 from a peer is suppressed when isForegrounded is true '
+      'kind-713 from a peer is suppressed when isForegrounded is true '
       '(before vault lookup)',
       () async {
         final service = buildService(
@@ -257,7 +257,7 @@ void main() {
       },
     );
     test(
-      'kind-1337 from a peer still reaches vault lookup when not foregrounded',
+      'kind-713 from a peer still reaches vault lookup when not foregrounded',
       () async {
         final service = buildService(
           currentPubkey: TestHexPubkeys.alice,

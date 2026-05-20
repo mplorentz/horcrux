@@ -49,7 +49,7 @@ void main() {
       )).thenAnswer((_) async => _stubGiftWrap());
     });
 
-    // ── sendInvitationAcceptanceEvent (kind 1340) ──
+    // ── sendInvitationAcceptanceEvent (kind 716) ──
 
     test('sendInvitationAcceptanceEvent sends empty content and correct tags', () async {
       String capturedContent = '';
@@ -78,7 +78,7 @@ void main() {
       expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
     });
 
-    // ── sendDenialEvent (kind 1341) ──
+    // ── sendDenialEvent (kind 717) ──
 
     test('sendDenialEvent sends empty content and correct tags', () async {
       String capturedContent = '';
@@ -105,7 +105,7 @@ void main() {
       expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
     });
 
-    // ── sendShareConfirmationEvent (kind 1342) ──
+    // ── sendShareConfirmationEvent (kind 718) ──
 
     test('sendShareConfirmationEvent sends empty content and correct tags', () async {
       String capturedContent = '';
@@ -158,7 +158,7 @@ void main() {
       expect(_hasTag(capturedTags, 'distribution_version', '5'), isTrue);
     });
 
-    // ── sendShareErrorEvent (kind 1343) ──
+    // ── sendShareErrorEvent (kind 719) ──
 
     test('sendShareErrorEvent sends empty content and correct tags', () async {
       String capturedContent = '';
@@ -188,7 +188,7 @@ void main() {
       expect(_hasTag(capturedTags, 'error', 'Decryption failed'), isTrue);
     });
 
-    // ── sendInvitationInvalidEvent (kind 1344) ──
+    // ── sendInvitationInvalidEvent (kind 720) ──
 
     test('sendInvitationInvalidEvent sends empty content and correct tags', () async {
       String capturedContent = '';
@@ -217,7 +217,7 @@ void main() {
       expect(_hasTag(capturedTags, 'reason', 'Steward removed'), isTrue);
     });
 
-    // ── sendKeyHolderRemovalEvent (kind 1345) ──
+    // ── sendKeyHolderRemovalEvent (kind 721) ──
 
     test('sendKeyHolderRemovalEvent sends empty content and correct tags', () async {
       String capturedContent = '';
