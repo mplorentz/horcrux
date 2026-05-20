@@ -482,26 +482,23 @@ class BackupService {
     );
   }
 
-  /// Owner changed [Vault.pushEnabled] without other backup-config edits.
+  /// Bumps [BackupConfig.distributionVersion], resets steward ack state so
+  /// previously holding-key stewards move to [StewardStatus.awaitingNewKey],
+  /// then runs [createAndDistributeBackup] with the new version.
   ///
-  /// Stewards learn `push_enabled` from shard payloads; without a new
-  /// distribution they would keep a stale value and could still trigger
-  /// recovery pushes. Bumps [BackupConfig.distributionVersion], resets
-  /// steward distribution state like [mergeBackupConfig], then runs
-  /// [createAndDistributeBackup] so new shards carry the current preference.
+  /// Used by the owner-initiated "Redistribute Keys" action and by paths that
+  /// must force a fresh distribution (e.g. push-preference change).
   ///
   /// No-ops when there is no config or [BackupConfig.canDistribute] is false.
-  Future<void> redistributeForPushPreferenceChange({
-    required String vaultId,
-  }) async {
+  Future<void> redistributeKeys({required String vaultId}) async {
     final config = await _repository.getBackupConfig(vaultId);
     if (config == null) {
-      Log.info('BackupService: skip push redistribution (no backup config)');
+      Log.info('BackupService: skip redistribution (no backup config)');
       return;
     }
     if (!config.canDistribute) {
       Log.info(
-        'BackupService: skip push redistribution (not all stewards have pubkeys yet)',
+        'BackupService: skip redistribution (not all stewards have pubkeys yet)',
       );
       return;
     }
@@ -511,11 +508,21 @@ class BackupService {
     await _repository.updateBackupConfig(vaultId, updatedConfig);
     Log.info(
       'BackupService: incremented distributionVersion to ${updatedConfig.distributionVersion} '
-      'for vault $vaultId (owner push preference)',
+      'for vault $vaultId (redistribute)',
     );
 
     await createAndDistributeBackup(vaultId: vaultId);
   }
+
+  /// Owner changed [Vault.pushEnabled] without other backup-config edits.
+  ///
+  /// Stewards learn `push_enabled` from shard payloads; without a new
+  /// distribution they would keep a stale value and could still trigger
+  /// recovery pushes.
+  Future<void> redistributeForPushPreferenceChange({
+    required String vaultId,
+  }) =>
+      redistributeKeys(vaultId: vaultId);
 
   /// Check if keys should be auto-distributed and distribute if necessary
   ///

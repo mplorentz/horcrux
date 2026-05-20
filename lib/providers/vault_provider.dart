@@ -255,10 +255,16 @@ class VaultRepository {
     return vault.backupConfig;
   }
 
+  /// Updates a steward row and distribution-share state.
+  ///
+  /// [status] is optional: when omitted and ack fields are set, status is derived
+  /// via [stewardStatusFromDistributionAck]; otherwise the prior status is kept.
+  /// Pass [status] explicitly for non-ack transitions (e.g. [StewardStatus.error],
+  /// [StewardStatus.awaitingKey] after publish).
   Future<void> updateStewardStatus({
     required String vaultId,
     required String pubkey,
-    required StewardStatus status,
+    StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,
@@ -278,8 +284,17 @@ class VaultRepository {
     }
     final updatedStewards = List<Steward>.from(config.stewards);
     final prior = updatedStewards[stewardIndex];
+    final currentDistributionVersion = config.distributionVersion;
+    final resolvedStatus = status ??
+        (acknowledgedAt != null || acknowledgedDistributionVersion != null
+            ? stewardStatusFromDistributionAck(
+                acknowledgedDistributionVersion:
+                    acknowledgedDistributionVersion ?? currentDistributionVersion,
+                currentDistributionVersion: currentDistributionVersion,
+              )
+            : prior.status);
     updatedStewards[stewardIndex] = prior.copyWith(
-      status: status,
+      status: resolvedStatus,
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: acknowledgmentEventId,
       acknowledgedDistributionVersion: acknowledgedDistributionVersion,
@@ -291,14 +306,14 @@ class VaultRepository {
       vaultId: vaultId,
       stewardId: prior.id,
       stewardGiftWrapEventId: prior.giftWrapEventId,
-      status: status,
+      status: resolvedStatus,
       giftWrapEventId: giftWrapEventId,
       acknowledgedAt: acknowledgedAt,
       acknowledgmentEventId: acknowledgmentEventId,
       acknowledgedDistributionVersion: acknowledgedDistributionVersion,
       currentDistributionVersion: updated.distributionVersion,
     );
-    Log.info('Updated steward $pubkey status to $status in vault $vaultId');
+    Log.info('Updated steward $pubkey status to $resolvedStatus in vault $vaultId');
   }
 
   // ========== Share management (`held_shares` table) ==========
@@ -919,16 +934,13 @@ class VaultRepository {
     final acknowledgedAt =
         acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
     final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
-    final isCurrentAck =
-        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
 
     final status = isInvited
         ? StewardStatus.invited
-        : isCurrentAck
-            ? StewardStatus.holdingKey
-            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
-                ? StewardStatus.awaitingNewKey
-                : StewardStatus.awaitingKey;
+        : stewardStatusFromDistributionAck(
+            acknowledgedDistributionVersion: acknowledgedVersion,
+            currentDistributionVersion: currentDistributionVersion,
+          );
 
     final giftWrapEventId = distributionShareRow?.giftWrapEventId;
     return Steward(
@@ -983,8 +995,13 @@ class VaultRepository {
     required int? acknowledgedDistributionVersion,
     required int currentDistributionVersion,
   }) async {
-    final distributionVersion = acknowledgedDistributionVersion ?? currentDistributionVersion;
-    final distributionId = _distributionId(vaultId, distributionVersion);
+    final recordingInboundAck = acknowledgmentEventId != null && acknowledgedAt != null;
+    // Kind-1342 acks attach to the *current* distribution share row so hydration
+    // can compare [acknowledgmentDistributionVersion] to [currentDistributionVersion].
+    final distributionVersionForRow = recordingInboundAck
+        ? currentDistributionVersion
+        : (acknowledgedDistributionVersion ?? currentDistributionVersion);
+    final distributionId = _distributionId(vaultId, distributionVersionForRow);
     final shareId = '${distributionId}_$stewardId';
     final nowMs = DateTime.now().millisecondsSinceEpoch;
 
@@ -992,9 +1009,9 @@ class VaultRepository {
           DistributionsCompanion.insert(
             id: distributionId,
             vaultId: vaultId,
-            version: distributionVersion,
+            version: distributionVersionForRow,
             createdAt: nowMs,
-            contentHmac: _placeholderHmac('$vaultId:$distributionVersion'),
+            contentHmac: _placeholderHmac('$vaultId:$distributionVersionForRow'),
           ),
         );
 
@@ -1012,15 +1029,21 @@ class VaultRepository {
 
     final sentAtMs =
         giftWrapEventId != null && giftWrapEventId.isNotEmpty ? nowMs : existing?.sentAt;
-    final acknowledgedAtMs = status == StewardStatus.holdingKey
-        ? (acknowledgedAt ?? DateTime.now()).millisecondsSinceEpoch
-        : existing?.acknowledgedAt;
-    final ackEvent = status == StewardStatus.holdingKey
-        ? (acknowledgmentEventId ?? existing?.acknowledgmentEventId)
-        : existing?.acknowledgmentEventId;
-    final ackVersion = status == StewardStatus.holdingKey
-        ? (acknowledgedDistributionVersion ?? distributionVersion)
-        : existing?.acknowledgmentDistributionVersion;
+    final acknowledgedAtMs = recordingInboundAck
+        ? acknowledgedAt.millisecondsSinceEpoch
+        : status == StewardStatus.holdingKey
+            ? (acknowledgedAt ?? DateTime.now()).millisecondsSinceEpoch
+            : existing?.acknowledgedAt;
+    final ackEvent = recordingInboundAck
+        ? acknowledgmentEventId
+        : status == StewardStatus.holdingKey
+            ? (acknowledgmentEventId ?? existing?.acknowledgmentEventId)
+            : existing?.acknowledgmentEventId;
+    final ackVersion = recordingInboundAck
+        ? (acknowledgedDistributionVersion ?? distributionVersionForRow)
+        : status == StewardStatus.holdingKey
+            ? (acknowledgedDistributionVersion ?? distributionVersionForRow)
+            : existing?.acknowledgmentDistributionVersion;
 
     await _db.into(_db.distributionShares).insertOnConflictUpdate(
           DistributionSharesCompanion(

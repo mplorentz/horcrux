@@ -67,7 +67,6 @@ void main() {
       await repository.updateStewardStatus(
         vaultId: vaultId,
         pubkey: stewardPubkey,
-        status: StewardStatus.holdingKey,
         acknowledgedAt: acknowledgedAt,
         acknowledgmentEventId: 'ack-event-1',
         acknowledgedDistributionVersion: 1,
@@ -107,7 +106,6 @@ void main() {
       await repository.updateStewardStatus(
         vaultId: vaultId,
         pubkey: stewardPubkey,
-        status: StewardStatus.holdingKey,
         acknowledgedAt: acknowledgedAt,
         acknowledgmentEventId: 'ack-event-2',
         acknowledgedDistributionVersion: 1,

@@ -150,7 +150,6 @@ class ShareDistributionService {
               await _repository.updateStewardStatus(
                 vaultId: config.vaultId,
                 pubkey: ownerPubkey,
-                status: StewardStatus.holdingKey,
                 acknowledgedAt: DateTime.now(),
                 // Owner self-steward: provenance is distribution version + outbound
                 // wrap id only — no separate ack event id (stewards infer the same).
@@ -321,7 +320,6 @@ class ShareDistributionService {
             await _repository.updateStewardStatus(
               vaultId: vaultId,
               pubkey: shareEvent.recipientPubkey, // Hex format
-              status: StewardStatus.holdingKey,
               acknowledgedAt: DateTime.now(),
               acknowledgmentEventId: acknowledgmentEventId,
               acknowledgedDistributionVersion: currentDistributionVersion,
@@ -350,8 +348,11 @@ class ShareDistributionService {
 
   /// Processes share confirmation event received from steward (kind 1342).
   ///
-  /// Validates vault ID and share index from tags ([share_index] on wire).
-  /// Updates steward status to "holding key".
+  /// Tag-only wire (empty content): [vault_id], [share_index],
+  /// optional [distribution_version]. Steward identity is [Nip01Event.pubKey]
+  /// (gift-wrap seal author), not a redundant tag. Confirmations tagged with a
+  /// future [distribution_version] are dropped. Status is derived from ack
+  /// version vs current distribution version.
   Future<void> processShareConfirmationEvent({
     required Nip01Event event,
   }) async {
@@ -370,8 +371,6 @@ class ShareDistributionService {
       );
     }
 
-    // Extract vault ID, share index, and distribution version from tags
-    // All confirmation data is stored in tags (no content)
     final vaultId = _extractTagValue(event.tags, 'vault_id');
     final shareIndexStr = _extractTagValue(event.tags, 'share_index');
     final distributionVersionStr = _extractTagValue(
@@ -392,26 +391,43 @@ class ShareDistributionService {
     final shareIndex = int.tryParse(shareIndexStr);
     if (shareIndex == null) {
       throw ArgumentError(
-        'Invalid share index in share confirmation event: $shareIndexStr',
+        'Invalid share_index in share confirmation event: $shareIndexStr',
       );
     }
 
-    final distributionVersion =
+    final tagDistributionVersion =
         distributionVersionStr != null ? int.tryParse(distributionVersionStr) : null;
 
-    // Update steward status
+    final vaultBefore = await _repository.getVault(vaultId);
+    final config = vaultBefore?.backupConfig;
+    final currentDistributionVersion = config?.distributionVersion ?? 0;
     final keyHolderPubkey = event.pubKey;
+
+    if (tagDistributionVersion != null && tagDistributionVersion > currentDistributionVersion) {
+      // Return without throwing so NDK records the gift wrap processed (no retry).
+      Log.error(
+        'Cannot process share confirmation for future distribution v$tagDistributionVersion '
+        '(current v$currentDistributionVersion) on vault $vaultId, share $shareIndex',
+      );
+      return;
+    }
+
+    final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
     await _repository.updateStewardStatus(
       vaultId: vaultId,
       pubkey: keyHolderPubkey,
-      status: StewardStatus.holdingKey,
       acknowledgedAt: DateTime.now(),
       acknowledgmentEventId: event.id,
-      acknowledgedDistributionVersion: distributionVersion,
+      acknowledgedDistributionVersion: acknowledgedDistributionVersion,
     );
 
+    final status = stewardStatusFromDistributionAck(
+      acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+      currentDistributionVersion: currentDistributionVersion,
+    );
     Log.info(
-      'Processed share confirmation event for vault $vaultId, share $shareIndex from steward $keyHolderPubkey',
+      'Processed share confirmation event for vault $vaultId, share $shareIndex '
+      'from steward $keyHolderPubkey (ack v$acknowledgedDistributionVersion, status $status)',
     );
   }
 

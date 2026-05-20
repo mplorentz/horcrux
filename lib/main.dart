@@ -31,7 +31,6 @@ Future<void> main() async {
   } else {
     WidgetsFlutterBinding.ensureInitialized();
   }
-
   try {
     await initializeAppLogFile();
   } catch (e, st) {
