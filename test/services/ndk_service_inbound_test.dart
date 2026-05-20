@@ -226,9 +226,6 @@ void main() {
     // Exercises the _vaultIdFromReader logic: JSON wins over tags
     test('prefers JSON vault_id over tag when both present', () {
       final json = <String, dynamic>{'vault_id': 'from-json'};
-      final tags = [
-        ['vault_id', 'from-tag']
-      ];
       // Simulate: _vaultIdFromReader(json, tags) -> 'from-json'
       expect(json['vault_id'], 'from-json');
     });
