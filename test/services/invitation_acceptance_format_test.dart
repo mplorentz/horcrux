@@ -474,8 +474,6 @@ void main() {
         // Arrange
         const inviteCode = 'test-code';
         const ownerPubkey = TestHexPubkeys.alice;
-        const inviteePubkey = TestHexPubkeys.bob;
-
         when(
           mockNdkService.publishEncryptedEvent(
             content: anyNamed('content'),
