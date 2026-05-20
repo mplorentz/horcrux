@@ -624,7 +624,7 @@ void main() {
       );
     });
 
-    Nip01Event _makeEvent({
+    Nip01Event makeEvent({
       int kind = 1342,
       List<List<String>> tags = const [],
       String pubKey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
@@ -635,7 +635,7 @@ void main() {
 
     group('processShareConfirmationEvent', () {
       test('extracts vault_id and share_index from tags', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['vault_id', vaultId],
           ['share_index', shareIndex],
         ]);
@@ -661,7 +661,7 @@ void main() {
       });
 
       test('includes distribution_version from tags when present', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['vault_id', vaultId],
           ['share_index', shareIndex],
           ['distribution_version', '5'],
@@ -688,7 +688,7 @@ void main() {
       });
 
       test('works without distribution_version tag', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['vault_id', vaultId],
           ['share_index', shareIndex],
         ]);
@@ -714,7 +714,7 @@ void main() {
       });
 
       test('throws on missing vault_id tag', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['share_index', shareIndex],
         ]);
 
@@ -725,7 +725,7 @@ void main() {
       });
 
       test('throws on missing share_index tag', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['vault_id', vaultId],
         ]);
 
@@ -736,7 +736,7 @@ void main() {
       });
 
       test('throws on non-numeric share_index', () async {
-        final event = _makeEvent(tags: [
+        final event = makeEvent(tags: [
           ['vault_id', vaultId],
           ['share_index', 'not-a-number'],
         ]);
@@ -748,7 +748,7 @@ void main() {
       });
 
       test('throws on wrong event kind', () async {
-        final event = _makeEvent(kind: 9999, tags: [
+        final event = makeEvent(kind: 9999, tags: [
           ['vault_id', vaultId],
           ['share_index', shareIndex],
         ]);
@@ -762,7 +762,7 @@ void main() {
 
     group('processShareErrorEvent', () {
       test('extracts vault_id and share_index from tags', () async {
-        final event = _makeEvent(
+        final event = makeEvent(
           kind: 1343,
           tags: [
             ['vault_id', vaultId],
@@ -786,7 +786,7 @@ void main() {
       });
 
       test('throws on wrong event kind', () async {
-        final event = _makeEvent(kind: 9999, tags: [
+        final event = makeEvent(kind: 9999, tags: [
           ['vault_id', vaultId],
           ['share_index', shareIndex],
         ]);
@@ -798,7 +798,7 @@ void main() {
       });
 
       test('throws on missing vault_id tag', () async {
-        final event = _makeEvent(kind: 1343, tags: [
+        final event = makeEvent(kind: 1343, tags: [
           ['share_index', shareIndex],
         ]);
 
