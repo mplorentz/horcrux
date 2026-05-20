@@ -92,9 +92,11 @@ class ShareDistributionService {
             distributionVersion: config.distributionVersion,
           );
 
-          // Nostr payload JSON (wire keys remain shard_* — see [shareToJson])
-          final shareJson = shareToJson(shareWithRelays);
-          final shareString = json.encode(shareJson);
+          // New Nostr wire format: content is raw payload, tags from shareToNostrTags
+          final nostrContent = shareToNostrContent(shareWithRelays);
+          final nostrTags = shareToNostrTags(shareWithRelays);
+          // Add d tag for dedup (stable identifier for replaceable event)
+          nostrTags.insert(0, ['d', 'share_${config.vaultId}_$i']);
 
           Log.debug('recipient pubkey: ${keyHolder.pubkey}');
 
@@ -102,16 +104,12 @@ class ShareDistributionService {
           // wrap so we can pipe it to [tryPushForEvent] below without
           // rebuilding it.
           final publishedEvent = await _ndkService.publishEncryptedEvent(
-            content: shareString,
+            content: nostrContent,
             kind: NostrKind.shareData.value,
-            recipientPubkey: keyHolder.pubkey!, // Hex format - safe because we checked null above
+            recipientPubkey: keyHolder.pubkey!,
             relays: config.relays,
-            tags: [
-              ['d', 'shard_${config.vaultId}_$i'], // Wire distinguisher (stable)
-              ['backup_config_id', config.vaultId],
-              ['shard_index', i.toString()],
-            ],
-            customPubkey: ownerPubkey, // Vault owner signs the rumor
+            tags: nostrTags,
+            customPubkey: ownerPubkey,
           );
 
           if (publishedEvent == null) {
@@ -245,17 +243,16 @@ class ShareDistributionService {
         if (!manifest.isValid) {
           throw StateError('distributeShares: built manifest share failed validation');
         }
-        final manifestString = json.encode(shareToJson(manifest));
+        // New Nostr wire format for manifest: empty content, tags from shareToNostrTags
+        final manifestContent = shareToNostrContent(manifest);
+        final manifestTags = shareToNostrTags(manifest);
+        manifestTags.insert(0, ['d', 'manifest_${config.vaultId}']);
         final publishedManifest = await _ndkService.publishEncryptedEvent(
-          content: manifestString,
+          content: manifestContent,
           kind: NostrKind.shareData.value,
           recipientPubkey: ownerPubkey,
           relays: config.relays,
-          tags: [
-            ['d', 'manifest_${config.vaultId}'],
-            ['backup_config_id', config.vaultId],
-            ['shard_index', '-1'],
-          ],
+          tags: manifestTags,
           customPubkey: ownerPubkey,
         );
         if (publishedManifest == null) {

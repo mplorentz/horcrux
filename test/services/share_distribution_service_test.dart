@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -406,26 +404,21 @@ void main() {
 
       verify(
         mockNdkService.publishEncryptedEvent(
-          content: argThat(
-            predicate<String>(
-              (raw) {
-                final m = json.decode(raw) as Map<String, dynamic>;
-                return m['shard'] == '' &&
-                    m['shard_index'] == -1 &&
-                    m['vault_id'] == cfg.vaultId &&
-                    m['distribution_version'] == cfg.distributionVersion;
-              },
-              'manifest-only 1337 wire JSON for owner rehydration',
-            ),
-            named: 'content',
-          ),
+          content: '',
           kind: NostrKind.shareData.value,
           recipientPubkey: alicePubHex,
           relays: cfg.relays,
           tags: [
             ['d', 'manifest_${cfg.vaultId}'],
-            ['backup_config_id', cfg.vaultId],
-            ['shard_index', '-1'],
+            ['share_index', '-1'],
+            ['total_shares', '2'],
+            ['threshold', '2'],
+            ['prime_mod', TestShare.testPrimeMod],
+            ['vault_id', cfg.vaultId],
+            ['distribution_version', cfg.distributionVersion.toString()],
+            ['steward', '0', 'Bob', bobPubHex, ''],
+            ['steward', '1', 'Charlie', charliePubHex, ''],
+            ['relay', cfg.relays[0]],
           ],
           customPubkey: alicePubHex,
           vaultId: anyNamed('vaultId'),
