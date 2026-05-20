@@ -995,6 +995,218 @@ void main() {
     );
   });
 
+  group('processRecoveryResponse dedup', () {
+    late String testCreatorPubkey;
+    late LoginService loginService;
+    late VaultRepository repository;
+    late BackupService backupService;
+    late NdkService ndkService;
+    late MockLocalNotificationService mockLocalNotificationService;
+    late RecoveryService recoveryService;
+    late AppDatabase testDb;
+    const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
+    const testVaultId = 'vault-dedup-test';
+
+    setUp(() async {
+      secureStorageMock.clear();
+      loginService = LoginService();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      testCreatorPubkey = keyPair.publicKey;
+
+      testDb = newTestDatabase();
+      repository = VaultRepository(loginService, db: testDb);
+
+      final mockBackupService = MockBackupService();
+      final mockNdkService = MockNdkService();
+      mockLocalNotificationService = MockLocalNotificationService();
+      when(
+        mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
+      ).thenAnswer((_) async {});
+      when(
+        mockLocalNotificationService.notifyRecoveryResponseProcessed(any),
+      ).thenAnswer((_) async {});
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => testCreatorPubkey);
+
+      backupService = mockBackupService;
+      ndkService = mockNdkService;
+      final mockHorcruxNotificationService = MockHorcruxNotificationService();
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      recoveryService = RecoveryService(
+        repository,
+        backupService,
+        ndkService,
+        ProcessedNostrEventStore(),
+        mockLocalNotificationService,
+        mockHorcruxNotificationService,
+        testDb,
+      );
+      await recoveryService.clearAll();
+      await repository.clearAll();
+
+      // Create a test vault for recovery tests
+      final testVault = Vault(
+        id: testVaultId,
+        name: 'Dedup Test Vault',
+        createdAt: DateTime.now(),
+        ownerPubkey: testCreatorPubkey,
+      );
+      await repository.addVault(testVault);
+
+      final relayPlan = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 1,
+        totalKeys: 1,
+        stewards: [
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+        ],
+        relays: ['wss://relay.example.com'],
+      );
+      await repository.updateBackupConfig(testVaultId, relayPlan);
+    });
+
+    tearDown(() async {
+      await repository.clearAll();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+      await testDb.close();
+    });
+
+    test('first response from a steward returns true', () async {
+      final request = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final result = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+      );
+
+      expect(result, isTrue);
+    });
+
+    test('duplicate response by nostrEventId returns false', () async {
+      final request = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      // First response with a nostrEventId
+      final first = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+        nostrEventId: 'event-abc123',
+      );
+      expect(first, isTrue);
+
+      // Relay echo arrives with the same nostrEventId
+      final echo = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+        nostrEventId: 'event-abc123',
+      );
+      expect(echo, isFalse);
+
+      // Verify only one response is stored
+      final updated = await recoveryService.getRecoveryRequest(request.id);
+      expect(updated!.responses.length, 1);
+      expect(updated.responseForPubkey(testKeyHolder1)!.nostrEventId, 'event-abc123');
+    });
+
+    test('duplicate response by respondedAt returns false', () async {
+      final request = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      // First response without nostrEventId (simulates local auto-approve)
+      final first = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+      );
+      expect(first, isTrue);
+
+      // Relay echo arrives without matching nostrEventId
+      // (backfill hasn't completed yet)
+      final echo = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+        nostrEventId: 'event-xyz789',
+      );
+      expect(echo, isFalse);
+    });
+
+    test('different steward responses are both accepted', () async {
+      const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
+      final request = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      final result1 = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder1,
+        true,
+        nostrEventId: 'event-steward1',
+      );
+      expect(result1, isTrue);
+
+      final result2 = await recoveryService.processRecoveryResponse(
+        request.id,
+        testKeyHolder2,
+        true,
+        nostrEventId: 'event-steward2',
+      );
+      expect(result2, isTrue);
+    });
+
+    test('response without existing placeholder is accepted', () async {
+      // If a response arrives from a pubkey not in the placeholder list,
+      // processRecoveryResponse should still accept it (creates new entry)
+      const unknownSteward = '1111111111111111111111111111111111111111111111111111111111111111';
+      final request = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1],
+        threshold: 1,
+      );
+
+      final result = await recoveryService.processRecoveryResponse(
+        request.id,
+        unknownSteward,
+        true,
+        nostrEventId: 'event-unknown',
+      );
+      expect(result, isTrue);
+    });
+  });
   group('RecoveryService - performRecovery', () {
     late String testCreatorPubkey;
     late LoginService loginService;
