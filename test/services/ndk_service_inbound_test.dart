@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ndk/ndk.dart';
 import 'package:horcrux/models/share.dart';
-import 'package:horcrux/models/recovery_request.dart';
 
 import '../fixtures/test_keys.dart';
 
