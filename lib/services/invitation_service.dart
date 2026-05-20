@@ -474,7 +474,6 @@ class InvitationService {
   /// Invalidates invitation code.
   Future<void> denyInvitation({
     required String inviteCode,
-    String? reason,
   }) async {
     // Validate invite code format first
     if (!isValidInviteCodeFormat(inviteCode)) {
@@ -517,7 +516,6 @@ class InvitationService {
         inviteCode: inviteCode,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
-        reason: reason,
       );
     } catch (e) {
       Log.error('Error sending denial event for invitation $inviteCode', e);
@@ -527,9 +525,7 @@ class InvitationService {
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info(
-      'Denied invitation $inviteCode${reason != null ? ", reason: $reason" : ""}',
-    );
+    Log.info('Denied invitation $inviteCode');
   }
 
   /// Invalidates an invitation (e.g., when invitee removed from backup config)
