@@ -818,7 +818,7 @@ class MockVaultRepository extends _i1.Mock implements _i7.VaultRepository {
   _i4.Future<void> updateStewardStatus({
     required String? vaultId,
     required String? pubkey,
-    required _i10.StewardStatus? status,
+    _i10.StewardStatus? status,
     DateTime? acknowledgedAt,
     String? acknowledgmentEventId,
     int? acknowledgedDistributionVersion,

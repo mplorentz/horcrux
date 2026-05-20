@@ -306,16 +306,13 @@ class VaultDetailRepository {
     final acknowledgedAt =
         acknowledgedAtMs == null ? null : DateTime.fromMillisecondsSinceEpoch(acknowledgedAtMs);
     final acknowledgedVersion = distributionShareRow?.acknowledgmentDistributionVersion;
-    final isCurrentAck =
-        acknowledgedVersion != null && acknowledgedVersion == currentDistributionVersion;
 
     final status = isInvited
         ? StewardStatus.invited
-        : isCurrentAck
-            ? StewardStatus.holdingKey
-            : acknowledgedVersion != null && acknowledgedVersion < currentDistributionVersion
-                ? StewardStatus.awaitingNewKey
-                : StewardStatus.awaitingKey;
+        : stewardStatusFromDistributionAck(
+            acknowledgedDistributionVersion: acknowledgedVersion,
+            currentDistributionVersion: currentDistributionVersion,
+          );
     final giftWrapEventId = distributionShareRow?.giftWrapEventId;
 
     return Steward(

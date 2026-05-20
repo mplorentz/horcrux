@@ -237,6 +237,64 @@ void main() {
     );
   });
 
+  group('VaultShareService.sendShareConfirmationEvent wire tags', () {
+    late MockLoginService mockLoginService;
+    late MockNdkService mockNdkService;
+    late MockHorcruxNotificationService mockNotificationService;
+    late VaultShareService service;
+    List<List<String>>? capturedTags;
+
+    setUp(() {
+      mockLoginService = MockLoginService();
+      mockNdkService = MockNdkService();
+      mockNotificationService = MockHorcruxNotificationService();
+      capturedTags = null;
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => TestHexPubkeys.bob);
+      when(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer((invocation) async {
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>?;
+        return Nip01Event(
+          kind: NostrKind.shareConfirmation.value,
+          pubKey: TestHexPubkeys.bob,
+          tags: const [],
+          content: '',
+          createdAt: 1,
+        );
+      });
+      service = VaultShareService(
+        VaultRepository(mockLoginService),
+        () => mockNdkService,
+        () => mockNotificationService,
+        () => MockPushNotificationReceiver(),
+      );
+    });
+
+    test('publishes share_index without steward_pubkey tag', () async {
+      await service.sendShareConfirmationEvent(
+        vaultId: 'vault-wire',
+        shareIndex: 2,
+        ownerPubkey: TestHexPubkeys.alice,
+        relayUrls: ['wss://relay.example.com'],
+        distributionVersion: 4,
+      );
+
+      expect(capturedTags, isNotNull);
+      expect(
+        capturedTags!.any((t) => t[0] == 'share_index' && t[1] == '2'),
+        isTrue,
+      );
+      expect(capturedTags!.any((t) => t[0] == 'shard_index'), isFalse);
+      expect(capturedTags!.any((t) => t[0] == 'steward_pubkey'), isFalse);
+    });
+  });
+
   group('VaultShareService steward shard_index placement', () {
     late AppDatabase db;
     late MockLoginService mockLoginService;

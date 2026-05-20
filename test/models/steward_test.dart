@@ -305,4 +305,46 @@ void main() {
       });
     });
   });
+
+  group('stewardStatusFromDistributionAck', () {
+    test('holdingKey when ack version matches current', () {
+      expect(
+        stewardStatusFromDistributionAck(
+          acknowledgedDistributionVersion: 3,
+          currentDistributionVersion: 3,
+        ),
+        StewardStatus.holdingKey,
+      );
+    });
+
+    test('awaitingNewKey when ack version is older than current', () {
+      expect(
+        stewardStatusFromDistributionAck(
+          acknowledgedDistributionVersion: 2,
+          currentDistributionVersion: 3,
+        ),
+        StewardStatus.awaitingNewKey,
+      );
+    });
+
+    test('awaitingKey when no ack version', () {
+      expect(
+        stewardStatusFromDistributionAck(
+          acknowledgedDistributionVersion: null,
+          currentDistributionVersion: 3,
+        ),
+        StewardStatus.awaitingKey,
+      );
+    });
+
+    test('awaitingKey when ack version is newer than current', () {
+      expect(
+        stewardStatusFromDistributionAck(
+          acknowledgedDistributionVersion: 4,
+          currentDistributionVersion: 3,
+        ),
+        StewardStatus.awaitingKey,
+      );
+    });
+  });
 }

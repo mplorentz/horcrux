@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/ndk.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
-import '../models/steward_status.dart';
 import '../models/vault.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
@@ -256,8 +255,7 @@ class VaultShareService {
 
       final tags = [
         ['vault_id', vaultId],
-        ['shard_index', shareIndex.toString()],
-        ['steward_pubkey', currentPubkey],
+        ['share_index', shareIndex.toString()],
         ['confirmed_at', DateTime.now().toIso8601String()],
         if (distributionVersion != null) ['distribution_version', distributionVersion.toString()],
       ];
@@ -533,7 +531,6 @@ class VaultShareService {
       await repository.updateStewardStatus(
         vaultId: vaultId,
         pubkey: ownerPk,
-        status: StewardStatus.holdingKey,
         acknowledgedAt: DateTime.now(),
         acknowledgmentEventId: null,
         acknowledgedDistributionVersion: shareDist,

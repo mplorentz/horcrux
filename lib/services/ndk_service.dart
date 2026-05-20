@@ -195,6 +195,34 @@ class NdkService {
     }
   }
 
+  /// Replace the active relay set in one shot and (re)build subscriptions once.
+  ///
+  /// Prefer this over multiple [addRelay] calls at startup: each [addRelay]
+  /// invocation tears down and rebuilds every NDK subscription, and doing
+  /// that N times in rapid succession can leave the first-added relay's
+  /// per-relay REQ in an inconsistent state (observed: events stopped flowing
+  /// from the first relay while later-added relays delivered normally).
+  Future<void> setActiveRelays(List<String> relayUrls) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    final unique = <String>{...relayUrls}.toList();
+    _activeRelays
+      ..clear()
+      ..addAll(unique);
+    Log.info(
+      'setActiveRelays: ${_activeRelays.length} relays (${_activeRelays.join(', ')})',
+    );
+    if (_activeRelays.isEmpty) {
+      await closeSubscriptions();
+    } else {
+      await _setupSubscriptions();
+    }
+    for (final url in unique) {
+      unawaited(_publishService.onRelayReconnected(url));
+    }
+  }
+
   /// Remove a relay from active listening
   Future<void> removeRelay(String relayUrl) async {
     _activeRelays.remove(relayUrl);
@@ -540,43 +568,40 @@ class NdkService {
 
       await _processedEventStore.recordProcessed(event.id);
       await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
-    } catch (e) {
+    } catch (e, st) {
+      // Per-kind handlers throw on failure (validation, lookup, DB error).
+      // Release the claim so the next delivery (subscription replay) retries
+      // instead of permanently marking this event processed.
       await _processedEventStore.releaseClaimedEvent(event.id);
-      Log.error('Error handling gift wrap event ${event.id}', e);
+      Log.error('Error handling gift wrap event ${event.id}', e, st);
     }
   }
 
-  /// Handle incoming shard data (kind 1337)
+  /// Handle incoming shard data (kind 1337). Errors propagate so the outer
+  /// dispatcher releases the dedup claim and retries on next delivery.
   Future<void> _handleShare(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    try {
-      Log.info('Processing shard data event: ${event.id}');
+    Log.info('Processing shard data event: ${event.id}');
 
-      // Use canonical tag-based format
-      final shardData = shareFromNostr(event).copyWith(nostrEventId: event.id);
+    final shardData = shareFromNostr(event).copyWith(nostrEventId: event.id);
+    Log.debug('Shard data: $shardData');
 
-      Log.debug('Shard data: $shardData');
+    final vaultId = shardData.vaultId;
+    if (vaultId == null || vaultId.isEmpty) {
+      throw ArgumentError(
+        'Cannot process shard data event ${event.id}: missing vault_id in shard data',
+      );
+    }
 
-      final vaultId = shardData.vaultId;
-      if (vaultId == null || vaultId.isEmpty) {
-        Log.error(
-          'Cannot process shard data event ${event.id}: missing vault_id in shard data',
-        );
-        return;
-      }
+    final vaultShareService = _ref.read(vaultShareServiceProvider);
+    await vaultShareService.processVaultShare(vaultId, shardData);
 
-      final vaultShareService = _ref.read(vaultShareServiceProvider);
-      await vaultShareService.processVaultShare(vaultId, shardData);
-
-      if (allowLocalNotification) {
-        await _ref
-            .read(localNotificationServiceProvider)
-            .notifyShareDataProcessed(event: event, share: shardData);
-      }
-    } catch (e) {
-      Log.error('Error handling shard data event ${event.id}', e);
+    if (allowLocalNotification) {
+      await _ref
+          .read(localNotificationServiceProvider)
+          .notifyShareDataProcessed(event: event, share: shardData);
     }
   }
 
@@ -732,73 +757,51 @@ class NdkService {
     );
   }
 
-  /// Handle incoming invitation acceptance event (kind 1340)
+  /// Handle incoming invitation acceptance event (kind 1340). Errors propagate
+  /// so the outer dispatcher releases the dedup claim and retries.
   Future<void> _handleInvitationAcceptance(Nip01Event event) async {
-    try {
-      Log.info('Processing invitation acceptance event: ${event.id}');
-      Log.debug(
-        'Invitation acceptance event before processing: kind=${event.kind}, content length=${event.content.length}, content preview=${event.content.length > 100 ? event.content.substring(0, 100) : event.content}',
-      );
-      final invitationService = _getInvitationService();
-      await invitationService.processInvitationAcceptanceEvent(event: event);
-      Log.info(
-        'Successfully processed invitation acceptance event: ${event.id}',
-      );
-    } catch (e) {
-      Log.error('Error handling invitation acceptance event ${event.id}', e);
-    }
+    Log.info('Processing invitation acceptance event: ${event.id}');
+    final invitationService = _getInvitationService();
+    await invitationService.processInvitationAcceptanceEvent(event: event);
+    Log.info(
+      'Successfully processed invitation acceptance event: ${event.id}',
+    );
   }
 
-  /// Handle incoming invitation denial event (kind 1341)
+  /// Handle incoming invitation denial event (kind 1341). Errors propagate.
   Future<void> _handleInvitationDenial(Nip01Event event) async {
-    try {
-      Log.info('Processing invitation denial event: ${event.id}');
-      final invitationService = _getInvitationService();
-      await invitationService.processDenialEvent(event: event);
-      Log.info('Successfully processed denial event: ${event.id}');
-    } catch (e) {
-      Log.error('Error handling invitation denial event ${event.id}', e);
-    }
+    Log.info('Processing invitation denial event: ${event.id}');
+    final invitationService = _getInvitationService();
+    await invitationService.processDenialEvent(event: event);
+    Log.info('Successfully processed denial event: ${event.id}');
   }
 
-  /// Handle incoming shard confirmation event (kind 1342)
+  /// Handle incoming shard confirmation event (kind 1342). Errors propagate so
+  /// the outer dispatcher releases the dedup claim and retries on next delivery.
   Future<void> _handleShareConfirmation(
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    try {
-      Log.info('Processing shard confirmation event: ${event.id}');
-      Log.debug('Shard confirmation event tags: ${event.tags}');
-      final shardDistributionService = _ref.read(
-        shareDistributionServiceProvider,
-      );
-      await shardDistributionService.processShareConfirmationEvent(
-        event: event,
-      );
-      Log.info('Successfully processed shard confirmation event: ${event.id}');
+    Log.info('Processing shard confirmation event: ${event.id}');
+    Log.debug('Shard confirmation event tags: ${event.tags}');
+    await _ref.read(shareDistributionServiceProvider).processShareConfirmationEvent(event: event);
+    Log.info('Successfully processed shard confirmation event: ${event.id}');
 
-      final vaultId = _firstTagValue(event.tags, 'vault_id');
-      if (vaultId != null && allowLocalNotification) {
-        await _ref
-            .read(localNotificationServiceProvider)
-            .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
-      }
-    } catch (e) {
-      Log.error('Error handling shard confirmation event ${event.id}', e);
+    final vaultId = _firstTagValue(event.tags, 'vault_id');
+    if (vaultId != null && allowLocalNotification) {
+      await _ref
+          .read(localNotificationServiceProvider)
+          .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
     }
   }
 
-  /// Handle incoming steward removed event (kind 1345)
+  /// Handle incoming steward removed event (kind 1345). Errors propagate.
   Future<void> _handleKeyHolderRemoved(Nip01Event event) async {
-    try {
-      Log.info('Processing steward removed event: ${event.id}');
-      Log.debug('Key holder removed event tags: ${event.tags}');
-      final vaultShareService = _ref.read(vaultShareServiceProvider);
-      await vaultShareService.processKeyHolderRemoval(event: event);
-      Log.info('Successfully processed steward removed event: ${event.id}');
-    } catch (e) {
-      Log.error('Error handling steward removed event ${event.id}', e);
-    }
+    Log.info('Processing steward removed event: ${event.id}');
+    Log.debug('Key holder removed event tags: ${event.tags}');
+    final vaultShareService = _ref.read(vaultShareServiceProvider);
+    await vaultShareService.processKeyHolderRemoval(event: event);
+    Log.info('Successfully processed steward removed event: ${event.id}');
   }
 
   /// Close all active gift-wrap subscriptions.
@@ -818,6 +821,13 @@ class NdkService {
         }
       }
     }
+
+    // Cancel and clear Dart-side stream listeners so the next setup starts
+    // from an empty list — otherwise stale listeners accumulate across calls.
+    for (final sub in _subscriptionStreamSubs) {
+      await sub.cancel();
+    }
+    _subscriptionStreamSubs.clear();
   }
 
   /// Get the list of active relays
