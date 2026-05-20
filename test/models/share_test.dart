@@ -42,7 +42,7 @@ void main() {
           creatorPubkey: 'a' * 64,
           createdAt: secondsSinceEpoch(),
         ).isManifest,
-        isFalse,
+        isTrue, // isManifest is now payload.isEmpty only (not payload.isEmpty && shareIndex == -1)
       );
     });
   });
