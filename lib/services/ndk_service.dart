@@ -742,7 +742,7 @@ class NdkService {
       ),
     );
 
-    await _ref.read(recoveryServiceProvider).processRecoveryResponse(
+    final processed = await _ref.read(recoveryServiceProvider).processRecoveryResponse(
           recoveryRequestId,
           senderPubkey,
           approved,
@@ -752,9 +752,12 @@ class NdkService {
           allowLocalNotification: allowLocalNotification,
         );
 
-    Log.info(
-      'Persisted recovery response: $recoveryRequestId from $senderPubkey',
-    );
+    if (processed) {
+      Log.info(
+        'Persisted recovery response: $recoveryRequestId from '
+        '${senderPubkey.substring(0, 8)}...',
+      );
+    }
   }
 
   /// Handle incoming invitation acceptance event (kind 1340). Errors propagate

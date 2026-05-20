@@ -542,13 +542,15 @@ class RecoveryService {
   /// Merges one steward's recovery response into local vault state (from Nostr or from this device).
   ///
   /// Since events are immutable, we skip processing if the response already exists.
+  /// Returns `true` when the response was actually processed, `false` when it was
+  /// skipped (duplicate or already processed).
   ///
   /// When [recoveryResponseSourceEvent] is set (relay-delivered event), may show a local OS
   /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it. Pass
   /// `allowLocalNotification: false` when the caller has already shown the user a
   /// notification for this event (e.g. an FCM push the user just tapped) so we do
   /// not double-notify.
-  Future<void> processRecoveryResponse(
+  Future<bool> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
@@ -571,16 +573,19 @@ class RecoveryService {
       // Check if this is a duplicate by comparing nostrEventId if provided
       if (nostrEventId != null && existingResponse.nostrEventId == nostrEventId) {
         Log.info(
-          'Ignoring duplicate recovery response for request $recoveryRequestId from $responderPubkey (nostrEventId: $nostrEventId)',
+          'Ignoring duplicate recovery response for request $recoveryRequestId from '
+          '${responderPubkey.substring(0, 8)}... (nostrEventId: $nostrEventId)',
         );
-        return;
+        return false;
       }
       // If response already exists and has respondedAt, skip processing (immutable event)
       if (existingResponse.respondedAt != null) {
         Log.info(
-          'Ignoring recovery response for request $recoveryRequestId from $responderPubkey - response already exists',
+          'Ignoring recovery response for request $recoveryRequestId from '
+          '${responderPubkey.substring(0, 8)}... - already processed '
+          '(respondedAt=${existingResponse.respondedAt})',
         );
-        return;
+        return false;
       }
     }
 
@@ -650,8 +655,10 @@ class RecoveryService {
     }
 
     Log.info(
-      'Updated recovery request $recoveryRequestId with response from ${responderPubkey.substring(0, 8)}... (approved: $approved)',
+      'Updated recovery request $recoveryRequestId with response from '
+      '${responderPubkey.substring(0, 8)}... (approved: $approved)',
     );
+    return true;
   }
 
   /// Approve or deny a recovery request with automatic shard data retrieval and Nostr sending
@@ -731,15 +738,22 @@ class RecoveryService {
         }
 
         if (relayUrls.isNotEmpty) {
-          await sendRecoveryResponseViaNostr(
+          final eventId = await sendRecoveryResponseViaNostr(
             request,
             stewardShare,
             approved,
             relays: relayUrls,
           );
           Log.info(
-            'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved)',
+            'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved, event: ${eventId.substring(0, 8)}...)',
           );
+
+          // Backfill the nostrEventId on the persisted response so that
+          // when the relay echo arrives, the duplicate check matches by
+          // nostrEventId (first check) rather than by respondedAt (second
+          // check). This also improves log clarity — the echo shows
+          // 'duplicate' instead of 'already processed'.
+          unawaited(_backfillNostrEventId(request.vaultId, recoveryRequestId, eventId));
         } else {
           Log.warning('No relay URLs available for sending recovery response');
         }
@@ -1201,6 +1215,39 @@ class RecoveryService {
     _isInitialized = false;
     _viewedNotificationIds = null;
     await initialize();
+  }
+
+  /// After sending a recovery response via Nostr, backfill the event id on the
+  /// persisted response so the relay echo can be matched by nostrEventId (first
+  /// check in [processRecoveryResponse]) rather than by respondedAt (second check).
+  Future<void> _backfillNostrEventId(
+    String vaultId,
+    String recoveryRequestId,
+    String eventId,
+  ) async {
+    try {
+      final request = await getRecoveryRequest(recoveryRequestId);
+      if (request == null) return;
+      for (final response in request.responses) {
+        if (response.nostrEventId == null && response.respondedAt != null) {
+          final updated = response.copyWith(nostrEventId: eventId);
+          final updatedRequest = request.withUpsertedResponse(response: updated);
+          await repository.updateRecoveryRequestInVault(
+            vaultId,
+            recoveryRequestId,
+            updatedRequest,
+          );
+          Log.info(
+            'Backfilled nostrEventId for response from '
+            '${response.pubkey.substring(0, 8)}... '
+            '(event: ${eventId.substring(0, 8)}...)',
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      Log.error('Failed to backfill nostrEventId for recovery response', e);
+    }
   }
 }
 

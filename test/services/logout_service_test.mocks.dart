@@ -769,7 +769,7 @@ class MockRecoveryService extends _i1.Mock implements _i13.RecoveryService {
       ) as _i8.Future<_i14.RecoveryStatus?>);
 
   @override
-  _i8.Future<void> processRecoveryResponse(
+  _i8.Future<bool> processRecoveryResponse(
     String? recoveryRequestId,
     String? responderPubkey,
     bool? approved, {
@@ -793,9 +793,9 @@ class MockRecoveryService extends _i1.Mock implements _i13.RecoveryService {
             #allowLocalNotification: allowLocalNotification,
           },
         ),
-        returnValue: _i8.Future<void>.value(),
-        returnValueForMissingStub: _i8.Future<void>.value(),
-      ) as _i8.Future<void>);
+        returnValue: _i8.Future<bool>.value(false),
+        returnValueForMissingStub: _i8.Future<bool>.value(false),
+      ) as _i8.Future<bool>);
 
   @override
   _i8.Future<void> respondToRecoveryRequestWithShare(
