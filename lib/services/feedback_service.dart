@@ -12,10 +12,12 @@ import 'logger.dart';
 /// The form endpoint is swappable via [formspreeFormId].
 class FeedbackService {
   final String formspreeFormId;
+  final http.Client _httpClient;
 
   FeedbackService({
     required this.formspreeFormId,
-  });
+    http.Client? httpClient,
+  }) : _httpClient = httpClient ?? http.Client();
 
   /// Submit feedback to Formspree.
   ///
@@ -45,7 +47,7 @@ class FeedbackService {
         body['_diagnostics'] = await _buildDiagnostics();
       }
 
-      final response = await http.post(
+      final response = await _httpClient.post(
         uri,
         headers: {
           'Accept': 'application/json',
