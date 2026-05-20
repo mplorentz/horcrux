@@ -867,7 +867,7 @@ void main() {
   group('Nostr wire format - shareToNostrTags', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 
-    Share _sampleShare(
+    Share sampleShare(
         {bool withStewards = false, bool withRelays = false, bool withPush = false}) {
       return Share(
         payload: 'raw-shamir-payload',
@@ -894,7 +894,7 @@ void main() {
     }
 
     test('includes required tags', () {
-      final tags = shareToNostrTags(_sampleShare());
+      final tags = shareToNostrTags(sampleShare());
       expect(tags.any((t) => t[0] == 'share_index' && t[1] == '0'), isTrue,
           reason: 'should have share_index tag');
       expect(tags.any((t) => t[0] == 'total_shares' && t[1] == '3'), isTrue,
@@ -906,7 +906,7 @@ void main() {
     });
 
     test('includes optional string tags when present', () {
-      final tags = shareToNostrTags(_sampleShare());
+      final tags = shareToNostrTags(sampleShare());
       expect(tags.any((t) => t[0] == 'vault_id' && t[1] == 'vault-1'), isTrue);
       expect(tags.any((t) => t[0] == 'vault_name' && t[1] == 'My Vault'), isTrue);
       expect(tags.any((t) => t[0] == 'owner_name' && t[1] == 'Alice'), isTrue);
@@ -914,22 +914,22 @@ void main() {
     });
 
     test('includes distribution_version when present', () {
-      final tags = shareToNostrTags(_sampleShare());
+      final tags = shareToNostrTags(sampleShare());
       expect(tags.any((t) => t[0] == 'distribution_version' && t[1] == '1'), isTrue);
     });
 
     test('includes push_enabled when present', () {
-      final tags = shareToNostrTags(_sampleShare(withPush: true));
+      final tags = shareToNostrTags(sampleShare(withPush: true));
       expect(tags.any((t) => t[0] == 'push_enabled' && t[1] == 'true'), isTrue);
     });
 
     test('omits push_enabled when null', () {
-      final tags = shareToNostrTags(_sampleShare());
+      final tags = shareToNostrTags(sampleShare());
       expect(tags.any((t) => t[0] == 'push_enabled'), isFalse);
     });
 
     test('includes repeated steward tags', () {
-      final tags = shareToNostrTags(_sampleShare(withStewards: true));
+      final tags = shareToNostrTags(sampleShare(withStewards: true));
       expect(
         tags.any((t) =>
             t[0] == 'steward' &&
@@ -953,13 +953,13 @@ void main() {
     });
 
     test('includes repeated relay tags', () {
-      final tags = shareToNostrTags(_sampleShare(withRelays: true));
+      final tags = shareToNostrTags(sampleShare(withRelays: true));
       expect(tags.any((t) => t[0] == 'relay' && t[1] == 'wss://relay1.com'), isTrue);
       expect(tags.any((t) => t[0] == 'relay' && t[1] == 'wss://relay2.com'), isTrue);
     });
 
     test('omits optional tags when null', () {
-      final share = Share(
+      const share = Share(
         payload: 'p',
         threshold: 2,
         shareIndex: 0,
@@ -1023,7 +1023,7 @@ void main() {
   group('Nostr wire format - shareFromNostr', () {
     const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
 
-    Nip01Event _makeRumor({
+    Nip01Event makeRumor({
       required String content,
       List<List<String>> tags = const [],
       String pubKey = creatorPubkey,
@@ -1039,7 +1039,7 @@ void main() {
     }
 
     test('parses required tags and content from rumor', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'shamir-data',
         tags: [
           ['share_index', '2'],
@@ -1062,7 +1062,7 @@ void main() {
     });
 
     test('parses manifest from empty content', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: '',
         tags: [
           ['share_index', '0'],
@@ -1078,7 +1078,7 @@ void main() {
     });
 
     test('parses optional string tags', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         tags: [
           ['share_index', '0'],
@@ -1100,7 +1100,7 @@ void main() {
     });
 
     test('parses distribution_version and push_enabled', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         tags: [
           ['share_index', '0'],
@@ -1118,7 +1118,7 @@ void main() {
     });
 
     test('parses repeated steward tags', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         tags: [
           ['share_index', '0'],
@@ -1140,7 +1140,7 @@ void main() {
     });
 
     test('parses repeated relay tags', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         tags: [
           ['share_index', '0'],
@@ -1159,7 +1159,7 @@ void main() {
     });
 
     test('sets null for absent optional fields', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         tags: [
           ['share_index', '0'],
@@ -1182,7 +1182,7 @@ void main() {
     });
 
     test('uses rumor.pubKey as creatorPubkey', () {
-      final rumor = _makeRumor(
+      final rumor = makeRumor(
         content: 'data',
         pubKey: 'b' * 64,
         tags: [
