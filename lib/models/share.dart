@@ -51,7 +51,7 @@ class Share with _$Share {
 
   const Share._();
 
-  /// Wire-level "manifest-only" 1337: empty Shamir payload.
+  /// Wire-level "manifest-only" 713: empty Shamir payload.
   ///
   /// Used when the owner is not a self-steward so relays can still carry a
   /// gift-wrapped recovery-plan snapshot to the owner's pubkey. A manifest

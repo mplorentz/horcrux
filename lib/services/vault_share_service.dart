@@ -128,8 +128,8 @@ class VaultShareService {
   /// 3. Opt into push if the owner has push enabled.
   /// 4. Send share confirmation event to owner.
   ///
-  /// **Manifest-only** shares ([Share.isManifest]): metadata-only 1337 for
-  /// owner rehydration — skips `held_shares`, confirmation (1342), and
+  /// **Manifest-only** shares ([Share.isManifest]): metadata-only 713 for
+  /// owner rehydration — skips `held_shares`, confirmation (718), and
   /// phantom self-steward upsert; may insert an `owned_vaults` shell when the
   /// ingesting pubkey is the vault owner on a fresh device.
   ///
@@ -250,7 +250,7 @@ class VaultShareService {
     }
   }
 
-  /// Creates and publishes a share confirmation event (kind 1342).
+  /// Creates and publishes a share confirmation event (kind 718).
   Future<String?> sendShareConfirmationEvent({
     required String vaultId,
     required int shareIndex,
@@ -391,7 +391,7 @@ class VaultShareService {
       Log.info('_upsertStewardVaultAndSelf: created vault record $vaultId');
     } else {
       // Version-gate: only update vault metadata if incoming version is newer.
-      // Held shares drive the steward case; manifest-only 1337 never writes
+      // Held shares drive the steward case; manifest-only 713 never writes
       // `held_shares`, so also compare to the vault row's current distribution
       // (hydrated as [Vault.backupConfig.distributionVersion]) so a late stale
       // manifest cannot roll back [Vault.name] / owner display fields.

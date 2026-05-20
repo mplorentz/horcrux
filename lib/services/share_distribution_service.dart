@@ -261,7 +261,7 @@ class ShareDistributionService {
           throw Exception('Failed to publish owner manifest share event');
         }
         Log.info(
-          'Published manifest-only 1337 for vault ${config.vaultId} (owner not self-steward)',
+          'Published manifest-only 713 for vault ${config.vaultId} (owner not self-steward)',
         );
       }
 
@@ -346,7 +346,7 @@ class ShareDistributionService {
     }
   }
 
-  /// Processes share confirmation event received from steward (kind 1342).
+  /// Processes share confirmation event received from steward (kind 718).
   ///
   /// Tag-only wire (empty content): [vault_id], [share_index],
   /// optional [distribution_version]. Steward identity is [Nip01Event.pubKey]
@@ -431,7 +431,7 @@ class ShareDistributionService {
     );
   }
 
-  /// Processes share error event received from steward (kind 1343).
+  /// Processes share error event received from steward (kind 719).
   ///
   /// Wire tag format: vault_id, share_index, error from tags.
   Future<void> processShareErrorEvent({required Nip01Event event}) async {

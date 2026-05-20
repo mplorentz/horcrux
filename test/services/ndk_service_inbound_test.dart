@@ -17,7 +17,7 @@ String? _firstTagValue(List<List<String>> tags, String name) {
 }
 
 Nip01Event _makeEvent({
-  int kind = 1337,
+  int kind = 713,
   String pubKey = TestHexPubkeys.alice,
   List<List<String>> tags = const [],
   String content = '',
@@ -34,22 +34,22 @@ Nip01Event _makeEvent({
 
 void main() {
   group('resolveVaultIdFromTags', () {
-    test('returns vault_id for kind 1337 (shareData)', () {
-      final event = _makeEvent(kind: 1337, tags: [
+    test('returns vault_id for kind 713 (shareData)', () {
+      final event = _makeEvent(kind: 713, tags: [
         ['vault_id', 'vault-123'],
       ]);
       expect(_firstTagValue(event.tags, 'vault_id'), 'vault-123');
     });
 
-    test('returns vault_id for kind 1338 (recoveryRequest)', () {
-      final event = _makeEvent(kind: 1338, tags: [
+    test('returns vault_id for kind 714 (recoveryRequest)', () {
+      final event = _makeEvent(kind: 714, tags: [
         ['vault_id', 'vault-456'],
       ]);
       expect(_firstTagValue(event.tags, 'vault_id'), 'vault-456');
     });
 
-    test('returns vault_id for kind 1339 (recoveryResponse)', () {
-      final event = _makeEvent(kind: 1339, tags: [
+    test('returns vault_id for kind 715 (recoveryResponse)', () {
+      final event = _makeEvent(kind: 715, tags: [
         ['vault_id', 'vault-789'],
       ]);
       expect(_firstTagValue(event.tags, 'vault_id'), 'vault-789');
@@ -71,7 +71,7 @@ void main() {
   });
 
   group('shareFromNostr tag parsing', () {
-    test('parses kind-1337 tags + content to Share', () {
+    test('parses kind-713 tags + content to Share', () {
       final event = _makeEvent(
         content: 'raw-shamir-payload',
         tags: [
@@ -119,7 +119,7 @@ void main() {
 
   group('recovery_request_id tag parsing', () {
     test('reads recovery_request_id from tags', () {
-      final event = _makeEvent(kind: 1338, tags: [
+      final event = _makeEvent(kind: 714, tags: [
         ['recovery_request_id', 'req-abc-123'],
         ['vault_id', 'vault-123'],
       ]);
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('reads is_practice from tags', () {
-      final event = _makeEvent(kind: 1338, tags: [
+      final event = _makeEvent(kind: 714, tags: [
         ['recovery_request_id', 'req-456'],
         ['vault_id', 'vault-456'],
         ['is_practice', 'true'],
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('returns null when recovery_request_id is missing', () {
-      final event = _makeEvent(kind: 1338, tags: [
+      final event = _makeEvent(kind: 714, tags: [
         ['vault_id', 'vault-123'],
       ]);
       expect(_firstTagValue(event.tags, 'recovery_request_id'), isNull);
@@ -147,7 +147,7 @@ void main() {
   group('recovery response tag parsing', () {
     test('reads approved from non-empty content', () {
       final event = _makeEvent(
-        kind: 1339,
+        kind: 715,
         content: 'share-payload-data',
         tags: [
           ['recovery_request_id', 'req-789'],
@@ -162,7 +162,7 @@ void main() {
 
     test('reads denial from empty content without is_practice', () {
       final event = _makeEvent(
-        kind: 1339,
+        kind: 715,
         content: '',
         tags: [
           ['recovery_request_id', 'req-000'],

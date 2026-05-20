@@ -436,20 +436,20 @@ class NdkService {
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
-        case 1337: // [NostrKind.shareData]
+        case 713: // [NostrKind.shareData]
           final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1338: // [NostrKind.recoveryRequest]
+        case 714: // [NostrKind.recoveryRequest]
           final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1339: // [NostrKind.recoveryResponse]
+        case 715: // [NostrKind.recoveryResponse]
           Map<String, dynamic>? m;
           try {
             m = json.decode(inner.content) as Map<String, dynamic>;
           } catch (_) {}
           final id = _vaultIdFromReader(m, inner.tags);
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1342: // [NostrKind.shareConfirmation]
+        case 718: // [NostrKind.shareConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
         default:
           return null;
