@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -131,19 +130,16 @@ void main() {
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
         when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create invitation acceptance event
-        final acceptancePayload = json.encode({
-          'invite_code': invitation.inviteCode,
-          'invitee_pubkey': deviceCPubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
-
+        // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          tags: [],
+          tags: [
+            ['invite_code', invitation.inviteCode],
+            ['vault_id', vaultId],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: acceptancePayload,
+          content: '',
         );
 
         // Act: Process invitation acceptance (which adds Device C as a new steward)
@@ -253,19 +249,16 @@ void main() {
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
         when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create invitation acceptance event with the generated invite code
-        final acceptancePayload = json.encode({
-          'invite_code': generatedInvitation.inviteCode,
-          'invitee_pubkey': deviceCPubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
-
+        // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          tags: [],
+          tags: [
+            ['invite_code', generatedInvitation.inviteCode],
+            ['vault_id', vaultId],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: acceptancePayload,
+          content: '',
         );
 
         // Act: Device C accepts the invitation
@@ -375,19 +368,16 @@ void main() {
 
         when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
 
-        // Create invitation acceptance event
-        final acceptancePayload = json.encode({
-          'invite_code': invitation.inviteCode,
-          'invitee_pubkey': deviceCPubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
-
+        // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          tags: [],
+          tags: [
+            ['invite_code', invitation.inviteCode],
+            ['vault_id', vaultId],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: acceptancePayload,
+          content: '',
         );
 
         // Act: Add Device C as a new steward
@@ -479,18 +469,16 @@ void main() {
         final invitation = invitations.first;
         final inviteCode = invitation.inviteCode;
 
-        // Device B accepts first (via invitation acceptance event)
-        final firstAcceptancePayload = json.encode({
-          'invite_code': inviteCode,
-          'invitee_pubkey': deviceBPubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
+        // Device B accepts first (via invitation acceptance event in canonical tag-based format)
         final firstEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceBPubkey,
-          tags: [],
+          tags: [
+            ['invite_code', inviteCode],
+            ['vault_id', vaultId],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: firstAcceptancePayload,
+          content: '',
         );
         await invitationService.processInvitationAcceptanceEvent(event: firstEvent);
 
@@ -499,18 +487,16 @@ void main() {
         expect(invitationsAfterFirst, isEmpty,
             reason: 'Invitation should not be in pending after first redemption');
 
-        // Device C tries to accept the same invitation
-        final secondAcceptancePayload = json.encode({
-          'invite_code': inviteCode,
-          'invitee_pubkey': deviceCPubkey,
-          'responded_at': DateTime.now().toIso8601String(),
-        });
+        // Device C tries to accept the same invitation (canonical tag-based format)
         final secondEvent = Nip01Event(
           kind: NostrKind.invitationAcceptance.value,
           pubKey: deviceCPubkey,
-          tags: [],
+          tags: [
+            ['invite_code', inviteCode],
+            ['vault_id', vaultId],
+          ],
           createdAt: secondsSinceEpoch(),
-          content: secondAcceptancePayload,
+          content: '',
         );
 
         // Act: Second acceptance should be silently rejected (no exception)

@@ -409,15 +409,22 @@ class NdkService {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
         case 1337: // [NostrKind.shareData]
-          final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String?;
+          // Try JSON content first (legacy), fall back to tags (new format)
+          Map<String, dynamic>? m;
+          try {
+            m = json.decode(inner.content) as Map<String, dynamic>;
+          } catch (_) {}
+          final id = _vaultIdFromReader(m, inner.tags);
           return (id != null && id.isNotEmpty) ? id : null;
         case 1338: // [NostrKind.recoveryRequest]
           final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
         case 1339: // [NostrKind.recoveryResponse]
-          final m = json.decode(inner.content) as Map<String, dynamic>;
-          final id = m['vault_id'] as String?;
+          Map<String, dynamic>? m;
+          try {
+            m = json.decode(inner.content) as Map<String, dynamic>;
+          } catch (_) {}
+          final id = _vaultIdFromReader(m, inner.tags);
           return (id != null && id.isNotEmpty) ? id : null;
         case 1342: // [NostrKind.shareConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
@@ -455,6 +462,16 @@ class NdkService {
       Log.debug('resolveRecoveryRequestIdForGiftWrap failed', e, st);
       return null;
     }
+  }
+
+  /// Try to find [name] in [json] as a field, falling back to extracting it
+  /// as a tag value from [tags]. Returns null when absent in both.
+  String? _vaultIdFromReader(Map<String, dynamic>? json, List<List<String>> tags) {
+    if (json != null) {
+      final v = json['vault_id'] as String?;
+      if (v != null && v.isNotEmpty) return v;
+    }
+    return _firstTagValue(tags, 'vault_id');
   }
 
   String? _firstTagValue(List<List<String>> tags, String name) {
@@ -542,10 +559,14 @@ class NdkService {
     try {
       Log.info('Processing shard data event: ${event.id}');
 
-      final shardJson = json.decode(event.content) as Map<String, dynamic>;
-      var shardData = shareFromJson(shardJson);
-
-      shardData = shardData.copyWith(nostrEventId: event.id);
+      // Try legacy JSON content first, fall back to tag-based canonical format
+      late Share shardData;
+      try {
+        shardData = shareFromJson(json.decode(event.content) as Map<String, dynamic>)
+            .copyWith(nostrEventId: event.id);
+      } catch (_) {
+        shardData = shareFromNostr(event).copyWith(nostrEventId: event.id);
+      }
 
       Log.debug('Shard data: $shardData');
 
@@ -640,24 +661,54 @@ class NdkService {
     Nip01Event event, {
     bool allowLocalNotification = true,
   }) async {
-    final responseData = json.decode(event.content) as Map<String, dynamic>;
+    Map<String, dynamic>? responseData;
+    try {
+      responseData = json.decode(event.content) as Map<String, dynamic>;
+    } catch (_) {}
+
     final senderPubkey = event.pubKey;
 
-    final recoveryRequestId = responseData['recovery_request_id'] as String;
-    final vaultId = responseData['vault_id'] as String;
-    final approved = responseData['approved'] as bool;
+    String recoveryRequestId;
+    String vaultId;
+    bool approved;
+    Share? shardData;
+
+    if (responseData != null) {
+      // Legacy JSON format
+      recoveryRequestId = responseData['recovery_request_id'] as String;
+      vaultId = responseData['vault_id'] as String;
+      approved = responseData['approved'] as bool;
+
+      final shardPayload = responseData['shard_data'];
+      if (approved && shardPayload != null) {
+        shardData = shareFromJson(shardPayload as Map<String, dynamic>);
+      }
+    } else {
+      // Canonical tag-based format
+      recoveryRequestId = _firstTagValue(event.tags, 'recovery_request_id') ?? '';
+      vaultId = _firstTagValue(event.tags, 'vault_id') ?? '';
+      final hasContent = event.content.isNotEmpty;
+      final isPractice = _firstTagValue(event.tags, 'is_practice') == 'true';
+      approved = hasContent || isPractice;
+      if (hasContent) {
+        shardData = shareFromNostr(event);
+      }
+    }
+
+    if (recoveryRequestId.isEmpty) {
+      Log.error('Missing recovery_request_id in recovery response event');
+      return;
+    }
+    if (vaultId.isEmpty) {
+      Log.error('Missing vault_id in recovery response event');
+      return;
+    }
 
     Log.info(
       'Received recovery response from $senderPubkey for vault $vaultId: approved=$approved',
     );
 
-    Share? shardData;
-
-    final shardPayload = responseData['shard_data'];
-    if (approved && shardPayload != null) {
-      final shardDataJson = shardPayload as Map<String, dynamic>;
-      shardData = shareFromJson(shardDataJson);
-
+    if (shardData != null) {
       Log.info(
         'Decoded recovery shard from $senderPubkey for recovery request $recoveryRequestId '
         '(persists via RecoveryService)',

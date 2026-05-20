@@ -474,7 +474,6 @@ class InvitationService {
   /// Invalidates invitation code.
   Future<void> denyInvitation({
     required String inviteCode,
-    String? reason,
   }) async {
     // Validate invite code format first
     if (!isValidInviteCodeFormat(inviteCode)) {
@@ -517,7 +516,6 @@ class InvitationService {
         inviteCode: inviteCode,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
-        reason: reason,
       );
     } catch (e) {
       Log.error('Error sending denial event for invitation $inviteCode', e);
@@ -527,9 +525,7 @@ class InvitationService {
     // Notify listeners
     _notifyInvitationsChanged();
 
-    Log.info(
-      'Denied invitation $inviteCode${reason != null ? ", reason: $reason" : ""}',
-    );
+    Log.info('Denied invitation $inviteCode');
   }
 
   /// Invalidates an invitation (e.g., when invitee removed from backup config)
@@ -682,38 +678,19 @@ class InvitationService {
       throw Exception('No key pair available. Cannot process invitation acceptance event.');
     }
 
-    // Parse the invitation acceptance data from the unwrapped content (already decrypted by NDK)
-    Map<String, dynamic> payload;
-    try {
-      Log.debug('Invitation acceptance event content: ${event.content}');
-      payload = json.decode(event.content) as Map<String, dynamic>;
-      Log.debug('Invitation acceptance event payload keys: ${payload.keys.toList()}');
-    } catch (e) {
-      Log.error('Error parsing invitation acceptance event JSON', e);
-      throw Exception(
-        'Failed to parse invitation acceptance event content. The event may be corrupted or encrypted incorrectly: $e',
-      );
-    }
-
-    // Extract invite code from payload
-    final inviteCode = payload['invite_code'] as String?;
+    // New canonical format: read invite_code and vault_id from tags, invitee from event.pubKey
+    final inviteCode = _extractTagValue(event.tags, 'invite_code');
     if (inviteCode == null) {
-      throw ArgumentError('Missing invite_code in invitation acceptance event payload');
+      throw ArgumentError('Missing invite_code tag in invitation acceptance event');
     }
 
-    // Extract invitee pubkey from payload
-    final inviteePubkey = payload['invitee_pubkey'] as String?;
-    if (inviteePubkey == null || !isValidHexPubkey(inviteePubkey)) {
-      throw ArgumentError('Invalid invitee_pubkey in invitation acceptance event payload');
+    // Invitee pubkey comes from the event author (the person who accepted)
+    final inviteePubkey = event.pubKey;
+    if (!isValidHexPubkey(inviteePubkey)) {
+      throw ArgumentError('Invalid invitee pubkey from event author');
     }
 
-    if (inviteePubkey != event.pubKey) {
-      throw ArgumentError(
-        'Invitee pubkey mismatch: event pubkey != payload pubkey',
-      );
-    }
-
-    final vaultIdFromPayload = payload['vault_id'] as String?;
+    final vaultIdFromPayload = _extractTagValue(event.tags, 'vault_id');
 
     // Load invitation
     final invitation = await _loadInvitation(inviteCode);
@@ -854,29 +831,16 @@ class InvitationService {
       throw Exception('No key pair available. Cannot process denial event.');
     }
 
-    // Parse the denial data from the unwrapped content (already decrypted by NDK)
-    Map<String, dynamic> payload;
-    try {
-      Log.debug('Denial event content: ${event.content}');
-      payload = json.decode(event.content) as Map<String, dynamic>;
-      Log.debug('Denial event payload keys: ${payload.keys.toList()}');
-    } catch (e) {
-      Log.error('Error parsing denial event JSON', e);
-      throw Exception(
-        'Failed to parse denial event content. The event may be corrupted or encrypted incorrectly: $e',
-      );
-    }
-
-    // Extract invite code from payload
-    final inviteCode = payload['invite_code'] as String?;
+    // New canonical format: read invite_code from tags, invitee from event.pubKey
+    final inviteCode = _extractTagValue(event.tags, 'invite_code');
     if (inviteCode == null) {
-      throw ArgumentError('Missing invite_code in denial event payload');
+      throw ArgumentError('Missing invite_code tag in denial event');
     }
 
-    // Extract invitee pubkey from payload (optional for denial)
-    final inviteePubkey = payload['invitee_pubkey'] as String?;
-    if (inviteePubkey != null && !isValidHexPubkey(inviteePubkey)) {
-      throw ArgumentError('Invalid invitee_pubkey in denial event payload');
+    // Invitee pubkey comes from the event author (the person who denied)
+    final inviteePubkey = event.pubKey;
+    if (!isValidHexPubkey(inviteePubkey)) {
+      throw ArgumentError('Invalid invitee pubkey from event author');
     }
 
     // Load invitation
@@ -1232,5 +1196,13 @@ class InvitationService {
       Log.error('Error accessing NDK service to add relays', e);
       // Don't fail invitation generation if relay addition fails
     }
+  }
+
+  /// Helper: extract first value of a named tag from event tags.
+  String? _extractTagValue(List<List<String>> tags, String name) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == name && tag.length >= 2) return tag[1];
+    }
+    return null;
   }
 }
