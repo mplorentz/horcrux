@@ -554,14 +554,8 @@ class NdkService {
     try {
       Log.info('Processing shard data event: ${event.id}');
 
-      // Try legacy JSON content first, fall back to tag-based canonical format
-      late Share shardData;
-      try {
-        shardData = shareFromJson(json.decode(event.content) as Map<String, dynamic>)
-            .copyWith(nostrEventId: event.id);
-      } catch (_) {
-        shardData = shareFromNostr(event).copyWith(nostrEventId: event.id);
-      }
+      // Use canonical tag-based format
+      final shardData = shareFromNostr(event).copyWith(nostrEventId: event.id);
 
       Log.debug('Shard data: $shardData');
 
