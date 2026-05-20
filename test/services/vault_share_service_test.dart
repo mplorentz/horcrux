@@ -37,7 +37,6 @@ void main() {
   late MockPushNotificationReceiver mockPushReceiver;
   late MockRelayScanService mockRelayScanService;
   late VaultRepository repository;
-  late VaultShareService service;
 
   setUp(() {
     mockLoginService = MockLoginService();
@@ -53,13 +52,6 @@ void main() {
     when(mockPushReceiver.isOptedIn()).thenAnswer((_) async => true);
     mockRelayScanService = MockRelayScanService();
     repository = VaultRepository(mockLoginService);
-    service = VaultShareService(
-      repository,
-      () => mockNdkService,
-      () => mockNotificationService,
-      () => mockPushReceiver,
-      () => mockRelayScanService,
-    );
   });
 
   group('VaultShareService.addVaultShare pushEnabled propagation', () {
