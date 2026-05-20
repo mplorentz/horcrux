@@ -99,5 +99,3 @@ flutter:
       fonts:
         - asset: fonts/RobotoMono-Regular.ttf
 
-dependency_overrides:
-  dart_style: ^3.1.0
