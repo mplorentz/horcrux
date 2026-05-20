@@ -401,6 +401,8 @@ class RelayScanService {
       Log.info('Added ${enabledRelays.length} enabled relays to NDK');
     } catch (e) {
       Log.error('Error initializing NDK', e);
+      _isScanning = false;
+      return;
     }
 
     // Update scanning status
