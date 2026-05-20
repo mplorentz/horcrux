@@ -878,7 +878,7 @@ void main() {
   });
 
   group('Share.isValid edge cases', () {
-    Share _baseShare() {
+    Share baseShare() {
       return Share(
         payload: 'abc123',
         threshold: 2,
@@ -891,46 +891,46 @@ void main() {
     }
 
     test('isValid returns false for zero threshold', () {
-      final share = _baseShare().copyWith(threshold: 0);
+      final share = baseShare().copyWith(threshold: 0);
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false for negative createdAt', () {
-      final share = _baseShare().copyWith(createdAt: -1);
+      final share = baseShare().copyWith(createdAt: -1);
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false for empty primeMod', () {
-      final share = _baseShare().copyWith(primeMod: '');
+      final share = baseShare().copyWith(primeMod: '');
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false for empty creatorPubkey', () {
-      final share = _baseShare().copyWith(creatorPubkey: '');
+      final share = baseShare().copyWith(creatorPubkey: '');
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false for shareIndex >= totalShares', () {
-      final share = _baseShare().copyWith(shareIndex: 3, totalShares: 3);
+      final share = baseShare().copyWith(shareIndex: 3, totalShares: 3);
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false when steward pubkey is not 64-char hex', () {
-      final share = _baseShare().copyWith(stewards: [
+      final share = baseShare().copyWith(stewards: [
         {'name': 'Alice', 'pubkey': 'tooshort'},
       ]);
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false when steward name is empty', () {
-      final share = _baseShare().copyWith(stewards: [
+      final share = baseShare().copyWith(stewards: [
         {'name': '', 'pubkey': 'b' * 64},
       ]);
       expect(share.isValid, isFalse);
     });
 
     test('isValid returns false when steward contactInfo exceeds 500 chars', () {
-      final share = _baseShare().copyWith(stewards: [
+      final share = baseShare().copyWith(stewards: [
         {
           'name': 'Alice',
           'pubkey': 'b' * 64,
@@ -941,7 +941,7 @@ void main() {
     });
 
     test('isValid returns false for negative steward shard_index', () {
-      final share = _baseShare().copyWith(stewards: [
+      final share = baseShare().copyWith(stewards: [
         {
           'name': 'Alice',
           'pubkey': 'b' * 64,
@@ -952,7 +952,7 @@ void main() {
     });
 
     test('isValid returns true for steward with valid optional contactInfo', () {
-      final share = _baseShare().copyWith(stewards: [
+      final share = baseShare().copyWith(stewards: [
         {
           'name': 'Alice',
           'pubkey': 'b' * 64,

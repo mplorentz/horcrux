@@ -96,8 +96,8 @@ void main() {
 
   group('RecoveryResponse.isValid', () {
     const validPubkey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    Share _validShare() {
-      return Share(
+    Share validShare() {
+      return const Share(
         payload: 'abc123',
         threshold: 2,
         shareIndex: 0,
@@ -112,7 +112,7 @@ void main() {
       final response = RecoveryResponse(
         pubkey: validPubkey,
         approved: true,
-        share: _validShare(),
+        share: validShare(),
         respondedAt: DateTime.now().subtract(const Duration(minutes: 5)),
       );
       expect(response.isValid, isTrue);
@@ -122,7 +122,7 @@ void main() {
       final response = RecoveryResponse(
         pubkey: 'too-short',
         approved: true,
-        share: _validShare(),
+        share: validShare(),
         respondedAt: DateTime.now().subtract(const Duration(minutes: 5)),
       );
       expect(response.isValid, isFalse);
@@ -141,8 +141,8 @@ void main() {
 
   group('RecoveryResponse JSON serialization', () {
     const validPubkey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    Share _validShare() {
-      return Share(
+    Share validShare() {
+      return const Share(
         payload: 'abc123',
         threshold: 2,
         shareIndex: 0,
@@ -154,7 +154,7 @@ void main() {
     }
 
     test('toJson encodes share as shardData with shareToJson', () {
-      final share = _validShare();
+      final share = validShare();
       final response = RecoveryResponse(
         pubkey: validPubkey,
         approved: true,
@@ -213,7 +213,7 @@ void main() {
       final original = RecoveryResponse(
         pubkey: validPubkey,
         approved: true,
-        share: _validShare(),
+        share: validShare(),
         respondedAt: DateTime.utc(2026, 1, 1),
         nostrEventId: 'nostr-evt-roundtrip',
         errorMessage: null,
@@ -317,7 +317,7 @@ void main() {
         threshold: 2,
         stewardPubkeys: [stewardA],
         responses: [
-          RecoveryResponse(
+          const RecoveryResponse(
             pubkey: stewardA,
             approved: false,
             respondedAt: null,
