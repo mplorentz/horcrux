@@ -72,8 +72,25 @@ abstract final class HorcruxSnackBar {
     // [OverlayEntry.remove] asserts a non-null overlay link; if the overlay was
     // torn down (hot restart, app exit) before the auto-dismiss timer fires,
     // the entry can already be unmounted.
-    if (entry != null && entry.mounted) {
-      entry.remove();
+    //
+    // Also remove entries that are inserted but not yet mounted (e.g. when two
+    // show() calls happen in the same synchronous block — the first entry is
+    // inserted into the overlay but not yet built/mounted by the framework).
+    // These entries are still valid OverlayEntry objects that need cleanup.
+    if (entry != null) {
+      if (entry.mounted) {
+        entry.remove();
+      } else {
+        // Entry was inserted but not yet mounted — try to remove it anyway.
+        // OverlayEntry.remove() on an unmounted entry throws if the overlay
+        // link is null. We wrap in try/catch to handle this gracefully.
+        try {
+          entry.remove();
+        } catch (_) {
+          // Entry wasn't fully mounted — the overlay will simply not build it
+          // since it hasn't been laid out yet.
+        }
+      }
     }
   }
 

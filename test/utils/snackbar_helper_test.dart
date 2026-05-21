@@ -272,5 +272,79 @@ void main() {
         reason: 'Toast should auto-dismiss after screen pop',
       );
     });
+
+    testWidgets(
+        'toast auto-dismisses after replacement + screen pop '
+        '(push-permission scenario)', (tester) async {
+      // Simulates the exact recovery-plan save flow identified by the reviewer:
+      // 1. Show success toast ("Backup configuration saved")
+      // 2. Show error toast ("Push permission not granted") — replaces success
+      // 3. Navigator.pop back to screen A (overlay rebuilds)
+      // 4. Error toast (2.5s) should auto-dismiss
+      final navKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navKey,
+        home: const Scaffold(body: Text('Screen A')),
+      ));
+
+      navKey.currentState!.push(MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              key: const Key('save_with_push_prompt'),
+              onPressed: () {
+                // Step 1: Show success toast
+                context.showHorcruxSnackBar(
+                  'Backup configuration saved successfully!',
+                  kind: HorcruxSnackKind.success,
+                );
+                // Step 2: Push permission check shows error toast
+                // (simulating maybePromptOwnerForVaultPush)
+                context.showHorcruxSnackBar(
+                  'Push permission was not granted.',
+                  kind: HorcruxSnackKind.error,
+                );
+                // Step 3: Pop in next frame (like _popWithOwnerPushPrompt)
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Navigator.of(context).pop();
+                });
+              },
+              child: const Text('Save & Prompt Push'),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Tap the button
+      await tester.tap(find.byKey(const Key('save_with_push_prompt')));
+      await tester.pumpAndSettle();
+
+      // Back on Screen A
+      expect(find.text('Screen A'), findsOneWidget);
+
+      // The error toast (last shown) should be visible, success toast replaced
+      expect(find.text('Push permission was not granted.'), findsOneWidget);
+      expect(
+          find.text('Backup configuration saved successfully!'), findsNothing);
+
+      // At 2s (success duration) — error toast should STILL be visible
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        find.text('Push permission was not granted.'),
+        findsOneWidget,
+        reason: 'Error toast (2.5s) should still be visible at 2s',
+      );
+
+      // At 2.5s+ — error toast should dismiss
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(
+        find.text('Push permission was not granted.'),
+        findsNothing,
+        reason:
+            'Error toast should auto-dismiss after 2.5s even after replacement + screen pop',
+      );
+    });
   });
 }
