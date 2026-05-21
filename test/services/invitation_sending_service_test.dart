@@ -3,6 +3,7 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
 
+import 'package:horcrux/models/key_holder_removal_reason.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/services/invitation_sending_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
@@ -242,6 +243,30 @@ void main() {
 
       expect(capturedContent, isEmpty);
       expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
+      expect(_hasTag(capturedTags, 'reason', 'steward_removed'), isTrue);
+    });
+
+    test('sendKeyHolderRemovalEvent includes vault_deleted reason when provided', () async {
+      List<List<String>> capturedTags = [];
+      when(mockNdkService.publishEncryptedEvent(
+        content: anyNamed('content'),
+        kind: NostrKind.keyHolderRemoved.value,
+        recipientPubkey: anyNamed('recipientPubkey'),
+        relays: anyNamed('relays'),
+        tags: anyNamed('tags'),
+      )).thenAnswer((invocation) async {
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
+        return _stubGiftWrap();
+      });
+
+      await service.sendKeyHolderRemovalEvent(
+        vaultId: 'vault-def',
+        removedStewardPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        relayUrls: ['wss://relay.example.com'],
+        reason: KeyHolderRemovalReason.vaultDeleted,
+      );
+
+      expect(_hasTag(capturedTags, 'reason', 'vault_deleted'), isTrue);
     });
   });
 }

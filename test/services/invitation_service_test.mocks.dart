@@ -6,16 +6,17 @@
 import 'dart:async' as _i7;
 
 import 'package:horcrux/models/backup_config.dart' as _i6;
-import 'package:horcrux/models/backup_status.dart' as _i20;
+import 'package:horcrux/models/backup_status.dart' as _i21;
+import 'package:horcrux/models/key_holder_removal_reason.dart' as _i17;
 import 'package:horcrux/models/nostr_kinds.dart' as _i9;
 import 'package:horcrux/models/recovery_request.dart' as _i15;
-import 'package:horcrux/models/relay_configuration.dart' as _i17;
+import 'package:horcrux/models/relay_configuration.dart' as _i18;
 import 'package:horcrux/models/share.dart' as _i8;
-import 'package:horcrux/models/steward.dart' as _i19;
+import 'package:horcrux/models/steward.dart' as _i20;
 import 'package:horcrux/models/steward_status.dart' as _i14;
 import 'package:horcrux/models/vault.dart' as _i13;
 import 'package:horcrux/providers/vault_provider.dart' as _i12;
-import 'package:horcrux/services/backup_service.dart' as _i18;
+import 'package:horcrux/services/backup_service.dart' as _i19;
 import 'package:horcrux/services/invitation_sending_service.dart' as _i16;
 import 'package:horcrux/services/login_service.dart' as _i10;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
@@ -1155,6 +1156,7 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
     required String? vaultId,
     required String? removedStewardPubkey,
     required List<String>? relayUrls,
+    _i17.KeyHolderRemovalReason? reason = _i17.KeyHolderRemovalReason.stewardRemoved,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1164,6 +1166,7 @@ class MockInvitationSendingService extends _i1.Mock implements _i16.InvitationSe
             #vaultId: vaultId,
             #removedStewardPubkey: removedStewardPubkey,
             #relayUrls: relayUrls,
+            #reason: reason,
           },
         ),
         returnValue: _i7.Future<String?>.value(),
@@ -1207,28 +1210,28 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i17.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
+  _i7.Future<List<_i18.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i7.Future<List<_i17.RelayConfiguration>>.value(<_i17.RelayConfiguration>[]),
-      ) as _i7.Future<List<_i17.RelayConfiguration>>);
+        returnValue: _i7.Future<List<_i18.RelayConfiguration>>.value(<_i18.RelayConfiguration>[]),
+      ) as _i7.Future<List<_i18.RelayConfiguration>>);
 
   @override
-  _i7.Future<_i17.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
+  _i7.Future<_i18.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i7.Future<_i17.RelayConfiguration?>.value(),
-      ) as _i7.Future<_i17.RelayConfiguration?>);
+        returnValue: _i7.Future<_i18.RelayConfiguration?>.value(),
+      ) as _i7.Future<_i18.RelayConfiguration?>);
 
   @override
-  _i7.Future<void> addRelayConfiguration(_i17.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i7.Future<void> addRelayConfiguration(_i18.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
@@ -1238,7 +1241,7 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> updateRelayConfiguration(_i17.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i7.Future<void> updateRelayConfiguration(_i18.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],
@@ -1356,7 +1359,7 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
 /// A class which mocks [BackupService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockBackupService extends _i1.Mock implements _i18.BackupService {
+class MockBackupService extends _i1.Mock implements _i19.BackupService {
   MockBackupService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1366,7 +1369,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i19.Steward>? stewards,
+    required List<_i20.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
   }) =>
@@ -1492,7 +1495,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
   @override
   _i7.Future<void> updateBackupStatus(
     String? vaultId,
-    _i20.BackupStatus? status,
+    _i21.BackupStatus? status,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1545,7 +1548,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
   _i7.Future<_i6.BackupConfig> mergeBackupConfig({
     required String? vaultId,
     int? threshold,
-    List<_i19.Steward>? stewards,
+    List<_i20.Steward>? stewards,
     List<String>? relays,
     String? instructions,
   }) =>
@@ -1625,7 +1628,7 @@ class MockBackupService extends _i1.Mock implements _i18.BackupService {
     required String? vaultId,
     required int? threshold,
     required int? totalKeys,
-    required List<_i19.Steward>? stewards,
+    required List<_i20.Steward>? stewards,
     required List<String>? relays,
     String? instructions,
   }) =>

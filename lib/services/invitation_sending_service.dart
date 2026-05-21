@@ -3,6 +3,7 @@ import '../database/app_database_provider.dart';
 import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../models/nostr_kinds.dart';
+import '../models/key_holder_removal_reason.dart';
 
 /// Provider for InvitationSendingService.
 ///
@@ -228,6 +229,7 @@ class InvitationSendingService {
     required String vaultId,
     required String removedStewardPubkey, // Hex format
     required List<String> relayUrls,
+    KeyHolderRemovalReason reason = KeyHolderRemovalReason.stewardRemoved,
   }) async {
     try {
       Log.warning(
@@ -242,6 +244,7 @@ class InvitationSendingService {
         relays: relayUrls,
         tags: [
           ['vault_id', vaultId],
+          ['reason', reason.wireValue],
         ],
       );
       return event?.id;
