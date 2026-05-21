@@ -40,25 +40,21 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
-          vaultDetailProvider(vaultDetail.id)
-              .overrideWith((ref) => Stream.value(vaultDetail)),
-          currentPublicKeyProvider
-              .overrideWith((ref) async => testPubkey),
+          vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
+          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
         ],
       );
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-              home: VaultDetailScreen(vaultId: 'test-vault')),
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
         ),
       );
       await tester.pumpAndSettle();
 
       // Should show vault deleted message
-      expect(find.text('This vault has been deleted by the owner.'),
-          findsOneWidget);
+      expect(find.text('This vault has been deleted by the owner.'), findsOneWidget);
       expect(find.text('Vault deleted'), findsOneWidget);
       expect(find.text('Remove from my device'), findsOneWidget);
 
@@ -69,64 +65,52 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('shows tombstone for steward removed from vault',
-        (tester) async {
-      final vaultDetail =
-          archivedVault(archivedReason: 'steward_removed');
+    testWidgets('shows tombstone for steward removed from vault', (tester) async {
+      final vaultDetail = archivedVault(archivedReason: 'steward_removed');
 
       final container = ProviderContainer(
         overrides: [
-          vaultDetailProvider(vaultDetail.id)
-              .overrideWith((ref) => Stream.value(vaultDetail)),
-          currentPublicKeyProvider
-              .overrideWith((ref) async => testPubkey),
+          vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
+          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
         ],
       );
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-              home: VaultDetailScreen(vaultId: 'test-vault')),
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
         ),
       );
       await tester.pumpAndSettle();
 
       // Should show "removed from vault" message (not "deleted")
-      expect(
-          find.text('You have been removed from this vault.'), findsOneWidget);
+      expect(find.text('You have been removed from this vault.'), findsOneWidget);
       expect(find.text('steward_removed'), findsOneWidget);
       expect(find.text('Remove from my device'), findsOneWidget);
 
       container.dispose();
     });
 
-    testWidgets(
-        'shows tombstone with default reason when archivedReason is null',
-        (tester) async {
+    testWidgets('shows tombstone with default reason when archivedReason is null', (tester) async {
       final vaultDetail = archivedVault(archivedReason: null);
 
       final container = ProviderContainer(
         overrides: [
-          vaultDetailProvider(vaultDetail.id)
-              .overrideWith((ref) => Stream.value(vaultDetail)),
-          currentPublicKeyProvider
-              .overrideWith((ref) async => testPubkey),
+          vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
+          currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
         ],
       );
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-              home: VaultDetailScreen(vaultId: 'test-vault')),
+          child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
         ),
       );
       await tester.pumpAndSettle();
 
       // Should show "removed" message with default reason
-      expect(
-          find.text('You have been removed from this vault.'), findsOneWidget);
+      expect(find.text('You have been removed from this vault.'), findsOneWidget);
       expect(find.text('Removed by owner'), findsOneWidget);
 
       container.dispose();
@@ -135,16 +119,13 @@ void main() {
 
   group('Archived vault - VaultCard', () {
     testWidgets('shows tombstone card for archived vault', (tester) async {
-      final vaultDetail =
-          archivedVault(archivedReason: 'Vault deleted', name: 'My Vault');
+      final vaultDetail = archivedVault(archivedReason: 'Vault deleted', name: 'My Vault');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vaultDetailProvider(vaultDetail.id)
-                .overrideWith((ref) => Stream.value(vaultDetail)),
-            currentPublicKeyProvider
-                .overrideWith((ref) async => testPubkey),
+            vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -165,17 +146,14 @@ void main() {
       expect(find.byIcon(Icons.archive_outlined), findsOneWidget);
     });
 
-    testWidgets('shows default reason on card when archivedReason is null',
-        (tester) async {
+    testWidgets('shows default reason on card when archivedReason is null', (tester) async {
       final vaultDetail = archivedVault(archivedReason: null);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vaultDetailProvider(vaultDetail.id)
-                .overrideWith((ref) => Stream.value(vaultDetail)),
-            currentPublicKeyProvider
-                .overrideWith((ref) async => testPubkey),
+            vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
           ],
           child: MaterialApp(
             home: Scaffold(

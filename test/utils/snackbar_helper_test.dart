@@ -114,8 +114,7 @@ void main() {
       expect(find.text('Toast B'), findsNothing);
     });
 
-    testWidgets('toast auto-dismiss timer fires after first toast replaced',
-        (tester) async {
+    testWidgets('toast auto-dismiss timer fires after first toast replaced', (tester) async {
       await tester.pumpWidget(testApp);
 
       await tester.tap(find.byKey(const Key('show_a')));
@@ -216,8 +215,7 @@ void main() {
   });
 
   group('HorcruxSnackBar screen pop scenario', () {
-    testWidgets('toast auto-dismisses after Navigator.pop rebuilds overlay',
-        (tester) async {
+    testWidgets('toast auto-dismisses after Navigator.pop rebuilds overlay', (tester) async {
       // Simulates the recovery-plan save flow:
       // 1. Show toast on screen B
       // 2. Pop back to screen A (overlay rebuilds)
@@ -326,8 +324,7 @@ void main() {
 
       // The error toast (last shown) should be visible, success toast replaced
       expect(find.text('Push permission was not granted.'), findsOneWidget);
-      expect(
-          find.text('Backup configuration saved successfully!'), findsNothing);
+      expect(find.text('Backup configuration saved successfully!'), findsNothing);
 
       // At 2s (success duration) — error toast should STILL be visible
       await tester.pump(const Duration(seconds: 2));
@@ -342,8 +339,7 @@ void main() {
       expect(
         find.text('Push permission was not granted.'),
         findsNothing,
-        reason:
-            'Error toast should auto-dismiss after 2.5s even after replacement + screen pop',
+        reason: 'Error toast should auto-dismiss after 2.5s even after replacement + screen pop',
       );
     });
   });

@@ -379,6 +379,10 @@ class VaultRepository {
           vaultId: vaultId,
           shareIndex: share.shareIndex,
           sharePayload: share.payload,
+          // Persist the AEAD blob alongside the share so the steward can
+          // hand it back verbatim during recovery — without the blob, the
+          // owner has no ciphertext to decrypt with the reconstructed key.
+          aeadBlob: Value(share.blob),
           distributionVersion: dist,
           receivedAt: now,
           nostrEventId: Value(share.nostrEventId),
@@ -897,6 +901,9 @@ class VaultRepository {
       createdAt: vaultRow.createdAt ~/ 1000,
       vaultId: r.vaultId,
       vaultName: vaultRow.name,
+      // gf256_v1 stores the AEAD ciphertext bundle here; recovery responses
+      // ride it back to the owner verbatim. DB column is `aead_blob`.
+      blob: r.aeadBlob,
       nostrEventId: r.nostrEventId,
       distributionVersion: r.distributionVersion,
       pushEnabled: r.pushEnabled,
