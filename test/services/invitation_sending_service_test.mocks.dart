@@ -70,8 +70,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> setActiveRelays(List<String>? relayUrls) =>
-      (super.noSuchMethod(
+  _i4.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
         Invocation.method(
           #setActiveRelays,
           [relayUrls],
@@ -140,8 +139,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<_i5.Share?>);
 
   @override
-  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-      (super.noSuchMethod(
+  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
@@ -150,16 +148,15 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>
-      resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) =>
-          (super.noSuchMethod(
-            Invocation.method(
-              #resolveRecoveryRequestIdForGiftWrap,
-              [giftWrap],
-            ),
-            returnValue: _i4.Future<
-                ({_i6.NostrKind kind, String recoveryRequestId})?>.value(),
-          ) as _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>);
+  _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i2.Nip01Event? giftWrap) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resolveRecoveryRequestIdForGiftWrap,
+          [giftWrap],
+        ),
+        returnValue: _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i4.Future<void> closeSubscriptions() => (super.noSuchMethod(
@@ -181,8 +178,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as List<String>);
 
   @override
-  _i4.Future<void> queryHistoricalGiftWraps(
-          {required List<String>? relayUrls}) =>
+  _i4.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
       (super.noSuchMethod(
         Invocation.method(
           #queryHistoricalGiftWraps,
@@ -257,8 +253,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue:
-            _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
+        returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
       ) as _i4.Future<List<_i2.Nip01Event?>>);
 
   @override
