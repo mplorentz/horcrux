@@ -347,10 +347,15 @@ class VaultShareService {
         return;
       }
 
+      // Read reason from tags (default to 'steward_removed' for legacy events)
+      final reason = _extractTagValue(event.tags, 'reason') ?? 'steward_removed';
+
       await repository.saveVault(
         vault.copyWith(
           archivedAt: DateTime.now(),
-          archivedReason: 'Removed by owner',
+          archivedReason: reason == 'vault_deleted'
+              ? 'Vault deleted'
+              : 'Removed by owner',
         ),
       );
       Log.info('processKeyHolderRemoval: archived vault $vaultId');

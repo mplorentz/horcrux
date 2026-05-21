@@ -242,6 +242,30 @@ void main() {
 
       expect(capturedContent, isEmpty);
       expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
+      expect(_hasTag(capturedTags, 'reason', 'steward_removed'), isTrue);
+    });
+
+    test('sendKeyHolderRemovalEvent includes vault_deleted reason when provided', () async {
+      List<List<String>> capturedTags = [];
+      when(mockNdkService.publishEncryptedEvent(
+        content: anyNamed('content'),
+        kind: NostrKind.keyHolderRemoved.value,
+        recipientPubkey: anyNamed('recipientPubkey'),
+        relays: anyNamed('relays'),
+        tags: anyNamed('tags'),
+      )).thenAnswer((invocation) async {
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
+        return _stubGiftWrap();
+      });
+
+      await service.sendKeyHolderRemovalEvent(
+        vaultId: 'vault-def',
+        removedStewardPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        relayUrls: ['wss://relay.example.com'],
+        reason: 'vault_deleted',
+      );
+
+      expect(_hasTag(capturedTags, 'reason', 'vault_deleted'), isTrue);
     });
   });
 }

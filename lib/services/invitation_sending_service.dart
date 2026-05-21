@@ -228,6 +228,7 @@ class InvitationSendingService {
     required String vaultId,
     required String removedStewardPubkey, // Hex format
     required List<String> relayUrls,
+    String reason = 'steward_removed',
   }) async {
     try {
       Log.warning(
@@ -242,6 +243,7 @@ class InvitationSendingService {
         relays: relayUrls,
         tags: [
           ['vault_id', vaultId],
+          ['reason', reason],
         ],
       );
       return event?.id;
