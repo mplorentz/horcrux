@@ -12,6 +12,7 @@ import '../widgets/horcrux_scaffold.dart';
 import '../widgets/name_label.dart';
 import '../widgets/row_button.dart';
 import '../widgets/row_button_stack.dart';
+import 'vault_detail_screen.dart';
 
 /// Screen for accepting or denying an invitation link
 ///
@@ -411,26 +412,19 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
     try {
       final invitationService = ref.read(invitationServiceProvider);
-      await invitationService.redeemInvitation(
+      final vaultId = await invitationService.redeemInvitation(
         inviteCode: widget.inviteCode,
         inviteePubkey: inviteePubkey,
       );
 
       if (mounted) {
-        context.showHorcruxSnackBar(
-          'Invitation accepted successfully!',
-          kind: HorcruxSnackKind.success,
+        // Remove the invitation screen and navigate to vault detail
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+          ),
         );
-
-        // Refresh the invitation data
-        ref.invalidate(invitationByCodeProvider(widget.inviteCode));
-
-        // Navigate back after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        });
       }
     } on InvitationAlreadyRedeemedException {
       setState(() {
