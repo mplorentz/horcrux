@@ -552,7 +552,10 @@ class NdkService {
           allowLocalNotification: allowLocalNotification,
         );
       } else if (unwrappedEvent.kind == NostrKind.invitationAcceptance.value) {
-        await _handleInvitationAcceptance(unwrappedEvent);
+        await _handleInvitationAcceptance(
+          unwrappedEvent,
+          allowLocalNotification: allowLocalNotification,
+        );
       } else if (unwrappedEvent.kind == NostrKind.invitationDenial.value) {
         await _handleInvitationDenial(unwrappedEvent);
       } else if (unwrappedEvent.kind == NostrKind.shareConfirmation.value) {
@@ -759,13 +762,58 @@ class NdkService {
 
   /// Handle incoming invitation acceptance event (kind 1340). Errors propagate
   /// so the outer dispatcher releases the dedup claim and retries.
-  Future<void> _handleInvitationAcceptance(Nip01Event event) async {
+  ///
+  /// After processing succeeds, shows a local notification on the owner's
+  /// device announcing that the steward has accepted.
+  Future<void> _handleInvitationAcceptance(
+    Nip01Event event, {
+    bool allowLocalNotification = true,
+  }) async {
     Log.info('Processing invitation acceptance event: ${event.id}');
     final invitationService = _getInvitationService();
     await invitationService.processInvitationAcceptanceEvent(event: event);
     Log.info(
       'Successfully processed invitation acceptance event: ${event.id}',
     );
+
+    if (allowLocalNotification) {
+      await _notifyInvitationAcceptance(event);
+    }
+  }
+
+  /// Resolves the vault id for an invitation acceptance event and shows a
+  /// local notification via [LocalNotificationService].
+  ///
+  /// Tries the stored invitation first (by invite code), then falls back to
+  /// the `vault_id` tag on the event.
+  Future<void> _notifyInvitationAcceptance(Nip01Event event) async {
+    final inviteCode = _firstTagValue(event.tags, 'invite_code');
+    String? vaultId;
+
+    if (inviteCode != null && inviteCode.isNotEmpty) {
+      try {
+        final invitation =
+            await _getInvitationService().lookupInvitationByCode(inviteCode);
+        if (invitation != null) {
+          vaultId = invitation.vaultId;
+        }
+      } catch (e, st) {
+        Log.debug('Failed to lookup invitation by code for notification', e, st);
+      }
+    }
+
+    vaultId ??= _firstTagValue(event.tags, 'vault_id');
+
+    if (vaultId == null || vaultId.isEmpty) {
+      Log.debug(
+        'Skipping invitation acceptance notification: could not resolve vault id',
+      );
+      return;
+    }
+
+    await _ref
+        .read(localNotificationServiceProvider)
+        .notifyInvitationAcceptanceProcessed(event: event, vaultId: vaultId);
   }
 
   /// Handle incoming invitation denial event (kind 1341). Errors propagate.
