@@ -27,10 +27,10 @@ typedef PushNotificationText = ({String title, String body});
 ///
 /// | Kind                    | Title               | Body                                                                     |
 /// | ----------------------- | ------------------- | ------------------------------------------------------------------------ |
-/// | 1337 shard data         | "Vault updated"     | "Open Horcrux to save the latest data for {owner}'s vault {vault}"       |
-/// | 1338 recovery request   | "Recovery request"  | "{sender} is requesting your key to vault {vault}."                      |
-/// | 1339 recovery response  | "Recovery response" | "{sender} {approved|denied} recovery of {vault}." (sent a shard if null) |
-/// | 1342 shard confirmation | "Steward confirmed" | "{sender} has confirmed they have the latest data for vault {vault}"     |
+/// | 713 shard data         | "Vault updated"     | "Open Horcrux to save the latest data for {owner}'s vault {vault}"       |
+/// | 714 recovery request   | "Recovery request"  | "{sender} is requesting your key to vault {vault}."                      |
+/// | 715 recovery response  | "Recovery response" | "{sender} {approved|denied} recovery of {vault}." (sent a shard if null) |
+/// | 718 shard confirmation | "Steward confirmed" | "{sender} has confirmed they have the latest data for vault {vault}"     |
 ///
 /// Kinds we don't specifically recognize (invitation acceptance/denial,
 /// shard error, etc.) are not pushed -- the helper returns `null` so
@@ -54,7 +54,7 @@ PushNotificationText? composeNotificationText({
 
   switch (kind) {
     case NostrKind.shareData:
-      // The sender of a 1337 gift wrap is the vault owner; use their
+      // The sender of a 713 gift wrap is the vault owner; use their
       // display name to personalize the body.
       return (
         title: 'Vault updated',

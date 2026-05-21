@@ -250,7 +250,8 @@ void main() {
       expect(json['shard_index'], validJsonFixture['shard_index']);
       expect(json['total_shards'], validJsonFixture['total_shards']);
       expect(json['prime_mod'], validJsonFixture['prime_mod']);
-      expect(json['creator_pubkey'], validJsonFixture['creator_pubkey']);
+      expect(json.containsKey('creator_pubkey'), isFalse,
+          reason: 'creator_pubkey no longer emitted on wire');
       expect(json['created_at'], validJsonFixture['created_at']);
       expect(json.containsKey('vault_id'), isFalse);
       expect(json.containsKey('vault_name'), isFalse);
@@ -275,10 +276,8 @@ void main() {
           validJsonWithRecoveryMetadata['total_shards'],
         );
         expect(json['prime_mod'], validJsonWithRecoveryMetadata['prime_mod']);
-        expect(
-          json['creator_pubkey'],
-          validJsonWithRecoveryMetadata['creator_pubkey'],
-        );
+        expect(json.containsKey('creator_pubkey'), isFalse,
+            reason: 'creator_pubkey no longer emitted on wire');
         expect(json['created_at'], validJsonWithRecoveryMetadata['created_at']);
         expect(json['vault_id'], validJsonWithRecoveryMetadata['vault_id']);
         expect(json['vault_name'], validJsonWithRecoveryMetadata['vault_name']);
@@ -308,7 +307,9 @@ void main() {
       expect(decodedShare.shareIndex, originalShare.shareIndex);
       expect(decodedShare.totalShares, originalShare.totalShares);
       expect(decodedShare.scheme, originalShare.scheme);
-      expect(decodedShare.creatorPubkey, originalShare.creatorPubkey);
+      // creatorPubkey is not serialized to wire JSON anymore
+      expect(decodedShare.creatorPubkey, isEmpty,
+          reason: 'creatorPubkey is not in wire JSON anymore');
       expect(decodedShare.createdAt, originalShare.createdAt);
       expect(decodedShare.vaultId, originalShare.vaultId);
       expect(decodedShare.vaultName, originalShare.vaultName);

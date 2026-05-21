@@ -53,7 +53,7 @@ class Share with _$Share {
 
   const Share._();
 
-  /// Wire-level "manifest-only" 1337: empty Shamir payload.
+  /// Wire-level "manifest-only" 713: empty Shamir payload.
   ///
   /// Used when the owner is not a self-steward so relays can still carry a
   /// gift-wrapped recovery-plan snapshot to the owner's pubkey. A manifest
@@ -351,7 +351,6 @@ Map<String, dynamic> shareToJson(Share share) {
     if (share.scheme != null && share.scheme != 'gf256_v1')
       // Write prime_mod for backward compatibility with legacy data
       'prime_mod': share.scheme,
-    'creator_pubkey': share.creatorPubkey,
     'created_at': share.createdAt,
     if (share.vaultId != null) 'vault_id': share.vaultId,
     if (share.vaultName != null) 'vault_name': share.vaultName,
@@ -438,7 +437,8 @@ Share shareFromJson(Map<String, dynamic> json) {
     threshold: _readIntFlexible(json['threshold']),
     shareIndex: shareIndex,
     totalShares: totalShares,
-    creatorPubkey: json['creator_pubkey'] as String,
+    creatorPubkey: (json['creator_pubkey'] as String?) ?? '',
+    // Read scheme from JSON; fall back to prime_mod for legacy data
     scheme: json['scheme'] as String? ?? json['prime_mod'] as String?,
     createdAt: createdAt,
     vaultId: json['vault_id'] as String?,

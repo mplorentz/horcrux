@@ -543,7 +543,7 @@ class VaultRepository {
   /// Ensures an `owned_vaults` row exists for [vaultId] (empty encrypted shell).
   ///
   /// Used when the vault owner (same device pubkey as [vaults.owner_pubkey])
-  /// ingests a manifest-only 1337 on a fresh install so [isOwnedVault] and
+  /// ingests a manifest-only 713 on a fresh install so [isOwnedVault] and
   /// owner UI gates activate while [saveOwnedVaultContent] has not run yet.
   Future<void> ensureOwnedVaultShell(String vaultId) async {
     final existing = await _db.ownedVaultDao.getByVaultId(vaultId);
@@ -817,7 +817,7 @@ class VaultRepository {
     // Owner-role rows are authoritative once the owner has saved backup config
     // on this device. Steward-role rows (from mergeVaultRowFromIncomingShare)
     // are a wire snapshot used when owner rows are absent — e.g. fresh install
-    // from kind-1337 — without letting stale steward snapshots override edits.
+    // from kind-713 — without letting stale steward snapshots override edits.
     final ownerRelayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
     final relayRows = ownerRelayRows.isNotEmpty
         ? ownerRelayRows
@@ -989,7 +989,7 @@ class VaultRepository {
     required int currentDistributionVersion,
   }) async {
     final recordingInboundAck = acknowledgmentEventId != null && acknowledgedAt != null;
-    // Kind-1342 acks attach to the *current* distribution share row so hydration
+    // Kind-718 acks attach to the *current* distribution share row so hydration
     // can compare [acknowledgmentDistributionVersion] to [currentDistributionVersion].
     final distributionVersionForRow = recordingInboundAck
         ? currentDistributionVersion

@@ -22,15 +22,15 @@ This protocol defines the following custom event kinds:
 
 *TODO: all event kinds subject to change*
 
-- `1337`: Share Distribution
-- `1338`: Recovery Request
-- `1339`: Recovery Response  
-- `1340`: Invitation Acceptance
-- `1341`: Invitation Denial
-- `1342`: Share Confirmation *TODO: is there some generic ACK kind already we should reuse here?*
-- `1343`: Share Error
-- `1344`: Invitation Invalid
-- `1345`: Steward Removed
+- `713`: Share Distribution *(was 1337)*
+- `714`: Recovery Request *(was 1338)*
+- `715`: Recovery Response *(was 1339)*
+- `716`: Invitation Acceptance *(was 1340)*
+- `717`: Invitation Denial *(was 1341)*
+- `718`: Share Confirmation *(was 1342)* — *TODO: is there some generic ACK kind already we should reuse here?*
+- `719`: Share Error *(was 1343)*
+- `720`: Invitation Invalid *(was 1344)*
+- `721`: Key Holder Removed *(was 1345)*
 
 All events MUST be wrapped using NIP-59 gift wrap (kind 1059) for privacy and MAY include NIP-40 expiration tags.
 
@@ -220,29 +220,31 @@ Sent by the vault owner to notify an invitee that their invitation code is inval
 }
 ```
 
-### Steward Removed (Kind 1345)
+### Key Holder Removed (Kind 721)
 
 Sent by the vault owner to notify a steward when they are removed from the backup configuration.
+
+Following the canonical format, all data is placed in tags and content is empty.
 
 **Note:** This event MUST be wrapped in a NIP-59 gift wrap before publishing.
 
 ```json
 {
-  "kind": 1345,
+  "kind": 721,
   "pubkey": "<owner-pubkey-hex>",
   "tags": [
     ["p", "<removed-steward-pubkey-hex>"],
-    ["vault", "<vault-id>"]
+    ["vault_id", "<vault-id>"],
+    ["reason", "<reason>"]
   ],
   "created_at": <timestamp>,
-  "content": {
-    "vault_id": "<vault-id>",
-    "vault_name": "My Secret Vault",
-    "timestamp": "2025-11-24T10:00:00Z",
-    "reason": "Backup configuration updated"
-  }
+  "content": ""
 }
 ```
+
+The `reason` tag distinguishes the cause of the removal:
+- `steward_removed`: The owner removed this steward from the vault's backup configuration
+- `vault_deleted`: The owner deleted the entire vault
 
 ### Recovery Request (Kind 1338)
 

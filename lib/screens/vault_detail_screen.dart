@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
+import '../models/key_holder_removal_reason.dart';
 import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
+import '../services/invitation_sending_service.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
@@ -249,6 +251,23 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
             onPressed: () async {
               // Use Riverpod to get the repository - much better for testing!
               final repository = ref.read(vaultRepositoryProvider);
+
+              // Notify all stewards before deleting the vault.
+              if (vault.backupConfig != null) {
+                final config = vault.backupConfig!;
+                final invitationSendingService = ref.read(invitationSendingServiceProvider);
+                for (final steward in config.stewards) {
+                  if (steward.pubkey != null && config.relays.isNotEmpty) {
+                    await invitationSendingService.sendKeyHolderRemovalEvent(
+                      vaultId: vault.id,
+                      removedStewardPubkey: steward.pubkey!,
+                      relayUrls: config.relays,
+                      reason: KeyHolderRemovalReason.vaultDeleted,
+                    );
+                  }
+                }
+              }
+
               await repository.deleteVault(vault.id);
               if (context.mounted) {
                 Navigator.pop(context); // Close dialog

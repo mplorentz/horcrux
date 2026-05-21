@@ -243,8 +243,8 @@ void main() {
       );
       final shares2 = await backupService.generateShamirShares(
         content: testSecret,
-        threshold: 2,
-        totalShards: 3,
+        threshold: 3,
+        totalShards: 5,
         creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
         vaultId: 'different-vault',
         vaultName: 'Different Vault',
@@ -264,7 +264,7 @@ void main() {
         ],
       );
 
-      // Act & Assert - Should throw when mixing shares from different sets
+      // Act & Assert - Should throw when Shamir metadata differs across shares
       expect(
         () => backupService.reconstructFromShares(
           shares: [shares1[0], shares2[1]],

@@ -251,14 +251,14 @@ class BackupService {
       }
 
       // Validate that all shares have the same threshold and totalShards
+      // creatorPubkey is intentionally NOT checked — shares from different stewards
+      // will have different creatorPubkey values, but Shamir combine only needs
+      // matching threshold/totalShares.
       final threshold = shares.first.threshold;
       final totalSharesCount = shares.first.totalShares;
-      final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
-        if (share.threshold != threshold ||
-            share.totalShares != totalSharesCount ||
-            share.creatorPubkey != creatorPubkey) {
+        if (share.threshold != threshold || share.totalShares != totalSharesCount) {
           throw ArgumentError('All shares must have the same parameters');
         }
       }

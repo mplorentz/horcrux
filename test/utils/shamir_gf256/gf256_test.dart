@@ -26,8 +26,7 @@ void main() {
     test('all EXP entries are in 0x00–0xFF', () {
       for (int i = 0; i < GF256.exp3.length; i++) {
         expect(GF256.exp3[i], greaterThanOrEqualTo(0));
-        expect(GF256.exp3[i], lessThanOrEqualTo(255),
-            reason: 'EXP[$i] = ${GF256.exp3[i]}');
+        expect(GF256.exp3[i], lessThanOrEqualTo(255), reason: 'EXP[$i] = ${GF256.exp3[i]}');
       }
     });
 
@@ -39,8 +38,7 @@ void main() {
         seen[GF256.exp3[i]]++;
       }
       for (int v = 1; v < 256; v++) {
-        expect(seen[v], 1,
-            reason: 'byte $v appears ${seen[v]} times in EXP[0..254]');
+        expect(seen[v], 1, reason: 'byte $v appears ${seen[v]} times in EXP[0..254]');
       }
     });
 
@@ -71,22 +69,19 @@ void main() {
     test('all LOG entries are in 0x00–0xFF', () {
       for (int i = 0; i < GF256.log3.length; i++) {
         expect(GF256.log3[i], greaterThanOrEqualTo(0));
-        expect(GF256.log3[i], lessThanOrEqualTo(255),
-            reason: 'LOG[$i] = ${GF256.log3[i]}');
+        expect(GF256.log3[i], lessThanOrEqualTo(255), reason: 'LOG[$i] = ${GF256.log3[i]}');
       }
     });
 
     test('LOG and EXP are inverse for all non-zero bytes', () {
       for (int v = 1; v < 256; v++) {
-        expect(GF256.exp3[GF256.log3[v]], v,
-            reason: 'EXP[LOG[$v]] != $v');
+        expect(GF256.exp3[GF256.log3[v]], v, reason: 'EXP[LOG[$v]] != $v');
       }
     });
 
     test('LOG[EXP[i] mod 255] == i for i in 0..254', () {
       for (int i = 0; i < 255; i++) {
-        expect(GF256.log3[GF256.exp3[i]], i,
-            reason: 'LOG[EXP[$i]] != $i');
+        expect(GF256.log3[GF256.exp3[i]], i, reason: 'LOG[EXP[$i]] != $i');
       }
     });
   });
@@ -159,8 +154,7 @@ void main() {
       for (int i = 0; i < 10; i++) {
         final a = rng.nextInt(256);
         final b = rng.nextInt(256);
-        expect(GF256.multiply(a, b), GF256.multiply(b, a),
-            reason: 'multiply($a, $b)');
+        expect(GF256.multiply(a, b), GF256.multiply(b, a), reason: 'multiply($a, $b)');
       }
     });
 
@@ -205,8 +199,7 @@ void main() {
       for (int i = 0; i < 10; i++) {
         int a = rng.nextInt(255) + 1; // 1..255
         int b = rng.nextInt(255) + 1; // 1..255
-        expect(GF256.divide(GF256.multiply(a, b), b), a,
-            reason: 'divide(multiply($a, $b), $b)');
+        expect(GF256.divide(GF256.multiply(a, b), b), a, reason: 'divide(multiply($a, $b), $b)');
       }
     });
 

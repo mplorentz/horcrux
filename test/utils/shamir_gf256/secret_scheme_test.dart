@@ -67,14 +67,12 @@ void main() {
     final rng = Random(12345);
 
     /// Test a single (threshold, totalShares, secretLength) combination.
-    void testRoundTrip(
-        String label, int threshold, int totalShares, int secretLength) {
-      test('$label: threshold=$threshold, shares=$totalShares, '
+    void testRoundTrip(String label, int threshold, int totalShares, int secretLength) {
+      test(
+          '$label: threshold=$threshold, shares=$totalShares, '
           'secretLength=$secretLength', () async {
-        final scheme = SecretScheme.withRandom(
-            totalShares, threshold, Random(42));
-        final secret = List<int>.generate(
-            secretLength, (_) => rng.nextInt(256));
+        final scheme = SecretScheme.withRandom(totalShares, threshold, Random(42));
+        final secret = List<int>.generate(secretLength, (_) => rng.nextInt(256));
 
         final sharesMap = scheme.createShares(secret);
 
@@ -92,8 +90,7 @@ void main() {
             subMap[x] = sharesMap[x]!;
           }
           final subResult = scheme.combineShares(subMap);
-          expect(subResult, secret,
-              reason: 'Subset $subset round-trip');
+          expect(subResult, secret, reason: 'Subset $subset round-trip');
           checked++;
         }
         expect(checked, greaterThanOrEqualTo(1));
@@ -212,12 +209,10 @@ void main() {
       final twoShares = Map.fromEntries(sharesMap.entries.take(2));
       // Should not crash; result may be wrong but that's expected
       final result = scheme.combineShares(twoShares);
-      expect(result.length, secret.length,
-          reason: 'result length matches secret length');
+      expect(result.length, secret.length, reason: 'result length matches secret length');
     });
 
-    test('duplicate x-coordinates collapse in Map (wrong result, not crash)',
-        () {
+    test('duplicate x-coordinates collapse in Map (wrong result, not crash)', () {
       final scheme = SecretScheme.withRandom(2, 2, Random(42));
       final secret = [0x11, 0x22];
       final sharesMap = scheme.createShares(secret);

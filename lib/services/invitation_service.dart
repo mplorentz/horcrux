@@ -312,7 +312,7 @@ class InvitationService {
   /// Adds invitee to backup config as steward.
   /// Sends invitation acceptance event via InvitationSendingService.
   /// Updates invitation tracking.
-  Future<void> redeemInvitation({
+  Future<String> redeemInvitation({
     required String inviteCode,
     required String inviteePubkey, // Hex format
   }) async {
@@ -464,6 +464,7 @@ class InvitationService {
     _notifyInvitationsChanged();
 
     Log.info('Redeemed invitation $inviteCode by invitee $inviteePubkey');
+    return invitation.vaultId;
   }
 
   /// Processes invitation denial when invitee declines

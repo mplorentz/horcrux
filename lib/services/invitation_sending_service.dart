@@ -3,6 +3,7 @@ import '../database/app_database_provider.dart';
 import '../services/ndk_service.dart';
 import '../services/logger.dart';
 import '../models/nostr_kinds.dart';
+import '../models/key_holder_removal_reason.dart';
 
 /// Provider for InvitationSendingService.
 ///
@@ -30,7 +31,7 @@ class InvitationSendingService {
   ///
   /// Creates invitation acceptance event payload.
   /// Encrypts using NIP-44.
-  /// Creates Nostr event (kind 1340).
+  /// Creates Nostr event (kind 716).
   /// Signs with invitee's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -66,7 +67,7 @@ class InvitationSendingService {
   /// Creates and publishes denial event to decline invitation
   ///
   /// Creates denial event with empty content, data in tags.
-  /// Creates Nostr event (kind 1341).
+  /// Creates Nostr event (kind 717).
   /// Signs with invitee's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -101,7 +102,7 @@ class InvitationSendingService {
   ///
   /// Creates confirmation event payload.
   /// Encrypts using NIP-44.
-  /// Creates Nostr event (kind 1342).
+  /// Creates Nostr event (kind 718).
   /// Signs with steward's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -145,7 +146,7 @@ class InvitationSendingService {
   /// Creates and publishes share error event
   ///
   /// Creates error event with empty content, data in tags.
-  /// Creates Nostr event (kind 1343).
+  /// Creates Nostr event (kind 719).
   /// Signs with steward's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -184,7 +185,7 @@ class InvitationSendingService {
   ///
   /// Creates invalid event payload.
   /// Encrypts using NIP-44.
-  /// Creates Nostr event (kind 1344).
+  /// Creates Nostr event (kind 720).
   /// Signs with vault owner's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -220,7 +221,7 @@ class InvitationSendingService {
   /// Creates and publishes steward removed event
   ///
   /// Creates removal event with empty content, data in tags.
-  /// Creates Nostr event (kind 1345).
+  /// Creates Nostr event (kind 721).
   /// Signs with vault owner's private key.
   /// Publishes to relays.
   /// Returns event ID, or null if publishing fails.
@@ -228,6 +229,7 @@ class InvitationSendingService {
     required String vaultId,
     required String removedStewardPubkey, // Hex format
     required List<String> relayUrls,
+    KeyHolderRemovalReason reason = KeyHolderRemovalReason.stewardRemoved,
   }) async {
     try {
       Log.warning(
@@ -242,6 +244,7 @@ class InvitationSendingService {
         relays: relayUrls,
         tags: [
           ['vault_id', vaultId],
+          ['reason', reason.wireValue],
         ],
       );
       return event?.id;
