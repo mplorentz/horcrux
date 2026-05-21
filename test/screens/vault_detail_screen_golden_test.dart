@@ -640,10 +640,6 @@ void main() {
       await harness.dispose();
     });
 
-    // Skipped: golden PNGs must be generated on macOS.
-    // Remove `skip: true` and run
-    //   flutter test test/screens --update-goldens
-    // on macOS before merging.
     testGoldens('archived vault - deleted by owner', (tester) async {
       final archivedVault = Vault(
         id: 'test-vault',
@@ -672,12 +668,8 @@ void main() {
       );
 
       await harness.dispose();
-    }, skip: true);
+    });
 
-    // Skipped: golden PNGs must be generated on macOS.
-    // Remove `skip: true` and run
-    //   flutter test test/screens --update-goldens
-    // on macOS before merging.
     testGoldens('archived vault - steward removed', (tester) async {
       final archivedVault = Vault(
         id: 'test-vault',
@@ -711,7 +703,7 @@ void main() {
       );
 
       await harness.dispose();
-    }, skip: true);
+    });
 
     testGoldens('recovery notification', (tester) async {
       // Create a recovery request initiated by someone else (not testPubkey)
