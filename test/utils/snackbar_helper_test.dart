@@ -6,7 +6,6 @@ import 'package:horcrux/utils/snackbar_helper.dart';
 // Flutter's fake clock advances in pump() increments, so exact timing
 // depends on pump granularity.
 const _successDuration = Duration(seconds: 2);
-const _errorDuration = Duration(milliseconds: 2500);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
