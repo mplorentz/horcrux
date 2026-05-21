@@ -254,7 +254,7 @@ class VaultDetailRepository {
       threshold: vaultRow.threshold,
       shareIndex: r.shareIndex,
       totalShares: vaultRow.totalShares,
-      primeMod: vaultRow.primeMod ?? '',
+      scheme: vaultRow.primeMod == null ? 'gf256_v1' : null,
       creatorPubkey: vaultRow.ownerPubkey,
       createdAt: vaultRow.createdAt ~/ 1000,
       vaultId: r.vaultId,

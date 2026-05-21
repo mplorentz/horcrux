@@ -49,7 +49,7 @@ class _StubBackupService extends BackupService {
     for (final share in shares) {
       if (share.threshold != first.threshold ||
           share.totalShares != first.totalShares ||
-          share.primeMod != first.primeMod ||
+          share.scheme != first.scheme ||
           share.creatorPubkey != first.creatorPubkey) {
         throw ArgumentError('All shares must have the same parameters');
       }
@@ -394,7 +394,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'test_prime_mod',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: 'Test Vault',
@@ -531,7 +531,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'test_prime_CCC=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: 'Recovered Vault',
@@ -615,7 +615,7 @@ void main() {
         threshold: 1,
         shareIndex: 0,
         totalShares: 1,
-        primeMod: 'test_prime=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
@@ -651,7 +651,7 @@ void main() {
         threshold: 1,
         shareIndex: 0,
         totalShares: 1,
-        primeMod: 'test_prime=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
@@ -685,7 +685,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 2,
-        primeMod: 'test_prime_DDD=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
@@ -696,7 +696,7 @@ void main() {
         threshold: 2,
         shareIndex: 1,
         totalShares: 2,
-        primeMod: 'test_prime_DDD=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
       );
@@ -770,7 +770,7 @@ void main() {
           threshold: 1,
           shareIndex: 0,
           totalShares: 1,
-          primeMod: 'test_prime_EEE=',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
           vaultName: 'Test Vault',
@@ -859,7 +859,7 @@ void main() {
         threshold: 1,
         shareIndex: 0,
         totalShares: 1,
-        primeMod: 'test_prime_FFF=',
+        scheme: null,
         creatorPubkey: testCreatorPubkey,
         vaultId: testVaultId,
         vaultName: 'Test Vault',
@@ -939,7 +939,7 @@ void main() {
         true,
       );
       expect(
-        capturedTags!.any((t) => t[0] == 'prime_mod' && t[1] == 'test_prime_FFF='),
+        capturedTags!.any((t) => t[0] == 'scheme'),
         true,
       );
       expect(
@@ -1322,7 +1322,7 @@ void main() {
           threshold: 3,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1351,7 +1351,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1365,7 +1365,7 @@ void main() {
           threshold: 2,
           shareIndex: 1,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1398,7 +1398,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1437,7 +1437,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1451,7 +1451,7 @@ void main() {
           threshold: 2,
           shareIndex: 1,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1482,7 +1482,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: testCreatorPubkey,
           vaultId: testVaultId,
         ),
@@ -1499,7 +1499,7 @@ void main() {
           threshold: 2,
           shareIndex: 1,
           totalShares: 2,
-          primeMod: 'prime123',
+          scheme: null,
           creatorPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
           vaultId: testVaultId,
         ),

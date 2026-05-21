@@ -387,14 +387,8 @@ class VaultRepository {
         ),
       );
       await _db.heldShareDao.pruneOldVersions(vaultId);
-      // Write primeMod to the vault row when provided so that
-      // _shareFromHeldShareRow can hydrate valid Share objects. For owned
-      // vaults, _persistVault doesn't write primeMod (BackupConfig doesn't
-      // carry it); persisting it here fills that gap. For steward vaults
-      // mergeVaultRowFromIncomingShare already set it, so this is idempotent.
-      final vaultsUpdate = share.primeMod.isNotEmpty
-          ? VaultsCompanion(primeMod: Value(share.primeMod), lastSyncedAt: Value(now))
-          : VaultsCompanion(lastSyncedAt: Value(now));
+      // GF(256) has no prime to specify. Update lastSynced timestamp.
+      final vaultsUpdate = VaultsCompanion(lastSyncedAt: Value(now));
       await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(vaultsUpdate);
     });
     Log.info(
@@ -511,7 +505,6 @@ class VaultRepository {
         VaultsCompanion(
           threshold: Value(share.threshold),
           totalShares: Value(share.totalShares),
-          primeMod: Value(share.primeMod),
           currentDistributionVersion: Value(
             incomingDist > row.currentDistributionVersion
                 ? incomingDist
@@ -899,7 +892,7 @@ class VaultRepository {
       threshold: vaultRow.threshold,
       shareIndex: r.shareIndex,
       totalShares: vaultRow.totalShares,
-      primeMod: vaultRow.primeMod ?? '',
+      scheme: vaultRow.primeMod == null ? 'gf256_v1' : null,
       creatorPubkey: vaultRow.ownerPubkey,
       createdAt: vaultRow.createdAt ~/ 1000,
       vaultId: r.vaultId,

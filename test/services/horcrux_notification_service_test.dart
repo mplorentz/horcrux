@@ -487,7 +487,7 @@ void main() {
         threshold: 1,
         shareIndex: 0,
         totalShares: coStewardPubkeys.length + 1,
-        primeMod: TestShare.testPrimeMod,
+        scheme: TestShare.testPrimeMod,
         creatorPubkey: owner,
         createdAt: createdAt,
         distributionVersion: distributionVersion,

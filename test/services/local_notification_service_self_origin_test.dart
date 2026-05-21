@@ -88,7 +88,7 @@ void main() {
       threshold: 2,
       shareIndex: 0,
       totalShares: 3,
-      primeMod: TestShare.testPrimeMod,
+      scheme: TestShare.testPrimeMod,
       creatorPubkey: TestShare.testCreatorPubkey,
       createdAt: 1700000000,
       vaultId: vaultId,

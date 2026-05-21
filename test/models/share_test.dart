@@ -11,7 +11,7 @@ Share _validRealShare() {
     threshold: 2,
     shareIndex: 0,
     totalShares: 3,
-    primeMod: 'abc',
+    scheme: null,
     creatorPubkey: 'a' * 64,
     createdAt: secondsSinceEpoch(),
     vaultId: 'vault-1',
@@ -26,7 +26,7 @@ void main() {
         threshold: 2,
         shareIndex: -1,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
       );
@@ -40,7 +40,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a' * 64,
           createdAt: secondsSinceEpoch(),
         ).isManifest,
@@ -56,7 +56,7 @@ void main() {
         threshold: 2,
         shareIndex: -1,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
         stewards: [
@@ -72,7 +72,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
       );
@@ -85,7 +85,7 @@ void main() {
         threshold: 2,
         shareIndex: -2,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
       );
@@ -98,7 +98,7 @@ void main() {
         threshold: 2,
         shareIndex: -1,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
       );
@@ -158,7 +158,7 @@ void main() {
       expect(shardData.threshold, validJsonFixture['threshold']);
       expect(shardData.shareIndex, validJsonFixture['shard_index']);
       expect(shardData.totalShares, validJsonFixture['total_shards']);
-      expect(shardData.primeMod, validJsonFixture['prime_mod']);
+      expect(shardData.scheme, validJsonFixture['prime_mod']);
       expect(shardData.creatorPubkey, validJsonFixture['creator_pubkey']);
       expect(shardData.createdAt, validJsonFixture['created_at']);
       expect(shardData.vaultId, isNull);
@@ -217,7 +217,7 @@ void main() {
           shardData.totalShares,
           validJsonWithRecoveryMetadata['total_shards'],
         );
-        expect(shardData.primeMod, validJsonWithRecoveryMetadata['prime_mod']);
+        expect(shardData.scheme, validJsonWithRecoveryMetadata['prime_mod']);
         expect(
           shardData.creatorPubkey,
           validJsonWithRecoveryMetadata['creator_pubkey'],
@@ -306,7 +306,7 @@ void main() {
       expect(decodedShare.threshold, originalShare.threshold);
       expect(decodedShare.shareIndex, originalShare.shareIndex);
       expect(decodedShare.totalShares, originalShare.totalShares);
-      expect(decodedShare.primeMod, originalShare.primeMod);
+      expect(decodedShare.scheme, originalShare.scheme);
       // creatorPubkey is not serialized to wire JSON anymore
       expect(decodedShare.creatorPubkey, isEmpty,
           reason: 'creatorPubkey is not in wire JSON anymore');
@@ -378,7 +378,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'ZmZmZmZmZmZmZg==',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
@@ -396,7 +396,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
@@ -410,7 +410,7 @@ void main() {
           threshold: 0, // Too low
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
@@ -424,7 +424,7 @@ void main() {
           threshold: 5, // Greater than totalShards
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
@@ -438,7 +438,7 @@ void main() {
           threshold: 2,
           shareIndex: -1, // Negative
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
@@ -452,21 +452,21 @@ void main() {
           threshold: 2,
           shareIndex: 3, // >= totalShards
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
       );
     });
 
-    test('createShare validates empty primeMod', () {
+    test('createShare validates empty scheme', () {
       expect(
         () => createShare(
           payload: 'abc123',
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: '', // Empty
+          scheme: '', // Empty scheme string
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         ),
         throwsA(isA<ArgumentError>()),
@@ -480,7 +480,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: '', // Empty
         ),
         throwsA(isA<ArgumentError>()),
@@ -494,7 +494,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'not-hex', // Invalid hex
         ),
@@ -509,7 +509,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           recipientPubkey: 'abcd1234', // Too short
         ),
@@ -526,7 +526,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'abc',
+          scheme: null,
           creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
           isReceived: true,
           receivedAt: futureDate, // Future date
@@ -541,7 +541,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         recipientPubkey: 'b22bd84f68f94fa53fa9cdf624ef663ccdeb4c7260d9f0ab97d7254f1d9c8454',
       );
@@ -556,7 +556,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'QW5vdGhlckJhc2U2NFN0cmluZ0hlcmU=',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
@@ -571,7 +571,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
@@ -581,7 +581,7 @@ void main() {
       expect(copy.shareIndex, equals(1));
       expect(copy.payload, equals(original.payload));
       expect(copy.totalShares, equals(original.totalShares));
-      expect(copy.primeMod, equals(original.primeMod));
+      expect(copy.scheme, equals(original.scheme));
       expect(copy.creatorPubkey, equals(original.creatorPubkey));
     });
 
@@ -592,7 +592,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
         vaultId: null,
@@ -619,7 +619,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: pastTimestamp,
         vaultId: null,
@@ -646,7 +646,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: recentTimestamp,
         vaultId: null,
@@ -672,7 +672,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
         createdAt: oldTimestamp,
         vaultId: null,
@@ -697,7 +697,7 @@ void main() {
         threshold: 2,
         shareIndex: 1,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
       );
 
@@ -722,7 +722,7 @@ void main() {
         threshold: 2,
         shareIndex: shareIndex,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: createdAt,
         distributionVersion: distributionVersion,
@@ -810,7 +810,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: creatorPubkey,
         vaultId: 'vault-1',
         vaultName: 'My Vault',
@@ -874,7 +874,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc123',
+        scheme: null,
         creatorPubkey: creatorPubkey,
         createdAt: 1759759657,
         vaultId: 'vault-1',
@@ -901,8 +901,8 @@ void main() {
           reason: 'should have total_shares tag');
       expect(tags.any((t) => t[0] == 'threshold' && t[1] == '2'), isTrue,
           reason: 'should have threshold tag');
-      expect(tags.any((t) => t[0] == 'prime_mod' && t[1] == 'abc123'), isTrue,
-          reason: 'should have prime_mod tag');
+      expect(tags.any((t) => t[0] == 'scheme' && t[1] == 'gf256_v1'), isTrue,
+          reason: 'should have scheme tag');
     });
 
     test('includes optional string tags when present', () {
@@ -964,7 +964,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: creatorPubkey,
         createdAt: 1759759657,
       );
@@ -986,7 +986,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: 1759759657,
       );
@@ -999,7 +999,7 @@ void main() {
         threshold: 2,
         shareIndex: -1,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: 1759759657,
       );
@@ -1012,7 +1012,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: 1759759657,
       );
@@ -1054,7 +1054,7 @@ void main() {
       expect(share.shareIndex, 2);
       expect(share.totalShares, 5);
       expect(share.threshold, 3);
-      expect(share.primeMod, 'xyz789');
+      expect(share.scheme, 'xyz789');
       expect(share.creatorPubkey, creatorPubkey);
       expect(share.createdAt, 1759759657);
       expect(share.recipientPubkey, 'r' * 64);
@@ -1207,7 +1207,7 @@ void main() {
         threshold: 3,
         shareIndex: 1,
         totalShares: 5,
-        primeMod: 'prime-mod-value',
+        scheme: null,
         creatorPubkey: creatorPubkey,
         createdAt: 1759759657,
         vaultId: 'vault-1',
@@ -1239,7 +1239,8 @@ void main() {
       expect(decoded.threshold, original.threshold);
       expect(decoded.shareIndex, original.shareIndex);
       expect(decoded.totalShares, original.totalShares);
-      expect(decoded.primeMod, original.primeMod);
+      // scheme normalizes null → 'gf256_v1' during wire round-trip
+      expect(decoded.scheme, 'gf256_v1');
       expect(decoded.creatorPubkey, original.creatorPubkey);
       expect(decoded.createdAt, original.createdAt);
       expect(decoded.vaultId, original.vaultId);
@@ -1263,7 +1264,7 @@ void main() {
         threshold: 2,
         shareIndex: -1,
         totalShares: 3,
-        primeMod: 'abc',
+        scheme: null,
         creatorPubkey: creatorPubkey,
         createdAt: 1759759657,
         vaultId: 'vault-m',
@@ -1328,7 +1329,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: 'a' * 64,
         createdAt: secondsSinceEpoch(),
       );
@@ -1344,8 +1345,8 @@ void main() {
       expect(share.isValid, isFalse);
     });
 
-    test('isValid returns false for empty primeMod', () {
-      final share = baseShare().copyWith(primeMod: '');
+    test('isValid returns false for empty scheme', () {
+      final share = baseShare().copyWith(scheme: '');
       expect(share.isValid, isFalse);
     });
 

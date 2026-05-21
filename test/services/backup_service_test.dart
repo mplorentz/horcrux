@@ -95,8 +95,8 @@ void main() {
         expect(shares[i].creatorPubkey, testCreatorPubkey);
         expect(shares[i].payload, isA<String>());
         expect(shares[i].payload.isNotEmpty, true);
-        expect(shares[i].primeMod, isA<String>());
-        expect(shares[i].primeMod.isNotEmpty, true);
+        expect(shares[i].scheme, isA<String>());
+        expect(shares[i].scheme!.isNotEmpty, true);
       }
     });
 
@@ -353,7 +353,7 @@ void main() {
       // Create tampered shares with an invalid prime modulus
       final tamperedShares = validShares.map((share) {
         return share.copyWith(
-          primeMod: invalidPrimeMod, // Replace with invalid prime
+          scheme: invalidPrimeMod, // Replace with invalid prime
         );
       }).toList();
 
@@ -364,7 +364,7 @@ void main() {
           isA<ArgumentError>().having(
             (e) => e.message,
             'message',
-            contains('Invalid prime modulus'),
+            contains('Unsupported scheme'),
           ),
         ),
       );
