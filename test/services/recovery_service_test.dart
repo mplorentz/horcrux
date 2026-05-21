@@ -430,7 +430,8 @@ void main() {
         expect(shardDataJson['threshold'], 2);
         expect(shardDataJson['shard_index'], 0);
         expect(shardDataJson['total_shards'], 3);
-        expect(shardDataJson['creator_pubkey'], testCreatorPubkey);
+        expect(shardDataJson.containsKey('creator_pubkey'), isFalse,
+            reason: 'creator_pubkey no longer emitted on wire');
         expect(shardDataJson['vault_id'], testVaultId);
         expect(shardDataJson['vault_name'], 'Test Vault');
       },
@@ -1251,7 +1252,7 @@ void main() {
       expect(content, 'reconstructed-secret-data');
     });
 
-    test('throws when shares have mismatched parameters', () async {
+    test('succeeds when shares have different creatorPubkey', () async {
       final recoveryRequest = await recoveryService.initiateRecovery(
         testVaultId,
         initiatorPubkey: testCreatorPubkey,
@@ -1275,8 +1276,8 @@ void main() {
         ),
       );
 
-      // Second share with a different creatorPubkey — reconstructFromShares
-      // validates that all shares have the same parameters
+      // Second share with a different creatorPubkey — Shamir combine only
+      // requires matching threshold/totalShares/primeMod.
       await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder2,
@@ -1292,10 +1293,10 @@ void main() {
         ),
       );
 
-      await expectLater(
-        () => recoveryService.performRecovery(recoveryRequest.id),
-        throwsA(isA<ArgumentError>()),
-      );
+      // Update the request status to inProgress so performRecovery can proceed
+      // (the test setup may need to mark the request as inProgress)
+      final content = await recoveryService.performRecovery(recoveryRequest.id);
+      expect(content, isNotEmpty);
     });
   });
 }
