@@ -753,7 +753,12 @@ class RecoveryService {
           // nostrEventId (first check) rather than by respondedAt (second
           // check). This also improves log clarity — the echo shows
           // 'duplicate' instead of 'already processed'.
-          unawaited(_backfillNostrEventId(request.vaultId, recoveryRequestId, eventId));
+          unawaited(_backfillNostrEventId(
+            request.vaultId,
+            recoveryRequestId,
+            responderPubkey,
+            eventId,
+          ));
         } else {
           Log.warning('No relay URLs available for sending recovery response');
         }
@@ -1223,28 +1228,29 @@ class RecoveryService {
   Future<void> _backfillNostrEventId(
     String vaultId,
     String recoveryRequestId,
+    String responderPubkey,
     String eventId,
   ) async {
     try {
       final request = await getRecoveryRequest(recoveryRequestId);
       if (request == null) return;
-      for (final response in request.responses) {
-        if (response.nostrEventId == null && response.respondedAt != null) {
-          final updated = response.copyWith(nostrEventId: eventId);
-          final updatedRequest = request.withUpsertedResponse(response: updated);
-          await repository.updateRecoveryRequestInVault(
-            vaultId,
-            recoveryRequestId,
-            updatedRequest,
-          );
-          Log.info(
-            'Backfilled nostrEventId for response from '
-            '${response.pubkey.substring(0, 8)}... '
-            '(event: ${eventId.substring(0, 8)}...)',
-          );
-          return;
-        }
+      // Find the response for THIS pubkey (not the first match)
+      final existing = request.responseForPubkey(responderPubkey);
+      if (existing == null || existing.nostrEventId != null || existing.respondedAt == null) {
+        return;
       }
+      final updated = existing.copyWith(nostrEventId: eventId);
+      final updatedRequest = request.withUpsertedResponse(response: updated);
+      await repository.updateRecoveryRequestInVault(
+        vaultId,
+        recoveryRequestId,
+        updatedRequest,
+      );
+      Log.info(
+        'Backfilled nostrEventId for response from '
+        '${responderPubkey.substring(0, 8)}... '
+        '(event: ${eventId.substring(0, 8)}...)',
+      );
     } catch (e) {
       Log.error('Failed to backfill nostrEventId for recovery response', e);
     }
