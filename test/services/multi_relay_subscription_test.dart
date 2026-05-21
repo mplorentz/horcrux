@@ -95,7 +95,7 @@ void main() {
 
           // Subscribe to relay 1 with cacheRead: false (correct behavior)
           final sub1 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay1.url],
             cacheRead: false,
           );
@@ -104,7 +104,7 @@ void main() {
 
           // Subscribe to relay 2 with cacheRead: false
           final sub2 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay2.url],
             cacheRead: false,
           );
@@ -162,7 +162,7 @@ void main() {
 
           // Subscribe with cacheRead:true (BUG — triggers ConcurrencyCheck dedup)
           final sub1 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay1.url],
             cacheRead: true,
           );
@@ -170,7 +170,7 @@ void main() {
           final s1 = sub1.stream.listen((e) => events1.add(e));
 
           final sub2 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay2.url],
             cacheRead: true,
           );
@@ -226,7 +226,7 @@ void main() {
 
           // Round 1: subscribe
           final sub1 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay.url],
             cacheRead: false,
           );
@@ -242,7 +242,7 @@ void main() {
 
           // Round 2: re-subscribe
           final sub2 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay.url],
             cacheRead: false,
           );
@@ -293,7 +293,7 @@ void main() {
 
           // Round 1: subscribe but don't close at NDK level
           final sub1 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay.url],
             cacheRead: false,
           );
@@ -306,7 +306,7 @@ void main() {
 
           // Round 2: re-subscribe with cacheRead:false
           final sub2 = ndk.requests.subscription(
-            filters: [filter],
+            filter: filter,
             explicitRelays: [relay.url],
             cacheRead: false,
           );
