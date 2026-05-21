@@ -289,7 +289,7 @@ class ShareDistributionService {
             since: shareEvent.createdAt.secondsSinceEpoch,
           );
 
-          final acknowledgmentResponse = ndk.requests.query(filters: [filter]);
+          final acknowledgmentResponse = ndk.requests.query(filter: filter);
 
           // Get the events from the response
           final acknowledgmentEvents = await acknowledgmentResponse.future;

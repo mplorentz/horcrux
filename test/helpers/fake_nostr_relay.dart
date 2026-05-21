@@ -55,7 +55,7 @@ class FakeNostrRelay {
     subId ??= _activeSubscriptions.keys.firstOrNull;
 
     if (subId != null) {
-      _webSocket!.add(jsonEncode(['EVENT', subId, event.toJson()]));
+      _webSocket!.add(jsonEncode(['EVENT', subId, Nip01EventModel.fromEntity(event).toJson()]));
     }
   }
 
@@ -153,7 +153,8 @@ Nip01Event makeGiftWrapEvent({
   required String id,
   int createdAt = 0,
 }) {
-  final event = Nip01Event(
+  return Nip01Event(
+    id: id,
     pubKey: 'a' * 64,
     kind: 1059,
     tags: [
@@ -162,6 +163,4 @@ Nip01Event makeGiftWrapEvent({
     content: '{"kind":1,"content":"test"}',
     createdAt: createdAt,
   );
-  event.id = id;
-  return event;
 }

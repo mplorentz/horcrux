@@ -281,13 +281,11 @@ class NdkService {
       // subscriptions with identical filters (e.g. when subscribing to a second
       // relay). We handle our own dedup via ProcessedNostrEventStore.
       final response = _ndk!.requests.subscription(
-        filters: [
-          Filter(
-            kinds: [NostrKind.giftWrap.value],
-            pTags: [myPubkey],
-            since: sinceFilter,
-          ),
-        ],
+        filter: Filter(
+          kinds: [NostrKind.giftWrap.value],
+          pTags: [myPubkey],
+          since: sinceFilter,
+        ),
         explicitRelays: [relayUrl],
         cacheRead: false,
       );
@@ -366,7 +364,7 @@ class NdkService {
         ids: [eventIdHex],
       );
       final response = _ndk!.requests.query(
-        filters: [filter],
+        filter: filter,
         explicitRelays: relays,
       );
       final events = await response.future;
@@ -866,9 +864,7 @@ class NdkService {
     );
 
     final response = _ndk!.requests.query(
-      filters: [
-        Filter(kinds: [NostrKind.giftWrap.value], pTags: [myPubkey]),
-      ],
+      filter: Filter(kinds: [NostrKind.giftWrap.value], pTags: [myPubkey]),
       explicitRelays: relayUrls,
     );
 

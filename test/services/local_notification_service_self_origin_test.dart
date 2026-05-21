@@ -58,12 +58,13 @@ void main() {
     String id = 'evt-shard-confirm-1',
   }) {
     return Nip01Event(
+      id: id,
       pubKey: senderPubkey,
       kind: 718,
       tags: const [],
       createdAt: createdAt,
       content: '',
-    )..id = id;
+    );
   }
 
   Nip01Event buildShare({
@@ -72,12 +73,13 @@ void main() {
     String id = 'evt-shard-data-1',
   }) {
     return Nip01Event(
+      id: id,
       pubKey: senderPubkey,
       kind: 713,
       tags: const [],
       createdAt: createdAt,
       content: '',
-    )..id = id;
+    );
   }
 
   Share makeShare({String vaultId = 'vault-1'}) {

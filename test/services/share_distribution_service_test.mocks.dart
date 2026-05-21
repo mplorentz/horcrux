@@ -100,6 +100,7 @@ class MockBroadcast extends _i1.Mock implements _i2.Broadcast {
     _i2.EventSigner? customSigner,
     double? considerDonePercent,
     Duration? timeout,
+    bool? saveToCache,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -111,6 +112,7 @@ class MockBroadcast extends _i1.Mock implements _i2.Broadcast {
             #customSigner: customSigner,
             #considerDonePercent: considerDonePercent,
             #timeout: timeout,
+            #saveToCache: saveToCache,
           },
         ),
         returnValue: _FakeNdkBroadcastResponse_0(
@@ -124,6 +126,7 @@ class MockBroadcast extends _i1.Mock implements _i2.Broadcast {
               #customSigner: customSigner,
               #considerDonePercent: considerDonePercent,
               #timeout: timeout,
+              #saveToCache: saveToCache,
             },
           ),
         ),
@@ -161,18 +164,30 @@ class MockBroadcast extends _i1.Mock implements _i2.Broadcast {
 
   @override
   _i2.NdkBroadcastResponse broadcastDeletion({
-    required String? eventId,
+    _i2.Nip01Event? event,
+    List<_i2.Nip01Event>? events,
+    _i2.Nip01Event? eventAndAllVersions,
+    List<_i2.Nip01Event>? eventsAndAllVersions,
+    String? eventId,
+    List<String>? eventIds,
     Iterable<String>? customRelays,
     _i2.EventSigner? customSigner,
+    String? reason = 'delete',
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #broadcastDeletion,
           [],
           {
+            #event: event,
+            #events: events,
+            #eventAndAllVersions: eventAndAllVersions,
+            #eventsAndAllVersions: eventsAndAllVersions,
             #eventId: eventId,
+            #eventIds: eventIds,
             #customRelays: customRelays,
             #customSigner: customSigner,
+            #reason: reason,
           },
         ),
         returnValue: _FakeNdkBroadcastResponse_0(
@@ -181,9 +196,15 @@ class MockBroadcast extends _i1.Mock implements _i2.Broadcast {
             #broadcastDeletion,
             [],
             {
+              #event: event,
+              #events: events,
+              #eventAndAllVersions: eventAndAllVersions,
+              #eventsAndAllVersions: eventsAndAllVersions,
               #eventId: eventId,
+              #eventIds: eventIds,
               #customRelays: customRelays,
               #customSigner: customSigner,
+              #reason: reason,
             },
           ),
         ),
@@ -199,8 +220,18 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
   }
 
   @override
+  set fetchedRanges(_i2.FetchedRanges? fetchedRanges) => super.noSuchMethod(
+        Invocation.setter(
+          #fetchedRanges,
+          fetchedRanges,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i2.NdkResponse query({
-    required List<_i2.Filter>? filters,
+    _i2.Filter? filter,
+    List<_i2.Filter>? filters,
     String? name = '',
     _i2.RelaySet? relaySet,
     bool? cacheRead = true,
@@ -210,12 +241,15 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
     dynamic Function()? timeoutCallback,
     Iterable<String>? explicitRelays,
     int? desiredCoverage,
+    List<_i2.Account>? authenticateAs,
+    bool? paginate = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #query,
           [],
           {
+            #filter: filter,
             #filters: filters,
             #name: name,
             #relaySet: relaySet,
@@ -226,6 +260,8 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
             #timeoutCallback: timeoutCallback,
             #explicitRelays: explicitRelays,
             #desiredCoverage: desiredCoverage,
+            #authenticateAs: authenticateAs,
+            #paginate: paginate,
           },
         ),
         returnValue: _FakeNdkResponse_1(
@@ -234,6 +270,7 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
             #query,
             [],
             {
+              #filter: filter,
               #filters: filters,
               #name: name,
               #relaySet: relaySet,
@@ -244,6 +281,8 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
               #timeoutCallback: timeoutCallback,
               #explicitRelays: explicitRelays,
               #desiredCoverage: desiredCoverage,
+              #authenticateAs: authenticateAs,
+              #paginate: paginate,
             },
           ),
         ),
@@ -251,7 +290,8 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
 
   @override
   _i2.NdkResponse subscription({
-    required List<_i2.Filter>? filters,
+    _i2.Filter? filter,
+    List<_i2.Filter>? filters,
     String? name = '',
     String? id,
     _i2.RelaySet? relaySet,
@@ -259,12 +299,14 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
     bool? cacheWrite = false,
     Iterable<String>? explicitRelays,
     int? desiredCoverage,
+    List<_i2.Account>? authenticateAs,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #subscription,
           [],
           {
+            #filter: filter,
             #filters: filters,
             #name: name,
             #id: id,
@@ -273,6 +315,7 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
             #cacheWrite: cacheWrite,
             #explicitRelays: explicitRelays,
             #desiredCoverage: desiredCoverage,
+            #authenticateAs: authenticateAs,
           },
         ),
         returnValue: _FakeNdkResponse_1(
@@ -281,6 +324,7 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
             #subscription,
             [],
             {
+              #filter: filter,
               #filters: filters,
               #name: name,
               #id: id,
@@ -289,6 +333,7 @@ class MockRequests extends _i1.Mock implements _i2.Requests {
               #cacheWrite: cacheWrite,
               #explicitRelays: explicitRelays,
               #desiredCoverage: desiredCoverage,
+              #authenticateAs: authenticateAs,
             },
           ),
         ),
@@ -428,25 +473,10 @@ class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
       ) as String);
 
   @override
-  String get sig => (super.noSuchMethod(
-        Invocation.getter(#sig),
-        returnValue: _i5.dummyValue<String>(
-          this,
-          Invocation.getter(#sig),
-        ),
-      ) as String);
-
-  @override
   List<String> get sources => (super.noSuchMethod(
         Invocation.getter(#sources),
         returnValue: <String>[],
       ) as List<String>);
-
-  @override
-  bool get isIdValid => (super.noSuchMethod(
-        Invocation.getter(#isIdValid),
-        returnValue: false,
-      ) as bool);
 
   @override
   List<String> get tTags => (super.noSuchMethod(
@@ -485,82 +515,52 @@ class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
       );
 
   @override
-  set tags(List<List<String>>? _tags) => super.noSuchMethod(
-        Invocation.setter(
-          #tags,
-          _tags,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  set content(String? _content) => super.noSuchMethod(
-        Invocation.setter(
-          #content,
-          _content,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  set sig(String? _sig) => super.noSuchMethod(
-        Invocation.setter(
-          #sig,
-          _sig,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  set validSig(bool? _validSig) => super.noSuchMethod(
-        Invocation.setter(
-          #validSig,
-          _validSig,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  set sources(List<String>? _sources) => super.noSuchMethod(
-        Invocation.setter(
-          #sources,
-          _sources,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  Map<String, dynamic> toJson() => (super.noSuchMethod(
+  _i2.Nip01Event copyWith({
+    String? id,
+    String? pubKey,
+    int? createdAt,
+    int? kind,
+    List<List<String>>? tags,
+    String? content,
+    String? sig,
+    bool? validSig,
+    List<String>? sources,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
-          #toJson,
+          #copyWith,
           [],
+          {
+            #id: id,
+            #pubKey: pubKey,
+            #createdAt: createdAt,
+            #kind: kind,
+            #tags: tags,
+            #content: content,
+            #sig: sig,
+            #validSig: validSig,
+            #sources: sources,
+          },
         ),
-        returnValue: <String, dynamic>{},
-      ) as Map<String, dynamic>);
-
-  @override
-  String toBase64() => (super.noSuchMethod(
-        Invocation.method(
-          #toBase64,
-          [],
-        ),
-        returnValue: _i5.dummyValue<String>(
+        returnValue: _FakeNip01Event_2(
           this,
           Invocation.method(
-            #toBase64,
+            #copyWith,
             [],
+            {
+              #id: id,
+              #pubKey: pubKey,
+              #createdAt: createdAt,
+              #kind: kind,
+              #tags: tags,
+              #content: content,
+              #sig: sig,
+              #validSig: validSig,
+              #sources: sources,
+            },
           ),
         ),
-      ) as String);
-
-  @override
-  void sign(String? privateKey) => super.noSuchMethod(
-        Invocation.method(
-          #sign,
-          [privateKey],
-        ),
-        returnValueForMissingStub: null,
-      );
+      ) as _i2.Nip01Event);
 
   @override
   List<String> getTags(String? tag) => (super.noSuchMethod(
@@ -576,48 +576,6 @@ class MockNip01Event extends _i1.Mock implements _i2.Nip01Event {
         #getFirstTag,
         [name],
       )) as String?);
-
-  @override
-  _i2.Nip01Event copyWith({
-    String? pubKey,
-    int? createdAt,
-    int? kind,
-    List<List<String>>? tags,
-    String? content,
-    String? sig,
-    List<String>? sources,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #copyWith,
-          [],
-          {
-            #pubKey: pubKey,
-            #createdAt: createdAt,
-            #kind: kind,
-            #tags: tags,
-            #content: content,
-            #sig: sig,
-            #sources: sources,
-          },
-        ),
-        returnValue: _FakeNip01Event_2(
-          this,
-          Invocation.method(
-            #copyWith,
-            [],
-            {
-              #pubKey: pubKey,
-              #createdAt: createdAt,
-              #kind: kind,
-              #tags: tags,
-              #content: content,
-              #sig: sig,
-              #sources: sources,
-            },
-          ),
-        ),
-      ) as _i2.Nip01Event);
 }
 
 /// A class which mocks [NdkBroadcastResponse].

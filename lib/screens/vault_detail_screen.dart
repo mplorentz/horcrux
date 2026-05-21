@@ -84,6 +84,53 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           );
         }
 
+        // Show tombstone for archived/removed vaults
+        if (vault.isArchived) {
+          final reasonText = vault.archivedReason ?? 'Removed by owner';
+          return Scaffold(
+            appBar: HorcruxAppBar(title: vault.name),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.archive_outlined,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      reasonText == 'Vault deleted'
+                          ? 'This vault has been deleted by the owner.'
+                          : 'You have been removed from this vault.',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      reasonText,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        ref.read(vaultRepositoryProvider).deleteVault(vault.id);
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Remove from my device'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         _scheduleOwnerPushPromptOnce();
         return _buildVaultDetail(context, ref, vault);
       },

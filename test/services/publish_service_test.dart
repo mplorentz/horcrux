@@ -9,15 +9,14 @@ import '../helpers/test_database.dart';
 
 /// Creates a minimal [Nip01Event] with a deterministic ID.
 Nip01Event _makeEvent(String id) {
-  final event = Nip01Event(
+  return Nip01Event(
+    id: id,
     pubKey: 'a' * 64,
     kind: 1059,
     tags: const [],
     content: 'test',
     createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
   );
-  event.id = id;
-  return event;
 }
 
 void main() {
