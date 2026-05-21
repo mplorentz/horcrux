@@ -3,6 +3,7 @@ import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:ndk/ndk.dart';
 
+import 'package:horcrux/models/key_holder_removal_reason.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/services/invitation_sending_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
@@ -262,7 +263,7 @@ void main() {
         vaultId: 'vault-def',
         removedStewardPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         relayUrls: ['wss://relay.example.com'],
-        reason: 'vault_deleted',
+        reason: KeyHolderRemovalReason.vaultDeleted,
       );
 
       expect(_hasTag(capturedTags, 'reason', 'vault_deleted'), isTrue);
