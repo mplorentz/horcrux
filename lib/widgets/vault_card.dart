@@ -33,9 +33,15 @@ class VaultCard extends ConsumerWidget {
       final reasonText = vault.archivedReason ?? 'Removed by owner';
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
-        color: theme.colorScheme.surfaceContainerLow,
-        child: Opacity(
-          opacity: 0.5,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VaultDetailScreen(vaultId: vault.id),
+              ),
+            );
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
@@ -44,12 +50,11 @@ class VaultCard extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.error.withValues(alpha: 0.1),
+                    color: theme.colorScheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.archive_outlined,
-                    color: theme.colorScheme.error,
                     size: 24,
                   ),
                 ),
@@ -62,18 +67,23 @@ class VaultCard extends ConsumerWidget {
                         vault.name,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.lineThrough,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         reasonText,
                         style: textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: theme.colorScheme.secondary,
                 ),
               ],
             ),
