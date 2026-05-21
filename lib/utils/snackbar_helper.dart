@@ -234,6 +234,7 @@ abstract final class HorcruxSnackBar {
             backgroundColor: backgroundColor,
             actionForeground: actionForeground,
             action: action,
+            autoDismissDuration: effectiveDuration,
           ),
         );
       },
@@ -247,6 +248,8 @@ abstract final class HorcruxSnackBar {
 
 /// Slide + fade from above; registers [HorcruxSnackBar._animatedDismiss] for timed/action dismiss.
 class _HorcruxOverlayToast extends StatefulWidget {
+  final Duration autoDismissDuration;
+
   const _HorcruxOverlayToast({
     required this.entry,
     required this.message,
@@ -257,6 +260,7 @@ class _HorcruxOverlayToast extends StatefulWidget {
     required this.backgroundColor,
     required this.actionForeground,
     required this.action,
+    required this.autoDismissDuration,
   });
 
   final OverlayEntry entry;
@@ -283,6 +287,7 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
   late Animation<Offset> _slide;
   late Animation<double> _fade;
   late VoidCallback _boundDismiss;
+  Timer? _autoDismissTimer;
   bool _isExiting = false;
 
   @override
@@ -300,10 +305,12 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
     _boundDismiss = _startDismiss;
     HorcruxSnackBar._animatedDismiss = _boundDismiss;
     _controller.forward();
+    _autoDismissTimer = Timer(widget.autoDismissDuration, _startDismiss);
   }
 
   @override
   void dispose() {
+    _autoDismissTimer?.cancel();
     if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
       HorcruxSnackBar._animatedDismiss = null;
     }
