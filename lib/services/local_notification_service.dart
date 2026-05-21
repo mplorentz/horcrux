@@ -361,6 +361,18 @@ class LocalNotificationService {
       return;
     }
 
+    // When the user is a steward of their own vault, their invitation
+    // acceptance can round-trip through gift-wrap. Skip self-signed events
+    // to avoid notifying about one's own acceptance. Matches the same
+    // self-origin guard in [_showShardNotification].
+    if (await _isCurrentUserPubkey(event.pubKey)) {
+      Log.debug(
+        'Skipping invitation acceptance notification ${event.id}: '
+        'event was signed by the current user',
+      );
+      return;
+    }
+
     final eventUtc = DateTime.fromMillisecondsSinceEpoch(
       event.createdAt * 1000,
       isUtc: true,

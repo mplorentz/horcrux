@@ -262,6 +262,50 @@ void main() {
     );
 
     testWidgets(
+      'invitation acceptance tap: pushes vault detail only',
+      (tester) async {
+        final observer = _RouteEventRecorder();
+        await pumpHostApp(tester, observer);
+
+        await service.navigateForKind(
+          NostrKind.invitationAcceptance,
+          'invite-accept-event-id',
+          vaultId: vaultId,
+        );
+        await tester.pump();
+
+        expect(
+          observer.pushNames,
+          equals([
+            homeRouteName,
+            vaultDetailRouteName(vaultId),
+          ]),
+        );
+        expect(observer.removeNames, isEmpty);
+
+        while (tester.takeException() != null) {}
+      },
+    );
+
+    testWidgets(
+      'invitation acceptance tap with no vaultId: returns false, no navigation',
+      (tester) async {
+        final observer = _RouteEventRecorder();
+        await pumpHostApp(tester, observer);
+
+        final navigated = await service.navigateForKind(
+          NostrKind.invitationAcceptance,
+          'invite-accept-event-id',
+        );
+        await tester.pump();
+
+        expect(navigated, isFalse);
+        expect(observer.pushNames, equals([homeRouteName]));
+        expect(observer.removeNames, isEmpty);
+      },
+    );
+
+    testWidgets(
       'stack reset preserves the root route: routes pushed before the '
       'notification tap are removed, the root home is kept',
       (tester) async {
