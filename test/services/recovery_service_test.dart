@@ -430,7 +430,8 @@ void main() {
         expect(shardDataJson['threshold'], 2);
         expect(shardDataJson['shard_index'], 0);
         expect(shardDataJson['total_shards'], 3);
-        expect(shardDataJson['creator_pubkey'], testCreatorPubkey);
+        expect(shardDataJson.containsKey('creator_pubkey'), isFalse,
+            reason: 'creator_pubkey no longer emitted on wire');
         expect(shardDataJson['vault_id'], testVaultId);
         expect(shardDataJson['vault_name'], 'Test Vault');
       },
