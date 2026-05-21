@@ -28,6 +28,60 @@ class VaultCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
+    // Show tombstone card for archived vaults
+    if (vault.isArchived) {
+      final reasonText = vault.archivedReason ?? 'Removed by owner';
+      return Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        color: theme.colorScheme.surfaceContainerLow,
+        child: Opacity(
+          opacity: 0.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.archive_outlined,
+                    color: theme.colorScheme.error,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vault.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        reasonText,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
     final currentPubkey = currentPubkeyAsync.maybeWhen(
       data: (pubkey) => pubkey,
