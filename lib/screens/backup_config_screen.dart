@@ -1524,11 +1524,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _initialPushEnabled = _alertStewardsWithPush;
         });
 
-        context.showHorcruxSnackBar(
-          'Backup configuration saved successfully!',
-          kind: HorcruxSnackKind.success,
-        );
-
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (mounted) {
