@@ -72,8 +72,25 @@ abstract final class HorcruxSnackBar {
     // [OverlayEntry.remove] asserts a non-null overlay link; if the overlay was
     // torn down (hot restart, app exit) before the auto-dismiss timer fires,
     // the entry can already be unmounted.
-    if (entry != null && entry.mounted) {
-      entry.remove();
+    //
+    // Also remove entries that are inserted but not yet mounted (e.g. when two
+    // show() calls happen in the same synchronous block — the first entry is
+    // inserted into the overlay but not yet built/mounted by the framework).
+    // These entries are still valid OverlayEntry objects that need cleanup.
+    if (entry != null) {
+      if (entry.mounted) {
+        entry.remove();
+      } else {
+        // Entry was inserted but not yet mounted — try to remove it anyway.
+        // OverlayEntry.remove() on an unmounted entry throws if the overlay
+        // link is null. We wrap in try/catch to handle this gracefully.
+        try {
+          entry.remove();
+        } catch (_) {
+          // Entry wasn't fully mounted — the overlay will simply not build it
+          // since it hasn't been laid out yet.
+        }
+      }
     }
   }
 
@@ -94,6 +111,11 @@ abstract final class HorcruxSnackBar {
     _activeTimer?.cancel();
     _activeTimer = Timer(duration, () {
       if (_activeEntry != entry) {
+        // This timer's entry was replaced by a newer toast. Try to remove
+        // the old entry directly so it doesn't leak in the overlay.
+        if (entry.mounted) {
+          entry.remove();
+        }
         return;
       }
       _requestAnimatedDismiss();
@@ -229,6 +251,7 @@ abstract final class HorcruxSnackBar {
             backgroundColor: backgroundColor,
             actionForeground: actionForeground,
             action: action,
+            autoDismissDuration: effectiveDuration,
           ),
         );
       },
@@ -242,6 +265,8 @@ abstract final class HorcruxSnackBar {
 
 /// Slide + fade from above; registers [HorcruxSnackBar._animatedDismiss] for timed/action dismiss.
 class _HorcruxOverlayToast extends StatefulWidget {
+  final Duration autoDismissDuration;
+
   const _HorcruxOverlayToast({
     required this.entry,
     required this.message,
@@ -252,6 +277,7 @@ class _HorcruxOverlayToast extends StatefulWidget {
     required this.backgroundColor,
     required this.actionForeground,
     required this.action,
+    required this.autoDismissDuration,
   });
 
   final OverlayEntry entry;
@@ -278,6 +304,7 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
   late Animation<Offset> _slide;
   late Animation<double> _fade;
   late VoidCallback _boundDismiss;
+  Timer? _autoDismissTimer;
   bool _isExiting = false;
 
   @override
@@ -295,10 +322,12 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
     _boundDismiss = _startDismiss;
     HorcruxSnackBar._animatedDismiss = _boundDismiss;
     _controller.forward();
+    _autoDismissTimer = Timer(widget.autoDismissDuration, _startDismiss);
   }
 
   @override
   void dispose() {
+    _autoDismissTimer?.cancel();
     if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
       HorcruxSnackBar._animatedDismiss = null;
     }
