@@ -94,6 +94,11 @@ abstract final class HorcruxSnackBar {
     _activeTimer?.cancel();
     _activeTimer = Timer(duration, () {
       if (_activeEntry != entry) {
+        // This timer's entry was replaced by a newer toast. Try to remove
+        // the old entry directly so it doesn't leak in the overlay.
+        if (entry.mounted) {
+          entry.remove();
+        }
         return;
       }
       _requestAnimatedDismiss();
