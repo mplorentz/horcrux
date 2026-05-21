@@ -291,8 +291,7 @@ void main() {
       );
     });
 
-    test('reconstructFromShares throws when shares are from different vaults',
-        () async {
+    test('reconstructFromShares throws when shares are from different vaults', () async {
       // Arrange - generate shares for two different vaults
       final sharesVault1 = await backupService.generateShamirShares(
         content: testSecret,
@@ -515,9 +514,7 @@ void main() {
       // Flip a bit in the blob on every share so the consistency check
       // doesn't catch it first — we want to exercise the Poly1305 tag path.
       final tamperedBlob = _flipFirstBase64Char(shares[0].blob!);
-      final tampered = shares
-          .map((s) => s.copyWith(blob: tamperedBlob))
-          .toList();
+      final tampered = shares.map((s) => s.copyWith(blob: tamperedBlob)).toList();
 
       expect(
         () => backupService.reconstructFromShares(

@@ -29,6 +29,7 @@ class Share with _$Share {
     // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
     // Null means unsupported (legacy ntcdcrypto GF(p) format).
     String? scheme,
+
     /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
     /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
     /// `gf256_v1` shares.

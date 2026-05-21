@@ -38,16 +38,13 @@ mixin _$Share {
   /// cross-checks for byte equality before reconstructing the key. The
   /// Poly1305 tag is what gives reconstructed content its integrity
   /// guarantee — SSS alone provides none.
-  String? get blob =>
-      throw _privateConstructorUsedError; // Recovery metadata (optional fields)
+  String? get blob => throw _privateConstructorUsedError; // Recovery metadata (optional fields)
   String? get vaultId => throw _privateConstructorUsedError;
   String? get vaultName => throw _privateConstructorUsedError;
   List<Map<String, String>>? get stewards =>
       throw _privateConstructorUsedError; // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
-  String? get ownerName =>
-      throw _privateConstructorUsedError; // Name of the vault owner (creator)
-  String? get instructions =>
-      throw _privateConstructorUsedError; // Instructions for stewards
+  String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner (creator)
+  String? get instructions => throw _privateConstructorUsedError; // Instructions for stewards
   String? get recipientPubkey => throw _privateConstructorUsedError;
   bool? get isReceived => throw _privateConstructorUsedError;
   DateTime? get receivedAt => throw _privateConstructorUsedError;
@@ -74,8 +71,7 @@ mixin _$Share {
 
 /// @nodoc
 abstract class $ShareCopyWith<$Res> {
-  factory $ShareCopyWith(Share value, $Res Function(Share) then) =
-      _$ShareCopyWithImpl<$Res, Share>;
+  factory $ShareCopyWith(Share value, $Res Function(Share) then) = _$ShareCopyWithImpl<$Res, Share>;
   @useResult
   $Res call(
       {String payload,
@@ -101,8 +97,7 @@ abstract class $ShareCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$ShareCopyWithImpl<$Res, $Val extends Share>
-    implements $ShareCopyWith<$Res> {
+class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$Res> {
   _$ShareCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -223,8 +218,7 @@ class _$ShareCopyWithImpl<$Res, $Val extends Share>
 
 /// @nodoc
 abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
-  factory _$$ShareImplCopyWith(
-          _$ShareImpl value, $Res Function(_$ShareImpl) then) =
+  factory _$$ShareImplCopyWith(_$ShareImpl value, $Res Function(_$ShareImpl) then) =
       __$$ShareImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -252,11 +246,9 @@ abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$ShareImplCopyWithImpl<$Res>
-    extends _$ShareCopyWithImpl<$Res, _$ShareImpl>
+class __$$ShareImplCopyWithImpl<$Res> extends _$ShareCopyWithImpl<$Res, _$ShareImpl>
     implements _$$ShareImplCopyWith<$Res> {
-  __$$ShareImplCopyWithImpl(
-      _$ShareImpl _value, $Res Function(_$ShareImpl) _then)
+  __$$ShareImplCopyWithImpl(_$ShareImpl _value, $Res Function(_$ShareImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of Share
@@ -495,40 +487,28 @@ class _$ShareImpl extends _Share {
         (other.runtimeType == runtimeType &&
             other is _$ShareImpl &&
             (identical(other.payload, payload) || other.payload == payload) &&
-            (identical(other.threshold, threshold) ||
-                other.threshold == threshold) &&
-            (identical(other.shareIndex, shareIndex) ||
-                other.shareIndex == shareIndex) &&
-            (identical(other.totalShares, totalShares) ||
-                other.totalShares == totalShares) &&
+            (identical(other.threshold, threshold) || other.threshold == threshold) &&
+            (identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex) &&
+            (identical(other.totalShares, totalShares) || other.totalShares == totalShares) &&
             (identical(other.creatorPubkey, creatorPubkey) ||
                 other.creatorPubkey == creatorPubkey) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.scheme, scheme) || other.scheme == scheme) &&
             (identical(other.blob, blob) || other.blob == blob) &&
             (identical(other.vaultId, vaultId) || other.vaultId == vaultId) &&
-            (identical(other.vaultName, vaultName) ||
-                other.vaultName == vaultName) &&
+            (identical(other.vaultName, vaultName) || other.vaultName == vaultName) &&
             const DeepCollectionEquality().equals(other._stewards, _stewards) &&
-            (identical(other.ownerName, ownerName) ||
-                other.ownerName == ownerName) &&
-            (identical(other.instructions, instructions) ||
-                other.instructions == instructions) &&
+            (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
+            (identical(other.instructions, instructions) || other.instructions == instructions) &&
             (identical(other.recipientPubkey, recipientPubkey) ||
                 other.recipientPubkey == recipientPubkey) &&
-            (identical(other.isReceived, isReceived) ||
-                other.isReceived == isReceived) &&
-            (identical(other.receivedAt, receivedAt) ||
-                other.receivedAt == receivedAt) &&
-            (identical(other.nostrEventId, nostrEventId) ||
-                other.nostrEventId == nostrEventId) &&
-            const DeepCollectionEquality()
-                .equals(other._relayUrls, _relayUrls) &&
+            (identical(other.isReceived, isReceived) || other.isReceived == isReceived) &&
+            (identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt) &&
+            (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
+            const DeepCollectionEquality().equals(other._relayUrls, _relayUrls) &&
             (identical(other.distributionVersion, distributionVersion) ||
                 other.distributionVersion == distributionVersion) &&
-            (identical(other.pushEnabled, pushEnabled) ||
-                other.pushEnabled == pushEnabled));
+            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -639,8 +619,7 @@ abstract class _Share extends Share {
   @override
   String? get nostrEventId;
   @override
-  List<String>?
-      get relayUrls; // Relay URLs from backup config for sending confirmations
+  List<String>? get relayUrls; // Relay URLs from backup config for sending confirmations
   @override
   int?
       get distributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
@@ -659,6 +638,5 @@ abstract class _Share extends Share {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ShareImplCopyWith<_$ShareImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$ShareImplCopyWith<_$ShareImpl> get copyWith => throw _privateConstructorUsedError;
 }

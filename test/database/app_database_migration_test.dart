@@ -90,9 +90,7 @@ void main() {
     await db.close();
   });
 
-  test(
-      'upgrade from v6 snapshot adds held_shares.aead_blob and preserves existing rows',
-      () async {
+  test('upgrade from v6 snapshot adds held_shares.aead_blob and preserves existing rows', () async {
     final raw = sqlite.sqlite3.openInMemory();
     raw.execute('PRAGMA foreign_keys = ON');
 
@@ -132,17 +130,14 @@ void main() {
 
     // aead_blob column exists post-migration and the seeded row survives
     // with aead_blob == NULL.
-    final cols = await db
-        .customSelect("PRAGMA table_info(held_shares)")
-        .get();
+    final cols = await db.customSelect("PRAGMA table_info(held_shares)").get();
     expect(
       cols.any((c) => c.data['name'] == 'aead_blob'),
       isTrue,
       reason: 'v6→v7 migration must add held_shares.aead_blob',
     );
-    final seeded = await db
-        .customSelect("SELECT aead_blob FROM held_shares WHERE id = 'hs-1'")
-        .get();
+    final seeded =
+        await db.customSelect("SELECT aead_blob FROM held_shares WHERE id = 'hs-1'").get();
     expect(seeded, hasLength(1));
     expect(seeded.first.data['aead_blob'], isNull);
 

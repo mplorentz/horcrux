@@ -1465,8 +1465,7 @@ void main() {
   });
 
   group('blob (AEAD ciphertext)', () {
-    const creatorPubkey =
-        'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+    const creatorPubkey = 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
     const sampleBlob = 'AAECAwQFBgcICQoLDA0ODw=='; // arbitrary base64
 
     test('JSON round-trip preserves blob', () {
