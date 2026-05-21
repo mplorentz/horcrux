@@ -283,7 +283,6 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
   late Animation<Offset> _slide;
   late Animation<double> _fade;
   late VoidCallback _boundDismiss;
-  Timer? _autoDismissTimer;
   bool _isExiting = false;
 
   @override
@@ -301,19 +300,10 @@ class _HorcruxOverlayToastState extends State<_HorcruxOverlayToast>
     _boundDismiss = _startDismiss;
     HorcruxSnackBar._animatedDismiss = _boundDismiss;
     _controller.forward();
-
-    // Each widget manages its OWN auto-dismiss timer so it survives
-    // overlay rebuilds (e.g., screen pop) that dispose and recreate the
-    // widget. The shared static timer from _scheduleAutoDismiss can miss
-    // during a rebuild/dispose cycle.
-    _autoDismissTimer = Timer(const Duration(seconds: 2), () {
-      _startDismiss();
-    });
   }
 
   @override
   void dispose() {
-    _autoDismissTimer?.cancel();
     if (HorcruxSnackBar._animatedDismiss == _boundDismiss) {
       HorcruxSnackBar._animatedDismiss = null;
     }
