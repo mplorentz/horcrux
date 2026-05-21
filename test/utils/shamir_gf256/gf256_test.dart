@@ -228,5 +228,10 @@ void main() {
       expect(() => GF256.divide(256, 1), throwsArgumentError);
       expect(() => GF256.divide(1, 256), throwsArgumentError);
     });
+
+    test('divide throws on divisor == 0', () {
+      expect(() => GF256.divide(1, 0), throwsArgumentError);
+      expect(() => GF256.divide(255, 0), throwsArgumentError);
+    });
   });
 }

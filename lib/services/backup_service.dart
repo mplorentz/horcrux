@@ -250,14 +250,18 @@ class BackupService {
         }
       }
 
-      // Validate that all shares have the same threshold and totalShards
-      // creatorPubkey is intentionally NOT checked — shares from different stewards
-      // will have different creatorPubkey values, but Shamir combine only needs
-      // matching threshold/totalShares.
+      // Validate that all shares belong to the same vault and have the same
+      // Shamir parameters. creatorPubkey is intentionally NOT checked — shares
+      // from different stewards will have different creatorPubkey values, but
+      // Shamir combine only needs matching vaultId/threshold/totalShares.
+      final vaultId = shares.first.vaultId;
       final threshold = shares.first.threshold;
       final totalSharesCount = shares.first.totalShares;
 
       for (final share in shares) {
+        if (share.vaultId != vaultId) {
+          throw ArgumentError('All shares must belong to the same vault');
+        }
         if (share.threshold != threshold || share.totalShares != totalSharesCount) {
           throw ArgumentError('All shares must have the same parameters');
         }
@@ -284,8 +288,12 @@ class BackupService {
         shareMap[x] = yValues;
       }
 
+      if (shareMap.length != shares.length) {
+        throw ArgumentError('Shares contain duplicate x-coordinates');
+      }
+
       // Create GF(256) SSS instance and reconstruct
-      final scheme = SecretScheme(shares.length, threshold);
+      final scheme = SecretScheme(totalSharesCount, threshold);
       final secretBytes = scheme.combineShares(shareMap);
       final content = utf8.decode(secretBytes);
 
