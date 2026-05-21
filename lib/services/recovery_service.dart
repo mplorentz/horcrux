@@ -747,18 +747,6 @@ class RecoveryService {
           Log.info(
             'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved, event: ${eventId.substring(0, 8)}...)',
           );
-
-          // Backfill the nostrEventId on the persisted response so that
-          // when the relay echo arrives, the duplicate check matches by
-          // nostrEventId (first check) rather than by respondedAt (second
-          // check). This also improves log clarity — the echo shows
-          // 'duplicate' instead of 'already processed'.
-          unawaited(_backfillNostrEventId(
-            request.vaultId,
-            recoveryRequestId,
-            responderPubkey,
-            eventId,
-          ));
         } else {
           Log.warning('No relay URLs available for sending recovery response');
         }
@@ -1220,40 +1208,6 @@ class RecoveryService {
     _isInitialized = false;
     _viewedNotificationIds = null;
     await initialize();
-  }
-
-  /// After sending a recovery response via Nostr, backfill the event id on the
-  /// persisted response so the relay echo can be matched by nostrEventId (first
-  /// check in [processRecoveryResponse]) rather than by respondedAt (second check).
-  Future<void> _backfillNostrEventId(
-    String vaultId,
-    String recoveryRequestId,
-    String responderPubkey,
-    String eventId,
-  ) async {
-    try {
-      final request = await getRecoveryRequest(recoveryRequestId);
-      if (request == null) return;
-      // Find the response for THIS pubkey (not the first match)
-      final existing = request.responseForPubkey(responderPubkey);
-      if (existing == null || existing.nostrEventId != null || existing.respondedAt == null) {
-        return;
-      }
-      final updated = existing.copyWith(nostrEventId: eventId);
-      final updatedRequest = request.withUpsertedResponse(response: updated);
-      await repository.updateRecoveryRequestInVault(
-        vaultId,
-        recoveryRequestId,
-        updatedRequest,
-      );
-      Log.info(
-        'Backfilled nostrEventId for response from '
-        '${responderPubkey.substring(0, 8)}... '
-        '(event: ${eventId.substring(0, 8)}...)',
-      );
-    } catch (e) {
-      Log.error('Failed to backfill nostrEventId for recovery response', e);
-    }
   }
 }
 
