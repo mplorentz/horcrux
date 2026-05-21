@@ -21,9 +21,11 @@ class Share with _$Share {
     required int threshold,
     required int shareIndex,
     required int totalShares,
-    required String primeMod,
     required String creatorPubkey,
     required int createdAt,
+    // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
+    // Null means unsupported (legacy ntcdcrypto GF(p) format).
+    String? scheme,
     // Recovery metadata (optional fields)
     String? vaultId,
     String? vaultName,
@@ -103,9 +105,15 @@ class Share with _$Share {
         return false;
       }
 
-      if (primeMod.isEmpty) {
-        Log.error('Share validation failed: primeMod is empty');
+      // Scheme validation: reject empty, warn for other non-gf256_v1 but don't reject legacy shares
+      if (scheme == '') {
+        Log.error('Share validation failed: scheme is empty');
         return false;
+      }
+      if (scheme != null && scheme != 'gf256_v1') {
+        Log.info(
+          'Share has unsupported scheme \'$scheme\' (expected gf256_v1, likely legacy)',
+        );
       }
 
       if (creatorPubkey.isEmpty) {
@@ -232,8 +240,9 @@ Share createShare({
   required int threshold,
   required int shareIndex,
   required int totalShares,
-  required String primeMod,
   required String creatorPubkey,
+  String? scheme,
+  int? createdAt,
   String? vaultId,
   String? vaultName,
   List<Map<String, String>>? stewards,
@@ -258,8 +267,8 @@ Share createShare({
   if (shareIndex < 0 || shareIndex >= totalShares) {
     throw ArgumentError('shareIndex must be >= 0 and < totalShares');
   }
-  if (primeMod.isEmpty) {
-    throw ArgumentError('PrimeMod cannot be empty');
+  if (scheme != null && scheme != 'gf256_v1') {
+    throw ArgumentError("Unsupported scheme: '$scheme' (expected 'gf256_v1')");
   }
   if (creatorPubkey.isEmpty) {
     throw ArgumentError('CreatorPubkey cannot be empty');
@@ -312,9 +321,9 @@ Share createShare({
     threshold: threshold,
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: primeMod,
     creatorPubkey: creatorPubkey,
-    createdAt: secondsSinceEpoch(),
+    createdAt: createdAt ?? secondsSinceEpoch(),
+    scheme: scheme ?? 'gf256_v1',
     vaultId: vaultId,
     vaultName: vaultName,
     stewards: stewards,
@@ -338,7 +347,10 @@ Map<String, dynamic> shareToJson(Share share) {
     'threshold': share.threshold,
     'shard_index': share.shareIndex,
     'total_shards': share.totalShares,
-    'prime_mod': share.primeMod,
+    'scheme': share.scheme ?? 'gf256_v1',
+    if (share.scheme != null && share.scheme != 'gf256_v1')
+      // Write prime_mod for backward compatibility with legacy data
+      'prime_mod': share.scheme,
     'creator_pubkey': share.creatorPubkey,
     'created_at': share.createdAt,
     if (share.vaultId != null) 'vault_id': share.vaultId,
@@ -426,8 +438,8 @@ Share shareFromJson(Map<String, dynamic> json) {
     threshold: _readIntFlexible(json['threshold']),
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: json['prime_mod'] as String,
     creatorPubkey: json['creator_pubkey'] as String,
+    scheme: json['scheme'] as String? ?? json['prime_mod'] as String?,
     createdAt: createdAt,
     vaultId: json['vault_id'] as String?,
     vaultName: json['vault_name'] as String?,
@@ -478,7 +490,7 @@ List<List<String>> shareToNostrTags(Share share) {
   tags.add(['share_index', share.shareIndex.toString()]);
   tags.add(['total_shares', share.totalShares.toString()]);
   tags.add(['threshold', share.threshold.toString()]);
-  tags.add(['prime_mod', share.primeMod]);
+  tags.add(['scheme', share.scheme ?? 'gf256_v1']);
 
   if (share.vaultId != null && share.vaultId!.isNotEmpty) {
     tags.add(['vault_id', share.vaultId!]);
@@ -551,7 +563,8 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
   final shareIndexStr = tagValue('share_index');
   final totalSharesStr = tagValue('total_shares');
   final thresholdStr = tagValue('threshold');
-  final primeMod = tagValue('prime_mod');
+  // Read scheme tag, fall back to prime_mod for backward compatibility
+  final scheme = tagValue('scheme') ?? tagValue('prime_mod');
 
   // Parse steward tags: ["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]
   final stewardTagLists = tagValues('steward');
@@ -601,8 +614,8 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
     threshold: threshold,
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: primeMod ?? '',
     creatorPubkey: rumor.pubKey,
+    scheme: scheme ?? 'gf256_v1',
     createdAt: rumor.createdAt,
     vaultId: tagValue('vault_id'),
     vaultName: tagValue('vault_name'),

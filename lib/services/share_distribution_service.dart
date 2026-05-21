@@ -227,7 +227,7 @@ class ShareDistributionService {
           threshold: config.threshold,
           shareIndex: -1,
           totalShares: config.totalKeys,
-          primeMod: template.primeMod,
+          scheme: template.scheme,
           creatorPubkey: ownerPubkey,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           vaultId: config.vaultId,

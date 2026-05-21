@@ -93,7 +93,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'fixture-prime-mod',
+        scheme: null,
         creatorPubkey: TestHexPubkeys.alice,
         vaultId: fixture.vaultId,
       );

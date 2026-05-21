@@ -69,7 +69,7 @@ Used to distribute a Shamir secret share to a steward.
     "threshold": 3,
     "share_index": 0,
     "total_shares": 5,
-    "prime_mod": "<base64-encoded-prime-modulus>",
+    "scheme": "gf256_v1",
     "creator_pubkey": "<creator-pubkey-hex>", // *TODO: this is redundant*
     "created_at": <unix-timestamp>,
     "vault_id": "<unique-vault-identifier>",
@@ -91,7 +91,8 @@ Used to distribute a Shamir secret share to a steward.
 - `threshold`: Minimum number of shares required to reconstruct the secret
 - `share_index`: Zero-based index of this specific share
 - `total_shares`: Total number of shares created
-- `prime_mod`: Base64-encoded prime modulus used in Shamir's algorithm
+- `scheme`: Shamir scheme identifier. `gf256_v1` for GF(2⁸) with Rijndael polynomial (0x11b).
+  Legacy `prime_mod` values are accepted for backward compatibility but SHOULD NOT be used for new shares.
 - `creator_pubkey`: Public key of the vault owner (hex format)
 - `created_at`: Unix timestamp when share was created
 - `vault_id`: Unique identifier for the vault
@@ -294,7 +295,7 @@ Sent by a steward in response to a recovery request.
       "threshold": 3,
       "share_index": 0,
       "total_shares": 5,
-      "prime_mod": "<base64-encoded-prime-modulus>",
+      "scheme": "gf256_v1",
       "creator_pubkey": "<creator-pubkey-hex>",
       "created_at": <unix-timestamp>
     },

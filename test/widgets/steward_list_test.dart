@@ -87,7 +87,7 @@ void main() {
       threshold: 2,
       shareIndex: 0,
       totalShares: 3,
-      primeMod: 'prime-mod',
+      scheme: null,
       creatorPubkey: ownerPubkey,
       vaultId: vaultId,
       vaultName: 'Vault Owner In Peers',

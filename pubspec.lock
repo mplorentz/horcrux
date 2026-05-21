@@ -860,14 +860,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.1"
-  ntcdcrypto:
-    dependency: "direct main"
-    description:
-      name: ntcdcrypto
-      sha256: "973d37101845ace0c0fda0e336721e04474e40310b7b9e749b7ed9090b581a7a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.0"
   objective_c:
     dependency: transitive
     description:

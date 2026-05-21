@@ -91,7 +91,7 @@ void main() {
       expect(share.shareIndex, 1);
       expect(share.totalShares, 3);
       expect(share.threshold, 2);
-      expect(share.primeMod, 'abc123');
+      expect(share.scheme, 'abc123');
       expect(share.vaultId, 'vault-123');
       expect(share.vaultName, 'My Vault');
       expect(share.distributionVersion, 1);

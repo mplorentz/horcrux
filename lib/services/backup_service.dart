@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ntcdcrypto/ntcdcrypto.dart';
+import '../utils/shamir_gf256/shamir_gf256.dart';
 import '../models/backup_config.dart';
 import '../models/steward.dart';
 import '../models/share.dart';
@@ -185,27 +185,31 @@ class BackupService {
         throw ArgumentError('Content cannot be empty');
       }
 
-      // Create SSS instance
-      final sss = SSS();
+      // Convert content string to byte list
+      final secretBytes = utf8.encode(content).toList();
 
-      // Generate shares using Base64Url encoding (isBase64 = true)
-      // The ntcdcrypto library returns shares as Base64Url-encoded strings
-      final shareStrings = sss.create(threshold, totalShards, content, true);
+      // Create GF(256) SSS instance
+      final scheme = SecretScheme(totalShards, threshold);
 
-      // The prime modulus is fixed in ntcdcrypto, convert to base64url for storage
-      // This matches the format expected by skb.py
-      final primeModHex = sss.prime.toRadixString(16);
-      final primeMod = base64Url.encode(utf8.encode(primeModHex));
+      // Generate shares: Map<int, List<int>> where key is x-coord
+      final sharesMap = scheme.createShares(secretBytes);
 
-      // Convert to Share objects
+      // Sort by x-coord and assign sequential shareIndex 0..N-1
+      final sortedXCoords = sharesMap.keys.toList()..sort();
       final shardDataList = <Share>[];
-      for (int i = 0; i < totalShards; i++) {
+      for (int i = 0; i < sortedXCoords.length; i++) {
+        final x = sortedXCoords[i];
+        final yBytes = sharesMap[x]!;
+
+        // Build share bytes: [x, y0, y1, ..., yn-1]
+        final shareBytes = <int>[x, ...yBytes];
+        final payload = base64Url.encode(shareBytes);
+
         final shardData = createShare(
-          payload: shareStrings[i],
+          payload: payload,
           threshold: threshold,
-          shareIndex: i,
+          shareIndex: i, // sequential 0-based index
           totalShares: totalShards,
-          primeMod: primeMod,
           creatorPubkey: creatorPubkey,
           vaultId: vaultId,
           vaultName: vaultName,
@@ -237,16 +241,23 @@ class BackupService {
         throw ArgumentError('At least one share is required');
       }
 
+      // Validate scheme — must be gf256_v1 or null (null treated as legacy, throw)
+      for (final share in shares) {
+        if (share.scheme != null && share.scheme != 'gf256_v1') {
+          throw ArgumentError(
+            "Unsupported scheme: '${share.scheme}' (expected 'gf256_v1')",
+          );
+        }
+      }
+
       // Validate that all shares have the same threshold and totalShards
       final threshold = shares.first.threshold;
       final totalSharesCount = shares.first.totalShares;
-      final primeMod = shares.first.primeMod;
       final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
         if (share.threshold != threshold ||
             share.totalShares != totalSharesCount ||
-            share.primeMod != primeMod ||
             share.creatorPubkey != creatorPubkey) {
           throw ArgumentError('All shares must have the same parameters');
         }
@@ -258,27 +269,25 @@ class BackupService {
         );
       }
 
-      // Create SSS instance
-      final sss = SSS();
-
-      // Verify that the prime modulus matches the one ntcdcrypto uses
-      final expectedPrimeModHex = sss.prime.toRadixString(16);
-      final expectedPrimeMod = base64Url.encode(
-        utf8.encode(expectedPrimeModHex),
-      );
-
-      if (primeMod != expectedPrimeMod) {
-        throw ArgumentError(
-          'Invalid prime modulus: shares were created with a different prime than ntcdcrypto uses',
-        );
+      // Decode base64-encoded shares back to byte lists
+      final shareMap = <int, List<int>>{};
+      for (final s in shares) {
+        final bytes = base64Url.decode(s.payload);
+        if (bytes.isEmpty) {
+          throw ArgumentError('Empty share payload');
+        }
+        final x = bytes[0];
+        if (x == 0) {
+          throw ArgumentError('Invalid share: x-coordinate cannot be 0');
+        }
+        final yValues = bytes.sublist(1);
+        shareMap[x] = yValues;
       }
 
-      // Extract the share strings from Share objects
-      final shareStrings = shares.map((s) => s.payload).toList();
-
-      // Combine shares using Base64Url encoding (isBase64 = true)
-      // This will reconstruct the original secret
-      final content = sss.combine(shareStrings, true);
+      // Create GF(256) SSS instance and reconstruct
+      final scheme = SecretScheme(shares.length, threshold);
+      final secretBytes = scheme.combineShares(shareMap);
+      final content = utf8.decode(secretBytes);
 
       Log.info(
         'Successfully reconstructed content from ${shares.length} shares',

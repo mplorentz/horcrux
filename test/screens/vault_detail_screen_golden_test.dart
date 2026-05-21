@@ -34,7 +34,7 @@ void main() {
       threshold: 2,
       shareIndex: shardIndex,
       totalShares: 3,
-      primeMod: 'test_prime_mod',
+      scheme: null,
       creatorPubkey: testPubkey,
       vaultId: vaultId,
       vaultName: vaultName,
