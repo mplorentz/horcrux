@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/utils/snackbar_helper.dart';
 
+// Allow small timing tolerance in auto-dismiss tests.
+// Flutter's fake clock advances in pump() increments, so exact timing
+// depends on pump granularity.
+const _successDuration = Duration(seconds: 2);
+const _errorDuration = Duration(milliseconds: 2500);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -47,10 +53,12 @@ void main() {
       // Toast should be visible
       expect(find.text('Toast A'), findsOneWidget);
 
-      // Wait for auto-dismiss duration (2 seconds for success)
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      // Advance to just before dismiss — toast should still be visible
+      await tester.pump(_successDuration - const Duration(milliseconds: 100));
+      expect(find.text('Toast A'), findsOneWidget);
 
-      // Toast should be gone
+      // Advance past dismiss — toast should animate out
+      await tester.pumpAndSettle(const Duration(milliseconds: 500));
       expect(find.text('Toast A'), findsNothing);
     });
 
@@ -138,6 +146,85 @@ void main() {
 
       expect(find.text('Toast B'), findsNothing);
       expect(find.text('Toast A'), findsNothing);
+    });
+
+    testWidgets('error toast auto-dismisses after 2.5 seconds', (tester) async {
+      late Widget errorApp;
+      errorApp = MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                key: const Key('show_error'),
+                onPressed: () => context.showHorcruxSnackBar(
+                  'Error occurred',
+                  kind: HorcruxSnackKind.error,
+                ),
+                child: const Text('Show Error'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(errorApp);
+      await tester.tap(find.byKey(const Key('show_error')));
+      await tester.pump();
+      expect(find.text('Error occurred'), findsOneWidget);
+
+      // At 2s (success duration) — error toast should still be visible
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        find.text('Error occurred'),
+        findsOneWidget,
+        reason: 'Error toast (2.5s duration) should still be visible at 2s',
+      );
+
+      // At 2.5s+ — error toast should start dismissing
+      await tester.pumpAndSettle(const Duration(milliseconds: 600));
+      expect(find.text('Error occurred'), findsNothing);
+    });
+
+    testWidgets('custom duration is respected', (tester) async {
+      late Widget customApp;
+      customApp = MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                key: const Key('show_custom'),
+                onPressed: () => context.showHorcruxSnackBar(
+                  'Custom duration',
+                  kind: HorcruxSnackKind.info,
+                  duration: const Duration(seconds: 5),
+                ),
+                child: const Text('Show Custom'),
+              );
+            },
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(customApp);
+      await tester.tap(find.byKey(const Key('show_custom')));
+      await tester.pump();
+      expect(find.text('Custom duration'), findsOneWidget);
+
+      // At 2s — custom toast should still be visible
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        find.text('Custom duration'),
+        findsOneWidget,
+        reason: 'Custom 5s toast should still be visible at 2s',
+      );
+
+      // At 3s — still visible
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Custom duration'), findsOneWidget);
+
+      // At 5s+ — should dismiss
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+      expect(find.text('Custom duration'), findsNothing);
     });
   });
 }
