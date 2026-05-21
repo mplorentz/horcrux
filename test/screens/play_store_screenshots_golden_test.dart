@@ -21,13 +21,12 @@ void main() {
           formFactor: formFactor,
           overrides: PlayStoreScreenshotFixtures.vaultListOverrides(),
         );
+        addTearDown(() => harness.dispose());
 
         await screenMatchesGolden(
           tester,
           playStoreGoldenName(formFactor, '01_vault_list'),
         );
-
-        await harness.dispose();
       });
 
       testGoldens(
@@ -43,13 +42,12 @@ void main() {
             formFactor: formFactor,
             overrides: PlayStoreScreenshotFixtures.vaultDetailStewardOverrides(),
           );
+          addTearDown(() => harness.dispose());
 
           await screenMatchesGolden(
             tester,
             playStoreGoldenName(formFactor, '02_vault_detail_steward'),
           );
-
-          await harness.dispose();
         },
       );
 
@@ -66,13 +64,12 @@ void main() {
             formFactor: formFactor,
             overrides: PlayStoreScreenshotFixtures.manageRecoveryOverrides(),
           );
+          addTearDown(() => harness.dispose());
 
           await screenMatchesGolden(
             tester,
             playStoreGoldenName(formFactor, '03_manage_recovery'),
           );
-
-          await harness.dispose();
         },
       );
     }

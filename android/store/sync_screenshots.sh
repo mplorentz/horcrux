@@ -17,6 +17,10 @@ STORE="$ROOT/android/store/screenshots"
 mkdir -p "$STORE"
 
 shopt -s nullglob
+rm -f "$STORE"/{01,02,03}_*_phone.png \
+      "$STORE"/{01,02,03}_*_tablet_7in.png \
+      "$STORE"/{01,02,03}_*_tablet_10in.png
+
 for golden in "$GOLDENS"/{01,02,03}_*.png; do
   name="$(basename "$golden")"
   case "$name" in

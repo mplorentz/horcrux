@@ -78,7 +78,7 @@ abstract final class PlayStoreScreenshotFixtures {
       vaultName: vaultName,
       stewards: [
         {'name': ownerName, 'pubkey': ownerPubkey},
-        {'name': 'Alex Rivera', 'pubkey': ownerPubkey},
+        {'name': 'Alex Rivera', 'pubkey': recipientPubkey},
       ],
       recipientPubkey: recipientPubkey,
       isReceived: true,
