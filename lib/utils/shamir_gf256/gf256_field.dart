@@ -575,7 +575,7 @@ class GF256 {
     _check(dividend);
     _check(divisor);
     if (dividend == 0) return 0;
-    return multiply(dividend, exp3[255 - log3[divisor]]);
+    return multiply(dividend, exp3[(255 - log3[divisor]) % 255]);
   }
 
   /// Checks that [v] is in [0..255].
