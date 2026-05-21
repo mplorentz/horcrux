@@ -26,7 +26,7 @@ void main() {
     expect(held, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 6);
+    expect(versionRow.first.columnAt(0), 7);
 
     final phase3 = await db
         .customSelect(
@@ -59,7 +59,7 @@ void main() {
     expect(held.first.data['c'], 0);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 6);
+    expect(versionRow.first.columnAt(0), 7);
 
     await db.close();
   });
@@ -85,7 +85,69 @@ void main() {
     expect(invitations, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 6);
+    expect(versionRow.first.columnAt(0), 7);
+
+    await db.close();
+  });
+
+  test(
+      'upgrade from v6 snapshot adds held_shares.aead_blob and preserves existing rows',
+      () async {
+    final raw = sqlite.sqlite3.openInMemory();
+    raw.execute('PRAGMA foreign_keys = ON');
+
+    for (final statement in _legacyV1Ddl) {
+      raw.execute(statement);
+    }
+    raw.execute(_legacyV1HeldSharesDdl);
+    raw.execute(_legacyV4InvitationsTableDdl);
+    raw.execute(_legacyV3RecoveryRequestsDdl);
+    raw.execute(_legacyV3RecoveryRequestParticipantsDdl);
+    raw.execute(_legacyV3RecoveryResponsesDdl);
+    raw.execute(_legacyV3OutboxDdl);
+    raw.execute(_legacyV3OutboxRelaysDdl);
+    raw.execute(_legacyV5KvDdl);
+    raw.execute(_legacyV5ViewedNotificationsDdl);
+    raw.execute(_legacyV5SyncedConsentsDdl);
+    raw.execute('ALTER TABLE stewards ADD COLUMN invite_code TEXT');
+
+    // Seed a held_shares row that pre-dates the blob column so we can prove
+    // the migration is non-destructive.
+    final ownerHex = 'a' * 64;
+    raw.execute(
+      "INSERT INTO vaults (id, name, owner_pubkey, threshold, total_shares, "
+      "current_distribution_version, push_enabled, created_at) "
+      "VALUES ('v-1', 'V', '$ownerHex', 2, 3, 0, 1, 1)",
+    );
+    raw.execute(
+      "INSERT INTO held_shares "
+      "(id, vault_id, share_index, share_payload, distribution_version, "
+      " received_at, push_enabled) "
+      "VALUES ('hs-1', 'v-1', 0, 'AAA', 1, 1, 1)",
+    );
+    raw.execute('PRAGMA user_version = 6');
+
+    final db = AppDatabase(NativeDatabase.opened(raw));
+    await db.customSelect('SELECT 1').get();
+
+    // aead_blob column exists post-migration and the seeded row survives
+    // with aead_blob == NULL.
+    final cols = await db
+        .customSelect("PRAGMA table_info(held_shares)")
+        .get();
+    expect(
+      cols.any((c) => c.data['name'] == 'aead_blob'),
+      isTrue,
+      reason: 'v6→v7 migration must add held_shares.aead_blob',
+    );
+    final seeded = await db
+        .customSelect("SELECT aead_blob FROM held_shares WHERE id = 'hs-1'")
+        .get();
+    expect(seeded, hasLength(1));
+    expect(seeded.first.data['aead_blob'], isNull);
+
+    final versionRow = raw.select('PRAGMA user_version');
+    expect(versionRow.first.columnAt(0), 7);
 
     await db.close();
   });
@@ -131,7 +193,7 @@ void main() {
     expect(consentsTable, isNotEmpty);
 
     final versionRow = raw.select('PRAGMA user_version');
-    expect(versionRow.first.columnAt(0), 6);
+    expect(versionRow.first.columnAt(0), 7);
 
     await db.close();
   });
@@ -186,4 +248,16 @@ CREATE TABLE "outbox_relays" ("outbox_id" TEXT NOT NULL REFERENCES outbox (id) O
 
 const _legacyV4InvitationsTableDdl = '''
 CREATE TABLE "invitations" ("code" TEXT NOT NULL, "vault_id" TEXT NOT NULL REFERENCES vaults (id) ON DELETE CASCADE, "steward_id" TEXT NULL REFERENCES stewards (id) ON DELETE CASCADE, "payload" TEXT NOT NULL, "created_at" INTEGER NOT NULL, "expires_at" INTEGER NULL, "accepted_at" INTEGER NULL, "accepted_by_pubkey" TEXT NULL, "revoked_at" INTEGER NULL, PRIMARY KEY ("code"))
+''';
+
+const _legacyV5KvDdl = '''
+CREATE TABLE "kv" ("key" TEXT NOT NULL, "value" TEXT NOT NULL, PRIMARY KEY ("key"))
+''';
+
+const _legacyV5ViewedNotificationsDdl = '''
+CREATE TABLE "viewed_notifications" ("notification_id" TEXT NOT NULL, "viewed_at" INTEGER NOT NULL, PRIMARY KEY ("notification_id"))
+''';
+
+const _legacyV5SyncedConsentsDdl = '''
+CREATE TABLE "synced_consents" ("consent_id" TEXT NOT NULL, "payload" TEXT NOT NULL, "synced_at" INTEGER NOT NULL, PRIMARY KEY ("consent_id"))
 ''';
