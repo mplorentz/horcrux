@@ -356,9 +356,8 @@ class VaultShareService {
       await repository.saveVault(
         vault.copyWith(
           archivedAt: DateTime.now(),
-          archivedReason: reason == KeyHolderRemovalReason.vaultDeleted
-              ? 'Vault deleted'
-              : 'Removed by owner',
+          archivedReason:
+              reason == KeyHolderRemovalReason.vaultDeleted ? 'Vault deleted' : 'Removed by owner',
         ),
       );
       Log.info('processKeyHolderRemoval: archived vault $vaultId');
