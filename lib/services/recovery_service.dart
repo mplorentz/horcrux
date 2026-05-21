@@ -542,13 +542,15 @@ class RecoveryService {
   /// Merges one steward's recovery response into local vault state (from Nostr or from this device).
   ///
   /// Since events are immutable, we skip processing if the response already exists.
+  /// Returns `true` when the response was actually processed, `false` when it was
+  /// skipped (duplicate or already processed).
   ///
   /// When [recoveryResponseSourceEvent] is set (relay-delivered event), may show a local OS
   /// notification per [RecoveryNotificationPolicy]. Local-only applies omit it. Pass
   /// `allowLocalNotification: false` when the caller has already shown the user a
   /// notification for this event (e.g. an FCM push the user just tapped) so we do
   /// not double-notify.
-  Future<void> processRecoveryResponse(
+  Future<bool> processRecoveryResponse(
     String recoveryRequestId,
     String responderPubkey,
     bool approved, {
@@ -571,16 +573,19 @@ class RecoveryService {
       // Check if this is a duplicate by comparing nostrEventId if provided
       if (nostrEventId != null && existingResponse.nostrEventId == nostrEventId) {
         Log.info(
-          'Ignoring duplicate recovery response for request $recoveryRequestId from $responderPubkey (nostrEventId: $nostrEventId)',
+          'Ignoring duplicate recovery response for request $recoveryRequestId from '
+          '${responderPubkey.substring(0, 8)}... (nostrEventId: $nostrEventId)',
         );
-        return;
+        return false;
       }
       // If response already exists and has respondedAt, skip processing (immutable event)
       if (existingResponse.respondedAt != null) {
         Log.info(
-          'Ignoring recovery response for request $recoveryRequestId from $responderPubkey - response already exists',
+          'Ignoring recovery response for request $recoveryRequestId from '
+          '${responderPubkey.substring(0, 8)}... - already processed '
+          '(respondedAt=${existingResponse.respondedAt})',
         );
-        return;
+        return false;
       }
     }
 
@@ -650,8 +655,10 @@ class RecoveryService {
     }
 
     Log.info(
-      'Updated recovery request $recoveryRequestId with response from ${responderPubkey.substring(0, 8)}... (approved: $approved)',
+      'Updated recovery request $recoveryRequestId with response from '
+      '${responderPubkey.substring(0, 8)}... (approved: $approved)',
     );
+    return true;
   }
 
   /// Approve or deny a recovery request with automatic shard data retrieval and Nostr sending
@@ -731,14 +738,14 @@ class RecoveryService {
         }
 
         if (relayUrls.isNotEmpty) {
-          await sendRecoveryResponseViaNostr(
+          final eventId = await sendRecoveryResponseViaNostr(
             request,
             stewardShare,
             approved,
             relays: relayUrls,
           );
           Log.info(
-            'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved)',
+            'Sent recovery response via Nostr for request $recoveryRequestId (approved: $approved, event: ${eventId.substring(0, 8)}...)',
           );
         } else {
           Log.warning('No relay URLs available for sending recovery response');
