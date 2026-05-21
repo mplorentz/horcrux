@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../utils/crypto/aead.dart';
 import '../utils/shamir_gf256/shamir_gf256.dart';
 import '../models/backup_config.dart';
 import '../models/steward.dart';
@@ -185,14 +187,20 @@ class BackupService {
         throw ArgumentError('Content cannot be empty');
       }
 
-      // Convert content string to byte list
-      final secretBytes = utf8.encode(content).toList();
+      // gf256_v1: encrypt the content with a fresh ChaCha20-Poly1305 key,
+      // then SSS-split that 32-byte key. The ciphertext bundle rides along
+      // with every share as `blob`. Reconstructing past the threshold yields
+      // the key, which decrypts the bundle — and the Poly1305 tag catches
+      // tampering. Plain SSS over the content bytes (the previous design)
+      // returned garbage on tampered shares with no signal.
+      final secretBytes = Uint8List.fromList(utf8.encode(content));
+      final aeadKey = Aead.generateKey();
+      final blobBundle = Aead.encrypt(aeadKey, secretBytes);
+      final blob = base64Url.encode(blobBundle);
 
-      // Create GF(256) SSS instance
+      // Create GF(256) SSS instance and split the AEAD key
       final scheme = SecretScheme(totalShards, threshold);
-
-      // Generate shares: Map<int, List<int>> where key is x-coord
-      final sharesMap = scheme.createShares(secretBytes);
+      final sharesMap = scheme.createShares(aeadKey);
 
       // Sort by x-coord and assign sequential shareIndex 0..N-1
       final sortedXCoords = sharesMap.keys.toList()..sort();
@@ -211,6 +219,9 @@ class BackupService {
           shareIndex: i, // sequential 0-based index
           totalShares: totalShards,
           creatorPubkey: creatorPubkey,
+          // Identical AEAD bundle on every share; recovery cross-checks for
+          // byte equality before reconstructing the key.
+          blob: blob,
           vaultId: vaultId,
           vaultName: vaultName,
           stewards: stewards,
@@ -273,6 +284,27 @@ class BackupService {
         );
       }
 
+      // gf256_v1: every share carries the same AEAD ciphertext blob, and the
+      // SSS payload reconstructs the 32-byte content-encryption key. Verify
+      // the blobs are byte-identical *before* doing any reconstruction — a
+      // disagreement means at least one steward tampered with their copy
+      // and we can fail fast with a clearer error than the Poly1305 tag
+      // mismatch we would otherwise hit on decrypt.
+      final blob = shares.first.blob;
+      if (blob == null || blob.isEmpty) {
+        throw ArgumentError(
+          'Share is missing AEAD blob (required for gf256_v1)',
+        );
+      }
+      for (final s in shares) {
+        if (s.blob != blob) {
+          throw ArgumentError(
+            'Shares disagree on AEAD blob — at least one was tampered with '
+            'or comes from a different distribution',
+          );
+        }
+      }
+
       // Decode base64-encoded shares back to byte lists
       final shareMap = <int, List<int>>{};
       for (final s in shares) {
@@ -292,15 +324,42 @@ class BackupService {
         throw ArgumentError('Shares contain duplicate x-coordinates');
       }
 
-      // Create GF(256) SSS instance and reconstruct
+      // Create GF(256) SSS instance and reconstruct the AEAD key
       final scheme = SecretScheme(totalSharesCount, threshold);
-      final secretBytes = scheme.combineShares(shareMap);
-      final content = utf8.decode(secretBytes);
+      final reconstructedKey = scheme.combineShares(shareMap);
+      if (reconstructedKey.length != Aead.keySize) {
+        // Defense in depth: gf256_v1 always splits a 32-byte key. Anything
+        // else means a malformed share slipped past the earlier checks.
+        throw ArgumentError(
+          'Reconstructed AEAD key has unexpected length: '
+          '${reconstructedKey.length} (expected ${Aead.keySize})',
+        );
+      }
 
-      Log.info(
-        'Successfully reconstructed content from ${shares.length} shares',
-      );
-      return content;
+      // AEAD-decrypt the blob with the reconstructed key. A Poly1305 tag
+      // mismatch here is the canonical "shares are wrong or tampered"
+      // signal — surface it as an ArgumentError so callers see a uniform
+      // failure mode rather than letting plaintext-decode errors leak
+      // through downstream.
+      final blobBundle = base64Url.decode(blob);
+      try {
+        final plaintextBytes = Aead.decrypt(
+          Uint8List.fromList(reconstructedKey),
+          blobBundle,
+        );
+        final content = utf8.decode(plaintextBytes);
+
+        Log.info(
+          'Successfully reconstructed content from ${shares.length} shares',
+        );
+        return content;
+      } on AeadAuthenticationError catch (e) {
+        Log.error('AEAD authentication failed during recovery', e);
+        throw ArgumentError(
+          'Recovery failed: ciphertext failed authentication — tampered '
+          'share, mismatched distribution, or insufficient/incorrect shares',
+        );
+      }
     } on ArgumentError catch (e) {
       Log.error('Error reconstructing from shares', e);
       rethrow;

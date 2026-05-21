@@ -228,6 +228,12 @@ class ShareDistributionService {
           shareIndex: -1,
           totalShares: config.totalKeys,
           scheme: template.scheme,
+          // Carry the AEAD blob on the manifest too. Without it, an owner
+          // who is not a self-steward could not decrypt anything stewards
+          // return — the blob is the ciphertext, the shares hold only the
+          // key. Manifest blob === every steward share blob (recovery
+          // requires byte-equal blobs across all collected shares).
+          blob: template.blob,
           creatorPubkey: ownerPubkey,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           vaultId: config.vaultId,
