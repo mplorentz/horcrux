@@ -1469,7 +1469,7 @@ void main() {
     const sampleBlob = 'AAECAwQFBgcICQoLDA0ODw=='; // arbitrary base64
 
     test('JSON round-trip preserves blob', () {
-      final share = Share(
+      const share = Share(
         payload: 'k-share',
         threshold: 2,
         shareIndex: 0,
@@ -1484,7 +1484,7 @@ void main() {
     });
 
     test('shareToJson omits blob when null', () {
-      final share = Share(
+      const share = Share(
         payload: 'k-share',
         threshold: 2,
         shareIndex: 0,
@@ -1497,7 +1497,7 @@ void main() {
     });
 
     test('Nostr tag round-trip preserves blob', () {
-      final share = Share(
+      const share = Share(
         payload: 'k-share',
         threshold: 2,
         shareIndex: 0,
@@ -1525,7 +1525,7 @@ void main() {
     });
 
     test('shareToNostrTags omits blob tag when null', () {
-      final share = Share(
+      const share = Share(
         payload: 'k-share',
         threshold: 2,
         shareIndex: 0,
