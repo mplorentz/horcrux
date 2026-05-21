@@ -970,7 +970,6 @@ void main() {
     );
   });
 
-
   group('processKeyHolderRemoval', () {
     const ownerPubkey = TestHexPubkeys.alice;
     const stewardPubkey = TestHexPubkeys.bob;
@@ -992,8 +991,7 @@ void main() {
           .thenAnswer((inv) async => inv.positionalArguments[0] as String);
 
       mockNdkService = MockNdkService();
-      when(mockNdkService.getCurrentPubkey())
-          .thenAnswer((_) async => stewardPubkey);
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => stewardPubkey);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
       mockRelayScanService = MockRelayScanService();
@@ -1096,7 +1094,9 @@ void main() {
       final event = Nip01Event(
         kind: 9999,
         pubKey: ownerPubkey,
-        tags: [['vault_id', vaultId]],
+        tags: [
+          ['vault_id', vaultId]
+        ],
         createdAt: 1,
         content: '',
       );
