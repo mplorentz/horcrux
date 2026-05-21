@@ -3,6 +3,7 @@ import 'package:ndk/ndk.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
 import '../models/vault.dart';
+import '../models/key_holder_removal_reason.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
 import 'horcrux_notification_service.dart';
@@ -347,13 +348,17 @@ class VaultShareService {
         return;
       }
 
-      // Read reason from tags (default to 'steward_removed' for legacy events)
-      final reason = _extractTagValue(event.tags, 'reason') ?? 'steward_removed';
+      // Read reason from tags (default to stewardRemoved for legacy events)
+      final reason = KeyHolderRemovalReason.fromWire(
+        _extractTagValue(event.tags, 'reason'),
+      );
 
       await repository.saveVault(
         vault.copyWith(
           archivedAt: DateTime.now(),
-          archivedReason: reason == 'vault_deleted' ? 'Vault deleted' : 'Removed by owner',
+          archivedReason: reason == KeyHolderRemovalReason.vaultDeleted
+              ? 'Vault deleted'
+              : 'Removed by owner',
         ),
       );
       Log.info('processKeyHolderRemoval: archived vault $vaultId');
