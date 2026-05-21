@@ -16,7 +16,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   local_auth: ^2.3.0
-  ndk: ^0.5.1
+  ndk: ^0.8.3
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^9.2.2
   logger: ^2.4.0

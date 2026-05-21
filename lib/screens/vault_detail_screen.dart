@@ -302,8 +302,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
               // Notify all stewards before deleting the vault.
               if (vault.backupConfig != null) {
                 final config = vault.backupConfig!;
-                final invitationSendingService =
-                    ref.read(invitationSendingServiceProvider);
+                final invitationSendingService = ref.read(invitationSendingServiceProvider);
                 for (final steward in config.stewards) {
                   if (steward.pubkey != null && config.relays.isNotEmpty) {
                     await invitationSendingService.sendKeyHolderRemovalEvent(
