@@ -363,9 +363,13 @@ Widget playStorePushedScreen(Widget screen) {
 
 /// Resets [FlutterView] size overrides after Play Store golden tests.
 void resetPlayStoreViewConfiguration() {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-  binding.window.clearDevicePixelRatioTestValue();
-  binding.window.clearPhysicalSizeTestValue();
+  TestWidgetsFlutterBinding.ensureInitialized();
+  for (final view in WidgetsBinding.instance.platformDispatcher.views) {
+    if (view case TestFlutterView testView) {
+      testView.resetPhysicalSize();
+      testView.resetDevicePixelRatio();
+    }
+  }
 }
 
 /// Pumps a widget at [formFactor] logical size, exported at Play Store physical px.
@@ -386,11 +390,11 @@ Future<GoldenTestHarness> pumpPlayStoreGoldenWidget(
   final container = harness.container;
 
   await tester.binding.setSurfaceSize(logicalSize);
-  tester.binding.window.physicalSizeTestValue = Size(
+  tester.view.physicalSize = Size(
     logicalSize.width * devicePixelRatio,
     logicalSize.height * devicePixelRatio,
   );
-  tester.binding.window.devicePixelRatioTestValue = devicePixelRatio;
+  tester.view.devicePixelRatio = devicePixelRatio;
 
   await tester.pumpWidget(
     UncontrolledProviderScope(
