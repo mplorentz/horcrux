@@ -110,12 +110,13 @@ class SecretScheme {
 
   /// Generate [count] unique non-zero byte values.
   List<int> _uniqueNonZeroBytes(int count) {
+    final seen = <int>{};
     final result = List<int>.filled(count, 0);
     int idx = 0;
     while (idx < count) {
       final v = _random.nextInt(256);
       if (v == 0) continue;
-      if (result.contains(v)) continue;
+      if (!seen.add(v)) continue;
       result[idx] = v;
       idx++;
     }

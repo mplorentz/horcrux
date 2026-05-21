@@ -574,6 +574,7 @@ class GF256 {
   static int divide(int dividend, int divisor) {
     _check(dividend);
     _check(divisor);
+    if (divisor == 0) throw ArgumentError('Cannot divide by zero in GF(256)');
     if (dividend == 0) return 0;
     return multiply(dividend, exp3[(255 - log3[divisor]) % 255]);
   }

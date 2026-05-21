@@ -347,7 +347,7 @@ Map<String, dynamic> shareToJson(Share share) {
     'threshold': share.threshold,
     'shard_index': share.shareIndex,
     'total_shards': share.totalShares,
-    'scheme': share.scheme ?? 'gf256_v1',
+    if (share.scheme != null) 'scheme': share.scheme!,
     if (share.scheme != null && share.scheme != 'gf256_v1')
       // Write prime_mod for backward compatibility with legacy data
       'prime_mod': share.scheme,

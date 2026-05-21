@@ -281,6 +281,70 @@ void main() {
       );
     });
 
+    test('reconstructFromShares throws when shares are from different vaults',
+        () async {
+      // Arrange - generate shares for two different vaults
+      final sharesVault1 = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+      final sharesVault2 = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: 'other-vault-456',
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Act & Assert - mixing shares from different vaults must throw
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [sharesVault1[0], sharesVault2[1]],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('same vault'),
+          ),
+        ),
+      );
+    });
+
+    test('reconstructFromShares throws on duplicate x-coordinates', () async {
+      // Arrange
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Act & Assert - same share submitted twice has the same x-coordinate
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [shares[0], shares[0]],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('duplicate x-coordinates'),
+          ),
+        ),
+      );
+    });
+
     test('generateShamirShares works with long secrets', () async {
       // Arrange - Create a secret longer than 256 bits
       final longSecret = 'A' * 500;
