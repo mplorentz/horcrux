@@ -980,6 +980,7 @@ void main() {
     late MockNdkService mockNdkService;
     late MockHorcruxNotificationService mockNotificationService;
     late MockPushNotificationReceiver mockPushReceiver;
+    late MockRelayScanService mockRelayScanService;
     late VaultRepository repository;
     late VaultShareService service;
 
@@ -995,6 +996,7 @@ void main() {
           .thenAnswer((_) async => stewardPubkey);
       mockNotificationService = MockHorcruxNotificationService();
       mockPushReceiver = MockPushNotificationReceiver();
+      mockRelayScanService = MockRelayScanService();
 
       repository = VaultRepository(mockLoginService);
       service = VaultShareService(
@@ -1002,6 +1004,7 @@ void main() {
         () => mockNdkService,
         () => mockNotificationService,
         () => mockPushReceiver,
+        () => mockRelayScanService,
       );
     });
 
