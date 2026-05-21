@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:ndk/data_layer/models/nip_01_event_model.dart';
 import 'package:ndk/ndk.dart';
 import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
@@ -54,7 +55,7 @@ void main() {
   Nip01Event decodeAuthHeader(String header) {
     expect(header.startsWith('Nostr '), isTrue, reason: 'header: $header');
     final raw = utf8.decode(base64Decode(header.substring('Nostr '.length)));
-    return Nip01Event.fromJson(json.decode(raw) as Map<String, dynamic>);
+    return Nip01EventModel.fromJson(json.decode(raw) as Map<String, dynamic>);
   }
 
   String? firstTag(Nip01Event event, String name) {
@@ -162,7 +163,7 @@ void main() {
       expect(firstTag(event, 'u'), req.url.toString());
       expect(firstTag(event, 'payload'), isNotNull,
           reason: 'body present -> sha256 payload tag required');
-      expect(Bip340.verify(event.id, event.sig, event.pubKey), isTrue);
+      expect(Bip340.verify(event.id, event.sig!, event.pubKey), isTrue);
       harness.service.dispose();
     });
 

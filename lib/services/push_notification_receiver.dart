@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ndk/data_layer/models/nip_01_event_model.dart';
 import 'package:ndk/ndk.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
@@ -404,7 +405,7 @@ class PushNotificationReceiver {
     final embedded = parseFcmEmbeddedEventJson(message.data);
     if (embedded != null) {
       try {
-        giftWrap = Nip01Event.fromJson(embedded);
+        giftWrap = Nip01EventModel.fromJson(embedded);
       } catch (e, st) {
         Log.warning('FCM tap: invalid embedded event_json', e, st);
         return;
@@ -426,13 +427,13 @@ class PushNotificationReceiver {
       }
     }
 
-    final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
-    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
+    final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap!);
+    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap!);
     try {
       // Tap path: the user already saw and acted on the FCM notification, so
       // any per-kind handler must not surface a second local OS notification.
       await _ndkService.processGiftWrapFromForegroundPush(
-        giftWrap,
+        giftWrap!,
         allowLocalNotification: false,
       );
     } catch (e, st) {
@@ -480,7 +481,7 @@ class PushNotificationReceiver {
     final embedded = parseFcmEmbeddedEventJson(message.data);
     if (embedded != null) {
       try {
-        final event = Nip01Event.fromJson(embedded);
+        final event = Nip01EventModel.fromJson(embedded);
         await _ndkService.processGiftWrapFromForegroundPush(event);
       } catch (e, st) {
         Log.warning(

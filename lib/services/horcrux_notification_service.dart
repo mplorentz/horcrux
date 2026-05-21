@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:ndk/data_layer/models/nip_01_event_model.dart';
 import 'package:ndk/ndk.dart';
 
 import '../database/app_database.dart';
@@ -462,7 +463,7 @@ class HorcruxNotificationService {
       return;
     }
 
-    final eventJson = event.toJson();
+    final eventJson = Nip01EventModel.fromEntity(event).toJson();
     final encodedBytes = utf8.encode(jsonEncode(eventJson)).length;
     final embedInline = encodedBytes <= maxEmbeddedEventBytes;
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
+import 'package:ndk/data_layer/models/nip_01_event_model.dart';
 import 'package:ndk/ndk.dart';
 
 import '../database/app_database.dart';
@@ -94,7 +95,7 @@ class PublishService {
 
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
-      final jsonStr = json.encode(event.toJson());
+      final jsonStr = json.encode(Nip01EventModel.fromEntity(event).toJson());
 
       await _db.transaction(() async {
         await _db.into(_db.outbox).insert(
@@ -216,7 +217,7 @@ class PublishService {
 
     Nip01Event event;
     try {
-      event = Nip01Event.fromJson(
+      event = Nip01EventModel.fromJson(
         json.decode(out.eventJson) as Map<String, dynamic>,
       );
     } catch (e, st) {

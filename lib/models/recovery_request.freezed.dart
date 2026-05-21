@@ -16,7 +16,8 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$RecoveryResponse {
-  String get pubkey => throw _privateConstructorUsedError; // hex format, 64 characters
+  String get pubkey =>
+      throw _privateConstructorUsedError; // hex format, 64 characters
   bool get approved =>
       throw _privateConstructorUsedError; // Whether the steward approved the request
   DateTime? get respondedAt => throw _privateConstructorUsedError;
@@ -29,12 +30,14 @@ mixin _$RecoveryResponse {
   /// Create a copy of RecoveryResponse
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $RecoveryResponseCopyWith<RecoveryResponse> get copyWith => throw _privateConstructorUsedError;
+  $RecoveryResponseCopyWith<RecoveryResponse> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $RecoveryResponseCopyWith<$Res> {
-  factory $RecoveryResponseCopyWith(RecoveryResponse value, $Res Function(RecoveryResponse) then) =
+  factory $RecoveryResponseCopyWith(
+          RecoveryResponse value, $Res Function(RecoveryResponse) then) =
       _$RecoveryResponseCopyWithImpl<$Res, RecoveryResponse>;
   @useResult
   $Res call(
@@ -114,9 +117,10 @@ class _$RecoveryResponseCopyWithImpl<$Res, $Val extends RecoveryResponse>
 }
 
 /// @nodoc
-abstract class _$$RecoveryResponseImplCopyWith<$Res> implements $RecoveryResponseCopyWith<$Res> {
-  factory _$$RecoveryResponseImplCopyWith(
-          _$RecoveryResponseImpl value, $Res Function(_$RecoveryResponseImpl) then) =
+abstract class _$$RecoveryResponseImplCopyWith<$Res>
+    implements $RecoveryResponseCopyWith<$Res> {
+  factory _$$RecoveryResponseImplCopyWith(_$RecoveryResponseImpl value,
+          $Res Function(_$RecoveryResponseImpl) then) =
       __$$RecoveryResponseImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -136,8 +140,8 @@ abstract class _$$RecoveryResponseImplCopyWith<$Res> implements $RecoveryRespons
 class __$$RecoveryResponseImplCopyWithImpl<$Res>
     extends _$RecoveryResponseCopyWithImpl<$Res, _$RecoveryResponseImpl>
     implements _$$RecoveryResponseImplCopyWith<$Res> {
-  __$$RecoveryResponseImplCopyWithImpl(
-      _$RecoveryResponseImpl _value, $Res Function(_$RecoveryResponseImpl) _then)
+  __$$RecoveryResponseImplCopyWithImpl(_$RecoveryResponseImpl _value,
+      $Res Function(_$RecoveryResponseImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of RecoveryResponse
@@ -216,16 +220,20 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
         (other.runtimeType == runtimeType &&
             other is _$RecoveryResponseImpl &&
             (identical(other.pubkey, pubkey) || other.pubkey == pubkey) &&
-            (identical(other.approved, approved) || other.approved == approved) &&
-            (identical(other.respondedAt, respondedAt) || other.respondedAt == respondedAt) &&
+            (identical(other.approved, approved) ||
+                other.approved == approved) &&
+            (identical(other.respondedAt, respondedAt) ||
+                other.respondedAt == respondedAt) &&
             (identical(other.share, share) || other.share == share) &&
-            (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
-            (identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+            (identical(other.nostrEventId, nostrEventId) ||
+                other.nostrEventId == nostrEventId) &&
+            (identical(other.errorMessage, errorMessage) ||
+                other.errorMessage == errorMessage));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, pubkey, approved, respondedAt, share, nostrEventId, errorMessage);
+  int get hashCode => Object.hash(runtimeType, pubkey, approved, respondedAt,
+      share, nostrEventId, errorMessage);
 
   /// Create a copy of RecoveryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -233,7 +241,8 @@ class _$RecoveryResponseImpl extends _RecoveryResponse {
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryResponseImplCopyWith<_$RecoveryResponseImpl> get copyWith =>
-      __$$RecoveryResponseImplCopyWithImpl<_$RecoveryResponseImpl>(this, _$identity);
+      __$$RecoveryResponseImplCopyWithImpl<_$RecoveryResponseImpl>(
+          this, _$identity);
 }
 
 abstract class _RecoveryResponse extends RecoveryResponse {
@@ -273,10 +282,12 @@ abstract class _RecoveryResponse extends RecoveryResponse {
 mixin _$RecoveryRequest {
   String get id => throw _privateConstructorUsedError;
   String get vaultId => throw _privateConstructorUsedError;
-  String get initiatorPubkey => throw _privateConstructorUsedError; // hex format, 64 characters
+  String get initiatorPubkey =>
+      throw _privateConstructorUsedError; // hex format, 64 characters
   DateTime get requestedAt => throw _privateConstructorUsedError;
   RecoveryRequestStatus get status => throw _privateConstructorUsedError;
-  int get threshold => throw _privateConstructorUsedError; // Shamir threshold needed for recovery
+  int get threshold =>
+      throw _privateConstructorUsedError; // Shamir threshold needed for recovery
   String? get nostrEventId => throw _privateConstructorUsedError;
 
   /// Unix `created_at` of the inner Nostr event (for live vs historical notification policy).
@@ -291,12 +302,14 @@ mixin _$RecoveryRequest {
   /// Create a copy of RecoveryRequest
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $RecoveryRequestCopyWith<RecoveryRequest> get copyWith => throw _privateConstructorUsedError;
+  $RecoveryRequestCopyWith<RecoveryRequest> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $RecoveryRequestCopyWith<$Res> {
-  factory $RecoveryRequestCopyWith(RecoveryRequest value, $Res Function(RecoveryRequest) then) =
+  factory $RecoveryRequestCopyWith(
+          RecoveryRequest value, $Res Function(RecoveryRequest) then) =
       _$RecoveryRequestCopyWithImpl<$Res, RecoveryRequest>;
   @useResult
   $Res call(
@@ -402,9 +415,10 @@ class _$RecoveryRequestCopyWithImpl<$Res, $Val extends RecoveryRequest>
 }
 
 /// @nodoc
-abstract class _$$RecoveryRequestImplCopyWith<$Res> implements $RecoveryRequestCopyWith<$Res> {
-  factory _$$RecoveryRequestImplCopyWith(
-          _$RecoveryRequestImpl value, $Res Function(_$RecoveryRequestImpl) then) =
+abstract class _$$RecoveryRequestImplCopyWith<$Res>
+    implements $RecoveryRequestCopyWith<$Res> {
+  factory _$$RecoveryRequestImplCopyWith(_$RecoveryRequestImpl value,
+          $Res Function(_$RecoveryRequestImpl) then) =
       __$$RecoveryRequestImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -585,17 +599,25 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
             (identical(other.vaultId, vaultId) || other.vaultId == vaultId) &&
             (identical(other.initiatorPubkey, initiatorPubkey) ||
                 other.initiatorPubkey == initiatorPubkey) &&
-            (identical(other.requestedAt, requestedAt) || other.requestedAt == requestedAt) &&
+            (identical(other.requestedAt, requestedAt) ||
+                other.requestedAt == requestedAt) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.threshold, threshold) || other.threshold == threshold) &&
-            (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
+            (identical(other.threshold, threshold) ||
+                other.threshold == threshold) &&
+            (identical(other.nostrEventId, nostrEventId) ||
+                other.nostrEventId == nostrEventId) &&
             (identical(other.eventCreationTime, eventCreationTime) ||
                 other.eventCreationTime == eventCreationTime) &&
-            (identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt) &&
-            const DeepCollectionEquality().equals(other._stewardPubkeys, _stewardPubkeys) &&
-            const DeepCollectionEquality().equals(other._responses, _responses) &&
-            (identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage) &&
-            (identical(other.isPractice, isPractice) || other.isPractice == isPractice));
+            (identical(other.expiresAt, expiresAt) ||
+                other.expiresAt == expiresAt) &&
+            const DeepCollectionEquality()
+                .equals(other._stewardPubkeys, _stewardPubkeys) &&
+            const DeepCollectionEquality()
+                .equals(other._responses, _responses) &&
+            (identical(other.errorMessage, errorMessage) ||
+                other.errorMessage == errorMessage) &&
+            (identical(other.isPractice, isPractice) ||
+                other.isPractice == isPractice));
   }
 
   @override
@@ -621,7 +643,8 @@ class _$RecoveryRequestImpl extends _RecoveryRequest {
   @override
   @pragma('vm:prefer-inline')
   _$$RecoveryRequestImplCopyWith<_$RecoveryRequestImpl> get copyWith =>
-      __$$RecoveryRequestImplCopyWithImpl<_$RecoveryRequestImpl>(this, _$identity);
+      __$$RecoveryRequestImplCopyWithImpl<_$RecoveryRequestImpl>(
+          this, _$identity);
 }
 
 abstract class _RecoveryRequest extends RecoveryRequest {
