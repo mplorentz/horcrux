@@ -427,13 +427,13 @@ class PushNotificationReceiver {
       }
     }
 
-    final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap!);
-    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap!);
+    final vaultId = await _ndkService.resolveVaultIdForGiftWrap(giftWrap);
+    final recoveryTarget = await _ndkService.resolveRecoveryRequestIdForGiftWrap(giftWrap);
     try {
       // Tap path: the user already saw and acted on the FCM notification, so
       // any per-kind handler must not surface a second local OS notification.
       await _ndkService.processGiftWrapFromForegroundPush(
-        giftWrap!,
+        giftWrap,
         allowLocalNotification: false,
       );
     } catch (e, st) {
