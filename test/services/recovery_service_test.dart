@@ -1252,7 +1252,7 @@ void main() {
       expect(content, 'reconstructed-secret-data');
     });
 
-    test('succeeds when shares have different creatorPubkey (normalized to vault owner)', () async {
+    test('succeeds when shares have different creatorPubkey', () async {
       final recoveryRequest = await recoveryService.initiateRecovery(
         testVaultId,
         initiatorPubkey: testCreatorPubkey,
@@ -1276,9 +1276,8 @@ void main() {
         ),
       );
 
-      // Second share with a different creatorPubkey — performRecovery now
-      // normalizes all shares' creatorPubkey to vault.ownerPubkey before
-      // combine, so this should succeed.
+      // Second share with a different creatorPubkey — Shamir combine only
+      // requires matching threshold/totalShares/primeMod.
       await recoveryService.processRecoveryResponse(
         recoveryRequest.id,
         testKeyHolder2,

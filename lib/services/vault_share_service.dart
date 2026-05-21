@@ -525,12 +525,10 @@ class VaultShareService {
     Share share,
   ) async {
     const syntheticPrefix = 'owner-self-steward-inferred';
-    // Prefer vault.ownerPubkey from the DB; fall back to share.creatorPubkey
-    // for shares that arrived before the vault row existed.
     final vault = await repository.getVault(vaultId);
-    final ownerPk = vault?.ownerPubkey.isNotEmpty == true
-        ? vault!.ownerPubkey
-        : share.creatorPubkey;
+    if (vault == null || vault.ownerPubkey.isEmpty) return;
+
+    final ownerPk = vault.ownerPubkey;
     final embedded = share.stewards;
     if (embedded == null || embedded.isEmpty) return;
 
@@ -538,8 +536,8 @@ class VaultShareService {
     if (!ownerListed) return;
 
     final shareDist = share.distributionVersion ?? 0;
-    final vaultDist = vault?.backupConfig?.distributionVersion;
-    if (vault == null || vaultDist == null) return;
+    final vaultDist = vault.backupConfig?.distributionVersion;
+    if (vaultDist == null) return;
     if (shareDist != vaultDist) return;
 
     final syntheticGiftWrapId = '$syntheticPrefix:$vaultId:v$shareDist';
