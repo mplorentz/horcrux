@@ -17,6 +17,9 @@ final _privateConstructorUsedError = UnsupportedError(
 /// @nodoc
 mixin _$Share {
   /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+  ///
+  /// In `gf256_v1`, [payload] is a share of the **content-encryption key**,
+  /// not the vault content itself. The encrypted content lives in [blob].
   String get payload => throw _privateConstructorUsedError;
   int get threshold => throw _privateConstructorUsedError;
   int get shareIndex => throw _privateConstructorUsedError;
@@ -25,13 +28,26 @@ mixin _$Share {
   int get createdAt =>
       throw _privateConstructorUsedError; // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
 // Null means unsupported (legacy ntcdcrypto GF(p) format).
-  String? get scheme => throw _privateConstructorUsedError; // Recovery metadata (optional fields)
+  String? get scheme => throw _privateConstructorUsedError;
+
+  /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
+  /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
+  /// `gf256_v1` shares.
+  ///
+  /// Every share in a distribution carries an identical [blob]; recovery
+  /// cross-checks for byte equality before reconstructing the key. The
+  /// Poly1305 tag is what gives reconstructed content its integrity
+  /// guarantee — SSS alone provides none.
+  String? get blob =>
+      throw _privateConstructorUsedError; // Recovery metadata (optional fields)
   String? get vaultId => throw _privateConstructorUsedError;
   String? get vaultName => throw _privateConstructorUsedError;
   List<Map<String, String>>? get stewards =>
       throw _privateConstructorUsedError; // List of maps with 'name', 'pubkey', and optionally 'contactInfo' for OTHER stewards (excludes creatorPubkey)
-  String? get ownerName => throw _privateConstructorUsedError; // Name of the vault owner (creator)
-  String? get instructions => throw _privateConstructorUsedError; // Instructions for stewards
+  String? get ownerName =>
+      throw _privateConstructorUsedError; // Name of the vault owner (creator)
+  String? get instructions =>
+      throw _privateConstructorUsedError; // Instructions for stewards
   String? get recipientPubkey => throw _privateConstructorUsedError;
   bool? get isReceived => throw _privateConstructorUsedError;
   DateTime? get receivedAt => throw _privateConstructorUsedError;
@@ -58,7 +74,8 @@ mixin _$Share {
 
 /// @nodoc
 abstract class $ShareCopyWith<$Res> {
-  factory $ShareCopyWith(Share value, $Res Function(Share) then) = _$ShareCopyWithImpl<$Res, Share>;
+  factory $ShareCopyWith(Share value, $Res Function(Share) then) =
+      _$ShareCopyWithImpl<$Res, Share>;
   @useResult
   $Res call(
       {String payload,
@@ -68,6 +85,7 @@ abstract class $ShareCopyWith<$Res> {
       String creatorPubkey,
       int createdAt,
       String? scheme,
+      String? blob,
       String? vaultId,
       String? vaultName,
       List<Map<String, String>>? stewards,
@@ -83,7 +101,8 @@ abstract class $ShareCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$Res> {
+class _$ShareCopyWithImpl<$Res, $Val extends Share>
+    implements $ShareCopyWith<$Res> {
   _$ShareCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -103,6 +122,7 @@ class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$R
     Object? creatorPubkey = null,
     Object? createdAt = null,
     Object? scheme = freezed,
+    Object? blob = freezed,
     Object? vaultId = freezed,
     Object? vaultName = freezed,
     Object? stewards = freezed,
@@ -144,6 +164,10 @@ class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$R
       scheme: freezed == scheme
           ? _value.scheme
           : scheme // ignore: cast_nullable_to_non_nullable
+              as String?,
+      blob: freezed == blob
+          ? _value.blob
+          : blob // ignore: cast_nullable_to_non_nullable
               as String?,
       vaultId: freezed == vaultId
           ? _value.vaultId
@@ -199,7 +223,8 @@ class _$ShareCopyWithImpl<$Res, $Val extends Share> implements $ShareCopyWith<$R
 
 /// @nodoc
 abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
-  factory _$$ShareImplCopyWith(_$ShareImpl value, $Res Function(_$ShareImpl) then) =
+  factory _$$ShareImplCopyWith(
+          _$ShareImpl value, $Res Function(_$ShareImpl) then) =
       __$$ShareImplCopyWithImpl<$Res>;
   @override
   @useResult
@@ -211,6 +236,7 @@ abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
       String creatorPubkey,
       int createdAt,
       String? scheme,
+      String? blob,
       String? vaultId,
       String? vaultName,
       List<Map<String, String>>? stewards,
@@ -226,9 +252,11 @@ abstract class _$$ShareImplCopyWith<$Res> implements $ShareCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$ShareImplCopyWithImpl<$Res> extends _$ShareCopyWithImpl<$Res, _$ShareImpl>
+class __$$ShareImplCopyWithImpl<$Res>
+    extends _$ShareCopyWithImpl<$Res, _$ShareImpl>
     implements _$$ShareImplCopyWith<$Res> {
-  __$$ShareImplCopyWithImpl(_$ShareImpl _value, $Res Function(_$ShareImpl) _then)
+  __$$ShareImplCopyWithImpl(
+      _$ShareImpl _value, $Res Function(_$ShareImpl) _then)
       : super(_value, _then);
 
   /// Create a copy of Share
@@ -243,6 +271,7 @@ class __$$ShareImplCopyWithImpl<$Res> extends _$ShareCopyWithImpl<$Res, _$ShareI
     Object? creatorPubkey = null,
     Object? createdAt = null,
     Object? scheme = freezed,
+    Object? blob = freezed,
     Object? vaultId = freezed,
     Object? vaultName = freezed,
     Object? stewards = freezed,
@@ -284,6 +313,10 @@ class __$$ShareImplCopyWithImpl<$Res> extends _$ShareCopyWithImpl<$Res, _$ShareI
       scheme: freezed == scheme
           ? _value.scheme
           : scheme // ignore: cast_nullable_to_non_nullable
+              as String?,
+      blob: freezed == blob
+          ? _value.blob
+          : blob // ignore: cast_nullable_to_non_nullable
               as String?,
       vaultId: freezed == vaultId
           ? _value.vaultId
@@ -348,6 +381,7 @@ class _$ShareImpl extends _Share {
       required this.creatorPubkey,
       required this.createdAt,
       this.scheme,
+      this.blob,
       this.vaultId,
       this.vaultName,
       final List<Map<String, String>>? stewards,
@@ -365,6 +399,9 @@ class _$ShareImpl extends _Share {
         super._();
 
   /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+  ///
+  /// In `gf256_v1`, [payload] is a share of the **content-encryption key**,
+  /// not the vault content itself. The encrypted content lives in [blob].
   @override
   final String payload;
   @override
@@ -381,6 +418,17 @@ class _$ShareImpl extends _Share {
 // Null means unsupported (legacy ntcdcrypto GF(p) format).
   @override
   final String? scheme;
+
+  /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
+  /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
+  /// `gf256_v1` shares.
+  ///
+  /// Every share in a distribution carries an identical [blob]; recovery
+  /// cross-checks for byte equality before reconstructing the key. The
+  /// Poly1305 tag is what gives reconstructed content its integrity
+  /// guarantee — SSS alone provides none.
+  @override
+  final String? blob;
 // Recovery metadata (optional fields)
   @override
   final String? vaultId;
@@ -438,7 +486,7 @@ class _$ShareImpl extends _Share {
 
   @override
   String toString() {
-    return 'Share(payload: $payload, threshold: $threshold, shareIndex: $shareIndex, totalShares: $totalShares, creatorPubkey: $creatorPubkey, createdAt: $createdAt, scheme: $scheme, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion, pushEnabled: $pushEnabled)';
+    return 'Share(payload: $payload, threshold: $threshold, shareIndex: $shareIndex, totalShares: $totalShares, creatorPubkey: $creatorPubkey, createdAt: $createdAt, scheme: $scheme, blob: $blob, vaultId: $vaultId, vaultName: $vaultName, stewards: $stewards, ownerName: $ownerName, instructions: $instructions, recipientPubkey: $recipientPubkey, isReceived: $isReceived, receivedAt: $receivedAt, nostrEventId: $nostrEventId, relayUrls: $relayUrls, distributionVersion: $distributionVersion, pushEnabled: $pushEnabled)';
   }
 
   @override
@@ -447,27 +495,40 @@ class _$ShareImpl extends _Share {
         (other.runtimeType == runtimeType &&
             other is _$ShareImpl &&
             (identical(other.payload, payload) || other.payload == payload) &&
-            (identical(other.threshold, threshold) || other.threshold == threshold) &&
-            (identical(other.shareIndex, shareIndex) || other.shareIndex == shareIndex) &&
-            (identical(other.totalShares, totalShares) || other.totalShares == totalShares) &&
+            (identical(other.threshold, threshold) ||
+                other.threshold == threshold) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex) &&
+            (identical(other.totalShares, totalShares) ||
+                other.totalShares == totalShares) &&
             (identical(other.creatorPubkey, creatorPubkey) ||
                 other.creatorPubkey == creatorPubkey) &&
-            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
             (identical(other.scheme, scheme) || other.scheme == scheme) &&
+            (identical(other.blob, blob) || other.blob == blob) &&
             (identical(other.vaultId, vaultId) || other.vaultId == vaultId) &&
-            (identical(other.vaultName, vaultName) || other.vaultName == vaultName) &&
+            (identical(other.vaultName, vaultName) ||
+                other.vaultName == vaultName) &&
             const DeepCollectionEquality().equals(other._stewards, _stewards) &&
-            (identical(other.ownerName, ownerName) || other.ownerName == ownerName) &&
-            (identical(other.instructions, instructions) || other.instructions == instructions) &&
+            (identical(other.ownerName, ownerName) ||
+                other.ownerName == ownerName) &&
+            (identical(other.instructions, instructions) ||
+                other.instructions == instructions) &&
             (identical(other.recipientPubkey, recipientPubkey) ||
                 other.recipientPubkey == recipientPubkey) &&
-            (identical(other.isReceived, isReceived) || other.isReceived == isReceived) &&
-            (identical(other.receivedAt, receivedAt) || other.receivedAt == receivedAt) &&
-            (identical(other.nostrEventId, nostrEventId) || other.nostrEventId == nostrEventId) &&
-            const DeepCollectionEquality().equals(other._relayUrls, _relayUrls) &&
+            (identical(other.isReceived, isReceived) ||
+                other.isReceived == isReceived) &&
+            (identical(other.receivedAt, receivedAt) ||
+                other.receivedAt == receivedAt) &&
+            (identical(other.nostrEventId, nostrEventId) ||
+                other.nostrEventId == nostrEventId) &&
+            const DeepCollectionEquality()
+                .equals(other._relayUrls, _relayUrls) &&
             (identical(other.distributionVersion, distributionVersion) ||
                 other.distributionVersion == distributionVersion) &&
-            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled));
+            (identical(other.pushEnabled, pushEnabled) ||
+                other.pushEnabled == pushEnabled));
   }
 
   @override
@@ -480,6 +541,7 @@ class _$ShareImpl extends _Share {
         creatorPubkey,
         createdAt,
         scheme,
+        blob,
         vaultId,
         vaultName,
         const DeepCollectionEquality().hash(_stewards),
@@ -512,6 +574,7 @@ abstract class _Share extends Share {
       required final String creatorPubkey,
       required final int createdAt,
       final String? scheme,
+      final String? blob,
       final String? vaultId,
       final String? vaultName,
       final List<Map<String, String>>? stewards,
@@ -527,6 +590,9 @@ abstract class _Share extends Share {
   const _Share._() : super._();
 
   /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+  ///
+  /// In `gf256_v1`, [payload] is a share of the **content-encryption key**,
+  /// not the vault content itself. The encrypted content lives in [blob].
   @override
   String get payload;
   @override
@@ -541,7 +607,18 @@ abstract class _Share extends Share {
   int get createdAt; // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
 // Null means unsupported (legacy ntcdcrypto GF(p) format).
   @override
-  String? get scheme; // Recovery metadata (optional fields)
+  String? get scheme;
+
+  /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
+  /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
+  /// `gf256_v1` shares.
+  ///
+  /// Every share in a distribution carries an identical [blob]; recovery
+  /// cross-checks for byte equality before reconstructing the key. The
+  /// Poly1305 tag is what gives reconstructed content its integrity
+  /// guarantee — SSS alone provides none.
+  @override
+  String? get blob; // Recovery metadata (optional fields)
   @override
   String? get vaultId;
   @override
@@ -562,7 +639,8 @@ abstract class _Share extends Share {
   @override
   String? get nostrEventId;
   @override
-  List<String>? get relayUrls; // Relay URLs from backup config for sending confirmations
+  List<String>?
+      get relayUrls; // Relay URLs from backup config for sending confirmations
   @override
   int?
       get distributionVersion; // Version tracking for redistribution detection (nullable for backward compatibility)
@@ -581,5 +659,6 @@ abstract class _Share extends Share {
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ShareImplCopyWith<_$ShareImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$ShareImplCopyWith<_$ShareImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }

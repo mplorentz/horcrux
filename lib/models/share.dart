@@ -17,6 +17,9 @@ part 'share.freezed.dart';
 class Share with _$Share {
   const factory Share({
     /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+    ///
+    /// In `gf256_v1`, [payload] is a share of the **content-encryption key**,
+    /// not the vault content itself. The encrypted content lives in [blob].
     required String payload,
     required int threshold,
     required int shareIndex,
@@ -26,6 +29,15 @@ class Share with _$Share {
     // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
     // Null means unsupported (legacy ntcdcrypto GF(p) format).
     String? scheme,
+    /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
+    /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
+    /// `gf256_v1` shares.
+    ///
+    /// Every share in a distribution carries an identical [blob]; recovery
+    /// cross-checks for byte equality before reconstructing the key. The
+    /// Poly1305 tag is what gives reconstructed content its integrity
+    /// guarantee — SSS alone provides none.
+    String? blob,
     // Recovery metadata (optional fields)
     String? vaultId,
     String? vaultName,
@@ -242,6 +254,7 @@ Share createShare({
   required int totalShares,
   required String creatorPubkey,
   String? scheme,
+  String? blob,
   int? createdAt,
   String? vaultId,
   String? vaultName,
@@ -324,6 +337,7 @@ Share createShare({
     creatorPubkey: creatorPubkey,
     createdAt: createdAt ?? secondsSinceEpoch(),
     scheme: scheme ?? 'gf256_v1',
+    blob: blob,
     vaultId: vaultId,
     vaultName: vaultName,
     stewards: stewards,
@@ -351,6 +365,7 @@ Map<String, dynamic> shareToJson(Share share) {
     if (share.scheme != null && share.scheme != 'gf256_v1')
       // Write prime_mod for backward compatibility with legacy data
       'prime_mod': share.scheme,
+    if (share.blob != null) 'blob': share.blob,
     'created_at': share.createdAt,
     if (share.vaultId != null) 'vault_id': share.vaultId,
     if (share.vaultName != null) 'vault_name': share.vaultName,
@@ -440,6 +455,7 @@ Share shareFromJson(Map<String, dynamic> json) {
     creatorPubkey: (json['creator_pubkey'] as String?) ?? '',
     // Read scheme from JSON; fall back to prime_mod for legacy data
     scheme: json['scheme'] as String? ?? json['prime_mod'] as String?,
+    blob: json['blob'] as String?,
     createdAt: createdAt,
     vaultId: json['vault_id'] as String?,
     vaultName: json['vault_name'] as String?,
@@ -491,6 +507,13 @@ List<List<String>> shareToNostrTags(Share share) {
   tags.add(['total_shares', share.totalShares.toString()]);
   tags.add(['threshold', share.threshold.toString()]);
   tags.add(['scheme', share.scheme ?? 'gf256_v1']);
+
+  // gf256_v1 carries the ChaCha20-Poly1305 ciphertext bundle here. The blob
+  // is identical across every share of a distribution; recovery verifies
+  // that byte-equality before reconstructing the key.
+  if (share.blob != null && share.blob!.isNotEmpty) {
+    tags.add(['blob', share.blob!]);
+  }
 
   if (share.vaultId != null && share.vaultId!.isNotEmpty) {
     tags.add(['vault_id', share.vaultId!]);
@@ -616,6 +639,7 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
     totalShares: totalShares,
     creatorPubkey: rumor.pubKey,
     scheme: scheme ?? 'gf256_v1',
+    blob: tagValue('blob'),
     createdAt: rumor.createdAt,
     vaultId: tagValue('vault_id'),
     vaultName: tagValue('vault_name'),

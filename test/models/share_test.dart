@@ -1463,4 +1463,111 @@ void main() {
       );
     });
   });
+
+  group('blob (AEAD ciphertext)', () {
+    const creatorPubkey =
+        'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437';
+    const sampleBlob = 'AAECAwQFBgcICQoLDA0ODw=='; // arbitrary base64
+
+    test('JSON round-trip preserves blob', () {
+      final share = Share(
+        payload: 'k-share',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        scheme: 'gf256_v1',
+        blob: sampleBlob,
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+      );
+      final decoded = shareFromJson(shareToJson(share));
+      expect(decoded.blob, equals(sampleBlob));
+    });
+
+    test('shareToJson omits blob when null', () {
+      final share = Share(
+        payload: 'k-share',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        scheme: null,
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+      );
+      expect(shareToJson(share).containsKey('blob'), isFalse);
+    });
+
+    test('Nostr tag round-trip preserves blob', () {
+      final share = Share(
+        payload: 'k-share',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        scheme: 'gf256_v1',
+        blob: sampleBlob,
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+        vaultId: 'vault-x',
+      );
+      final tags = shareToNostrTags(share);
+      // Sanity: emitted as a single 2-tuple tag.
+      final blobTag = tags.firstWhere((t) => t[0] == 'blob');
+      expect(blobTag, equals(['blob', sampleBlob]));
+
+      final rumor = Nip01Event(
+        pubKey: creatorPubkey,
+        kind: 1337,
+        tags: tags,
+        content: shareToNostrContent(share),
+        createdAt: 1759759657,
+      );
+      final decoded = shareFromNostr(rumor);
+      expect(decoded.blob, equals(sampleBlob));
+    });
+
+    test('shareToNostrTags omits blob tag when null', () {
+      final share = Share(
+        payload: 'k-share',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        scheme: 'gf256_v1',
+        creatorPubkey: creatorPubkey,
+        createdAt: 1759759657,
+        vaultId: 'vault-x',
+      );
+      final tags = shareToNostrTags(share);
+      expect(tags.any((t) => t[0] == 'blob'), isFalse);
+    });
+
+    test('shareFromNostr leaves blob null when tag is absent', () {
+      final rumor = Nip01Event(
+        pubKey: creatorPubkey,
+        kind: 1337,
+        tags: [
+          ['share_index', '0'],
+          ['total_shares', '3'],
+          ['threshold', '2'],
+          ['scheme', 'gf256_v1'],
+        ],
+        content: 'k-share',
+        createdAt: 1759759657,
+      );
+      final decoded = shareFromNostr(rumor);
+      expect(decoded.blob, isNull);
+    });
+
+    test('createShare accepts blob and stores it', () {
+      final share = createShare(
+        payload: 'k-share',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        creatorPubkey: creatorPubkey,
+        blob: sampleBlob,
+      );
+      expect(share.blob, equals(sampleBlob));
+      expect(share.scheme, equals('gf256_v1'));
+    });
+  });
 }
