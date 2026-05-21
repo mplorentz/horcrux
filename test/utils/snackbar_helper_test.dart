@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/utils/snackbar_helper.dart';
 
-// Allow small timing tolerance in auto-dismiss tests.
-// Flutter's fake clock advances in pump() increments, so exact timing
-// depends on pump granularity.
-const _successDuration = Duration(seconds: 2);
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -53,7 +48,7 @@ void main() {
       expect(find.text('Toast A'), findsOneWidget);
 
       // Advance to just before dismiss — toast should still be visible
-      await tester.pump(_successDuration - const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 1, milliseconds: 900));
       expect(find.text('Toast A'), findsOneWidget);
 
       // Advance past dismiss — toast should animate out
@@ -121,13 +116,6 @@ void main() {
 
     testWidgets('toast auto-dismiss timer fires after first toast replaced',
         (tester) async {
-      // This is the core bug scenario:
-      // 1. Toast A shown, timer A scheduled (2s)
-      // 2. Toast B shown before timer A fires
-      //    → _finishImmediate removes entry A, cancels timer A
-      //    → entry B inserted, timer B scheduled
-      // 3. Timer B fires after 2s → entry B auto-dismisses
-      // 4. No leaked overlay entries from toast A
       await tester.pumpWidget(testApp);
 
       await tester.tap(find.byKey(const Key('show_a')));
@@ -224,6 +212,65 @@ void main() {
       // At 5s+ — should dismiss
       await tester.pumpAndSettle(const Duration(seconds: 3));
       expect(find.text('Custom duration'), findsNothing);
+    });
+  });
+
+  group('HorcruxSnackBar screen pop scenario', () {
+    testWidgets('toast auto-dismisses after Navigator.pop rebuilds overlay',
+        (tester) async {
+      // Simulates the recovery-plan save flow:
+      // 1. Show toast on screen B
+      // 2. Pop back to screen A (overlay rebuilds)
+      // 3. Toast should auto-dismiss after 2s
+      final navKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(MaterialApp(
+        navigatorKey: navKey,
+        home: const Scaffold(body: Text('Screen A')),
+      ));
+
+      // Push screen B
+      navKey.currentState!.push(MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              key: const Key('save_and_pop'),
+              onPressed: () {
+                // Show toast, then pop in next frame (like backup_config_screen)
+                context.showHorcruxSnackBar(
+                  'Backup configuration saved successfully!',
+                  kind: HorcruxSnackKind.success,
+                );
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  Navigator.of(context).pop();
+                });
+              },
+              child: const Text('Save & Pop'),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Tap save — shows toast, then pops back to Screen A
+      await tester.tap(find.byKey(const Key('save_and_pop')));
+      await tester.pumpAndSettle();
+
+      // We should be back on Screen A
+      expect(find.text('Screen A'), findsOneWidget);
+
+      // Toast should still be visible (it's in the overlay, not the route)
+      expect(find.text('Backup configuration saved successfully!'), findsOneWidget);
+
+      // Wait for auto-dismiss (2s for success)
+      await tester.pumpAndSettle(const Duration(seconds: 3));
+
+      // Toast should be gone
+      expect(
+        find.text('Backup configuration saved successfully!'),
+        findsNothing,
+        reason: 'Toast should auto-dismiss after screen pop',
+      );
     });
   });
 }
