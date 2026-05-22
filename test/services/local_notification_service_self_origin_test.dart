@@ -245,12 +245,13 @@ void main() {
     String id = 'evt-invite-accept-1',
   }) {
     return Nip01Event(
+      id: id,
       pubKey: senderPubkey,
       kind: 1340,
       tags: const [],
       createdAt: createdAt,
       content: '',
-    )..id = id;
+    );
   }
 
   group('LocalNotificationService invitation acceptance', () {
