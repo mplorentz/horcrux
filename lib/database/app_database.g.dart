@@ -3071,6 +3071,11 @@ class $HeldSharesTable extends HeldShares with TableInfo<$HeldSharesTable, HeldS
   late final GeneratedColumn<String> sharePayload = GeneratedColumn<String>(
       'share_payload', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _aeadBlobMeta = const VerificationMeta('aeadBlob');
+  @override
+  late final GeneratedColumn<String> aeadBlob = GeneratedColumn<String>(
+      'aead_blob', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _distributionVersionMeta =
       const VerificationMeta('distributionVersion');
   @override
@@ -3106,6 +3111,7 @@ class $HeldSharesTable extends HeldShares with TableInfo<$HeldSharesTable, HeldS
         vaultId,
         shareIndex,
         sharePayload,
+        aeadBlob,
         distributionVersion,
         receivedAt,
         nostrEventId,
@@ -3143,6 +3149,10 @@ class $HeldSharesTable extends HeldShares with TableInfo<$HeldSharesTable, HeldS
           sharePayload.isAcceptableOrUnknown(data['share_payload']!, _sharePayloadMeta));
     } else if (isInserting) {
       context.missing(_sharePayloadMeta);
+    }
+    if (data.containsKey('aead_blob')) {
+      context.handle(
+          _aeadBlobMeta, aeadBlob.isAcceptableOrUnknown(data['aead_blob']!, _aeadBlobMeta));
     }
     if (data.containsKey('distribution_version')) {
       context.handle(
@@ -3186,6 +3196,8 @@ class $HeldSharesTable extends HeldShares with TableInfo<$HeldSharesTable, HeldS
           .read(DriftSqlType.int, data['${effectivePrefix}share_index'])!,
       sharePayload: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}share_payload'])!,
+      aeadBlob: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}aead_blob']),
       distributionVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}distribution_version'])!,
       receivedAt: attachedDatabase.typeMapping
@@ -3218,6 +3230,19 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
   /// data layer refactor plan.
   final String sharePayload;
 
+  /// Base64url-encoded ChaCha20-Poly1305 bundle (`nonce || ct || tag`) of
+  /// the vault content. Identical across every share in a distribution —
+  /// the steward returns it verbatim during recovery so the owner can
+  /// decrypt with the reconstructed key. Nullable for two reasons:
+  ///   1. legacy / non-`gf256_v1` rows that pre-date the AEAD layer;
+  ///   2. manifest-shaped rows the owner may hold for vaults where they
+  ///      are not a self-steward (no payload, so a blob would be unused).
+  /// Recovery enforces presence on the read path, not at insert time.
+  ///
+  /// SQL column is `aead_blob` — `blob` collides with [Table.blob], drift's
+  /// built-in binary-column constructor.
+  final String? aeadBlob;
+
   /// Distribution version at which this share was generated. Used for
   /// retention pruning and for serving a specific version during recovery.
   final int distributionVersion;
@@ -3244,6 +3269,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
       required this.vaultId,
       required this.shareIndex,
       required this.sharePayload,
+      this.aeadBlob,
       required this.distributionVersion,
       required this.receivedAt,
       this.nostrEventId,
@@ -3256,6 +3282,9 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
     map['vault_id'] = Variable<String>(vaultId);
     map['share_index'] = Variable<int>(shareIndex);
     map['share_payload'] = Variable<String>(sharePayload);
+    if (!nullToAbsent || aeadBlob != null) {
+      map['aead_blob'] = Variable<String>(aeadBlob);
+    }
     map['distribution_version'] = Variable<int>(distributionVersion);
     map['received_at'] = Variable<int>(receivedAt);
     if (!nullToAbsent || nostrEventId != null) {
@@ -3274,6 +3303,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
       vaultId: Value(vaultId),
       shareIndex: Value(shareIndex),
       sharePayload: Value(sharePayload),
+      aeadBlob: aeadBlob == null && nullToAbsent ? const Value.absent() : Value(aeadBlob),
       distributionVersion: Value(distributionVersion),
       receivedAt: Value(receivedAt),
       nostrEventId:
@@ -3291,6 +3321,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
       vaultId: serializer.fromJson<String>(json['vaultId']),
       shareIndex: serializer.fromJson<int>(json['shareIndex']),
       sharePayload: serializer.fromJson<String>(json['sharePayload']),
+      aeadBlob: serializer.fromJson<String?>(json['aeadBlob']),
       distributionVersion: serializer.fromJson<int>(json['distributionVersion']),
       receivedAt: serializer.fromJson<int>(json['receivedAt']),
       nostrEventId: serializer.fromJson<String?>(json['nostrEventId']),
@@ -3306,6 +3337,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
       'vaultId': serializer.toJson<String>(vaultId),
       'shareIndex': serializer.toJson<int>(shareIndex),
       'sharePayload': serializer.toJson<String>(sharePayload),
+      'aeadBlob': serializer.toJson<String?>(aeadBlob),
       'distributionVersion': serializer.toJson<int>(distributionVersion),
       'receivedAt': serializer.toJson<int>(receivedAt),
       'nostrEventId': serializer.toJson<String?>(nostrEventId),
@@ -3319,6 +3351,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
           String? vaultId,
           int? shareIndex,
           String? sharePayload,
+          Value<String?> aeadBlob = const Value.absent(),
           int? distributionVersion,
           int? receivedAt,
           Value<String?> nostrEventId = const Value.absent(),
@@ -3329,6 +3362,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
         vaultId: vaultId ?? this.vaultId,
         shareIndex: shareIndex ?? this.shareIndex,
         sharePayload: sharePayload ?? this.sharePayload,
+        aeadBlob: aeadBlob.present ? aeadBlob.value : this.aeadBlob,
         distributionVersion: distributionVersion ?? this.distributionVersion,
         receivedAt: receivedAt ?? this.receivedAt,
         nostrEventId: nostrEventId.present ? nostrEventId.value : this.nostrEventId,
@@ -3341,6 +3375,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
       vaultId: data.vaultId.present ? data.vaultId.value : this.vaultId,
       shareIndex: data.shareIndex.present ? data.shareIndex.value : this.shareIndex,
       sharePayload: data.sharePayload.present ? data.sharePayload.value : this.sharePayload,
+      aeadBlob: data.aeadBlob.present ? data.aeadBlob.value : this.aeadBlob,
       distributionVersion: data.distributionVersion.present
           ? data.distributionVersion.value
           : this.distributionVersion,
@@ -3358,6 +3393,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
           ..write('vaultId: $vaultId, ')
           ..write('shareIndex: $shareIndex, ')
           ..write('sharePayload: $sharePayload, ')
+          ..write('aeadBlob: $aeadBlob, ')
           ..write('distributionVersion: $distributionVersion, ')
           ..write('receivedAt: $receivedAt, ')
           ..write('nostrEventId: $nostrEventId, ')
@@ -3368,8 +3404,8 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
   }
 
   @override
-  int get hashCode => Object.hash(id, vaultId, shareIndex, sharePayload, distributionVersion,
-      receivedAt, nostrEventId, lastSeenRelay, pushEnabled);
+  int get hashCode => Object.hash(id, vaultId, shareIndex, sharePayload, aeadBlob,
+      distributionVersion, receivedAt, nostrEventId, lastSeenRelay, pushEnabled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3378,6 +3414,7 @@ class HeldShareRow extends DataClass implements Insertable<HeldShareRow> {
           other.vaultId == this.vaultId &&
           other.shareIndex == this.shareIndex &&
           other.sharePayload == this.sharePayload &&
+          other.aeadBlob == this.aeadBlob &&
           other.distributionVersion == this.distributionVersion &&
           other.receivedAt == this.receivedAt &&
           other.nostrEventId == this.nostrEventId &&
@@ -3390,6 +3427,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
   final Value<String> vaultId;
   final Value<int> shareIndex;
   final Value<String> sharePayload;
+  final Value<String?> aeadBlob;
   final Value<int> distributionVersion;
   final Value<int> receivedAt;
   final Value<String?> nostrEventId;
@@ -3401,6 +3439,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
     this.vaultId = const Value.absent(),
     this.shareIndex = const Value.absent(),
     this.sharePayload = const Value.absent(),
+    this.aeadBlob = const Value.absent(),
     this.distributionVersion = const Value.absent(),
     this.receivedAt = const Value.absent(),
     this.nostrEventId = const Value.absent(),
@@ -3413,6 +3452,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
     required String vaultId,
     required int shareIndex,
     required String sharePayload,
+    this.aeadBlob = const Value.absent(),
     required int distributionVersion,
     required int receivedAt,
     this.nostrEventId = const Value.absent(),
@@ -3430,6 +3470,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
     Expression<String>? vaultId,
     Expression<int>? shareIndex,
     Expression<String>? sharePayload,
+    Expression<String>? aeadBlob,
     Expression<int>? distributionVersion,
     Expression<int>? receivedAt,
     Expression<String>? nostrEventId,
@@ -3442,6 +3483,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
       if (vaultId != null) 'vault_id': vaultId,
       if (shareIndex != null) 'share_index': shareIndex,
       if (sharePayload != null) 'share_payload': sharePayload,
+      if (aeadBlob != null) 'aead_blob': aeadBlob,
       if (distributionVersion != null) 'distribution_version': distributionVersion,
       if (receivedAt != null) 'received_at': receivedAt,
       if (nostrEventId != null) 'nostr_event_id': nostrEventId,
@@ -3456,6 +3498,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
       Value<String>? vaultId,
       Value<int>? shareIndex,
       Value<String>? sharePayload,
+      Value<String?>? aeadBlob,
       Value<int>? distributionVersion,
       Value<int>? receivedAt,
       Value<String?>? nostrEventId,
@@ -3467,6 +3510,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
       vaultId: vaultId ?? this.vaultId,
       shareIndex: shareIndex ?? this.shareIndex,
       sharePayload: sharePayload ?? this.sharePayload,
+      aeadBlob: aeadBlob ?? this.aeadBlob,
       distributionVersion: distributionVersion ?? this.distributionVersion,
       receivedAt: receivedAt ?? this.receivedAt,
       nostrEventId: nostrEventId ?? this.nostrEventId,
@@ -3490,6 +3534,9 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
     }
     if (sharePayload.present) {
       map['share_payload'] = Variable<String>(sharePayload.value);
+    }
+    if (aeadBlob.present) {
+      map['aead_blob'] = Variable<String>(aeadBlob.value);
     }
     if (distributionVersion.present) {
       map['distribution_version'] = Variable<int>(distributionVersion.value);
@@ -3519,6 +3566,7 @@ class HeldSharesCompanion extends UpdateCompanion<HeldShareRow> {
           ..write('vaultId: $vaultId, ')
           ..write('shareIndex: $shareIndex, ')
           ..write('sharePayload: $sharePayload, ')
+          ..write('aeadBlob: $aeadBlob, ')
           ..write('distributionVersion: $distributionVersion, ')
           ..write('receivedAt: $receivedAt, ')
           ..write('nostrEventId: $nostrEventId, ')
@@ -9376,6 +9424,7 @@ typedef $$HeldSharesTableCreateCompanionBuilder = HeldSharesCompanion Function({
   required String vaultId,
   required int shareIndex,
   required String sharePayload,
+  Value<String?> aeadBlob,
   required int distributionVersion,
   required int receivedAt,
   Value<String?> nostrEventId,
@@ -9388,6 +9437,7 @@ typedef $$HeldSharesTableUpdateCompanionBuilder = HeldSharesCompanion Function({
   Value<String> vaultId,
   Value<int> shareIndex,
   Value<String> sharePayload,
+  Value<String?> aeadBlob,
   Value<int> distributionVersion,
   Value<int> receivedAt,
   Value<String?> nostrEventId,
@@ -9430,6 +9480,9 @@ class $$HeldSharesTableFilterComposer extends Composer<_$AppDatabase, $HeldShare
 
   ColumnFilters<String> get sharePayload =>
       $composableBuilder(column: $table.sharePayload, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get aeadBlob =>
+      $composableBuilder(column: $table.aeadBlob, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get distributionVersion => $composableBuilder(
       column: $table.distributionVersion, builder: (column) => ColumnFilters(column));
@@ -9482,6 +9535,9 @@ class $$HeldSharesTableOrderingComposer extends Composer<_$AppDatabase, $HeldSha
   ColumnOrderings<String> get sharePayload =>
       $composableBuilder(column: $table.sharePayload, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get aeadBlob =>
+      $composableBuilder(column: $table.aeadBlob, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get distributionVersion => $composableBuilder(
       column: $table.distributionVersion, builder: (column) => ColumnOrderings(column));
 
@@ -9532,6 +9588,9 @@ class $$HeldSharesTableAnnotationComposer extends Composer<_$AppDatabase, $HeldS
 
   GeneratedColumn<String> get sharePayload =>
       $composableBuilder(column: $table.sharePayload, builder: (column) => column);
+
+  GeneratedColumn<String> get aeadBlob =>
+      $composableBuilder(column: $table.aeadBlob, builder: (column) => column);
 
   GeneratedColumn<int> get distributionVersion =>
       $composableBuilder(column: $table.distributionVersion, builder: (column) => column);
@@ -9592,6 +9651,7 @@ class $$HeldSharesTableTableManager extends RootTableManager<
             Value<String> vaultId = const Value.absent(),
             Value<int> shareIndex = const Value.absent(),
             Value<String> sharePayload = const Value.absent(),
+            Value<String?> aeadBlob = const Value.absent(),
             Value<int> distributionVersion = const Value.absent(),
             Value<int> receivedAt = const Value.absent(),
             Value<String?> nostrEventId = const Value.absent(),
@@ -9604,6 +9664,7 @@ class $$HeldSharesTableTableManager extends RootTableManager<
             vaultId: vaultId,
             shareIndex: shareIndex,
             sharePayload: sharePayload,
+            aeadBlob: aeadBlob,
             distributionVersion: distributionVersion,
             receivedAt: receivedAt,
             nostrEventId: nostrEventId,
@@ -9616,6 +9677,7 @@ class $$HeldSharesTableTableManager extends RootTableManager<
             required String vaultId,
             required int shareIndex,
             required String sharePayload,
+            Value<String?> aeadBlob = const Value.absent(),
             required int distributionVersion,
             required int receivedAt,
             Value<String?> nostrEventId = const Value.absent(),
@@ -9628,6 +9690,7 @@ class $$HeldSharesTableTableManager extends RootTableManager<
             vaultId: vaultId,
             shareIndex: shareIndex,
             sharePayload: sharePayload,
+            aeadBlob: aeadBlob,
             distributionVersion: distributionVersion,
             receivedAt: receivedAt,
             nostrEventId: nostrEventId,

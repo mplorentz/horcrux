@@ -31,7 +31,7 @@ import 'tables/viewed_notifications.dart';
 
 part 'app_database.g.dart';
 
-/// Schema version 6 — corresponds to `drift_schemas/drift_schema_v6.json`.
+/// Schema version 7 — corresponds to `drift_schemas/drift_schema_v7.json`.
 ///
 /// **v2**: Adds `held_shares` (and indexes) on upgrade for databases that were
 /// created at v1 before the Phase 2a table landed; those files kept
@@ -51,6 +51,14 @@ part 'app_database.g.dart';
 /// **v6**: `stewards.invite_code` stores the pending invite code for a slot so
 /// invitation acceptance can hydrate stewards without relying on a local
 /// [Invitations] row on every owner device.
+///
+/// **v7**: `held_shares.aead_blob` — base64url ChaCha20-Poly1305 bundle that
+/// carries the AEAD-encrypted vault content. In `gf256_v1` the share payload
+/// is a share of the content-encryption key, not the vault content; the
+/// blob is what gets decrypted with the reconstructed key. Nullable so
+/// legacy / manifest-shaped rows continue to round-trip; recovery enforces
+/// presence on the read path. The bare column name `blob` collides with
+/// drift's [Table.blob] binary-column constructor.
 ///
 /// Any further change to any [Table] that affects the SQL schema MUST bump
 /// [schemaVersion], add a step in [MigrationStrategy.onUpgrade], dump a new
@@ -99,7 +107,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   Future<void> _createPhase3Indexes() async {
     await customStatement(
@@ -306,6 +314,20 @@ WHERE EXISTS (
     AND i2.revoked_at IS NULL
 )
 ''');
+            }
+          }
+          if (from < 7) {
+            // gf256_v1 + AEAD layer: held_shares.aead_blob carries the
+            // ChaCha20-Poly1305 ciphertext bundle. Nullable so we don't have
+            // to backfill any pre-existing rows — they predate gf256_v1 in
+            // practice (pre-beta, no shipped users), and recovery already
+            // rejects shares missing the blob. Column name is `aead_blob`
+            // (not `blob`) because drift's [Table.blob] reserves the bare
+            // identifier for binary-column constructors.
+            final cols = await customSelect('PRAGMA table_info(held_shares)').get();
+            final hasAeadBlob = cols.any((c) => c.data['name'] == 'aead_blob');
+            if (!hasAeadBlob) {
+              await customStatement('ALTER TABLE held_shares ADD COLUMN aead_blob TEXT');
             }
           }
         },

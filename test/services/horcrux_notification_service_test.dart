@@ -54,7 +54,7 @@ void main() {
   Nip01Event decodeAuthHeader(String header) {
     expect(header.startsWith('Nostr '), isTrue, reason: 'header: $header');
     final raw = utf8.decode(base64Decode(header.substring('Nostr '.length)));
-    return Nip01Event.fromJson(json.decode(raw) as Map<String, dynamic>);
+    return Nip01EventModel.fromJson(json.decode(raw) as Map<String, dynamic>);
   }
 
   String? firstTag(Nip01Event event, String name) {
@@ -162,7 +162,7 @@ void main() {
       expect(firstTag(event, 'u'), req.url.toString());
       expect(firstTag(event, 'payload'), isNotNull,
           reason: 'body present -> sha256 payload tag required');
-      expect(Bip340.verify(event.id, event.sig, event.pubKey), isTrue);
+      expect(Bip340.verify(event.id, event.sig!, event.pubKey), isTrue);
       harness.service.dispose();
     });
 
@@ -487,7 +487,7 @@ void main() {
         threshold: 1,
         shareIndex: 0,
         totalShares: coStewardPubkeys.length + 1,
-        primeMod: TestShare.testPrimeMod,
+        scheme: TestShare.testPrimeMod,
         creatorPubkey: owner,
         createdAt: createdAt,
         distributionVersion: distributionVersion,

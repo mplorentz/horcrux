@@ -102,7 +102,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: validPubkey,
         createdAt: 1759759657,
       );
@@ -147,7 +147,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'xyz',
+        scheme: null,
         creatorPubkey: validPubkey,
         createdAt: 1759759657,
       );

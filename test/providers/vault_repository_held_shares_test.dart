@@ -51,7 +51,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'prime-mod',
+        scheme: null,
         creatorPubkey: TestHexPubkeys.alice,
         vaultId: fixture.vaultId,
         // Wrong units on purpose — hydration must derive seconds from the vault row.
@@ -93,7 +93,7 @@ void main() {
               threshold: 2,
               shareIndex: 0,
               totalShares: 3,
-              primeMod: 'prime-mod',
+              scheme: null,
               creatorPubkey: TestHexPubkeys.alice,
               createdAt: 1700000000,
               vaultId: fixture.vaultId,
@@ -122,7 +122,7 @@ void main() {
             threshold: 2,
             shareIndex: 1,
             totalShares: 3,
-            primeMod: 'prime-mod',
+            scheme: null,
             creatorPubkey: TestHexPubkeys.alice,
             createdAt: 1700000000,
             vaultId: fixture.vaultId,
@@ -156,7 +156,7 @@ void main() {
           threshold: 2,
           shareIndex: 1,
           totalShares: 4,
-          primeMod: 'prime-mod-bootstrap',
+          scheme: null,
           creatorPubkey: TestHexPubkeys.alice,
           createdAt: 1704153600,
           vaultId: vaultId,
@@ -171,12 +171,12 @@ void main() {
         expect(shares.single.isValid, isTrue);
         expect(shares.single.threshold, 2);
         expect(shares.single.totalShares, 4);
-        expect(shares.single.primeMod, 'prime-mod-bootstrap');
+        expect(shares.single.scheme, 'gf256_v1');
 
         final json = shareToJson(shares.single);
         expect(json['threshold'], 2);
         expect(json['total_shards'], 4);
-        expect(json['prime_mod'], 'prime-mod-bootstrap');
+        expect(json['scheme'], 'gf256_v1');
       },
     );
 
@@ -198,7 +198,7 @@ void main() {
         threshold: 3,
         shareIndex: 0,
         totalShares: 5,
-        primeMod: 'prime-good',
+        scheme: null,
         creatorPubkey: TestHexPubkeys.alice,
         createdAt: 1704153600,
         vaultId: vaultId,
@@ -211,7 +211,7 @@ void main() {
         distributionVersion: 4,
         threshold: 1,
         totalShares: 2,
-        primeMod: 'prime-bad',
+        scheme: null,
         nostrEventId: 'evt-stale',
       );
       await repository.mergeVaultRowFromIncomingShare(vaultId, stale);
@@ -219,7 +219,8 @@ void main() {
       final row = await db.vaultDao.getById(vaultId);
       expect(row!.threshold, 3);
       expect(row.totalShares, 5);
-      expect(row.primeMod, 'prime-good');
+      // primeMod column is no longer written; scheme lives in share.scheme
+      expect(row.primeMod, equals(null));
       expect(row.currentDistributionVersion, 10);
     });
 

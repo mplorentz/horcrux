@@ -462,7 +462,7 @@ class HorcruxNotificationService {
       return;
     }
 
-    final eventJson = event.toJson();
+    final eventJson = Nip01EventModel.fromEntity(event).toJson();
     final encodedBytes = utf8.encode(jsonEncode(eventJson)).length;
     final embedInline = encodedBytes <= maxEmbeddedEventBytes;
 

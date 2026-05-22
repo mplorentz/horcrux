@@ -24,6 +24,16 @@ class _MockVaultDetailRepository extends Mock implements VaultDetailRepository {
       ) as Future<VaultDetail?>;
 }
 
+/// Flip the first character of a base64url string to a different valid base64
+/// character so the result still decodes (but to different bytes). Used by
+/// AEAD-tamper tests to introduce a 1-bit change.
+String _flipFirstBase64Char(String s) {
+  if (s.isEmpty) return s;
+  final first = s[0];
+  final replacement = first == 'A' ? 'B' : 'A';
+  return '$replacement${s.substring(1)}';
+}
+
 @GenerateMocks([
   VaultRepository,
   ShareDistributionService,
@@ -95,8 +105,8 @@ void main() {
         expect(shares[i].creatorPubkey, testCreatorPubkey);
         expect(shares[i].payload, isA<String>());
         expect(shares[i].payload.isNotEmpty, true);
-        expect(shares[i].primeMod, isA<String>());
-        expect(shares[i].primeMod.isNotEmpty, true);
+        expect(shares[i].scheme, isA<String>());
+        expect(shares[i].scheme!.isNotEmpty, true);
       }
     });
 
@@ -243,8 +253,8 @@ void main() {
       );
       final shares2 = await backupService.generateShamirShares(
         content: testSecret,
-        threshold: 2,
-        totalShards: 3,
+        threshold: 3,
+        totalShards: 5,
         creatorPubkey: 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234',
         vaultId: 'different-vault',
         vaultName: 'Different Vault',
@@ -264,7 +274,7 @@ void main() {
         ],
       );
 
-      // Act & Assert - Should throw when mixing shares from different sets
+      // Act & Assert - Should throw when Shamir metadata differs across shares
       expect(
         () => backupService.reconstructFromShares(
           shares: [shares1[0], shares2[1]],
@@ -278,6 +288,69 @@ void main() {
       expect(
         () => backupService.reconstructFromShares(shares: []),
         throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('reconstructFromShares throws when shares are from different vaults', () async {
+      // Arrange - generate shares for two different vaults
+      final sharesVault1 = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+      final sharesVault2 = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: 'other-vault-456',
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Act & Assert - mixing shares from different vaults must throw
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [sharesVault1[0], sharesVault2[1]],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('same vault'),
+          ),
+        ),
+      );
+    });
+
+    test('reconstructFromShares throws on duplicate x-coordinates', () async {
+      // Arrange
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Act & Assert - same share submitted twice has the same x-coordinate
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [shares[0], shares[0]],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('duplicate x-coordinates'),
+          ),
+        ),
       );
     });
 
@@ -353,7 +426,7 @@ void main() {
       // Create tampered shares with an invalid prime modulus
       final tamperedShares = validShares.map((share) {
         return share.copyWith(
-          primeMod: invalidPrimeMod, // Replace with invalid prime
+          scheme: invalidPrimeMod, // Replace with invalid prime
         );
       }).toList();
 
@@ -364,7 +437,149 @@ void main() {
           isA<ArgumentError>().having(
             (e) => e.message,
             'message',
-            contains('Invalid prime modulus'),
+            contains('Unsupported scheme'),
+          ),
+        ),
+      );
+    });
+
+    // ----- AEAD-layer (gf256_v1) negative tests -----
+    //
+    // The whole point of the AEAD layer is that tampering, blob mismatch, or
+    // insufficient shares fail loud instead of silently returning garbage.
+    // These tests pin that contract.
+
+    test('generated shares all carry the same non-empty blob', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 4,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+      final blobs = shares.map((s) => s.blob).toSet();
+      expect(blobs, hasLength(1));
+      expect(blobs.first, isNotNull);
+      expect(blobs.first!.isNotEmpty, isTrue);
+      for (final s in shares) {
+        expect(s.scheme, equals('gf256_v1'));
+      }
+    });
+
+    test('tampered share payload causes recovery to throw', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Flip a single character in one share's base64url payload (still
+      // valid base64url, just produces a different y-byte). Without AEAD
+      // this would silently reconstruct the wrong secret.
+      final payload = shares[0].payload;
+      final mutant = StringBuffer()
+        ..write(payload.substring(0, payload.length - 2))
+        ..write(payload.endsWith('A') ? 'B' : 'A')
+        ..write(payload.substring(payload.length - 1));
+      final tampered = shares[0].copyWith(payload: mutant.toString());
+
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [tampered, shares[1]],
+        ),
+        // Either the Poly1305 tag fails (most likely) or utf8 decode chokes
+        // on the resulting plaintext-shaped garbage. Both are acceptable —
+        // what's NOT acceptable is silently returning a wrong string.
+        throwsA(anyOf(isA<ArgumentError>(), isA<Exception>())),
+      );
+    });
+
+    test('tampered blob byte causes recovery to throw', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Flip a bit in the blob on every share so the consistency check
+      // doesn't catch it first — we want to exercise the Poly1305 tag path.
+      final tamperedBlob = _flipFirstBase64Char(shares[0].blob!);
+      final tampered = shares.map((s) => s.copyWith(blob: tamperedBlob)).toList();
+
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: tampered.sublist(0, 2),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('authentication'),
+          ),
+        ),
+      );
+    });
+
+    test('disagreeing blobs across shares fail the consistency check', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+
+      // Different blob on one share — recovery must reject before even
+      // attempting reconstruction.
+      final disagreement = shares[1].copyWith(
+        blob: _flipFirstBase64Char(shares[1].blob!),
+      );
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [shares[0], disagreement],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('disagree on AEAD blob'),
+          ),
+        ),
+      );
+    });
+
+    test('missing blob on a gf256_v1 share throws', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 3,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+      final stripped = shares.map((s) => s.copyWith(blob: null)).toList();
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: stripped.sublist(0, 2),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('AEAD blob'),
           ),
         ),
       );

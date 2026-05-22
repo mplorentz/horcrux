@@ -144,10 +144,10 @@ void main() {
 
       // Submit — fake service succeeds instantly, screen pops
       await tester.tap(find.text('Send Feedback'));
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      // After success, the screen pops and snackbar shows
+      await tester.pump(); // Show toast
+      // Verify snackbar appears before auto-dismiss
       expect(find.textContaining('Feedback sent'), findsOneWidget);
+      await tester.pumpAndSettle(const Duration(seconds: 5)); // Let toast dismiss
     });
 
     testWidgets('successful submission shows success snackbar', (tester) async {
@@ -171,11 +171,10 @@ void main() {
       );
 
       await tester.tap(find.text('Send Feedback'));
-      // Pump enough for the submission + snackbar auto-dismiss timer
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      // Should show success snackbar
+      await tester.pump(); // Show toast
       expect(find.textContaining('Feedback sent'), findsOneWidget);
+      // Pump enough for the auto-dismiss timer to fire
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     });
 
     testWidgets('failed submission shows error snackbar', (tester) async {
@@ -199,11 +198,10 @@ void main() {
       );
 
       await tester.tap(find.text('Send Feedback'));
-      // Pump enough for the snackbar auto-dismiss timer
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      // Should show error snackbar
+      await tester.pump(); // Show toast
       expect(find.textContaining('Failed to send'), findsOneWidget);
+      // Let auto-dismiss timer fire
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     });
   });
 }

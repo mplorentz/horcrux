@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ntcdcrypto/ntcdcrypto.dart';
+import '../utils/crypto/aead.dart';
+import '../utils/shamir_gf256/shamir_gf256.dart';
 import '../models/backup_config.dart';
 import '../models/steward.dart';
 import '../models/share.dart';
@@ -185,28 +187,41 @@ class BackupService {
         throw ArgumentError('Content cannot be empty');
       }
 
-      // Create SSS instance
-      final sss = SSS();
+      // gf256_v1: encrypt the content with a fresh ChaCha20-Poly1305 key,
+      // then SSS-split that 32-byte key. The ciphertext bundle rides along
+      // with every share as `blob`. Reconstructing past the threshold yields
+      // the key, which decrypts the bundle — and the Poly1305 tag catches
+      // tampering. Plain SSS over the content bytes (the previous design)
+      // returned garbage on tampered shares with no signal.
+      final secretBytes = Uint8List.fromList(utf8.encode(content));
+      final aeadKey = Aead.generateKey();
+      final blobBundle = Aead.encrypt(aeadKey, secretBytes);
+      final blob = base64Url.encode(blobBundle);
 
-      // Generate shares using Base64Url encoding (isBase64 = true)
-      // The ntcdcrypto library returns shares as Base64Url-encoded strings
-      final shareStrings = sss.create(threshold, totalShards, content, true);
+      // Create GF(256) SSS instance and split the AEAD key
+      final scheme = SecretScheme(totalShards, threshold);
+      final sharesMap = scheme.createShares(aeadKey);
 
-      // The prime modulus is fixed in ntcdcrypto, convert to base64url for storage
-      // This matches the format expected by skb.py
-      final primeModHex = sss.prime.toRadixString(16);
-      final primeMod = base64Url.encode(utf8.encode(primeModHex));
-
-      // Convert to Share objects
+      // Sort by x-coord and assign sequential shareIndex 0..N-1
+      final sortedXCoords = sharesMap.keys.toList()..sort();
       final shardDataList = <Share>[];
-      for (int i = 0; i < totalShards; i++) {
+      for (int i = 0; i < sortedXCoords.length; i++) {
+        final x = sortedXCoords[i];
+        final yBytes = sharesMap[x]!;
+
+        // Build share bytes: [x, y0, y1, ..., yn-1]
+        final shareBytes = <int>[x, ...yBytes];
+        final payload = base64Url.encode(shareBytes);
+
         final shardData = createShare(
-          payload: shareStrings[i],
+          payload: payload,
           threshold: threshold,
-          shareIndex: i,
+          shareIndex: i, // sequential 0-based index
           totalShares: totalShards,
-          primeMod: primeMod,
           creatorPubkey: creatorPubkey,
+          // Identical AEAD bundle on every share; recovery cross-checks for
+          // byte equality before reconstructing the key.
+          blob: blob,
           vaultId: vaultId,
           vaultName: vaultName,
           stewards: stewards,
@@ -237,17 +252,28 @@ class BackupService {
         throw ArgumentError('At least one share is required');
       }
 
-      // Validate that all shares have the same threshold and totalShards
+      // Validate scheme — must be gf256_v1 or null (null treated as legacy, throw)
+      for (final share in shares) {
+        if (share.scheme != null && share.scheme != 'gf256_v1') {
+          throw ArgumentError(
+            "Unsupported scheme: '${share.scheme}' (expected 'gf256_v1')",
+          );
+        }
+      }
+
+      // Validate that all shares belong to the same vault and have the same
+      // Shamir parameters. creatorPubkey is intentionally NOT checked — shares
+      // from different stewards will have different creatorPubkey values, but
+      // Shamir combine only needs matching vaultId/threshold/totalShares.
+      final vaultId = shares.first.vaultId;
       final threshold = shares.first.threshold;
       final totalSharesCount = shares.first.totalShares;
-      final primeMod = shares.first.primeMod;
-      final creatorPubkey = shares.first.creatorPubkey;
 
       for (final share in shares) {
-        if (share.threshold != threshold ||
-            share.totalShares != totalSharesCount ||
-            share.primeMod != primeMod ||
-            share.creatorPubkey != creatorPubkey) {
+        if (share.vaultId != vaultId) {
+          throw ArgumentError('All shares must belong to the same vault');
+        }
+        if (share.threshold != threshold || share.totalShares != totalSharesCount) {
           throw ArgumentError('All shares must have the same parameters');
         }
       }
@@ -258,32 +284,82 @@ class BackupService {
         );
       }
 
-      // Create SSS instance
-      final sss = SSS();
-
-      // Verify that the prime modulus matches the one ntcdcrypto uses
-      final expectedPrimeModHex = sss.prime.toRadixString(16);
-      final expectedPrimeMod = base64Url.encode(
-        utf8.encode(expectedPrimeModHex),
-      );
-
-      if (primeMod != expectedPrimeMod) {
+      // gf256_v1: every share carries the same AEAD ciphertext blob, and the
+      // SSS payload reconstructs the 32-byte content-encryption key. Verify
+      // the blobs are byte-identical *before* doing any reconstruction — a
+      // disagreement means at least one steward tampered with their copy
+      // and we can fail fast with a clearer error than the Poly1305 tag
+      // mismatch we would otherwise hit on decrypt.
+      final blob = shares.first.blob;
+      if (blob == null || blob.isEmpty) {
         throw ArgumentError(
-          'Invalid prime modulus: shares were created with a different prime than ntcdcrypto uses',
+          'Share is missing AEAD blob (required for gf256_v1)',
+        );
+      }
+      for (final s in shares) {
+        if (s.blob != blob) {
+          throw ArgumentError(
+            'Shares disagree on AEAD blob — at least one was tampered with '
+            'or comes from a different distribution',
+          );
+        }
+      }
+
+      // Decode base64-encoded shares back to byte lists
+      final shareMap = <int, List<int>>{};
+      for (final s in shares) {
+        final bytes = base64Url.decode(s.payload);
+        if (bytes.isEmpty) {
+          throw ArgumentError('Empty share payload');
+        }
+        final x = bytes[0];
+        if (x == 0) {
+          throw ArgumentError('Invalid share: x-coordinate cannot be 0');
+        }
+        final yValues = bytes.sublist(1);
+        shareMap[x] = yValues;
+      }
+
+      if (shareMap.length != shares.length) {
+        throw ArgumentError('Shares contain duplicate x-coordinates');
+      }
+
+      // Create GF(256) SSS instance and reconstruct the AEAD key
+      final scheme = SecretScheme(totalSharesCount, threshold);
+      final reconstructedKey = scheme.combineShares(shareMap);
+      if (reconstructedKey.length != Aead.keySize) {
+        // Defense in depth: gf256_v1 always splits a 32-byte key. Anything
+        // else means a malformed share slipped past the earlier checks.
+        throw ArgumentError(
+          'Reconstructed AEAD key has unexpected length: '
+          '${reconstructedKey.length} (expected ${Aead.keySize})',
         );
       }
 
-      // Extract the share strings from Share objects
-      final shareStrings = shares.map((s) => s.payload).toList();
+      // AEAD-decrypt the blob with the reconstructed key. A Poly1305 tag
+      // mismatch here is the canonical "shares are wrong or tampered"
+      // signal — surface it as an ArgumentError so callers see a uniform
+      // failure mode rather than letting plaintext-decode errors leak
+      // through downstream.
+      final blobBundle = base64Url.decode(blob);
+      try {
+        final plaintextBytes = Aead.decrypt(
+          Uint8List.fromList(reconstructedKey),
+          blobBundle,
+        );
+        final content = utf8.decode(plaintextBytes);
 
-      // Combine shares using Base64Url encoding (isBase64 = true)
-      // This will reconstruct the original secret
-      final content = sss.combine(shareStrings, true);
-
-      Log.info(
-        'Successfully reconstructed content from ${shares.length} shares',
-      );
-      return content;
+        Log.info(
+          'Successfully reconstructed content from ${shares.length} shares',
+        );
+        return content;
+      } on AeadAuthenticationError catch (e) {
+        Log.error('AEAD authentication failed during recovery', e);
+        throw ArgumentError(
+          'Recovery failed: ciphertext failed authentication — tampered '
+          'share, mismatched distribution, or insufficient/incorrect shares',
+        );
+      }
     } on ArgumentError catch (e) {
       Log.error('Error reconstructing from shares', e);
       rethrow;

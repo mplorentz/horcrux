@@ -26,7 +26,7 @@ import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 /// True when the app is in [AppLifecycleState.resumed] (foreground).
 ///
 /// Used by [LocalNotificationService] to suppress informational shard
-/// notifications (kind 1337) while the user already has the app open.
+/// notifications (kind 713) while the user already has the app open.
 /// [WidgetsBinding.instance.lifecycleState] may be null during early startup;
 /// that is treated as not resumed so notifications are not dropped.
 bool _defaultLocalNotificationIsForegrounded() {
@@ -159,7 +159,7 @@ class LocalNotificationService {
     await _showRecoveryResponseNotification(response);
   }
 
-  /// Called by [NdkService] after a kind-1337 shard-data event is processed successfully.
+  /// Called by [NdkService] after a kind-713 shard-data event is processed successfully.
   ///
   /// Shows a local notification on the steward's device announcing that the
   /// owner has sent them a (re)distributed shard. [event] is the unwrapped
@@ -179,7 +179,7 @@ class LocalNotificationService {
     );
   }
 
-  /// Called by [NdkService] after a kind-1342 shard-confirmation event is processed successfully.
+  /// Called by [NdkService] after a kind-718 shard-confirmation event is processed successfully.
   ///
   /// Shows a local notification on the vault owner's device announcing that a
   /// steward has confirmed receipt of the latest shard. [event] is the

@@ -17,41 +17,41 @@ enum NostrKind {
   /// as `Authorization: Nostr <base64>`.
   httpAuth(27235),
 
-  /// Horcrux custom: Share distribution (Nostr kind 1337; internal name only).
+  /// Horcrux custom: Share distribution (Nostr kind 713; internal name only).
   /// Used to distribute Shamir secret shares to stewards
-  shareData(1337),
+  shareData(713),
 
   /// Horcrux custom: Recovery request
   /// Used when a user initiates vault recovery
-  recoveryRequest(1338),
+  recoveryRequest(714),
 
   /// Horcrux custom: Recovery response
   /// Used when a steward responds to a recovery request
-  recoveryResponse(1339),
+  recoveryResponse(715),
 
   /// Horcrux custom: Invitation Acceptance
   /// Used when an invitee accepts an invitation link
-  invitationAcceptance(1340),
+  invitationAcceptance(716),
 
   /// Horcrux custom: Invitation denial
   /// Used when an invitee denies an invitation link
-  invitationDenial(1341),
+  invitationDenial(717),
 
-  /// Horcrux custom: Share confirmation (kind 1342).
+  /// Horcrux custom: Share confirmation (kind 718).
   /// Used when a steward confirms successful receipt of share material
-  shareConfirmation(1342),
+  shareConfirmation(718),
 
-  /// Horcrux custom: Share error (kind 1343).
+  /// Horcrux custom: Share error (kind 719).
   /// Used when a steward reports an error processing share material
-  shareError(1343),
+  shareError(719),
 
   /// Horcrux custom: Invitation invalid
   /// Used to notify invitee that an invitation code is invalid
-  invitationInvalid(1344),
+  invitationInvalid(720),
 
   /// Horcrux custom: Key holder removed
   /// Used to notify a steward when they are removed from a backup config
-  keyHolderRemoved(1345);
+  keyHolderRemoved(721);
 
   /// The numeric kind value
   final int value;
@@ -70,7 +70,7 @@ enum NostrKind {
 
   /// Check if this kind is a Horcrux custom kind
   bool get isCustom {
-    return value >= 1337 && value <= 1345;
+    return value >= 713 && value <= 721;
   }
 
   /// Check if this kind is a standard NIP kind

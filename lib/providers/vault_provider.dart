@@ -379,6 +379,10 @@ class VaultRepository {
           vaultId: vaultId,
           shareIndex: share.shareIndex,
           sharePayload: share.payload,
+          // Persist the AEAD blob alongside the share so the steward can
+          // hand it back verbatim during recovery — without the blob, the
+          // owner has no ciphertext to decrypt with the reconstructed key.
+          aeadBlob: Value(share.blob),
           distributionVersion: dist,
           receivedAt: now,
           nostrEventId: Value(share.nostrEventId),
@@ -387,14 +391,8 @@ class VaultRepository {
         ),
       );
       await _db.heldShareDao.pruneOldVersions(vaultId);
-      // Write primeMod to the vault row when provided so that
-      // _shareFromHeldShareRow can hydrate valid Share objects. For owned
-      // vaults, _persistVault doesn't write primeMod (BackupConfig doesn't
-      // carry it); persisting it here fills that gap. For steward vaults
-      // mergeVaultRowFromIncomingShare already set it, so this is idempotent.
-      final vaultsUpdate = share.primeMod.isNotEmpty
-          ? VaultsCompanion(primeMod: Value(share.primeMod), lastSyncedAt: Value(now))
-          : VaultsCompanion(lastSyncedAt: Value(now));
+      // GF(256) has no prime to specify. Update lastSynced timestamp.
+      final vaultsUpdate = VaultsCompanion(lastSyncedAt: Value(now));
       await (_db.update(_db.vaults)..where((v) => v.id.equals(vaultId))).write(vaultsUpdate);
     });
     Log.info(
@@ -511,7 +509,6 @@ class VaultRepository {
         VaultsCompanion(
           threshold: Value(share.threshold),
           totalShares: Value(share.totalShares),
-          primeMod: Value(share.primeMod),
           currentDistributionVersion: Value(
             incomingDist > row.currentDistributionVersion
                 ? incomingDist
@@ -550,7 +547,7 @@ class VaultRepository {
   /// Ensures an `owned_vaults` row exists for [vaultId] (empty encrypted shell).
   ///
   /// Used when the vault owner (same device pubkey as [vaults.owner_pubkey])
-  /// ingests a manifest-only 1337 on a fresh install so [isOwnedVault] and
+  /// ingests a manifest-only 713 on a fresh install so [isOwnedVault] and
   /// owner UI gates activate while [saveOwnedVaultContent] has not run yet.
   Future<void> ensureOwnedVaultShell(String vaultId) async {
     final existing = await _db.ownedVaultDao.getByVaultId(vaultId);
@@ -824,7 +821,7 @@ class VaultRepository {
     // Owner-role rows are authoritative once the owner has saved backup config
     // on this device. Steward-role rows (from mergeVaultRowFromIncomingShare)
     // are a wire snapshot used when owner rows are absent — e.g. fresh install
-    // from kind-1337 — without letting stale steward snapshots override edits.
+    // from kind-713 — without letting stale steward snapshots override edits.
     final ownerRelayRows = await _db.vaultRelayDao.forVaultByRole(row.id, 'owner');
     final relayRows = ownerRelayRows.isNotEmpty
         ? ownerRelayRows
@@ -899,11 +896,14 @@ class VaultRepository {
       threshold: vaultRow.threshold,
       shareIndex: r.shareIndex,
       totalShares: vaultRow.totalShares,
-      primeMod: vaultRow.primeMod ?? '',
+      scheme: vaultRow.primeMod == null ? 'gf256_v1' : null,
       creatorPubkey: vaultRow.ownerPubkey,
       createdAt: vaultRow.createdAt ~/ 1000,
       vaultId: r.vaultId,
       vaultName: vaultRow.name,
+      // gf256_v1 stores the AEAD ciphertext bundle here; recovery responses
+      // ride it back to the owner verbatim. DB column is `aead_blob`.
+      blob: r.aeadBlob,
       nostrEventId: r.nostrEventId,
       distributionVersion: r.distributionVersion,
       pushEnabled: r.pushEnabled,
@@ -996,7 +996,7 @@ class VaultRepository {
     required int currentDistributionVersion,
   }) async {
     final recordingInboundAck = acknowledgmentEventId != null && acknowledgedAt != null;
-    // Kind-1342 acks attach to the *current* distribution share row so hydration
+    // Kind-718 acks attach to the *current* distribution share row so hydration
     // can compare [acknowledgmentDistributionVersion] to [currentDistributionVersion].
     final distributionVersionForRow = recordingInboundAck
         ? currentDistributionVersion

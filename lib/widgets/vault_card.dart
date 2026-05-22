@@ -28,6 +28,70 @@ class VaultCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
+    // Show tombstone card for archived vaults
+    if (vault.isArchived) {
+      final reasonText = vault.archivedReason ?? 'Removed by owner';
+      return Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VaultDetailScreen(vaultId: vault.id),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.archive_outlined,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vault.name,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        reasonText,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: theme.colorScheme.secondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
     final currentPubkey = currentPubkeyAsync.maybeWhen(
       data: (pubkey) => pubkey,
