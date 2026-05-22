@@ -1,6 +1,6 @@
 # Horcrux
 
-_Horcrux is alpha software, do not use it to back up real secrets at this time._
+_Horcrux is beta software, do not use it to back up real secrets at this time._
 
 Horcrux is an app for backup and recovery of sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux uses advanced cryptography to distribute the data to the devices of the people you choose. All data is encrypted and can only be decrypted when most or all of these people provide their consent. The result is a virtual vault that no single person or key can open.
 
