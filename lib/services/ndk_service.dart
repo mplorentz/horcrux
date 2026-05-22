@@ -793,8 +793,7 @@ class NdkService {
 
     if (inviteCode != null && inviteCode.isNotEmpty) {
       try {
-        final invitation =
-            await _getInvitationService().lookupInvitationByCode(inviteCode);
+        final invitation = await _getInvitationService().lookupInvitationByCode(inviteCode);
         if (invitation != null) {
           vaultId = invitation.vaultId;
         }
