@@ -900,7 +900,7 @@ void main() {
         threshold: 2,
         shareIndex: 0,
         totalShares: 3,
-        scheme: null,
+        scheme: 'gf256_v1',
         creatorPubkey: creatorPubkey,
         createdAt: 1759759657,
         vaultId: 'vault-1',
@@ -1265,8 +1265,8 @@ void main() {
       expect(decoded.threshold, original.threshold);
       expect(decoded.shareIndex, original.shareIndex);
       expect(decoded.totalShares, original.totalShares);
-      // scheme normalizes null → 'gf256_v1' during wire round-trip
-      expect(decoded.scheme, 'gf256_v1');
+      // null scheme must be preserved through Nostr round-trip
+      expect(decoded.scheme, isNull);
       expect(decoded.creatorPubkey, original.creatorPubkey);
       expect(decoded.createdAt, original.createdAt);
       expect(decoded.vaultId, original.vaultId);
@@ -1589,6 +1589,7 @@ void main() {
         shareIndex: 0,
         totalShares: 3,
         creatorPubkey: creatorPubkey,
+        scheme: 'gf256_v1',
         blob: sampleBlob,
       );
       expect(share.blob, equals(sampleBlob));
