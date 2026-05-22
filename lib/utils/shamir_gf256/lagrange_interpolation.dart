@@ -45,6 +45,7 @@ class LagrangeInterpolation {
     if (points.isEmpty) {
       throw ArgumentError('At least one point is required');
     }
+    final seenX = <int>{};
     for (final p in points) {
       if (p.length != 2) {
         throw ArgumentError('Each point must be [x, y]');
@@ -53,6 +54,9 @@ class LagrangeInterpolation {
         if (v < 0 || v > 255) {
           throw ArgumentError('All point values must be bytes (0–255)');
         }
+      }
+      if (!seenX.add(p[0])) {
+        throw ArgumentError('Duplicate x-coordinate: ${p[0]}');
       }
     }
   }

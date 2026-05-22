@@ -323,6 +323,32 @@ void main() {
       expect(decodedShare.nostrEventId, isNull, reason: 'nostrEventId is not in wire JSON anymore');
     });
 
+    test('round-trip preserves null scheme through JSON serialization', () {
+      // Bug 3: null scheme must not be coerced to 'gf256_v1' on re-serialization.
+      // Create a JSON fixture with neither 'scheme' nor 'prime_mod'
+      final noSchemeJson = <String, dynamic>{
+        'shard': 'dGVzdA==',
+        'threshold': 2,
+        'shard_index': 0,
+        'total_shards': 3,
+        'creator_pubkey': 'a11ac73f57e93ef42ef8bce513de552bcda3b6169c8f9ab96c6143f0c9b73437',
+        'created_at': 1759759657,
+      };
+
+      final share = shareFromJson(noSchemeJson);
+      // Legacy share with no scheme should have null scheme
+      expect(share.scheme, isNull, reason: 'legacy share without scheme should have null scheme');
+
+      // Re-serialize and verify null is preserved
+      final json = shareToJson(share);
+      expect(json.containsKey('scheme'), isFalse,
+          reason: 'null scheme must not appear in serialized JSON');
+
+      final decodedShare = shareFromJson(json);
+      expect(decodedShare.scheme, isNull,
+          reason: 'null scheme round-trip must preserve null');
+    });
+
     test('shareFromJson handles null receivedAt correctly', () {
       final jsonWithoutReceivedAt = {...validJsonWithRecoveryMetadata};
       jsonWithoutReceivedAt.remove('received_at');

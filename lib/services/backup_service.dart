@@ -219,6 +219,7 @@ class BackupService {
           shareIndex: i, // sequential 0-based index
           totalShares: totalShards,
           creatorPubkey: creatorPubkey,
+          scheme: 'gf256_v1',
           // Identical AEAD bundle on every share; recovery cross-checks for
           // byte equality before reconstructing the key.
           blob: blob,

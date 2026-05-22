@@ -64,9 +64,12 @@ class BytePolynomial {
       _coefficients[i] = random.nextInt(256);
     }
 
-    // The leading coefficient must be non-zero.
-    while (_coefficients.last == 0) {
-      _coefficients[_coefficients.length - 1] = random.nextInt(256);
+    // The leading coefficient must be non-zero (skip for degree-0 where the
+    // only coefficient IS the secret byte).
+    if (_degree > 0) {
+      while (_coefficients.last == 0) {
+        _coefficients[_coefficients.length - 1] = random.nextInt(256);
+      }
     }
 
     _generated = true;

@@ -639,7 +639,7 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
     shareIndex: shareIndex,
     totalShares: totalShares,
     creatorPubkey: rumor.pubKey,
-    scheme: scheme ?? 'gf256_v1',
+    scheme: scheme,
     blob: tagValue('blob'),
     createdAt: rumor.createdAt,
     vaultId: tagValue('vault_id'),

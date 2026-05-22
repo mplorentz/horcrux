@@ -357,6 +357,35 @@ void main() {
             reason: 'degree $degree: leading coeff must be non-zero');
       }
     });
+
+    test('degree-0 polynomial preserves zero secret byte', () {
+      // Bug 2: degree-0 polynomial must NOT overwrite a zero secret byte.
+      // When threshold=1, degree=0, the while-loop enforcing non-zero leading
+      // coefficient should be skipped since the only coefficient IS the secret.
+      final rng = Random(42);
+      final poly = BytePolynomial(0); // degree-0
+      poly.generateCoefficients(0x00, rng); // secret byte is 0
+      expect(poly.isGenerated, isTrue);
+      expect(poly.coefficients[0], 0x00,
+          reason: 'degree-0 must preserve zero secret byte');
+      expect(poly.constantAtZero, 0x00,
+          reason: 'constantAtZero must return 0');
+    });
+
+    test('degree-0 polynomial preserves non-zero secret byte', () {
+      final rng = Random(42);
+      final poly = BytePolynomial(0);
+      poly.generateCoefficients(0xAB, rng);
+      expect(poly.coefficients[0], 0xAB);
+    });
+
+    test('degree-0 evaluateAt(0) returns secret byte', () {
+      final rng = Random(42);
+      final poly = BytePolynomial(0);
+      poly.generateCoefficients(0x42, rng);
+      expect(poly.evaluateAt(0), 0x42);
+      expect(poly.evaluateAt(5), 0x42, reason: 'constant poly: f(5)=f(0)');
+    });
   });
 
   // =========================================================================
@@ -400,6 +429,19 @@ void main() {
           [1, 256],
         ]),
         throwsArgumentError,
+      );
+    });
+
+    test('throws on duplicate x-coordinates', () {
+      // Bug 4: duplicate x-coordinates silently corrupt Lagrange result
+      expect(
+        () => LagrangeInterpolation.constantAtZero([
+          [1, 0x42],
+          [2, 0xAB],
+          [1, 0xCD], // duplicate x=1
+        ]),
+        throwsArgumentError,
+        reason: 'must reject duplicate x-coordinates',
       );
     });
   });
