@@ -105,6 +105,7 @@ class InlineTimePrinter extends LogPrinter {
 /// with configurable log levels and formatting.
 class Log {
   static Logger _logger = Logger(
+    filter: ProductionFilter(),
     printer: InlineTimePrinter(colors: true, printEmojis: true),
   );
 
@@ -128,6 +129,7 @@ class Log {
   /// Used during startup file-log wiring; keeps `dart:io` out of this library.
   static void configureOutput(LogOutput output) {
     _logger = Logger(
+      filter: ProductionFilter(),
       printer: InlineTimePrinter(colors: true, printEmojis: true),
       output: output,
     );
