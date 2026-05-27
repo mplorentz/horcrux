@@ -604,7 +604,7 @@ void main() {
           threshold: 2,
           shareIndex: 0,
           totalShares: 3,
-          primeMod: 'test-prime-mod',
+          scheme: null,
           creatorPubkey: ownerPubkey,
           vaultId: 'test-vault',
           vaultName: 'Test Vault',

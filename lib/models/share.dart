@@ -17,13 +17,28 @@ part 'share.freezed.dart';
 class Share with _$Share {
   const factory Share({
     /// Shamir share bytes (encoding depends on generator); Nostr key `shard`.
+    ///
+    /// In `gf256_v1`, [payload] is a share of the **content-encryption key**,
+    /// not the vault content itself. The encrypted content lives in [blob].
     required String payload,
     required int threshold,
     required int shareIndex,
     required int totalShares,
-    required String primeMod,
     required String creatorPubkey,
     required int createdAt,
+    // Shamir scheme identifier. 'gf256_v1' for GF(256) shares (current).
+    // Null means unsupported (legacy ntcdcrypto GF(p) format).
+    String? scheme,
+
+    /// Base64url-encoded ChaCha20-Poly1305 bundle of the vault content:
+    /// `nonce(12) || ciphertext(n) || poly1305 tag(16)`. Required for
+    /// `gf256_v1` shares.
+    ///
+    /// Every share in a distribution carries an identical [blob]; recovery
+    /// cross-checks for byte equality before reconstructing the key. The
+    /// Poly1305 tag is what gives reconstructed content its integrity
+    /// guarantee — SSS alone provides none.
+    String? blob,
     // Recovery metadata (optional fields)
     String? vaultId,
     String? vaultName,
@@ -51,7 +66,7 @@ class Share with _$Share {
 
   const Share._();
 
-  /// Wire-level "manifest-only" 1337: empty Shamir payload.
+  /// Wire-level "manifest-only" 713: empty Shamir payload.
   ///
   /// Used when the owner is not a self-steward so relays can still carry a
   /// gift-wrapped recovery-plan snapshot to the owner's pubkey. A manifest
@@ -103,9 +118,15 @@ class Share with _$Share {
         return false;
       }
 
-      if (primeMod.isEmpty) {
-        Log.error('Share validation failed: primeMod is empty');
+      // Scheme validation: reject empty, warn for other non-gf256_v1 but don't reject legacy shares
+      if (scheme == '') {
+        Log.error('Share validation failed: scheme is empty');
         return false;
+      }
+      if (scheme != null && scheme != 'gf256_v1') {
+        Log.info(
+          'Share has unsupported scheme \'$scheme\' (expected gf256_v1, likely legacy)',
+        );
       }
 
       if (creatorPubkey.isEmpty) {
@@ -232,8 +253,10 @@ Share createShare({
   required int threshold,
   required int shareIndex,
   required int totalShares,
-  required String primeMod,
   required String creatorPubkey,
+  String? scheme,
+  String? blob,
+  int? createdAt,
   String? vaultId,
   String? vaultName,
   List<Map<String, String>>? stewards,
@@ -258,8 +281,8 @@ Share createShare({
   if (shareIndex < 0 || shareIndex >= totalShares) {
     throw ArgumentError('shareIndex must be >= 0 and < totalShares');
   }
-  if (primeMod.isEmpty) {
-    throw ArgumentError('PrimeMod cannot be empty');
+  if (scheme != null && scheme != 'gf256_v1') {
+    throw ArgumentError("Unsupported scheme: '$scheme' (expected 'gf256_v1')");
   }
   if (creatorPubkey.isEmpty) {
     throw ArgumentError('CreatorPubkey cannot be empty');
@@ -312,9 +335,10 @@ Share createShare({
     threshold: threshold,
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: primeMod,
     creatorPubkey: creatorPubkey,
-    createdAt: secondsSinceEpoch(),
+    createdAt: createdAt ?? secondsSinceEpoch(),
+    scheme: scheme,
+    blob: blob,
     vaultId: vaultId,
     vaultName: vaultName,
     stewards: stewards,
@@ -338,8 +362,11 @@ Map<String, dynamic> shareToJson(Share share) {
     'threshold': share.threshold,
     'shard_index': share.shareIndex,
     'total_shards': share.totalShares,
-    'prime_mod': share.primeMod,
-    'creator_pubkey': share.creatorPubkey,
+    if (share.scheme != null) 'scheme': share.scheme!,
+    if (share.scheme != null && share.scheme != 'gf256_v1')
+      // Write prime_mod for backward compatibility with legacy data
+      'prime_mod': share.scheme,
+    if (share.blob != null) 'blob': share.blob,
     'created_at': share.createdAt,
     if (share.vaultId != null) 'vault_id': share.vaultId,
     if (share.vaultName != null) 'vault_name': share.vaultName,
@@ -426,8 +453,10 @@ Share shareFromJson(Map<String, dynamic> json) {
     threshold: _readIntFlexible(json['threshold']),
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: json['prime_mod'] as String,
-    creatorPubkey: json['creator_pubkey'] as String,
+    creatorPubkey: (json['creator_pubkey'] as String?) ?? '',
+    // Read scheme from JSON; fall back to prime_mod for legacy data
+    scheme: json['scheme'] as String? ?? json['prime_mod'] as String?,
+    blob: json['blob'] as String?,
     createdAt: createdAt,
     vaultId: json['vault_id'] as String?,
     vaultName: json['vault_name'] as String?,
@@ -478,7 +507,16 @@ List<List<String>> shareToNostrTags(Share share) {
   tags.add(['share_index', share.shareIndex.toString()]);
   tags.add(['total_shares', share.totalShares.toString()]);
   tags.add(['threshold', share.threshold.toString()]);
-  tags.add(['prime_mod', share.primeMod]);
+  if (share.scheme != null) {
+    tags.add(['scheme', share.scheme!]);
+  }
+
+  // gf256_v1 carries the ChaCha20-Poly1305 ciphertext bundle here. The blob
+  // is identical across every share of a distribution; recovery verifies
+  // that byte-equality before reconstructing the key.
+  if (share.blob != null && share.blob!.isNotEmpty) {
+    tags.add(['blob', share.blob!]);
+  }
 
   if (share.vaultId != null && share.vaultId!.isNotEmpty) {
     tags.add(['vault_id', share.vaultId!]);
@@ -551,7 +589,8 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
   final shareIndexStr = tagValue('share_index');
   final totalSharesStr = tagValue('total_shares');
   final thresholdStr = tagValue('threshold');
-  final primeMod = tagValue('prime_mod');
+  // Read scheme tag, fall back to prime_mod for backward compatibility
+  final scheme = tagValue('scheme') ?? tagValue('prime_mod');
 
   // Parse steward tags: ["steward", "<slot>", "<name>", "<pubkey>", "<contact_info>"]
   final stewardTagLists = tagValues('steward');
@@ -601,8 +640,9 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
     threshold: threshold,
     shareIndex: shareIndex,
     totalShares: totalShares,
-    primeMod: primeMod ?? '',
     creatorPubkey: rumor.pubKey,
+    scheme: scheme,
+    blob: tagValue('blob'),
     createdAt: rumor.createdAt,
     vaultId: tagValue('vault_id'),
     vaultName: tagValue('vault_name'),

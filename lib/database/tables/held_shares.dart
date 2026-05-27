@@ -31,6 +31,19 @@ class HeldShares extends Table {
   /// data layer refactor plan.
   TextColumn get sharePayload => text()();
 
+  /// Base64url-encoded ChaCha20-Poly1305 bundle (`nonce || ct || tag`) of
+  /// the vault content. Identical across every share in a distribution —
+  /// the steward returns it verbatim during recovery so the owner can
+  /// decrypt with the reconstructed key. Nullable for two reasons:
+  ///   1. legacy / non-`gf256_v1` rows that pre-date the AEAD layer;
+  ///   2. manifest-shaped rows the owner may hold for vaults where they
+  ///      are not a self-steward (no payload, so a blob would be unused).
+  /// Recovery enforces presence on the read path, not at insert time.
+  ///
+  /// SQL column is `aead_blob` — `blob` collides with [Table.blob], drift's
+  /// built-in binary-column constructor.
+  TextColumn get aeadBlob => text().nullable()();
+
   /// Distribution version at which this share was generated. Used for
   /// retention pruning and for serving a specific version during recovery.
   IntColumn get distributionVersion => integer()();

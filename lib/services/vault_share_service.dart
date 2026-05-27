@@ -3,12 +3,14 @@ import 'package:ndk/ndk.dart';
 import '../models/invitation_link.dart';
 import '../models/share.dart';
 import '../models/vault.dart';
+import '../models/key_holder_removal_reason.dart';
 import '../models/nostr_kinds.dart';
 import '../providers/vault_provider.dart';
 import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'ndk_service.dart';
 import 'push_notification_receiver.dart';
+import 'relay_scan_service.dart';
 
 /// Resolves the Shamir slot (0-based) for an embedded steward entry.
 ///
@@ -57,6 +59,7 @@ final vaultShareServiceProvider = Provider<VaultShareService>((ref) {
     () => ref.read(ndkServiceProvider),
     () => ref.read(horcruxNotificationServiceProvider),
     () => ref.read(pushNotificationReceiverProvider),
+    () => ref.read(relayScanServiceProvider),
   );
 });
 
@@ -70,12 +73,14 @@ class VaultShareService {
   final NdkService Function() _getNdkService;
   final HorcruxNotificationService Function() _getNotificationService;
   final PushNotificationReceiver Function() _getPushReceiver;
+  final RelayScanService Function() _getRelayScanService;
 
   VaultShareService(
     this.repository,
     this._getNdkService,
     this._getNotificationService,
     this._getPushReceiver,
+    this._getRelayScanService,
   );
 
   // ── Steward-side share management (backed by `held_shares` table) ──
@@ -124,8 +129,8 @@ class VaultShareService {
   /// 3. Opt into push if the owner has push enabled.
   /// 4. Send share confirmation event to owner.
   ///
-  /// **Manifest-only** shares ([Share.isManifest]): metadata-only 1337 for
-  /// owner rehydration — skips `held_shares`, confirmation (1342), and
+  /// **Manifest-only** shares ([Share.isManifest]): metadata-only 713 for
+  /// owner rehydration — skips `held_shares`, confirmation (718), and
   /// phantom self-steward upsert; may insert an `owned_vaults` shell when the
   /// ingesting pubkey is the vault owner on a fresh device.
   ///
@@ -189,6 +194,12 @@ class VaultShareService {
         'processVaultShare: applied manifest metadata for vault $vaultId '
         '(distributionVersion=${shardData.distributionVersion})',
       );
+
+      // Sync relay URLs so the steward subscribes to the updated relay set
+      if (shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
+        await _getRelayScanService().syncRelaysFromUrls(shardData.relayUrls!);
+      }
+
       return;
     }
 
@@ -205,6 +216,9 @@ class VaultShareService {
 
     try {
       if (shardData.relayUrls != null && shardData.relayUrls!.isNotEmpty) {
+        // Sync the share's relay URLs so the steward subscribes to them
+        await _getRelayScanService().syncRelaysFromUrls(shardData.relayUrls!);
+
         final eventId = await sendShareConfirmationEvent(
           vaultId: vaultId,
           shareIndex: shardData.shareIndex,
@@ -237,7 +251,7 @@ class VaultShareService {
     }
   }
 
-  /// Creates and publishes a share confirmation event (kind 1342).
+  /// Creates and publishes a share confirmation event (kind 718).
   Future<String?> sendShareConfirmationEvent({
     required String vaultId,
     required int shareIndex,
@@ -334,10 +348,16 @@ class VaultShareService {
         return;
       }
 
+      // Read reason from tags (default to stewardRemoved for legacy events)
+      final reason = KeyHolderRemovalReason.fromWire(
+        _extractTagValue(event.tags, 'reason'),
+      );
+
       await repository.saveVault(
         vault.copyWith(
           archivedAt: DateTime.now(),
-          archivedReason: 'Removed by owner',
+          archivedReason:
+              reason == KeyHolderRemovalReason.vaultDeleted ? 'Vault deleted' : 'Removed by owner',
         ),
       );
       Log.info('processKeyHolderRemoval: archived vault $vaultId');
@@ -378,7 +398,7 @@ class VaultShareService {
       Log.info('_upsertStewardVaultAndSelf: created vault record $vaultId');
     } else {
       // Version-gate: only update vault metadata if incoming version is newer.
-      // Held shares drive the steward case; manifest-only 1337 never writes
+      // Held shares drive the steward case; manifest-only 713 never writes
       // `held_shares`, so also compare to the vault row's current distribution
       // (hydrated as [Vault.backupConfig.distributionVersion]) so a late stale
       // manifest cannot roll back [Vault.name] / owner display fields.
@@ -512,7 +532,10 @@ class VaultShareService {
     Share share,
   ) async {
     const syntheticPrefix = 'owner-self-steward-inferred';
-    final ownerPk = share.creatorPubkey;
+    final vault = await repository.getVault(vaultId);
+    if (vault == null || vault.ownerPubkey.isEmpty) return;
+
+    final ownerPk = vault.ownerPubkey;
     final embedded = share.stewards;
     if (embedded == null || embedded.isEmpty) return;
 
@@ -520,9 +543,8 @@ class VaultShareService {
     if (!ownerListed) return;
 
     final shareDist = share.distributionVersion ?? 0;
-    final vault = await repository.getVault(vaultId);
-    final vaultDist = vault?.backupConfig?.distributionVersion;
-    if (vault == null || vaultDist == null) return;
+    final vaultDist = vault.backupConfig?.distributionVersion;
+    if (vaultDist == null) return;
     if (shareDist != vaultDist) return;
 
     final syntheticGiftWrapId = '$syntheticPrefix:$vaultId:v$shareDist';

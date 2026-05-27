@@ -67,6 +67,7 @@ class TestShare {
         'threshold': threshold,
         'shard_index': index,
         'total_shards': totalShards,
+        'scheme': 'gf256_v1',
         'prime_mod': testPrimeMod,
         'creator_pubkey': testCreatorPubkey,
         'created_at': 1759759657,

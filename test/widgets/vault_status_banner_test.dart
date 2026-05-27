@@ -255,7 +255,7 @@ void main() {
         threshold: 3,
         shareIndex: 0,
         totalShares: 3,
-        primeMod: 'pm',
+        scheme: null,
         creatorPubkey: other,
         createdAt: DateTime(2024, 1, 1).millisecondsSinceEpoch ~/ 1000,
         vaultId: 'vault-1',

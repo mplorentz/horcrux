@@ -18,7 +18,7 @@ Nip01Event _decodeHeader(String header) {
   final encoded = header.substring('Nostr '.length);
   final jsonStr = utf8.decode(base64Decode(encoded));
   final map = json.decode(jsonStr) as Map<String, dynamic>;
-  return Nip01Event.fromJson(map);
+  return Nip01EventModel.fromJson(map);
 }
 
 String? _firstTag(Nip01Event event, String name) {
@@ -58,9 +58,9 @@ void main() {
         isNull,
         reason: 'GET has no body, so no payload tag',
       );
-      expect(event.isIdValid, isTrue, reason: 'event id must match content');
+      expect(Nip01Utils.isIdValid(event), isTrue, reason: 'event id must match content');
       expect(
-        Bip340.verify(event.id, event.sig, event.pubKey),
+        Bip340.verify(event.id, event.sig!, event.pubKey),
         isTrue,
         reason: 'signature must verify against pubkey',
       );

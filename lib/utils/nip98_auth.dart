@@ -1,5 +1,6 @@
 import 'package:crypto/crypto.dart';
 import 'package:ndk/ndk.dart';
+import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
 
 import '../models/nostr_kinds.dart';
@@ -77,17 +78,27 @@ class Nip98Auth {
       tags.add(['payload', digest]);
     }
 
+    final effectiveCreatedAt = (createdAt ?? DateTime.now()).secondsSinceEpoch;
     final event = Nip01Event(
       pubKey: keyPair.publicKey,
       kind: NostrKind.httpAuth.value,
       tags: tags,
       content: '',
-      createdAt: (createdAt ?? DateTime.now()).secondsSinceEpoch,
+      createdAt: effectiveCreatedAt,
     );
     // Local Schnorr signing via the raw private key the caller already
     // holds; equivalent to what Bip340EventSigner.sign does internally.
-    event.sign(privateKey);
+    final signature = Bip340.sign(event.id, privateKey);
+    final signedEvent = Nip01EventModel(
+      id: event.id,
+      pubKey: event.pubKey,
+      createdAt: event.createdAt,
+      kind: event.kind,
+      tags: event.tags,
+      content: event.content,
+      sig: signature,
+    );
 
-    return 'Nostr ${event.toBase64()}';
+    return 'Nostr ${signedEvent.toBase64()}';
   }
 }

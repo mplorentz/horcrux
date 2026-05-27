@@ -18,7 +18,7 @@ void main() {
       threshold: 3,
       shareIndex: 0,
       totalShares: 3,
-      primeMod: 'prime-mod',
+      scheme: null,
       creatorPubkey: ownerPubkey,
       vaultId: vaultId,
       distributionVersion: 0,

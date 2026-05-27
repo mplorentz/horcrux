@@ -227,7 +227,13 @@ class ShareDistributionService {
           threshold: config.threshold,
           shareIndex: -1,
           totalShares: config.totalKeys,
-          primeMod: template.primeMod,
+          scheme: template.scheme,
+          // Carry the AEAD blob on the manifest too. Without it, an owner
+          // who is not a self-steward could not decrypt anything stewards
+          // return — the blob is the ciphertext, the shares hold only the
+          // key. Manifest blob === every steward share blob (recovery
+          // requires byte-equal blobs across all collected shares).
+          blob: template.blob,
           creatorPubkey: ownerPubkey,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           vaultId: config.vaultId,
@@ -261,7 +267,7 @@ class ShareDistributionService {
           throw Exception('Failed to publish owner manifest share event');
         }
         Log.info(
-          'Published manifest-only 1337 for vault ${config.vaultId} (owner not self-steward)',
+          'Published manifest-only 713 for vault ${config.vaultId} (owner not self-steward)',
         );
       }
 
@@ -289,7 +295,7 @@ class ShareDistributionService {
             since: shareEvent.createdAt.secondsSinceEpoch,
           );
 
-          final acknowledgmentResponse = ndk.requests.query(filters: [filter]);
+          final acknowledgmentResponse = ndk.requests.query(filter: filter);
 
           // Get the events from the response
           final acknowledgmentEvents = await acknowledgmentResponse.future;
@@ -346,7 +352,7 @@ class ShareDistributionService {
     }
   }
 
-  /// Processes share confirmation event received from steward (kind 1342).
+  /// Processes share confirmation event received from steward (kind 718).
   ///
   /// Tag-only wire (empty content): [vault_id], [share_index],
   /// optional [distribution_version]. Steward identity is [Nip01Event.pubKey]
@@ -431,7 +437,7 @@ class ShareDistributionService {
     );
   }
 
-  /// Processes share error event received from steward (kind 1343).
+  /// Processes share error event received from steward (kind 719).
   ///
   /// Wire tag format: vault_id, share_index, error from tags.
   Future<void> processShareErrorEvent({required Nip01Event event}) async {

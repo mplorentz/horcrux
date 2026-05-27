@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: Run Tests
-    runs-on: macos-latest # macOS required for consistent golden test rendering
+    runs-on: macos-26 # Pin macOS 26 for golden test rendering (macos-latest is still macOS 15 until June 2026)
     permissions:
       contents: read
       pull-requests: write
@@ -33,7 +33,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: "pubspec.yaml"
+          flutter-version-file: ".fvmrc"
           channel: "stable"
           cache: true
           # Use explicit path instead of wildcard to avoid macOS hashFiles issues

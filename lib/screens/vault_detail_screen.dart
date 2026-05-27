@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
+import '../models/key_holder_removal_reason.dart';
 import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import '../services/backup_service.dart';
+import '../services/invitation_sending_service.dart';
 import '../utils/owner_push_opt_in_prompt.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
@@ -79,6 +81,53 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           return const Scaffold(
             appBar: HorcruxAppBar(title: 'Vault Not Found'),
             body: Center(child: Text('This vault no longer exists.')),
+          );
+        }
+
+        // Show tombstone for archived/removed vaults
+        if (vault.isArchived) {
+          final reasonText = vault.archivedReason ?? 'Removed by owner';
+          return Scaffold(
+            appBar: HorcruxAppBar(title: vault.name),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.archive_outlined,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      reasonText == 'Vault deleted'
+                          ? 'This vault has been deleted by the owner.'
+                          : 'You have been removed from this vault.',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      reasonText,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        ref.read(vaultRepositoryProvider).deleteVault(vault.id);
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Remove from my device'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -249,6 +298,23 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
             onPressed: () async {
               // Use Riverpod to get the repository - much better for testing!
               final repository = ref.read(vaultRepositoryProvider);
+
+              // Notify all stewards before deleting the vault.
+              if (vault.backupConfig != null) {
+                final config = vault.backupConfig!;
+                final invitationSendingService = ref.read(invitationSendingServiceProvider);
+                for (final steward in config.stewards) {
+                  if (steward.pubkey != null && config.relays.isNotEmpty) {
+                    await invitationSendingService.sendKeyHolderRemovalEvent(
+                      vaultId: vault.id,
+                      removedStewardPubkey: steward.pubkey!,
+                      relayUrls: config.relays,
+                      reason: KeyHolderRemovalReason.vaultDeleted,
+                    );
+                  }
+                }
+              }
+
               await repository.deleteVault(vault.id);
               if (context.mounted) {
                 Navigator.pop(context); // Close dialog

@@ -54,7 +54,7 @@ void main() {
       threshold: 2,
       shareIndex: 0,
       totalShares: 3,
-      primeMod: 'test_prime_mod',
+      scheme: null,
       creatorPubkey: otherPubkey,
     ),
   );
@@ -257,7 +257,7 @@ void main() {
           threshold: 2,
           shareIndex: 1,
           totalShares: 3,
-          primeMod: 'test_prime_mod',
+          scheme: null,
           creatorPubkey: testPubkey,
         ),
       );

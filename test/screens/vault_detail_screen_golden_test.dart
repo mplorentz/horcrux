@@ -34,7 +34,7 @@ void main() {
       threshold: 2,
       shareIndex: shardIndex,
       totalShares: 3,
-      primeMod: 'test_prime_mod',
+      scheme: null,
       creatorPubkey: testPubkey,
       vaultId: vaultId,
       vaultName: vaultName,
@@ -636,6 +636,71 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'vault_detail_screen_multiple_devices');
+
+      await harness.dispose();
+    });
+
+    testGoldens('archived vault - deleted by owner', (tester) async {
+      final archivedVault = Vault(
+        id: 'test-vault',
+        name: 'My Private Keys',
+        createdAt: DateTime(2024, 10, 1, 10, 30),
+        ownerPubkey: testPubkey,
+        archivedAt: DateTime(2024, 11, 1),
+        archivedReason: 'Vault deleted',
+      );
+
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(ownedVaultDetailFromVault(archivedVault)),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+        surfaceSize: const Size(375, 667),
+      );
+
+      await screenMatchesGolden(
+        tester,
+        'vault_detail_screen_archived_deleted',
+      );
+
+      await harness.dispose();
+    });
+
+    testGoldens('archived vault - steward removed', (tester) async {
+      final archivedVault = Vault(
+        id: 'test-vault',
+        name: 'My Private Keys',
+        createdAt: DateTime(2024, 10, 1, 10, 30),
+        ownerPubkey: otherPubkey, // different owner — steward view
+        archivedAt: DateTime(2024, 11, 1),
+        archivedReason: 'steward_removed',
+      );
+
+      final harness = await pumpGoldenWidget(
+        tester,
+        const VaultDetailScreen(vaultId: 'test-vault'),
+        overrides: [
+          vaultDetailProvider('test-vault').overrideWith(
+            (ref) => Stream.value(
+              stewardedVaultDetailFromVault(
+                archivedVault,
+                latestShare: null,
+              ),
+            ),
+          ),
+          currentPublicKeyProvider.overrideWith((ref) => testPubkey),
+        ],
+        surfaceSize: const Size(375, 667),
+      );
+
+      await screenMatchesGolden(
+        tester,
+        'vault_detail_screen_archived_removed',
+      );
 
       await harness.dispose();
     });

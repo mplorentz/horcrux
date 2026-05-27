@@ -404,7 +404,7 @@ class PushNotificationReceiver {
     final embedded = parseFcmEmbeddedEventJson(message.data);
     if (embedded != null) {
       try {
-        giftWrap = Nip01Event.fromJson(embedded);
+        giftWrap = Nip01EventModel.fromJson(embedded);
       } catch (e, st) {
         Log.warning('FCM tap: invalid embedded event_json', e, st);
         return;
@@ -480,7 +480,7 @@ class PushNotificationReceiver {
     final embedded = parseFcmEmbeddedEventJson(message.data);
     if (embedded != null) {
       try {
-        final event = Nip01Event.fromJson(embedded);
+        final event = Nip01EventModel.fromJson(embedded);
         await _ndkService.processGiftWrapFromForegroundPush(event);
       } catch (e, st) {
         Log.warning(

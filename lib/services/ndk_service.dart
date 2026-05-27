@@ -281,13 +281,11 @@ class NdkService {
       // subscriptions with identical filters (e.g. when subscribing to a second
       // relay). We handle our own dedup via ProcessedNostrEventStore.
       final response = _ndk!.requests.subscription(
-        filters: [
-          Filter(
-            kinds: [NostrKind.giftWrap.value],
-            pTags: [myPubkey],
-            since: sinceFilter,
-          ),
-        ],
+        filter: Filter(
+          kinds: [NostrKind.giftWrap.value],
+          pTags: [myPubkey],
+          since: sinceFilter,
+        ),
         explicitRelays: [relayUrl],
         cacheRead: false,
       );
@@ -366,7 +364,7 @@ class NdkService {
         ids: [eventIdHex],
       );
       final response = _ndk!.requests.query(
-        filters: [filter],
+        filter: filter,
         explicitRelays: relays,
       );
       final events = await response.future;
@@ -436,20 +434,20 @@ class NdkService {
     try {
       final inner = await _ndk!.giftWrap.fromGiftWrap(giftWrap: giftWrap);
       switch (inner.kind) {
-        case 1337: // [NostrKind.shareData]
+        case 713: // [NostrKind.shareData]
           final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1338: // [NostrKind.recoveryRequest]
+        case 714: // [NostrKind.recoveryRequest]
           final id = _firstTagValue(inner.tags, 'vault_id');
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1339: // [NostrKind.recoveryResponse]
+        case 715: // [NostrKind.recoveryResponse]
           Map<String, dynamic>? m;
           try {
             m = json.decode(inner.content) as Map<String, dynamic>;
           } catch (_) {}
           final id = _vaultIdFromReader(m, inner.tags);
           return (id != null && id.isNotEmpty) ? id : null;
-        case 1342: // [NostrKind.shareConfirmation]
+        case 718: // [NostrKind.shareConfirmation]
           return _firstTagValue(inner.tags, 'vault_id');
         default:
           return null;
@@ -742,7 +740,7 @@ class NdkService {
       ),
     );
 
-    await _ref.read(recoveryServiceProvider).processRecoveryResponse(
+    final processed = await _ref.read(recoveryServiceProvider).processRecoveryResponse(
           recoveryRequestId,
           senderPubkey,
           approved,
@@ -752,9 +750,12 @@ class NdkService {
           allowLocalNotification: allowLocalNotification,
         );
 
-    Log.info(
-      'Persisted recovery response: $recoveryRequestId from $senderPubkey',
-    );
+    if (processed) {
+      Log.info(
+        'Persisted recovery response: $recoveryRequestId from '
+        '${senderPubkey.substring(0, 8)}...',
+      );
+    }
   }
 
   /// Handle incoming invitation acceptance event (kind 1340). Errors propagate
@@ -863,9 +864,7 @@ class NdkService {
     );
 
     final response = _ndk!.requests.query(
-      filters: [
-        Filter(kinds: [NostrKind.giftWrap.value], pTags: [myPubkey]),
-      ],
+      filter: Filter(kinds: [NostrKind.giftWrap.value], pTags: [myPubkey]),
       explicitRelays: relayUrls,
     );
 
