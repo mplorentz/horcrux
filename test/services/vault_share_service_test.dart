@@ -1049,12 +1049,13 @@ void main() {
         distributionVersion: 1,
       );
 
-      await service.processVaultShare(
+      final wasAccepted = await service.processVaultShare(
         vaultId,
         manifest,
         verifiedSenderPubkey: TestHexPubkeys.bob,
       );
 
+      expect(wasAccepted, isFalse);
       expect(await repository.getVault(vaultId), isNull);
     });
 
@@ -1084,12 +1085,13 @@ void main() {
         distributionVersion: 2,
       );
 
-      await service.processVaultShare(
+      final wasAccepted = await service.processVaultShare(
         vaultId,
         manifest,
         verifiedSenderPubkey: TestHexPubkeys.bob,
       );
 
+      expect(wasAccepted, isFalse);
       final stored = await repository.getVault(vaultId);
       expect(stored, isNotNull);
       expect(stored!.ownerPubkey, owner);

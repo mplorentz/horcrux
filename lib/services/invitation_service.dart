@@ -851,6 +851,14 @@ class InvitationService {
       return; // Silently ignore if invitation not found
     }
 
+    if (invitation.redeemedBy != null && invitation.redeemedBy != inviteePubkey) {
+      Log.warning(
+        'Ignoring denial event for invitation $inviteCode from $inviteePubkey: '
+        'already redeemed by ${invitation.redeemedBy}',
+      );
+      return;
+    }
+
     // Update invitation status to denied
     final deniedInvitation = invitation.updateStatus(InvitationStatus.denied);
     await _saveInvitation(deniedInvitation);
