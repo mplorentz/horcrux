@@ -366,10 +366,8 @@ void main() {
       final poly = BytePolynomial(0); // degree-0
       poly.generateCoefficients(0x00, rng); // secret byte is 0
       expect(poly.isGenerated, isTrue);
-      expect(poly.coefficients[0], 0x00,
-          reason: 'degree-0 must preserve zero secret byte');
-      expect(poly.constantAtZero, 0x00,
-          reason: 'constantAtZero must return 0');
+      expect(poly.coefficients[0], 0x00, reason: 'degree-0 must preserve zero secret byte');
+      expect(poly.constantAtZero, 0x00, reason: 'constantAtZero must return 0');
     });
 
     test('degree-0 polynomial preserves non-zero secret byte', () {
