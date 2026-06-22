@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ndk/entities.dart' show GiftWrapUnwrapResult;
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
@@ -44,6 +45,11 @@ int computeSinceTime({
     return 0;
   }
   return math.min(windowStartSec, last);
+}
+
+@visibleForTesting
+bool isVerifiedGiftWrapUnwrapResult(GiftWrapUnwrapResult result) {
+  return result.isSealSignatureValid && result.isPubkeyMatch;
 }
 
 /// Event emitted when a recovery response is received
@@ -526,7 +532,22 @@ class NdkService {
     try {
       Log.info('Received subscription Nostr event: ${event.id}');
 
-      final unwrappedEvent = await _ndk!.giftWrap.fromGiftWrap(giftWrap: event);
+      final unwrapResult = await _ndk!.giftWrap.fromGiftWrapWithInfo(
+        giftWrap: event,
+      );
+      if (!isVerifiedGiftWrapUnwrapResult(unwrapResult)) {
+        Log.warning(
+          'Rejecting gift wrap ${event.id}: '
+          'sealSignatureValid=${unwrapResult.isSealSignatureValid}, '
+          'sealPubkeyMatchesRumor=${unwrapResult.isPubkeyMatch}',
+        );
+        await _processedEventStore.recordProcessed(event.id);
+        await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
+        return;
+      }
+
+      final unwrappedEvent = unwrapResult.rumor;
+      final verifiedSenderPubkey = unwrapResult.seal.pubKey;
 
       Log.info(
         'Unwrapped event: kind=${unwrappedEvent.kind}, id=${unwrappedEvent.id}',
@@ -537,6 +558,7 @@ class NdkService {
       if (unwrappedEvent.kind == NostrKind.shareData.value) {
         await _handleShare(
           unwrappedEvent,
+          verifiedSenderPubkey: verifiedSenderPubkey,
           allowLocalNotification: allowLocalNotification,
         );
       } else if (unwrappedEvent.kind == NostrKind.recoveryRequest.value) {
@@ -579,6 +601,7 @@ class NdkService {
   /// dispatcher releases the dedup claim and retries on next delivery.
   Future<void> _handleShare(
     Nip01Event event, {
+    required String verifiedSenderPubkey,
     bool allowLocalNotification = true,
   }) async {
     Log.info('Processing shard data event: ${event.id}');
@@ -594,7 +617,11 @@ class NdkService {
     }
 
     final vaultShareService = _ref.read(vaultShareServiceProvider);
-    await vaultShareService.processVaultShare(vaultId, shardData);
+    await vaultShareService.processVaultShare(
+      vaultId,
+      shardData,
+      verifiedSenderPubkey: verifiedSenderPubkey,
+    );
 
     if (allowLocalNotification) {
       await _ref

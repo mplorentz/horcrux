@@ -138,8 +138,28 @@ class VaultShareService {
   /// manifests or held shares), a **stale** manifest (lower or equal
   /// [Share.distributionVersion]) is ignored so relays cannot roll back
   /// metadata.
-  Future<void> processVaultShare(String vaultId, Share shardData) async {
+  Future<void> processVaultShare(
+    String vaultId,
+    Share shardData, {
+    required String verifiedSenderPubkey,
+  }) async {
     if (!shardData.isValid) throw ArgumentError('Invalid shard data');
+
+    final existingVault = await repository.getVault(vaultId);
+    if (verifiedSenderPubkey != shardData.creatorPubkey) {
+      Log.warning(
+        'processVaultShare: rejected share for vault $vaultId because verified '
+        'sender does not match creatorPubkey',
+      );
+      return;
+    }
+    if (existingVault != null && shardData.creatorPubkey != existingVault.ownerPubkey) {
+      Log.warning(
+        'processVaultShare: rejected share for vault $vaultId because creator '
+        'does not match existing vault owner',
+      );
+      return;
+    }
 
     // Dedup by nostrEventId. If the vault doesn't exist yet, skip the check
     // and let addVaultShare create it.
@@ -162,7 +182,7 @@ class VaultShareService {
     }
 
     if (shardData.isManifest) {
-      final vault = await repository.getVault(vaultId);
+      final vault = existingVault;
       if (vault != null) {
         final maxHeldDist = await repository.maxHeldShareDistributionVersion(vaultId);
         final vaultRowDist = vault.backupConfig?.distributionVersion ?? -1;
