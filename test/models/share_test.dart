@@ -345,8 +345,7 @@ void main() {
           reason: 'null scheme must not appear in serialized JSON');
 
       final decodedShare = shareFromJson(json);
-      expect(decodedShare.scheme, isNull,
-          reason: 'null scheme round-trip must preserve null');
+      expect(decodedShare.scheme, isNull, reason: 'null scheme round-trip must preserve null');
     });
 
     test('shareFromJson handles null receivedAt correctly', () {
