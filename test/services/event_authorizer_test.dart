@@ -220,6 +220,7 @@ void main() {
               pubKey: TestHexPubkeys.bob,
               tags: [
                 ['invite_code', pendingInviteCode],
+                ['vault_id', vaultId],
               ],
             ),
             verifiedSenderPubkey: TestHexPubkeys.bob,
@@ -233,6 +234,7 @@ void main() {
               pubKey: TestHexPubkeys.bob,
               tags: [
                 ['invite_code', redeemedInviteCode],
+                ['vault_id', vaultId],
               ],
             ),
             verifiedSenderPubkey: TestHexPubkeys.bob,
@@ -246,6 +248,7 @@ void main() {
               pubKey: TestHexPubkeys.charlie,
               tags: [
                 ['invite_code', redeemedInviteCode],
+                ['vault_id', vaultId],
               ],
             ),
             verifiedSenderPubkey: TestHexPubkeys.charlie,
@@ -263,18 +266,55 @@ void main() {
         ),
         AuthDecision.deny,
       );
+      await seedInvitation(inviteCode: 'known-invite');
       expect(
         await authorizer.authorize(
           rumor: event(
-            kind: NostrKind.invitationDenial,
+            kind: NostrKind.invitationAcceptance,
             tags: [
-              ['invite_code', 'unknown-invite'],
+              ['invite_code', 'known-invite'],
             ],
           ),
           verifiedSenderPubkey: TestHexPubkeys.bob,
         ),
         AuthDecision.deny,
       );
+      expect(
+        await authorizer.authorize(
+          rumor: event(
+            kind: NostrKind.invitationDenial,
+            tags: [
+              ['invite_code', 'unknown-invite'],
+              ['vault_id', vaultId],
+            ],
+          ),
+          verifiedSenderPubkey: TestHexPubkeys.bob,
+        ),
+        AuthDecision.deny,
+      );
+    });
+
+    test('denies invitations whose vault_id does not match stored invitation', () async {
+      await seedInvitation(inviteCode: 'vault-mismatch-invite');
+
+      for (final kind in [
+        NostrKind.invitationAcceptance,
+        NostrKind.invitationDenial,
+      ]) {
+        expect(
+          await authorizer.authorize(
+            rumor: event(
+              kind: kind,
+              tags: [
+                ['invite_code', 'vault-mismatch-invite'],
+                ['vault_id', 'different-vault'],
+              ],
+            ),
+            verifiedSenderPubkey: TestHexPubkeys.bob,
+          ),
+          AuthDecision.deny,
+        );
+      }
     });
 
     test('authorizes keyHolderRemoved only from the vault owner', () async {

@@ -78,9 +78,12 @@ class EventAuthorizer {
   ) async {
     final inviteCode = _firstTagValue(rumor.tags, 'invite_code');
     if (inviteCode == null) return AuthDecision.deny;
+    final vaultId = _firstTagValue(rumor.tags, 'vault_id');
+    if (vaultId == null) return AuthDecision.deny;
 
     final invitation = await _db.invitationDao.getByCode(inviteCode);
     if (invitation == null) return AuthDecision.deny;
+    if (invitation.vaultId != vaultId) return AuthDecision.deny;
     final redeemedBy = invitation.acceptedByPubkey;
     if (redeemedBy != null && redeemedBy != verifiedSenderPubkey) {
       return AuthDecision.deny;

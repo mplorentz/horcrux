@@ -515,6 +515,7 @@ class InvitationService {
     try {
       await invitationSendingService.sendDenialEvent(
         inviteCode: inviteCode,
+        vaultId: invitation.vaultId,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
       );
