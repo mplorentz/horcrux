@@ -138,7 +138,7 @@ class VaultShareService {
   /// manifests or held shares), a **stale** manifest (lower or equal
   /// [Share.distributionVersion]) is ignored so relays cannot roll back
   /// metadata.
-  Future<void> processVaultShare(
+  Future<bool> processVaultShare(
     String vaultId,
     Share shardData, {
     required String verifiedSenderPubkey,
@@ -151,14 +151,14 @@ class VaultShareService {
         'processVaultShare: rejected share for vault $vaultId because verified '
         'sender does not match creatorPubkey',
       );
-      return;
+      return false;
     }
     if (existingVault != null && shardData.creatorPubkey != existingVault.ownerPubkey) {
       Log.warning(
         'processVaultShare: rejected share for vault $vaultId because creator '
         'does not match existing vault owner',
       );
-      return;
+      return false;
     }
 
     // Dedup by nostrEventId. If the vault doesn't exist yet, skip the check
@@ -174,7 +174,7 @@ class VaultShareService {
             'processVaultShare: share ${shardData.nostrEventId} already stored '
             'for vault $vaultId — skipping',
           );
-          return;
+          return false;
         }
       } on ArgumentError {
         // Vault not found — first time seeing this vault; proceed to create it.
@@ -200,7 +200,7 @@ class VaultShareService {
           if (pkStale != null && pkStale == shardData.creatorPubkey) {
             await repository.ensureOwnedVaultShell(vaultId);
           }
-          return;
+          return false;
         }
       }
 
@@ -220,7 +220,7 @@ class VaultShareService {
         await _getRelayScanService().syncRelaysFromUrls(shardData.relayUrls!);
       }
 
-      return;
+      return true;
     }
 
     await addVaultShare(vaultId, shardData);
@@ -269,6 +269,7 @@ class VaultShareService {
         e,
       );
     }
+    return true;
   }
 
   /// Creates and publishes a share confirmation event (kind 718).

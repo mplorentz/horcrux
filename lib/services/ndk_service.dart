@@ -15,6 +15,7 @@ import 'login_service.dart';
 import 'recovery_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
+import 'event_authorizer.dart';
 import 'share_distribution_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
@@ -555,6 +556,20 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
+      final authDecision = await _ref.read(eventAuthorizerProvider).authorize(
+            rumor: unwrappedEvent,
+            verifiedSenderPubkey: verifiedSenderPubkey,
+          );
+      if (authDecision == AuthDecision.deny) {
+        Log.warning(
+          'Rejecting unauthorized gift wrap ${event.id}: '
+          'innerKind=${unwrappedEvent.kind}, sender=$verifiedSenderPubkey',
+        );
+        await _processedEventStore.recordProcessed(event.id);
+        await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
+        return;
+      }
+
       if (unwrappedEvent.kind == NostrKind.shareData.value) {
         await _handleShare(
           unwrappedEvent,
@@ -617,11 +632,12 @@ class NdkService {
     }
 
     final vaultShareService = _ref.read(vaultShareServiceProvider);
-    await vaultShareService.processVaultShare(
+    final wasAccepted = await vaultShareService.processVaultShare(
       vaultId,
       shardData,
       verifiedSenderPubkey: verifiedSenderPubkey,
     );
+    if (!wasAccepted) return;
 
     if (allowLocalNotification) {
       await _ref
