@@ -70,7 +70,7 @@
 
 - [ ] T015 Implement link generation in `OwnerRecoveryScreen`:
   - Validate vault name and owner name inputs
-  - Default to keydex relay URL (allow user to change)
+  - Default to Horcrux relay URL (allow user to change)
   - Create RecoveryInitiationLink
   - Generate shareable URL
   - Store link locally for tracking

@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// The title of the application
   ///
   /// In en, this message translates to:
-  /// **'keydex'**
+  /// **'Horcrux'**
   String get appTitle;
 }
 

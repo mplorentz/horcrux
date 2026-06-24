@@ -69,7 +69,7 @@ As a vault owner who has lost my device, I want to recover my vault from a fresh
 - **What if steward has no vaults for this owner?** Show message "You don't appear to be a steward for any vaults that match this request."
 - **What if owner's temp key expires or they lose the fresh device?** They must start over with a new temp key and link.
 - **What if relay URLs in link differ from original vault relays?** Requests use original relays (from shard data), responses use link's relays (where owner listens). Stewards should add the link's relay URLs to their vault config so future communication uses consistent relays.
-- **What relays does owner use on fresh device?** Default to keydex relay (configurable). These relays are embedded in the recovery initiation link and stewards add them to their vault config.
+- **What relays does owner use on fresh device?** Default to Horcrux relay (configurable). These relays are embedded in the recovery initiation link and stewards add them to their vault config.
 - **How does owner's fresh device know which vault to reconstruct?** When first recovery response (shard) arrives, automatically create a local vault stub using metadata from the shard (vault ID, vault name from shard data). Subsequent shards are added to this vault.
 
 ---
@@ -90,7 +90,7 @@ As a vault owner who has lost my device, I want to recover my vault from a fresh
 - **FR-007**: System MUST prompt owner to enter vault name they want to recover
 - **FR-008**: System MUST prompt owner to enter their name (for steward identification)
 - **FR-009**: System MUST generate recovery initiation link with format: `horcrux://horcrux.app/recover/{code}?owner={tempPubkey}&vault={name}&name={ownerName}&relays={urls}`
-- **FR-009a**: System MUST default to keydex relay URL, but allow owner to configure different relays
+- **FR-009a**: System MUST default to Horcrux relay URL, but allow owner to configure different relays
 - **FR-009b**: Stewards MUST add the relay URLs from recovery initiation link to their vault's relay config for consistent communication
 - **FR-010**: System MUST create `RecoveryInitiationLink` model to track the link
 - **FR-011**: System MUST allow owner to copy/share the link
