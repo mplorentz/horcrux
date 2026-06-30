@@ -1511,4 +1511,236 @@ void main() {
       expect(content, isNotEmpty);
     });
   });
+
+  group('RecoveryService - performRecovery AEAD (real BackupService)', () {
+    late String testCreatorPubkey;
+    late LoginService loginService;
+    late VaultRepository repository;
+    late BackupService backupService;
+    late NdkService ndkService;
+    late MockLocalNotificationService mockLocalNotificationService;
+    late RecoveryService recoveryService;
+    late AppDatabase testDb;
+
+    const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
+    const testKeyHolder2 = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+    const testVaultId = 'vault-aead-perform-recovery';
+    const testSecret = 'AEAD recovery round-trip secret for RecoveryService integration test';
+    const testPeers = [
+      {
+        'name': 'Steward One',
+        'pubkey': testKeyHolder1,
+      },
+      {
+        'name': 'Steward Two',
+        'pubkey': testKeyHolder2,
+      },
+    ];
+
+    setUp(() async {
+      secureStorageMock.clear();
+      loginService = LoginService();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      testCreatorPubkey = keyPair.publicKey;
+
+      testDb = newTestDatabase();
+      repository = VaultRepository(loginService, db: testDb);
+      final mockNdkService = MockNdkService();
+      mockLocalNotificationService = MockLocalNotificationService();
+      when(
+        mockLocalNotificationService.notifyRecoveryRequestProcessed(any),
+      ).thenAnswer((_) async {});
+      when(
+        mockLocalNotificationService.notifyRecoveryResponseProcessed(any),
+      ).thenAnswer((_) async {});
+
+      when(
+        mockNdkService.getCurrentPubkey(),
+      ).thenAnswer((_) async => testCreatorPubkey);
+
+      backupService = BackupService(
+        repository,
+        MockVaultDetailRepository(),
+        MockShareDistributionService(),
+        loginService,
+        MockRelayScanService(),
+      );
+      ndkService = mockNdkService;
+      final mockHorcruxNotificationService = MockHorcruxNotificationService();
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      recoveryService = RecoveryService(
+        repository,
+        backupService,
+        ndkService,
+        ProcessedNostrEventStore(),
+        mockLocalNotificationService,
+        mockHorcruxNotificationService,
+        testDb,
+      );
+      await recoveryService.clearAll();
+      await repository.clearAll();
+
+      await repository.addVault(
+        Vault(
+          id: testVaultId,
+          name: 'AEAD Test Vault',
+          createdAt: DateTime.now(),
+          ownerPubkey: testCreatorPubkey,
+        ),
+      );
+
+      await repository.updateBackupConfig(
+        testVaultId,
+        createBackupConfig(
+          vaultId: testVaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+            createSteward(pubkey: testKeyHolder2).copyWith(status: StewardStatus.holdingKey),
+          ],
+          relays: ['wss://relay.example.com'],
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await recoveryService.clearAll();
+      repository.dispose();
+      await testDb.close();
+    });
+
+    test('performRecovery round-trips gf256_v1 AEAD shares', () async {
+      final generated = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 2,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: 'AEAD Test Vault',
+        stewards: testPeers,
+      );
+
+      final recoveryRequest = await recoveryService.initiateRecovery(
+        testVaultId,
+        initiatorPubkey: testCreatorPubkey,
+        stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+        threshold: 2,
+      );
+
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder1,
+        true,
+        share: generated[0],
+      );
+      await recoveryService.processRecoveryResponse(
+        recoveryRequest.id,
+        testKeyHolder2,
+        true,
+        share: generated[1],
+      );
+
+      final content = await recoveryService.performRecovery(recoveryRequest.id);
+      expect(content, testSecret);
+    });
+
+    test(
+      'manifest-only owner: steward responses suffice without owner shamir payload',
+      () async {
+        final generated = await backupService.generateShamirShares(
+          content: testSecret,
+          threshold: 2,
+          totalShards: 2,
+          creatorPubkey: testCreatorPubkey,
+          vaultId: testVaultId,
+          vaultName: 'AEAD Test Vault',
+          stewards: testPeers,
+        );
+        final blob = generated.first.blob!;
+
+        await repository.addShareToVault(
+          testVaultId,
+          Share(
+            payload: '',
+            threshold: 2,
+            shareIndex: -1,
+            totalShares: 2,
+            scheme: 'gf256_v1',
+            creatorPubkey: testCreatorPubkey,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            vaultId: testVaultId,
+            blob: blob,
+            distributionVersion: 0,
+          ),
+        );
+
+        final recoveryRequest = await recoveryService.initiateRecovery(
+          testVaultId,
+          initiatorPubkey: testCreatorPubkey,
+          stewardPubkeys: [testKeyHolder1, testKeyHolder2],
+          threshold: 2,
+        );
+
+        await repository.addShareToVault(testVaultId, generated[0]);
+        final hydrated0 = (await repository.getSharesForVault(testVaultId)).firstWhere(
+          (s) => s.shareIndex == 0,
+        );
+        expect(hydrated0.blob, blob);
+        await recoveryService.processRecoveryResponse(
+          recoveryRequest.id,
+          testKeyHolder1,
+          true,
+          share: hydrated0,
+        );
+
+        await repository.addShareToVault(testVaultId, generated[1]);
+        final hydrated1 = (await repository.getSharesForVault(testVaultId)).firstWhere(
+          (s) => s.shareIndex == 1,
+        );
+        expect(hydrated1.blob, blob);
+        await recoveryService.processRecoveryResponse(
+          recoveryRequest.id,
+          testKeyHolder2,
+          true,
+          share: hydrated1,
+        );
+
+        final request = await recoveryService.getRecoveryRequest(recoveryRequest.id);
+        expect(request, isNotNull);
+        expect(
+          request!.approvedSharesWithPayload.every((s) => s.shareIndex != -1),
+          isTrue,
+          reason: 'recovery must use steward payloads, not the owner manifest',
+        );
+        expect(
+          request.approvedSharesWithPayload.every((s) => s.blob == blob),
+          isTrue,
+        );
+
+        final content = await recoveryService.performRecovery(recoveryRequest.id);
+        expect(content, testSecret);
+      },
+    );
+  });
 }
