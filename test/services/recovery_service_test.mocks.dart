@@ -493,6 +493,24 @@ class MockLocalNotificationService extends _i1.Mock implements _i13.LocalNotific
       ) as _i7.Future<void>);
 
   @override
+  _i7.Future<void> notifyInvitationAcceptanceProcessed({
+    required _i3.Nip01Event? event,
+    required String? vaultId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #notifyInvitationAcceptanceProcessed,
+          [],
+          {
+            #event: event,
+            #vaultId: vaultId,
+          },
+        ),
+        returnValue: _i7.Future<void>.value(),
+        returnValueForMissingStub: _i7.Future<void>.value(),
+      ) as _i7.Future<void>);
+
+  @override
   _i7.Future<bool> requestPlatformNotificationPermissions() => (super.noSuchMethod(
         Invocation.method(
           #requestPlatformNotificationPermissions,

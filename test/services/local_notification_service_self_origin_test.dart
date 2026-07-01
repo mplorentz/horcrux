@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications_platform_interface/flutter_local_not
 import 'package:ndk/ndk.dart';
 
 import 'package:horcrux/database/app_database.dart';
+import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
@@ -234,6 +235,113 @@ void main() {
         );
 
         expect(vaultRepository.getVaultCalls, equals(['vault-1']));
+      },
+    );
+  });
+
+  /// Builds a kind-716 invitation-acceptance rumor signed by [senderPubkey].
+  Nip01Event buildInvitationAcceptance({
+    required String senderPubkey,
+    int createdAt = 1700000000,
+    String id = 'evt-invite-accept-1',
+  }) {
+    return Nip01Event(
+      id: id,
+      pubKey: senderPubkey,
+      kind: NostrKind.invitationAcceptance.value,
+      tags: const [],
+      createdAt: createdAt,
+      content: '',
+    );
+  }
+
+  group('LocalNotificationService invitation acceptance', () {
+    test(
+      'invitation acceptance from another steward proceeds past '
+      'self-origin filter and reaches vault lookup',
+      () async {
+        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+
+        await service.notifyInvitationAcceptanceProcessed(
+          event: buildInvitationAcceptance(
+            senderPubkey: TestHexPubkeys.bob,
+            // Use "now" so the recency gate doesn't filter the event out.
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: 'vault-1',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          equals(['vault-1']),
+          reason: 'non-self invitation acceptance must reach vault lookup',
+        );
+      },
+    );
+
+    test(
+      'invitation acceptance signed by the current user is filtered '
+      'by self-origin check',
+      () async {
+        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+
+        await service.notifyInvitationAcceptanceProcessed(
+          event: buildInvitationAcceptance(
+            senderPubkey: TestHexPubkeys.alice,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: 'vault-1',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'self-origin invitation acceptance must be dropped',
+        );
+      },
+    );
+
+    test(
+      'invitation acceptance with empty vaultId is skipped before '
+      'vault lookup',
+      () async {
+        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+
+        await service.notifyInvitationAcceptanceProcessed(
+          event: buildInvitationAcceptance(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: '',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'empty vaultId must short-circuit before vault lookup',
+        );
+      },
+    );
+
+    test(
+      'old invitation acceptance event is filtered by recency gate',
+      () async {
+        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+
+        await service.notifyInvitationAcceptanceProcessed(
+          event: buildInvitationAcceptance(
+            senderPubkey: TestHexPubkeys.bob,
+            // Old timestamp from well before first app open
+            createdAt: 1700000000,
+          ),
+          vaultId: 'vault-1',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'old events must be filtered by recency gate',
+        );
       },
     );
   });

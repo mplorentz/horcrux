@@ -15,6 +15,7 @@ import '../providers/vault_provider.dart';
 import '../screens/recovery_request_detail_screen.dart';
 import '../screens/recovery_status_screen.dart';
 import '../screens/vault_detail_screen.dart';
+import '../utils/nostr_display.dart';
 import '../utils/push_notification_text.dart';
 import 'login_service.dart';
 import 'logger.dart';
@@ -196,6 +197,21 @@ class LocalNotificationService {
     );
   }
 
+  /// Called by [NdkService] after a kind-1340 invitation-acceptance event is processed successfully.
+  ///
+  /// Shows a local notification on the vault owner's device announcing that a
+  /// steward has accepted their invitation. [event] is the unwrapped rumor
+  /// (the invitee's signed event).
+  ///
+  /// Recency-gated via [isEventRecent] so relay backfill of historical events
+  /// does not spam notifications on first launch.
+  Future<void> notifyInvitationAcceptanceProcessed({
+    required Nip01Event event,
+    required String vaultId,
+  }) async {
+    await _showInvitationAcceptanceNotification(event: event, vaultId: vaultId);
+  }
+
   /// Returns whether [pubkey] matches the current user's hex public key.
   ///
   /// Used to suppress local notifications for events the user themselves
@@ -333,6 +349,56 @@ class LocalNotificationService {
       title: text.title,
       body: text.body,
       payload: '${NostrKind.recoveryRequest.value}:${request.id}',
+    );
+  }
+
+  Future<void> _showInvitationAcceptanceNotification({
+    required Nip01Event event,
+    required String vaultId,
+  }) async {
+    if (vaultId.isEmpty) {
+      Log.debug('Skipping invitation acceptance notification: missing vault id');
+      return;
+    }
+
+    // When the user is a steward of their own vault, their invitation
+    // acceptance can round-trip through gift-wrap. Skip self-signed events
+    // to avoid notifying about one's own acceptance. Matches the same
+    // self-origin guard in [_showShardNotification].
+    if (await _isCurrentUserPubkey(event.pubKey)) {
+      Log.debug(
+        'Skipping invitation acceptance notification ${event.id}: '
+        'event was signed by the current user',
+      );
+      return;
+    }
+
+    final eventUtc = DateTime.fromMillisecondsSinceEpoch(
+      event.createdAt * 1000,
+      isUtc: true,
+    );
+    if (!await _isRecentForNotification(
+      eventUtc,
+      label: 'invitationAcceptance',
+      id: event.id,
+    )) {
+      return;
+    }
+
+    final vault = await _vaultRepository.getVault(vaultId);
+    if (vault == null) {
+      Log.debug('Skipping invitation acceptance notification: vault not found');
+      return;
+    }
+
+    final inviteeName = displayNameFromPubkey(vault, event.pubKey);
+    final vaultName = vault.name.trim().isEmpty ? 'your vault' : vault.name.trim();
+
+    Log.info('Showing notification for invitation acceptance event: ${event.id}');
+    await showNotification(
+      title: 'Invitation Accepted',
+      body: '$inviteeName accepted your invitation to "$vaultName"',
+      payload: '${NostrKind.invitationAcceptance.value}:${event.id}:$vaultId',
     );
   }
 
@@ -507,6 +573,7 @@ class LocalNotificationService {
         return _navigateToRecoveryStatus(id, fallbackVaultId: vaultId);
       case NostrKind.shareData:
       case NostrKind.shareConfirmation:
+      case NostrKind.invitationAcceptance:
         if (vaultId == null || vaultId.isEmpty) {
           Log.debug('No vaultId for $kind notification tap, skipping navigation');
           return false;
