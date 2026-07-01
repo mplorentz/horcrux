@@ -584,6 +584,34 @@ void main() {
         ),
       );
     });
+
+    test('reconstructFromShares rejects manifest share with empty payload', () async {
+      final shares = await backupService.generateShamirShares(
+        content: testSecret,
+        threshold: 2,
+        totalShards: 2,
+        creatorPubkey: testCreatorPubkey,
+        vaultId: testVaultId,
+        vaultName: testVaultName,
+        stewards: testPeers,
+      );
+      final manifest = shares.first.copyWith(
+        payload: '',
+        shareIndex: -1,
+      );
+      expect(
+        () => backupService.reconstructFromShares(
+          shares: [shares[0], manifest],
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('Empty share payload'),
+          ),
+        ),
+      );
+    });
   });
 
   group('BackupService - redistributeForPushPreferenceChange', () {

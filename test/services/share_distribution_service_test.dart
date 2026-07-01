@@ -352,6 +352,8 @@ void main() {
     });
 
     test('publishes extra manifest 1337 when owner is not marked self-steward', () async {
+      const sampleBlob = 'sample-aead-blob-base64url';
+
       final charliePrivHex = Helpers.decodeBech32(TestNsecKeys.charlie)[0];
       final charliePubHex = Bip340.getPublicKey(charliePrivHex);
 
@@ -381,6 +383,7 @@ void main() {
           creatorPubkey: alicePubHex,
           createdAt: 1700000000,
           vaultId: cfg.vaultId,
+          blob: sampleBlob,
           stewards: embedded,
         ),
         Share(
@@ -392,9 +395,37 @@ void main() {
           creatorPubkey: alicePubHex,
           createdAt: 1700000000,
           vaultId: cfg.vaultId,
+          blob: sampleBlob,
           stewards: embedded,
         ),
       ];
+
+      final capturedTagLists = <List<List<String>>>[];
+      reset(mockNdkService);
+      when(
+        mockNdkService.publishEncryptedEvent(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkey: anyNamed('recipientPubkey'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+          customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+          nip40Expiration: anyNamed('nip40Expiration'),
+        ),
+      ).thenAnswer((invocation) async {
+        final tags = invocation.namedArguments[#tags] as List<List<String>>;
+        capturedTagLists.add(
+          tags.map((tag) => List<String>.from(tag)).toList(),
+        );
+        return Nip01Event(
+          kind: 1059,
+          pubKey: 'a' * 64,
+          tags: const [],
+          createdAt: capturedTagLists.length,
+          content: '',
+        );
+      });
 
       await shardDistributionService.distributeShares(
         ownerPubkey: alicePubHex,
@@ -402,29 +433,30 @@ void main() {
         shares: shards,
       );
 
-      verify(
-        mockNdkService.publishEncryptedEvent(
-          content: '',
-          kind: NostrKind.shareData.value,
-          recipientPubkey: alicePubHex,
-          relays: cfg.relays,
-          tags: [
-            ['d', 'manifest_${cfg.vaultId}'],
-            ['share_index', '-1'],
-            ['total_shares', '2'],
-            ['threshold', '2'],
-            ['scheme', 'gf256_v1'],
-            ['vault_id', cfg.vaultId],
-            ['distribution_version', cfg.distributionVersion.toString()],
-            ['steward', '0', 'Bob', bobPubHex, ''],
-            ['steward', '1', 'Charlie', charliePubHex, ''],
-            ['relay', cfg.relays[0]],
-          ],
-          customPubkey: alicePubHex,
-          vaultId: anyNamed('vaultId'),
-          nip40Expiration: null,
+      expect(capturedTagLists, hasLength(3));
+
+      final manifestTags = capturedTagLists.firstWhere(
+        (tags) => tags.any(
+          (t) => t.isNotEmpty && t[0] == 'd' && t.length > 1 && t[1].startsWith('manifest_'),
         ),
-      ).called(1);
+      );
+      expect(
+        manifestTags.any((t) => t[0] == 'blob' && t[1] == sampleBlob),
+        isTrue,
+        reason: 'manifest 713 must carry the AEAD blob tag',
+      );
+
+      final stewardTags = capturedTagLists.where(
+        (tags) => tags.any((t) => t[0] == 'share_index' && t[1] != '-1'),
+      );
+      expect(stewardTags, hasLength(2));
+      for (final tags in stewardTags) {
+        expect(
+          tags.any((t) => t[0] == 'blob' && t[1] == sampleBlob),
+          isTrue,
+          reason: 'every steward 713 must carry the same AEAD blob tag',
+        );
+      }
     });
   });
 
