@@ -10,8 +10,16 @@ import '../screens/invitation_acceptance_screen.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Provider for DeepLinkService
+///
+/// Resolves [InvitationService] lazily at link-processing time (not at
+/// construction) so a logout-driven [appDatabaseProvider] invalidation does
+/// not leave a closed [AppDatabase] handle on this long-lived listener.
+/// Watching [invitationServiceProvider] here would create a circular
+/// dependency; the lazy callback matches [ndkServiceProvider].
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
-  final service = DeepLinkService(ref.read(invitationServiceProvider));
+  final service = DeepLinkService(
+    getInvitationService: () => ref.read(invitationServiceProvider),
+  );
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -28,12 +36,13 @@ typedef InvitationLinkData = ({
 
 /// Service for handling deep links, Universal Links, and custom URL schemes
 class DeepLinkService {
-  final InvitationService invitationService;
+  final InvitationService Function() _getInvitationService;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
-  DeepLinkService(this.invitationService);
+  DeepLinkService({required InvitationService Function() getInvitationService})
+      : _getInvitationService = getInvitationService;
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -135,7 +144,7 @@ class DeepLinkService {
 
       // Create/update invitation record on receiving side
       // This allows the invitation acceptance screen to load the invitation
-      await invitationService.createReceivedInvitation(
+      await _getInvitationService().createReceivedInvitation(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,

@@ -85,6 +85,7 @@ Future<void> initializeAppAndRefreshKeys(WidgetRef ref) async {
   ref.invalidate(appDatabaseProvider);
   ref.invalidate(ndkServiceProvider);
   ref.invalidate(relayScanServiceProvider);
+  ref.invalidate(deepLinkServiceProvider);
 
   await initializeAppServices(ref);
 
