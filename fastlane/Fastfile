@@ -118,15 +118,26 @@ platform :ios do
       api_key: api_key_obj
     )
     
-    # Install CocoaPods dependencies
+    project_root = File.expand_path("..", __dir__)
+
+    # Clean build from scratch. This is required (not just tidy): iOS Simulator
+    # builds leave IOSSIMULATOR-tagged FFI frameworks (rust_lib_ndk, objective_c)
+    # in build/native_assets/ios, which App Store Connect rejects. Manually
+    # deleting that directory does NOT work because Flutter's incremental build
+    # stamps stay valid, so the native assets never get regenerated. flutter clean
+    # invalidates those stamps and guarantees fresh device frameworks.
+    sh("cd #{project_root} && flutter clean")
+    sh("cd #{project_root} && flutter pub get")
+
+    # Install CocoaPods dependencies (pub get regenerates Generated.xcconfig first)
     podfile_path = File.expand_path("../ios/Podfile", __dir__)
     cocoapods(
       podfile: podfile_path,
       try_repo_update_on_error: true
     )
-    
+
     # Build the iOS app using Flutter
-    sh("cd .. && flutter build ipa --release")
+    sh("cd #{project_root} && flutter build ipa --release")
     
     # Find the IPA file
     ipa_path = File.expand_path("../build/ios/ipa/*.ipa", __dir__)
