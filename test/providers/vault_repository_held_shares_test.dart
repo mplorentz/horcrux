@@ -224,6 +224,45 @@ void main() {
       expect(row.currentDistributionVersion, 10);
     });
 
+    test('addShareToVault persists blob and getSharesForVault hydrates aead_blob', () async {
+      const sampleBlob = 'sample-aead-blob-base64url';
+
+      final fixture = await VaultFixture.stewarded(
+        db,
+        ownerPubkey: TestHexPubkeys.alice,
+        threshold: 2,
+        totalShares: 2,
+      );
+
+      final share = Share(
+        payload: 'gf256-payload-bytes',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 2,
+        scheme: 'gf256_v1',
+        creatorPubkey: TestHexPubkeys.alice,
+        createdAt: 1700000000,
+        vaultId: fixture.vaultId,
+        blob: sampleBlob,
+        distributionVersion: 1,
+        nostrEventId: 'evt-aead-blob',
+      );
+
+      await repository.addShareToVault(fixture.vaultId, share);
+
+      final shares = await repository.getSharesForVault(fixture.vaultId);
+      expect(shares, hasLength(1));
+      expect(shares.single.blob, sampleBlob);
+      expect(shares.single.scheme, 'gf256_v1');
+
+      final row = await db
+          .customSelect(
+            "SELECT aead_blob FROM held_shares WHERE vault_id = '${fixture.vaultId}'",
+          )
+          .getSingle();
+      expect(row.data['aead_blob'], sampleBlob);
+    });
+
     test('clearAll deletes held_shares explicitly before vaults', () async {
       final fixture = await VaultFixture.stewarded(
         db,

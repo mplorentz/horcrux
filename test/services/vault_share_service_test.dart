@@ -253,12 +253,66 @@ void main() {
           relayUrls: ['wss://relay.example.com'],
           nostrEventId: 'process-vault-share-push-opt-in',
         );
-        await service.processVaultShare(vaultId, shard);
+        await service.processVaultShare(
+          vaultId,
+          shard,
+          verifiedSenderPubkey: ownerPubkey,
+        );
 
         verify(mockPushReceiver.isOptedIn()).called(1);
         verify(mockPushReceiver.optIn()).called(1);
       },
     );
+
+    test('rejects share when verified sender does not match claimed creator', () async {
+      final shard = buildShard(index: 0, distributionVersion: 1);
+
+      await service.processVaultShare(
+        vaultId,
+        shard,
+        verifiedSenderPubkey: TestHexPubkeys.bob,
+      );
+
+      expect(await repository.getVault(vaultId), isNull);
+    });
+
+    test('rejects share when claimed creator differs from existing vault owner', () async {
+      final existing = Vault(
+        id: vaultId,
+        name: 'Original Vault',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        ownerPubkey: ownerPubkey,
+        ownerName: 'Alice',
+        pushEnabled: false,
+      );
+      await repository.addVault(existing);
+
+      final maliciousShard = createShare(
+        payload: 'abc123',
+        threshold: 2,
+        shareIndex: 0,
+        totalShares: 3,
+        scheme: null,
+        creatorPubkey: TestHexPubkeys.bob,
+        vaultId: vaultId,
+        vaultName: 'Forged Vault',
+        pushEnabled: true,
+        distributionVersion: 2,
+      );
+
+      await service.processVaultShare(
+        vaultId,
+        maliciousShard,
+        verifiedSenderPubkey: TestHexPubkeys.bob,
+      );
+
+      final stored = await repository.getVault(vaultId);
+      expect(stored, isNotNull);
+      expect(stored!.ownerPubkey, ownerPubkey);
+      expect(stored.name, 'Original Vault');
+      expect(stored.pushEnabled, isFalse);
+      expect(await repository.getSharesForVault(vaultId), isEmpty);
+    });
   });
 
   group('VaultShareService.sendShareConfirmationEvent wire tags', () {
@@ -823,7 +877,11 @@ void main() {
         nostrEventId: 'manifest-event-1',
       );
 
-      await service.processVaultShare(vaultId, manifest);
+      await service.processVaultShare(
+        vaultId,
+        manifest,
+        verifiedSenderPubkey: owner,
+      );
 
       final shares = await repository.getSharesForVault(vaultId);
       expect(shares, isEmpty);
@@ -896,6 +954,7 @@ void main() {
             vaultName: 'FromVThree',
             nostrEventId: 'manifest-v3-first',
           ),
+          verifiedSenderPubkey: owner,
         );
 
         await service.processVaultShare(
@@ -905,6 +964,7 @@ void main() {
             vaultName: 'FromVTwoStale',
             nostrEventId: 'manifest-v2-late',
           ),
+          verifiedSenderPubkey: owner,
         );
 
         final v = await repository.getVault(orderVaultId);
@@ -942,7 +1002,11 @@ void main() {
           nostrEventId: 'manifest-shell-a',
         );
 
-        await service.processVaultShare(shellVaultId, manifest);
+        await service.processVaultShare(
+          shellVaultId,
+          manifest,
+          verifiedSenderPubkey: owner,
+        );
         expect(await repository.isOwnedVault(shellVaultId), isTrue);
 
         await repository.deleteVaultContent(shellVaultId);
@@ -954,6 +1018,7 @@ void main() {
             instructions: 'Replay same dist',
             nostrEventId: 'manifest-shell-b',
           ),
+          verifiedSenderPubkey: owner,
         );
 
         expect(await repository.isOwnedVault(shellVaultId), isTrue);
@@ -968,6 +1033,73 @@ void main() {
         );
       },
     );
+
+    test('rejects manifest when verified sender does not match claimed creator', () async {
+      const manifest = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 2,
+        scheme: null,
+        creatorPubkey: owner,
+        createdAt: 1700000000,
+        vaultId: vaultId,
+        vaultName: 'Forged Manifest',
+        ownerName: 'Alice',
+        distributionVersion: 1,
+      );
+
+      final wasAccepted = await service.processVaultShare(
+        vaultId,
+        manifest,
+        verifiedSenderPubkey: TestHexPubkeys.bob,
+      );
+
+      expect(wasAccepted, isFalse);
+      expect(await repository.getVault(vaultId), isNull);
+    });
+
+    test('rejects manifest when claimed creator differs from existing vault owner', () async {
+      final existing = Vault(
+        id: vaultId,
+        name: 'Original Manifest Vault',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        ownerPubkey: owner,
+        ownerName: 'Alice',
+        pushEnabled: false,
+      );
+      await repository.addVault(existing);
+
+      const manifest = Share(
+        payload: '',
+        threshold: 2,
+        shareIndex: -1,
+        totalShares: 2,
+        scheme: null,
+        creatorPubkey: TestHexPubkeys.bob,
+        createdAt: 1700000000,
+        vaultId: vaultId,
+        vaultName: 'Forged Manifest',
+        ownerName: 'Mallory',
+        pushEnabled: true,
+        distributionVersion: 2,
+      );
+
+      final wasAccepted = await service.processVaultShare(
+        vaultId,
+        manifest,
+        verifiedSenderPubkey: TestHexPubkeys.bob,
+      );
+
+      expect(wasAccepted, isFalse);
+      final stored = await repository.getVault(vaultId);
+      expect(stored, isNotNull);
+      expect(stored!.ownerPubkey, owner);
+      expect(stored.name, 'Original Manifest Vault');
+      expect(stored.ownerName, 'Alice');
+      expect(stored.pushEnabled, isFalse);
+      expect(stored.backupConfig, isNull);
+    });
   });
 
   group('processKeyHolderRemoval', () {
@@ -1180,7 +1312,11 @@ void main() {
         relayUrls: [relayUrl],
       );
 
-      await service.processVaultShare(vaultId, shard);
+      await service.processVaultShare(
+        vaultId,
+        shard,
+        verifiedSenderPubkey: ownerPubkey,
+      );
 
       verify(mockRelayScanService.syncRelaysFromUrls([relayUrl])).called(1);
     });
@@ -1198,7 +1334,11 @@ void main() {
         relayUrls: null,
       );
 
-      await service.processVaultShare(vaultId, shard);
+      await service.processVaultShare(
+        vaultId,
+        shard,
+        verifiedSenderPubkey: ownerPubkey,
+      );
 
       verifyNever(mockRelayScanService.syncRelaysFromUrls(any));
     });

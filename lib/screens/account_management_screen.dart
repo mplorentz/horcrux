@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
 import '../providers/vault_provider.dart';
+import '../services/deep_link_service.dart';
 import '../services/logout_service.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
@@ -116,6 +117,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       ref.invalidate(appDatabaseProvider);
       ref.invalidate(ndkServiceProvider); // Reset NDK service to clear relay connections
       ref.invalidate(relayScanServiceProvider); // Reset relay scan service to clear stale state
+      ref.invalidate(deepLinkServiceProvider);
 
       if (!mounted) return;
 

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ndk/entities.dart' show GiftWrapUnwrapResult;
 import 'package:ndk/ndk.dart';
 import 'package:horcrux/models/share.dart';
+import 'package:horcrux/services/ndk_service.dart';
 
 import '../fixtures/test_keys.dart';
 
@@ -33,6 +35,50 @@ Nip01Event _makeEvent({
 }
 
 void main() {
+  group('gift wrap seal verification', () {
+    GiftWrapUnwrapResult makeResult({
+      required bool isSealSignatureValid,
+      String sealPubkey = TestHexPubkeys.alice,
+      String rumorPubkey = TestHexPubkeys.alice,
+    }) {
+      return GiftWrapUnwrapResult(
+        isSealSignatureValid: isSealSignatureValid,
+        seal: _makeEvent(kind: 13, pubKey: sealPubkey),
+        rumor: _makeEvent(kind: 713, pubKey: rumorPubkey),
+      );
+    }
+
+    test('accepts valid seal signature when seal and rumor pubkeys match', () {
+      expect(
+        isVerifiedGiftWrapUnwrapResult(
+          makeResult(isSealSignatureValid: true),
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects invalid seal signature', () {
+      expect(
+        isVerifiedGiftWrapUnwrapResult(
+          makeResult(isSealSignatureValid: false),
+        ),
+        isFalse,
+      );
+    });
+
+    test('rejects seal and rumor pubkey mismatch', () {
+      expect(
+        isVerifiedGiftWrapUnwrapResult(
+          makeResult(
+            isSealSignatureValid: true,
+            rumorPubkey: TestHexPubkeys.bob,
+          ),
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('resolveVaultIdFromTags', () {
     test('returns vault_id for kind 713 (shareData)', () {
       final event = _makeEvent(kind: 713, tags: [

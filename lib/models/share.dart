@@ -337,7 +337,7 @@ Share createShare({
     totalShares: totalShares,
     creatorPubkey: creatorPubkey,
     createdAt: createdAt ?? secondsSinceEpoch(),
-    scheme: scheme ?? 'gf256_v1',
+    scheme: scheme,
     blob: blob,
     vaultId: vaultId,
     vaultName: vaultName,
@@ -507,7 +507,9 @@ List<List<String>> shareToNostrTags(Share share) {
   tags.add(['share_index', share.shareIndex.toString()]);
   tags.add(['total_shares', share.totalShares.toString()]);
   tags.add(['threshold', share.threshold.toString()]);
-  tags.add(['scheme', share.scheme ?? 'gf256_v1']);
+  if (share.scheme != null) {
+    tags.add(['scheme', share.scheme!]);
+  }
 
   // gf256_v1 carries the ChaCha20-Poly1305 ciphertext bundle here. The blob
   // is identical across every share of a distribution; recovery verifies
@@ -639,7 +641,7 @@ Share shareFromNostr(Nip01Event rumor, {String? recipientPubkey}) {
     shareIndex: shareIndex,
     totalShares: totalShares,
     creatorPubkey: rumor.pubKey,
-    scheme: scheme ?? 'gf256_v1',
+    scheme: scheme,
     blob: tagValue('blob'),
     createdAt: rumor.createdAt,
     vaultId: tagValue('vault_id'),
