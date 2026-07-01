@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications_platform_interface/flutter_local_not
 import 'package:ndk/ndk.dart';
 
 import 'package:horcrux/database/app_database.dart';
+import 'package:horcrux/models/nostr_kinds.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/vault.dart';
@@ -238,7 +239,7 @@ void main() {
     );
   });
 
-  /// Builds a kind-1340 invitation-acceptance rumor signed by [senderPubkey].
+  /// Builds a kind-716 invitation-acceptance rumor signed by [senderPubkey].
   Nip01Event buildInvitationAcceptance({
     required String senderPubkey,
     int createdAt = 1700000000,
@@ -247,7 +248,7 @@ void main() {
     return Nip01Event(
       id: id,
       pubKey: senderPubkey,
-      kind: 1340,
+      kind: NostrKind.invitationAcceptance.value,
       tags: const [],
       createdAt: createdAt,
       content: '',

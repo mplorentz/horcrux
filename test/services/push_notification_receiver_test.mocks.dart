@@ -384,7 +384,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i8.LocalNotifica
 
   @override
   _i4.Future<void> notifyInvitationAcceptanceProcessed({
-    required _i2.Nip01Event? event,
+    required _i5.Nip01Event? event,
     required String? vaultId,
   }) =>
       (super.noSuchMethod(
