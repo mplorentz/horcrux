@@ -291,3 +291,127 @@ Future<GoldenTestHarness> pumpGoldenWidget(
       useScaffold: useScaffold,
       waitForSettle: waitForSettle,
     );
+
+/// Logical and physical sizes for Play Store screenshot goldens.
+///
+/// Golden and store file names use [storeFolderName] as a suffix:
+/// `{screenshotId}_{storeFolderName}.png` (e.g. `01_vault_list_phone.png`).
+class PlayStoreFormFactor {
+  const PlayStoreFormFactor({
+    required this.storeFolderName,
+    required this.logicalWidth,
+    required this.logicalHeight,
+    required this.physicalWidth,
+  });
+
+  /// Device suffix in screenshot file names (e.g. `01_vault_list_phone.png`).
+  final String storeFolderName;
+  final double logicalWidth;
+  final double logicalHeight;
+  final double physicalWidth;
+
+  double get devicePixelRatio => physicalWidth / logicalWidth;
+  double get physicalHeight => logicalHeight * devicePixelRatio;
+}
+
+/// Phone — 1080×2339 px (375×812 logical @ 2.88×).
+const playStorePhone = PlayStoreFormFactor(
+  storeFolderName: 'phone',
+  logicalWidth: 375,
+  logicalHeight: 812,
+  physicalWidth: 1080,
+);
+
+/// 7-inch tablet — 1200×1920 px (600×960 logical @ 2×).
+const playStoreTablet7In = PlayStoreFormFactor(
+  storeFolderName: 'tablet_7in',
+  logicalWidth: 600,
+  logicalHeight: 960,
+  physicalWidth: 1200,
+);
+
+/// 10-inch tablet — 1600×2560 px (800×1280 logical @ 2×).
+const playStoreTablet10In = PlayStoreFormFactor(
+  storeFolderName: 'tablet_10in',
+  logicalWidth: 800,
+  logicalHeight: 1280,
+  physicalWidth: 1600,
+);
+
+const playStoreFormFactors = [
+  playStorePhone,
+  playStoreTablet7In,
+  playStoreTablet10In,
+];
+
+/// Builds a golden file name for [formFactor] and [screenshotId].
+String playStoreGoldenName(PlayStoreFormFactor formFactor, String screenshotId) {
+  return '${screenshotId}_${formFactor.storeFolderName}';
+}
+
+/// Pushes [screen] above a blank route so [HorcruxAppBar] renders its back chevron.
+Widget playStorePushedScreen(Widget screen) {
+  return Navigator(
+    onGenerateInitialRoutes: (_, __) => [
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: SizedBox.shrink()),
+      ),
+      MaterialPageRoute<void>(builder: (_) => screen),
+    ],
+  );
+}
+
+/// Resets [FlutterView] size overrides after Play Store golden tests.
+void resetPlayStoreViewConfiguration() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  for (final view in binding.platformDispatcher.views) {
+    if (view case TestFlutterView testView) {
+      testView.resetPhysicalSize();
+      testView.resetDevicePixelRatio();
+    }
+  }
+}
+
+/// Pumps a widget at [formFactor] logical size, exported at Play Store physical px.
+///
+/// [pumpWidgetBuilder] always sets `devicePixelRatio` to 1.0, so a 1080×1920
+/// logical surface makes 14pt body text look tiny. This helper uses normal phone
+/// logical width at higher density instead.
+Future<GoldenTestHarness> pumpPlayStoreGoldenWidget(
+  WidgetTester tester,
+  Widget widget, {
+  required PlayStoreFormFactor formFactor,
+  List<Override> overrides = const [],
+  bool waitForSettle = true,
+}) async {
+  final logicalSize = Size(formFactor.logicalWidth, formFactor.logicalHeight);
+  final devicePixelRatio = formFactor.devicePixelRatio;
+  final harness = GoldenTestHarness.withOverrides(overrides);
+  final container = harness.container;
+
+  await tester.binding.setSurfaceSize(logicalSize);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.view.physicalSize = Size(
+    logicalSize.width * devicePixelRatio,
+    logicalSize.height * devicePixelRatio,
+  );
+  tester.view.devicePixelRatio = devicePixelRatio;
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: horcrux3Dark,
+        debugShowCheckedModeBanner: false,
+        home: Material(child: widget),
+      ),
+    ),
+  );
+
+  if (waitForSettle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
+  return harness;
+}
