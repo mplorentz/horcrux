@@ -515,6 +515,7 @@ class InvitationService {
     try {
       await invitationSendingService.sendDenialEvent(
         inviteCode: inviteCode,
+        vaultId: invitation.vaultId,
         ownerPubkey: invitation.ownerPubkey,
         relayUrls: invitation.relayUrls,
       );
@@ -849,6 +850,14 @@ class InvitationService {
     if (invitation == null) {
       Log.warning('Denial event received for unknown invitation: $inviteCode');
       return; // Silently ignore if invitation not found
+    }
+
+    if (invitation.redeemedBy != null && invitation.redeemedBy != inviteePubkey) {
+      Log.warning(
+        'Ignoring denial event for invitation $inviteCode from $inviteePubkey: '
+        'already redeemed by ${invitation.redeemedBy}',
+      );
+      return;
     }
 
     // Update invitation status to denied

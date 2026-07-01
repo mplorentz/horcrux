@@ -98,12 +98,14 @@ void main() {
 
       await service.sendDenialEvent(
         inviteCode: 'invite-123',
+        vaultId: 'vault-abc',
         ownerPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         relayUrls: ['wss://relay.example.com'],
       );
 
       expect(capturedContent, isEmpty);
       expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
+      expect(_hasTag(capturedTags, 'vault_id', 'vault-abc'), isTrue);
     });
 
     // ── sendShareConfirmationEvent (kind 718) ──

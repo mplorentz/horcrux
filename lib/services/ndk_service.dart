@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ndk/entities.dart' show GiftWrapUnwrapResult;
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
@@ -14,6 +15,7 @@ import 'login_service.dart';
 import 'recovery_service.dart';
 import 'vault_share_service.dart';
 import 'invitation_service.dart';
+import 'event_authorizer.dart';
 import 'share_distribution_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
@@ -44,6 +46,11 @@ int computeSinceTime({
     return 0;
   }
   return math.min(windowStartSec, last);
+}
+
+@visibleForTesting
+bool isVerifiedGiftWrapUnwrapResult(GiftWrapUnwrapResult result) {
+  return result.isSealSignatureValid && result.isPubkeyMatch;
 }
 
 /// Event emitted when a recovery response is received
@@ -526,7 +533,22 @@ class NdkService {
     try {
       Log.info('Received subscription Nostr event: ${event.id}');
 
-      final unwrappedEvent = await _ndk!.giftWrap.fromGiftWrap(giftWrap: event);
+      final unwrapResult = await _ndk!.giftWrap.fromGiftWrapWithInfo(
+        giftWrap: event,
+      );
+      if (!isVerifiedGiftWrapUnwrapResult(unwrapResult)) {
+        Log.warning(
+          'Rejecting gift wrap ${event.id}: '
+          'sealSignatureValid=${unwrapResult.isSealSignatureValid}, '
+          'sealPubkeyMatchesRumor=${unwrapResult.isPubkeyMatch}',
+        );
+        await _processedEventStore.recordProcessed(event.id);
+        await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
+        return;
+      }
+
+      final unwrappedEvent = unwrapResult.rumor;
+      final verifiedSenderPubkey = unwrapResult.seal.pubKey;
 
       Log.info(
         'Unwrapped event: kind=${unwrappedEvent.kind}, id=${unwrappedEvent.id}',
@@ -534,9 +556,24 @@ class NdkService {
       Log.debug('Gift wrap event tags: ${event.tags}');
       Log.debug('Unwrapped event tags: ${unwrappedEvent.tags}');
 
+      final authDecision = await _ref.read(eventAuthorizerProvider).authorize(
+            rumor: unwrappedEvent,
+            verifiedSenderPubkey: verifiedSenderPubkey,
+          );
+      if (authDecision == AuthDecision.deny) {
+        Log.warning(
+          'Rejecting unauthorized gift wrap ${event.id}: '
+          'innerKind=${unwrappedEvent.kind}, sender=$verifiedSenderPubkey',
+        );
+        await _processedEventStore.recordProcessed(event.id);
+        await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
+        return;
+      }
+
       if (unwrappedEvent.kind == NostrKind.shareData.value) {
         await _handleShare(
           unwrappedEvent,
+          verifiedSenderPubkey: verifiedSenderPubkey,
           allowLocalNotification: allowLocalNotification,
         );
       } else if (unwrappedEvent.kind == NostrKind.recoveryRequest.value) {
@@ -579,6 +616,7 @@ class NdkService {
   /// dispatcher releases the dedup claim and retries on next delivery.
   Future<void> _handleShare(
     Nip01Event event, {
+    required String verifiedSenderPubkey,
     bool allowLocalNotification = true,
   }) async {
     Log.info('Processing shard data event: ${event.id}');
@@ -594,7 +632,12 @@ class NdkService {
     }
 
     final vaultShareService = _ref.read(vaultShareServiceProvider);
-    await vaultShareService.processVaultShare(vaultId, shardData);
+    final wasAccepted = await vaultShareService.processVaultShare(
+      vaultId,
+      shardData,
+      verifiedSenderPubkey: verifiedSenderPubkey,
+    );
+    if (!wasAccepted) return;
 
     if (allowLocalNotification) {
       await _ref

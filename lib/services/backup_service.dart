@@ -219,6 +219,7 @@ class BackupService {
           shareIndex: i, // sequential 0-based index
           totalShares: totalShards,
           creatorPubkey: creatorPubkey,
+          scheme: 'gf256_v1',
           // Identical AEAD bundle on every share; recovery cross-checks for
           // byte equality before reconstructing the key.
           blob: blob,
@@ -821,7 +822,7 @@ class BackupService {
         stewards.add(stewardMap);
       }
 
-      final shards = await generateShamirShares(
+      final shares = await generateShamirShares(
         content: content,
         threshold: configToDistribute.threshold,
         totalShards: configToDistribute.totalKeys,
@@ -835,13 +836,13 @@ class BackupService {
         // (or re-learn, on redistribution) whether this vault uses push.
         pushEnabled: vaultDetail.pushEnabled,
       );
-      Log.info('Generated ${shards.length} Shamir shares');
+      Log.info('Generated ${shares.length} Shamir shares');
 
       // Step 6: Distribute shards using injected service
       await _shareDistributionService.distributeShares(
         ownerPubkey: creatorPubkey,
         config: configToDistribute,
-        shares: shards,
+        shares: shares,
       );
       Log.info('Successfully distributed all shards');
 

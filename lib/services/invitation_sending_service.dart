@@ -73,6 +73,7 @@ class InvitationSendingService {
   /// Returns event ID, or null if publishing fails.
   Future<String?> sendDenialEvent({
     required String inviteCode,
+    required String vaultId,
     required String ownerPubkey, // Hex format
     required List<String> relayUrls,
   }) async {
@@ -89,6 +90,7 @@ class InvitationSendingService {
         relays: relayUrls,
         tags: [
           ['invite_code', inviteCode],
+          ['vault_id', vaultId],
         ],
       );
       return event?.id;

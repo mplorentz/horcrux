@@ -9,6 +9,7 @@ import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:horcrux/services/backup_service.dart';
 import 'package:horcrux/services/invitation_sending_service.dart';
 import 'package:horcrux/models/backup_config.dart';
+import 'package:horcrux/models/invitation_status.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/nostr_kinds.dart';
@@ -521,6 +522,87 @@ void main() {
         expect(config, isNotNull);
         expect(config!.stewards.any((s) => s.pubkey == deviceCPubkey), isFalse,
             reason: 'Device C should not be in the backup config');
+      },
+    );
+
+    test(
+      'denial from a different pubkey does not overwrite an already redeemed invitation',
+      () async {
+        const vaultId = 'test-vault-denial-mismatch';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const redeemedPubkey = TestHexPubkeys.bob;
+        const attackerPubkey = TestHexPubkeys.charlie;
+
+        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any))
+            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(mockLoginService.decryptText(any))
+            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+
+        await realRepository.addVault(
+          Vault(
+            id: vaultId,
+            name: 'Denial Mismatch Vault',
+            createdAt: DateTime.now(),
+            ownerPubkey: ownerPubkey,
+          ),
+        );
+        await realRepository.updateBackupConfig(
+          vaultId,
+          createBackupConfig(
+            vaultId: vaultId,
+            threshold: 1,
+            totalKeys: 1,
+            stewards: [
+              createInvitedSteward(
+                id: 'invited-steward',
+                name: 'Invited Device',
+                inviteCode: 'placeholder-invite-code',
+              ),
+            ],
+            relays: ['wss://relay.example.com'],
+          ),
+        );
+
+        await invitationService.generateInvitationLink(
+          vaultId: vaultId,
+          inviteeName: 'Invited Device',
+          relayUrls: ['wss://relay.example.com'],
+        );
+        final invitation = (await invitationService.getPendingInvitations(vaultId)).first;
+        final inviteCode = invitation.inviteCode;
+
+        await invitationService.processInvitationAcceptanceEvent(
+          event: Nip01Event(
+            kind: NostrKind.invitationAcceptance.value,
+            pubKey: redeemedPubkey,
+            tags: [
+              ['invite_code', inviteCode],
+              ['vault_id', vaultId],
+            ],
+            createdAt: secondsSinceEpoch(),
+            content: '',
+          ),
+        );
+
+        await invitationService.processDenialEvent(
+          event: Nip01Event(
+            kind: NostrKind.invitationDenial.value,
+            pubKey: attackerPubkey,
+            tags: [
+              ['invite_code', inviteCode],
+              ['vault_id', vaultId],
+            ],
+            createdAt: secondsSinceEpoch(),
+            content: '',
+          ),
+        );
+
+        final storedInvitation = await invitationService.lookupInvitationByCode(inviteCode);
+        expect(storedInvitation, isNotNull);
+        expect(storedInvitation!.status, InvitationStatus.redeemed);
+        expect(storedInvitation.redeemedBy, redeemedPubkey);
       },
     );
   });

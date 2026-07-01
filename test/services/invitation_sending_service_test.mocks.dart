@@ -5,10 +5,11 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
 
-import 'package:horcrux/models/nostr_kinds.dart' as _i6;
-import 'package:horcrux/models/share.dart' as _i5;
+import 'package:horcrux/models/nostr_kinds.dart' as _i7;
+import 'package:horcrux/models/share.dart' as _i6;
 import 'package:horcrux/services/ndk_service.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:ndk/entities.dart' as _i5;
 import 'package:ndk/ndk.dart' as _i2;
 
 // ignore_for_file: type=lint
@@ -91,7 +92,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
 
   @override
   _i4.Future<void> processGiftWrapFromForegroundPush(
-    _i2.Nip01Event? event, {
+    _i5.Nip01Event? event, {
     bool? allowLocalNotification = true,
   }) =>
       (super.noSuchMethod(
@@ -105,7 +106,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<_i2.Nip01Event?> fetchGiftWrapByIdForPush({
+  _i4.Future<_i5.Nip01Event?> fetchGiftWrapByIdForPush({
     required String? eventIdHex,
     List<String>? relayHints,
   }) =>
@@ -118,11 +119,11 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i4.Future<_i2.Nip01Event?>.value(),
-      ) as _i4.Future<_i2.Nip01Event?>);
+        returnValue: _i4.Future<_i5.Nip01Event?>.value(),
+      ) as _i4.Future<_i5.Nip01Event?>);
 
   @override
-  _i4.Future<_i5.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+  _i4.Future<_i6.Share?> loadShareDataFromPublishedDistributionGiftWrap({
     required String? giftWrapEventId,
     required List<String>? relayHints,
   }) =>
@@ -135,11 +136,11 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i4.Future<_i5.Share?>.value(),
-      ) as _i4.Future<_i5.Share?>);
+        returnValue: _i4.Future<_i6.Share?>.value(),
+      ) as _i4.Future<_i6.Share?>);
 
   @override
-  _i4.Future<String?> resolveVaultIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
+  _i4.Future<String?> resolveVaultIdForGiftWrap(_i5.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
@@ -148,15 +149,15 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
-          _i2.Nip01Event? giftWrap) =>
+  _i4.Future<({_i7.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i5.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>.value(),
-      ) as _i4.Future<({_i6.NostrKind kind, String recoveryRequestId})?>);
+        returnValue: _i4.Future<({_i7.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i4.Future<({_i7.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i4.Future<void> closeSubscriptions() => (super.noSuchMethod(
@@ -199,7 +200,7 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<String?>);
 
   @override
-  _i4.Future<_i2.Nip01Event?> publishEncryptedEvent({
+  _i4.Future<_i5.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -224,11 +225,11 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue: _i4.Future<_i2.Nip01Event?>.value(),
-      ) as _i4.Future<_i2.Nip01Event?>);
+        returnValue: _i4.Future<_i5.Nip01Event?>.value(),
+      ) as _i4.Future<_i5.Nip01Event?>);
 
   @override
-  _i4.Future<List<_i2.Nip01Event?>> publishEncryptedEventToMultiple({
+  _i4.Future<List<_i5.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -253,8 +254,8 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue: _i4.Future<List<_i2.Nip01Event?>>.value(<_i2.Nip01Event?>[]),
-      ) as _i4.Future<List<_i2.Nip01Event?>>);
+        returnValue: _i4.Future<List<_i5.Nip01Event?>>.value(<_i5.Nip01Event?>[]),
+      ) as _i4.Future<List<_i5.Nip01Event?>>);
 
   @override
   _i4.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
