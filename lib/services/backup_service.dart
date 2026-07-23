@@ -380,41 +380,6 @@ class BackupService {
     );
   }
 
-  /// Update steward status
-  Future<void> updateStewardStatus({
-    required String vaultId,
-    required String pubkey, // Hex format
-    required StewardStatus status,
-    DateTime? acknowledgedAt,
-    String? acknowledgmentEventId,
-    String? giftWrapEventId,
-  }) async {
-    final config = await _repository.getBackupConfig(vaultId);
-    if (config == null) {
-      throw ArgumentError('Backup configuration not found for vault $vaultId');
-    }
-
-    // Find and update the steward
-    final updatedStewards = config.stewards.map((steward) {
-      if (steward.pubkey != null && steward.pubkey == pubkey) {
-        return steward.copyWith(
-          status: status,
-          acknowledgedAt: acknowledgedAt,
-          acknowledgmentEventId: acknowledgmentEventId,
-          giftWrapEventId: giftWrapEventId ?? steward.giftWrapEventId,
-          // Preserve contactInfo when updating steward status
-        );
-      }
-      return steward;
-    }).toList();
-
-    final updatedConfig = config.copyWith(stewards: updatedStewards);
-
-    await _repository.updateBackupConfig(vaultId, updatedConfig);
-
-    Log.info('Updated steward $pubkey status to $status');
-  }
-
   /// Check if backup is ready (all required stewards have acknowledged)
   Future<bool> isBackupReady(String vaultId) async {
     final config = await _repository.getBackupConfig(vaultId);

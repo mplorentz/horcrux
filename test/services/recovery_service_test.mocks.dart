@@ -7,22 +7,21 @@ import 'dart:async' as _i7;
 
 import 'package:horcrux/models/backup_config.dart' as _i2;
 import 'package:horcrux/models/backup_status.dart' as _i11;
-import 'package:horcrux/models/event_status.dart' as _i17;
-import 'package:horcrux/models/nostr_kinds.dart' as _i15;
-import 'package:horcrux/models/recovery_request.dart' as _i14;
-import 'package:horcrux/models/relay_configuration.dart' as _i22;
+import 'package:horcrux/models/event_status.dart' as _i16;
+import 'package:horcrux/models/nostr_kinds.dart' as _i14;
+import 'package:horcrux/models/recovery_request.dart' as _i13;
+import 'package:horcrux/models/relay_configuration.dart' as _i21;
 import 'package:horcrux/models/share.dart' as _i9;
 import 'package:horcrux/models/steward.dart' as _i8;
-import 'package:horcrux/models/steward_status.dart' as _i12;
-import 'package:horcrux/models/vault.dart' as _i19;
-import 'package:horcrux/models/vault_detail.dart' as _i21;
-import 'package:horcrux/providers/vault_detail_repository.dart' as _i20;
+import 'package:horcrux/models/vault.dart' as _i18;
+import 'package:horcrux/models/vault_detail.dart' as _i20;
+import 'package:horcrux/providers/vault_detail_repository.dart' as _i19;
 import 'package:horcrux/services/backup_service.dart' as _i6;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i18;
-import 'package:horcrux/services/local_notification_service.dart' as _i13;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
+import 'package:horcrux/services/local_notification_service.dart' as _i12;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
 import 'package:horcrux/services/relay_scan_service.dart' as _i5;
-import 'package:horcrux/services/share_distribution_service.dart' as _i16;
+import 'package:horcrux/services/share_distribution_service.dart' as _i15;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i10;
 import 'package:ndk/ndk.dart' as _i3;
@@ -245,32 +244,6 @@ class MockBackupService extends _i1.Mock implements _i6.BackupService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> updateStewardStatus({
-    required String? vaultId,
-    required String? pubkey,
-    required _i12.StewardStatus? status,
-    DateTime? acknowledgedAt,
-    String? acknowledgmentEventId,
-    String? giftWrapEventId,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #updateStewardStatus,
-          [],
-          {
-            #vaultId: vaultId,
-            #pubkey: pubkey,
-            #status: status,
-            #acknowledgedAt: acknowledgedAt,
-            #acknowledgmentEventId: acknowledgmentEventId,
-            #giftWrapEventId: giftWrapEventId,
-          },
-        ),
-        returnValue: _i7.Future<void>.value(),
-        returnValueForMissingStub: _i7.Future<void>.value(),
-      ) as _i7.Future<void>);
-
-  @override
   _i7.Future<bool> isBackupReady(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #isBackupReady,
@@ -419,7 +392,7 @@ class MockBackupService extends _i1.Mock implements _i6.BackupService {
 /// A class which mocks [LocalNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalNotificationService extends _i1.Mock implements _i13.LocalNotificationService {
+class MockLocalNotificationService extends _i1.Mock implements _i12.LocalNotificationService {
   MockLocalNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -435,7 +408,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i13.LocalNotific
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> notifyRecoveryRequestProcessed(_i14.RecoveryRequest? request) =>
+  _i7.Future<void> notifyRecoveryRequestProcessed(_i13.RecoveryRequest? request) =>
       (super.noSuchMethod(
         Invocation.method(
           #notifyRecoveryRequestProcessed,
@@ -550,7 +523,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i13.LocalNotific
 
   @override
   _i7.Future<bool> navigateForKind(
-    _i15.NostrKind? kind,
+    _i14.NostrKind? kind,
     String? id, {
     String? vaultId,
   }) =>
@@ -589,7 +562,7 @@ class MockLocalNotificationService extends _i1.Mock implements _i13.LocalNotific
 /// A class which mocks [ShareDistributionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistributionService {
+class MockShareDistributionService extends _i1.Mock implements _i15.ShareDistributionService {
   MockShareDistributionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -603,7 +576,7 @@ class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistrib
             DateTime? publishedAt,
             String recipientPubkey,
             int shareIndex,
-            _i17.EventStatus status
+            _i16.EventStatus status
           })>> distributeShares({
     required String? ownerPubkey,
     required _i2.BackupConfig? config,
@@ -627,14 +600,14 @@ class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistrib
                   DateTime? publishedAt,
                   String recipientPubkey,
                   int shareIndex,
-                  _i17.EventStatus status
+                  _i16.EventStatus status
                 })>>.value(<({
           DateTime createdAt,
           String giftWrapEventId,
           DateTime? publishedAt,
           String recipientPubkey,
           int shareIndex,
-          _i17.EventStatus status
+          _i16.EventStatus status
         })>[]),
       ) as _i7.Future<
           List<
@@ -644,7 +617,7 @@ class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistrib
                 DateTime? publishedAt,
                 String recipientPubkey,
                 int shareIndex,
-                _i17.EventStatus status
+                _i16.EventStatus status
               })>>);
 
   @override
@@ -657,7 +630,7 @@ class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistrib
               DateTime? publishedAt,
               String recipientPubkey,
               int shareIndex,
-              _i17.EventStatus status
+              _i16.EventStatus status
             })>?
         shareEvents,
   }) =>
@@ -811,14 +784,14 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<String?>);
 
   @override
-  _i7.Future<({_i15.NostrKind kind, String recoveryRequestId})?>
+  _i7.Future<({_i14.NostrKind kind, String recoveryRequestId})?>
       resolveRecoveryRequestIdForGiftWrap(_i3.Nip01Event? giftWrap) => (super.noSuchMethod(
             Invocation.method(
               #resolveRecoveryRequestIdForGiftWrap,
               [giftWrap],
             ),
-            returnValue: _i7.Future<({_i15.NostrKind kind, String recoveryRequestId})?>.value(),
-          ) as _i7.Future<({_i15.NostrKind kind, String recoveryRequestId})?>);
+            returnValue: _i7.Future<({_i14.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i7.Future<({_i14.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i7.Future<void> closeSubscriptions() => (super.noSuchMethod(
@@ -965,7 +938,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -998,7 +971,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNot
   @override
   _i7.Future<void> register({
     required String? fcmToken,
-    required _i18.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1026,7 +999,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNot
   @override
   _i7.Future<void> updateToken({
     required String? newToken,
-    required _i18.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1054,7 +1027,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNot
   @override
   List<String> computeConsentList({
     required String? currentUserPubkey,
-    required List<_i19.Vault>? vaults,
+    required List<_i18.Vault>? vaults,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1091,8 +1064,8 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i18.HorcruxNot
   @override
   _i7.Future<void> tryPushForEvent({
     required _i3.Nip01Event? event,
-    required _i15.NostrKind? kind,
-    required _i19.Vault? vault,
+    required _i14.NostrKind? kind,
+    required _i18.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
   }) =>
@@ -1310,34 +1283,34 @@ class MockNip01Event extends _i1.Mock implements _i3.Nip01Event {
 /// A class which mocks [VaultDetailRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockVaultDetailRepository extends _i1.Mock implements _i20.VaultDetailRepository {
+class MockVaultDetailRepository extends _i1.Mock implements _i19.VaultDetailRepository {
   MockVaultDetailRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i7.Stream<List<_i21.VaultDetail>> get vaultListStream => (super.noSuchMethod(
+  _i7.Stream<List<_i20.VaultDetail>> get vaultListStream => (super.noSuchMethod(
         Invocation.getter(#vaultListStream),
-        returnValue: _i7.Stream<List<_i21.VaultDetail>>.empty(),
-      ) as _i7.Stream<List<_i21.VaultDetail>>);
+        returnValue: _i7.Stream<List<_i20.VaultDetail>>.empty(),
+      ) as _i7.Stream<List<_i20.VaultDetail>>);
 
   @override
-  _i7.Stream<_i21.VaultDetail?> watchVaultDetail(String? vaultId) => (super.noSuchMethod(
+  _i7.Stream<_i20.VaultDetail?> watchVaultDetail(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #watchVaultDetail,
           [vaultId],
         ),
-        returnValue: _i7.Stream<_i21.VaultDetail?>.empty(),
-      ) as _i7.Stream<_i21.VaultDetail?>);
+        returnValue: _i7.Stream<_i20.VaultDetail?>.empty(),
+      ) as _i7.Stream<_i20.VaultDetail?>);
 
   @override
-  _i7.Future<_i21.VaultDetail?> getVaultDetail(String? vaultId) => (super.noSuchMethod(
+  _i7.Future<_i20.VaultDetail?> getVaultDetail(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #getVaultDetail,
           [vaultId],
         ),
-        returnValue: _i7.Future<_i21.VaultDetail?>.value(),
-      ) as _i7.Future<_i21.VaultDetail?>);
+        returnValue: _i7.Future<_i20.VaultDetail?>.value(),
+      ) as _i7.Future<_i20.VaultDetail?>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -1386,28 +1359,28 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<List<_i22.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
+  _i7.Future<List<_i21.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i7.Future<List<_i22.RelayConfiguration>>.value(<_i22.RelayConfiguration>[]),
-      ) as _i7.Future<List<_i22.RelayConfiguration>>);
+        returnValue: _i7.Future<List<_i21.RelayConfiguration>>.value(<_i21.RelayConfiguration>[]),
+      ) as _i7.Future<List<_i21.RelayConfiguration>>);
 
   @override
-  _i7.Future<_i22.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
+  _i7.Future<_i21.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i7.Future<_i22.RelayConfiguration?>.value(),
-      ) as _i7.Future<_i22.RelayConfiguration?>);
+        returnValue: _i7.Future<_i21.RelayConfiguration?>.value(),
+      ) as _i7.Future<_i21.RelayConfiguration?>);
 
   @override
-  _i7.Future<void> addRelayConfiguration(_i22.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i7.Future<void> addRelayConfiguration(_i21.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
@@ -1417,7 +1390,7 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> updateRelayConfiguration(_i22.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i7.Future<void> updateRelayConfiguration(_i21.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],

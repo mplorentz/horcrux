@@ -1512,32 +1512,6 @@ class MockBackupService extends _i1.Mock implements _i20.BackupService {
       ) as _i7.Future<void>);
 
   @override
-  _i7.Future<void> updateStewardStatus({
-    required String? vaultId,
-    required String? pubkey,
-    required _i15.StewardStatus? status,
-    DateTime? acknowledgedAt,
-    String? acknowledgmentEventId,
-    String? giftWrapEventId,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #updateStewardStatus,
-          [],
-          {
-            #vaultId: vaultId,
-            #pubkey: pubkey,
-            #status: status,
-            #acknowledgedAt: acknowledgedAt,
-            #acknowledgmentEventId: acknowledgmentEventId,
-            #giftWrapEventId: giftWrapEventId,
-          },
-        ),
-        returnValue: _i7.Future<void>.value(),
-        returnValueForMissingStub: _i7.Future<void>.value(),
-      ) as _i7.Future<void>);
-
-  @override
   _i7.Future<bool> isBackupReady(String? vaultId) => (super.noSuchMethod(
         Invocation.method(
           #isBackupReady,
