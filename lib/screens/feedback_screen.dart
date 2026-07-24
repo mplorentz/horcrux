@@ -18,7 +18,10 @@ final feedbackServiceProvider = Provider<FeedbackService>((ref) {
 /// optionally provide their email for a reply and include app diagnostics
 /// to help with debugging.
 class FeedbackScreen extends ConsumerStatefulWidget {
-  const FeedbackScreen({super.key});
+  /// Optional pre-filled message (e.g. an initialization error dump).
+  final String? initialMessage;
+
+  const FeedbackScreen({super.key, this.initialMessage});
 
   @override
   ConsumerState<FeedbackScreen> createState() => _FeedbackScreenState();
@@ -27,9 +30,15 @@ class FeedbackScreen extends ConsumerStatefulWidget {
 class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _messageController = TextEditingController();
+  late final TextEditingController _messageController;
   bool _includeDiagnostics = true;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController = TextEditingController(text: widget.initialMessage);
+  }
 
   @override
   void dispose() {

@@ -203,6 +203,26 @@ void main() {
       // Let auto-dismiss timer fire
       await tester.pumpAndSettle(const Duration(seconds: 5));
     });
+
+    testWidgets('prefills initialMessage when provided', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedbackServiceProvider.overrideWith((ref) => _FakeFeedbackService()),
+          ],
+          child: const MaterialApp(
+            home: FeedbackScreen(
+              initialMessage: 'App failed to initialize:\n\nboom',
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('App failed to initialize'), findsOneWidget);
+      expect(find.textContaining('boom'), findsOneWidget);
+    });
   });
 }
 
