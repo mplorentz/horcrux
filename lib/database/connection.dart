@@ -132,12 +132,33 @@ DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   return DatabaseConnection(lazy, closeStreamsSynchronously: true);
 }
 
+/// Throws a [StateError] unless the active SQLite library is SQLCipher.
+///
+/// `PRAGMA cipher_version` returns a version string only under SQLCipher; a
+/// plain SQLite build returns an empty result set. Per the SQLCipher advisory
+/// (https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688)
+/// this is the recommended runtime failsafe: refuse to operate on a connection
+/// that is not actually encrypting, on every platform, rather than silently
+/// persisting plaintext.
+void verifySqlCipherActive(Database rawDb) {
+  final result = rawDb.select('PRAGMA cipher_version;');
+  final version = result.isEmpty ? null : result.first.values.first;
+  if (version == null || (version is String && version.trim().isEmpty)) {
+    throw StateError(
+      'SQLCipher is not the active SQLite library (PRAGMA cipher_version '
+      'returned no value). Refusing to open a database that would not be '
+      'encrypted. This is a fatal configuration error.',
+    );
+  }
+}
+
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
 /// Extracted so tests using a non-encrypted in-memory DB can skip it.
 ///
 /// The key PRAGMA is executed first; any failure is re-thrown as a
 /// [StateError] with a sanitised message so key material cannot propagate
-/// through exception messages into crash reporters or logs.
+/// through exception messages into crash reporters or logs. After keying, the
+/// connection is verified to actually be SQLCipher via [verifySqlCipherActive].
 void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
   try {
     rawDb.execute("PRAGMA key = $pragmaKey;");
@@ -149,6 +170,12 @@ void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
       'This is a fatal configuration error.',
     );
   }
+  // Fail closed if the active SQLite library is not SQLCipher. `PRAGMA key`
+  // above is silently accepted by plain SQLite (it treats unknown pragmas as
+  // no-ops), so a successful key set is NOT proof of encryption. This guards
+  // against the linking regression fixed in [configureSqlCipherOpen] ever
+  // recurring and silently writing an unencrypted database.
+  verifySqlCipherActive(rawDb);
   rawDb.execute('PRAGMA cipher_page_size = 4096;');
   rawDb.execute("PRAGMA cipher_kdf_algorithm = 'PBKDF2_HMAC_SHA512';");
   rawDb.execute('PRAGMA cipher_use_hmac = ON;');
