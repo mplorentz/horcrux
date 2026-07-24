@@ -37,58 +37,57 @@ class InitializationErrorScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: theme.colorScheme.error,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Initialization Failed',
-                          style: theme.textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          error,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.7,
-                            ),
+        bottom: false, // RowButtonStack handles bottom inset via addBottomSafeArea
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: theme.colorScheme.error,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Initialization Failed',
+                        style: theme.textTheme.headlineSmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        error,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              RowButtonStack(
-                buttons: [
-                  RowButtonConfig(
-                    onPressed: () => _openFeedback(context),
-                    icon: Icons.feedback_outlined,
-                    text: 'Send Feedback',
-                  ),
-                  RowButtonConfig(
-                    onPressed: onRestart ?? () => exit(0),
-                    icon: Icons.refresh,
-                    text: 'Restart App',
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+            RowButtonStack(
+              buttons: [
+                RowButtonConfig(
+                  onPressed: () => _openFeedback(context),
+                  icon: Icons.feedback_outlined,
+                  text: 'Send Feedback',
+                ),
+                RowButtonConfig(
+                  onPressed: onRestart ?? () => exit(0),
+                  icon: Icons.refresh,
+                  text: 'Restart App',
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
