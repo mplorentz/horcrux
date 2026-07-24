@@ -41,10 +41,9 @@ Future<void> main() async {
     );
   }
 
-  // Point package:sqlite3 at SQLCipher on every platform before any DB open.
-  // On Android the default loader would pick libsqlite3.so; on iOS/macOS it
-  // would resolve Apple's system SQLite before SQLCipher (silently producing an
-  // unencrypted database). See [configureSqlCipherOpen].
+  // On Android, point package:sqlite3 at libsqlcipher.so before any DB open
+  // (default loader would pick libsqlite3.so). iOS/macOS rely on Podfile
+  // OTHER_LDFLAGS ordering instead — see [configureSqlCipherOpen].
   configureSqlCipherOpen();
   if (Platform.isAndroid) {
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();

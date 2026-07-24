@@ -45,8 +45,8 @@ post_install do |installer|
   # Ensure SQLCipher is linked before Apple's system SQLite. Otherwise the app
   # can silently link the system libsqlite3 first and write an unencrypted
   # database even though `PRAGMA key` succeeds. The flag must come first in
-  # OTHER_LDFLAGS. This complements the runtime `open.overrideFor` fix in
-  # lib/database/connection.dart. See:
+  # OTHER_LDFLAGS. Apple platforms rely on this linker ordering (no Dart
+  # DynamicLibrary.open override). See sqlcipher_flutter_libs docs and:
   # https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688
   installer.aggregate_targets.each do |aggregate_target|
     project = aggregate_target.user_project
