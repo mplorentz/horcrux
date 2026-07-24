@@ -40,4 +40,27 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
   end
+
+  # Ensure SQLCipher is linked before Apple's system SQLite. Otherwise the app
+  # can silently link the system libsqlite3 first and write an unencrypted
+  # database even though `PRAGMA key` succeeds. The flag must come first in
+  # OTHER_LDFLAGS. This complements the runtime `open.overrideFor` fix in
+  # lib/database/connection.dart. See:
+  # https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688
+  installer.aggregate_targets.each do |aggregate_target|
+    project = aggregate_target.user_project
+    project.native_targets.each do |target|
+      next unless target.name == 'Runner'
+      target.build_configurations.each do |config|
+        ldflags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
+        ldflags = [ldflags] unless ldflags.is_a?(Array)
+        already_linked = ldflags.each_cons(2).any? do |a, b|
+          a == '-framework' && b == 'SQLCipher'
+        end
+        ldflags = ['-framework', 'SQLCipher'] + ldflags unless already_linked
+        config.build_settings['OTHER_LDFLAGS'] = ldflags
+      end
+    end
+    project.save
+  end
 end

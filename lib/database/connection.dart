@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -7,13 +8,55 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 // `sqlite3` is pulled in transitively by sqlcipher_flutter_libs; we import the
 // `Database` type directly so the pragma-application helper has a precise
-// signature. Adding it as a direct dep would just track the version
-// sqlcipher_flutter_libs already pins.
+// signature, and `open` so we can point package:sqlite3 at SQLCipher. Adding
+// it as a direct dep would just track the version sqlcipher_flutter_libs
+// already pins.
 // ignore: depend_on_referenced_packages
 import 'package:sqlite3/sqlite3.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/open.dart';
 
 import '../services/logger.dart';
 import 'db_key.dart';
+
+/// Guards against registering the `package:sqlite3` open overrides more than
+/// once. [open.overrideFor] is global process state; repeated registration is
+/// harmless but pointless.
+bool _sqlCipherOpenConfigured = false;
+
+/// Points `package:sqlite3` at SQLCipher on every platform so drift never
+/// opens a plain-SQLite database by accident.
+///
+/// - **Android**: loads the bundled `libsqlcipher.so` via [openCipherOnAndroid]
+///   (the default loader would pick `libsqlite3.so`).
+/// - **iOS/macOS**: loads `SQLCipher.framework/SQLCipher` explicitly. The
+///   default `DynamicLibrary.process()` (RTLD_DEFAULT) resolves Apple's system
+///   SQLite *before* SQLCipher, which silently produces an unencrypted database
+///   even though `PRAGMA key` succeeds. See the Zetetic advisory:
+///   https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688
+///
+/// Idempotent and safe to call from both `main()` and the lazy database opener.
+/// Callers that need the old-Android workaround must still await
+/// [applyWorkaroundToOpenSqlCipherOnOldAndroidVersions] separately, since it is
+/// async and this function is not.
+void configureSqlCipherOpen() {
+  if (_sqlCipherOpenConfigured) return;
+  _sqlCipherOpenConfigured = true;
+
+  if (Platform.isAndroid) {
+    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+  } else if (Platform.isIOS) {
+    open.overrideFor(
+      OperatingSystem.iOS,
+      () => DynamicLibrary.open('SQLCipher.framework/SQLCipher'),
+    );
+  } else if (Platform.isMacOS) {
+    open.overrideFor(
+      OperatingSystem.macOS,
+      () => DynamicLibrary.open('SQLCipher.framework/SQLCipher'),
+    );
+  }
+}
 
 /// Filename for the SQLCipher database under the application support
 /// directory. Sibling files `<dbFileName>-wal` and `<dbFileName>-shm` must
@@ -73,6 +116,10 @@ Future<void> deleteSqlCipherDatabaseFiles({Directory? supportDirectory}) async {
 DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   final derivation = keyDerivation ?? DbKeyDerivation();
   final lazy = LazyDatabase(() async {
+    // Belt-and-suspenders: ensure SQLCipher is the library package:sqlite3
+    // loads even if the app entrypoint did not call [configureSqlCipherOpen]
+    // (e.g. in integration tests that open the DB directly).
+    configureSqlCipherOpen();
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
 
     final dbPath = await resolveSqlCipherDatabasePath();

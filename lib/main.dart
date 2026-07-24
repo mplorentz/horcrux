@@ -3,13 +3,12 @@ import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
-// ignore: depend_on_referenced_packages
-import 'package:sqlite3/open.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marionette_flutter/marionette_flutter.dart';
 import 'database/app_database.dart';
+import 'database/connection.dart';
 import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
@@ -42,11 +41,13 @@ Future<void> main() async {
     );
   }
 
-  // Drift uses package:sqlite3, which defaults to libsqlite3.so on Android.
-  // sqlcipher_flutter_libs ships libsqlcipher.so — override before any DB open.
+  // Point package:sqlite3 at SQLCipher on every platform before any DB open.
+  // On Android the default loader would pick libsqlite3.so; on iOS/macOS it
+  // would resolve Apple's system SQLite before SQLCipher (silently producing an
+  // unencrypted database). See [configureSqlCipherOpen].
+  configureSqlCipherOpen();
   if (Platform.isAndroid) {
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
-    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
   }
 
   await _initializeFirebaseIfNecessary();
