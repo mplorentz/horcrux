@@ -21,6 +21,7 @@ import 'services/log_export_service.dart';
 import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/initialization_error_screen.dart';
 import 'utils/app_initialization.dart';
 import 'widgets/theme.dart';
 
@@ -230,7 +231,7 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       home: _isInitializing
           ? const _InitializingScreen()
           : _initError != null
-              ? _ErrorScreen(error: _initError!)
+              ? InitializationErrorScreen(error: _initError!)
               : isLoggedInAsync.when(
                   data: (isLoggedIn) =>
                       isLoggedIn ? const VaultListScreen() : const OnboardingScreen(),
@@ -264,49 +265,6 @@ class _InitializingScreen extends StatelessWidget {
               style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// Error screen shown if initialization fails
-class _ErrorScreen extends StatelessWidget {
-  final String error;
-
-  const _ErrorScreen({required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-              const SizedBox(height: 24),
-              const Text(
-                'Initialization Failed',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                error,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  // Restart the app
-                  exit(0);
-                },
-                child: const Text('Restart App'),
-              ),
-            ],
-          ),
         ),
       ),
     );
