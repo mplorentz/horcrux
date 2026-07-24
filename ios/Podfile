@@ -55,11 +55,19 @@ post_install do |installer|
       target.build_configurations.each do |config|
         ldflags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
         ldflags = [ldflags] unless ldflags.is_a?(Array)
-        already_linked = ldflags.each_cons(2).any? do |a, b|
-          a == '-framework' && b == 'SQLCipher'
+        # Remove every existing -framework SQLCipher pair, then prepend exactly
+        # one so SQLCipher is always first (even if it was already present later).
+        cleaned = []
+        i = 0
+        while i < ldflags.length
+          if ldflags[i] == '-framework' && ldflags[i + 1] == 'SQLCipher'
+            i += 2
+          else
+            cleaned << ldflags[i]
+            i += 1
+          end
         end
-        ldflags = ['-framework', 'SQLCipher'] + ldflags unless already_linked
-        config.build_settings['OTHER_LDFLAGS'] = ldflags
+        config.build_settings['OTHER_LDFLAGS'] = ['-framework', 'SQLCipher'] + cleaned
       end
     end
     project.save
