@@ -134,9 +134,11 @@ DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
 
 /// Throws a [StateError] unless the active SQLite library is SQLCipher.
 ///
-/// `PRAGMA cipher_version` returns a version string only under SQLCipher; a
-/// plain SQLite build returns an empty result set. Per the SQLCipher advisory
-/// (https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688)
+/// `PRAGMA cipher_version` is a library capability check — it returns a
+/// version string on an unkeyed SQLCipher connection and an empty result set
+/// under plain SQLite. Call this **before** applying `PRAGMA key` so key
+/// material is never submitted to a non-encrypting SQLite. Per the SQLCipher
+/// advisory (https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688)
 /// this is the recommended runtime failsafe: refuse to operate on a connection
 /// that is not actually encrypting, on every platform, rather than silently
 /// persisting plaintext.
@@ -155,11 +157,20 @@ void verifySqlCipherActive(Database rawDb) {
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
 /// Extracted so tests using a non-encrypted in-memory DB can skip it.
 ///
-/// The key PRAGMA is executed first; any failure is re-thrown as a
-/// [StateError] with a sanitised message so key material cannot propagate
-/// through exception messages into crash reporters or logs. After keying, the
-/// connection is verified to actually be SQLCipher via [verifySqlCipherActive].
+/// Verifies SQLCipher is active **before** applying the key so key material
+/// is never handed to a plain SQLite library (where `PRAGMA key` is a silent
+/// no-op but the key still enters the SQL API / statement text). Key PRAGMA
+/// failures are re-thrown as a [StateError] with a sanitised message so key
+/// material cannot propagate through exception messages into crash reporters
+/// or logs.
 void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
+  // Fail closed before keying. `PRAGMA cipher_version` is a library capability
+  // check (works on an unkeyed SQLCipher connection). Plain SQLite returns an
+  // empty result; refusing here avoids ever submitting the key to a
+  // non-encrypting SQLite. This also guards against the linking regression
+  // fixed in [configureSqlCipherOpen] ever recurring and silently writing an
+  // unencrypted database.
+  verifySqlCipherActive(rawDb);
   try {
     rawDb.execute("PRAGMA key = $pragmaKey;");
   } on Object catch (e) {
@@ -170,12 +181,6 @@ void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
       'This is a fatal configuration error.',
     );
   }
-  // Fail closed if the active SQLite library is not SQLCipher. `PRAGMA key`
-  // above is silently accepted by plain SQLite (it treats unknown pragmas as
-  // no-ops), so a successful key set is NOT proof of encryption. This guards
-  // against the linking regression fixed in [configureSqlCipherOpen] ever
-  // recurring and silently writing an unencrypted database.
-  verifySqlCipherActive(rawDb);
   rawDb.execute('PRAGMA cipher_page_size = 4096;');
   rawDb.execute("PRAGMA cipher_kdf_algorithm = 'PBKDF2_HMAC_SHA512';");
   rawDb.execute('PRAGMA cipher_use_hmac = ON;');
