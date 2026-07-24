@@ -28,9 +28,21 @@ import 'package:sqlite3/sqlite3.dart';
 /// When none of those yield a non-empty `PRAGMA cipher_version`, the group is
 /// skipped (not failed) so host/CI unit runs stay green while still executing
 /// for real wherever SQLCipher is present.
+///
+/// Set `REQUIRE_SQLCIPHER=1` (used by the dedicated CI job) to fail instead of
+/// skip when SQLCipher cannot be loaded.
 void main() {
   final loadedFrom = _configureSqlCipherLibraryForTests();
   final sqlCipherAvailable = _probeCipherVersion();
+  final requireSqlCipher = Platform.environment['REQUIRE_SQLCIPHER']?.trim() == '1';
+
+  if (!sqlCipherAvailable && requireSqlCipher) {
+    fail(
+      'REQUIRE_SQLCIPHER=1 but SQLCipher is not active '
+      '(PRAGMA cipher_version empty). Loaded attempt: ${loadedFrom ?? "none"}. '
+      'Set SQLCIPHER_LIBRARY to a SQLCipher dylib/framework binary.',
+    );
+  }
 
   group(
     'SQLCipher encryption verification (Zetetic advisory)',
