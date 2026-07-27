@@ -7,13 +7,45 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 // `sqlite3` is pulled in transitively by sqlcipher_flutter_libs; we import the
 // `Database` type directly so the pragma-application helper has a precise
-// signature. Adding it as a direct dep would just track the version
+// signature, and `open` so we can point package:sqlite3 at SQLCipher on
+// Android. Adding it as a direct dep would just track the version
 // sqlcipher_flutter_libs already pins.
 // ignore: depend_on_referenced_packages
 import 'package:sqlite3/sqlite3.dart';
+// ignore: depend_on_referenced_packages
+import 'package:sqlite3/open.dart';
 
 import '../services/logger.dart';
 import 'db_key.dart';
+
+/// Guards against registering the `package:sqlite3` open overrides more than
+/// once. [open.overrideFor] is global process state; repeated registration is
+/// harmless but pointless.
+bool _sqlCipherOpenConfigured = false;
+
+/// Ensures `package:sqlite3` loads SQLCipher where a Dart open override is
+/// required, so drift never opens a plain-SQLite database by accident.
+///
+/// - **Android**: loads the bundled `libsqlcipher.so` via [openCipherOnAndroid]
+///   (the default loader would pick `libsqlite3.so`).
+/// - **iOS/macOS**: no Dart open override. Apple platforms rely on Podfile
+///   `OTHER_LDFLAGS` ordering (`-framework SQLCipher` first) so
+///   `DynamicLibrary.process()` resolves SQLCipher instead of system SQLite.
+///   See sqlcipher_flutter_libs docs and the Zetetic advisory:
+///   https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688
+///
+/// Idempotent and safe to call from both `main()` and the lazy database opener.
+/// Callers that need the old-Android workaround must still await
+/// [applyWorkaroundToOpenSqlCipherOnOldAndroidVersions] separately, since it is
+/// async and this function is not.
+void configureSqlCipherOpen() {
+  if (_sqlCipherOpenConfigured) return;
+  _sqlCipherOpenConfigured = true;
+
+  if (Platform.isAndroid) {
+    open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+  }
+}
 
 /// Filename for the SQLCipher database under the application support
 /// directory. Sibling files `<dbFileName>-wal` and `<dbFileName>-shm` must
@@ -73,6 +105,11 @@ Future<void> deleteSqlCipherDatabaseFiles({Directory? supportDirectory}) async {
 DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   final derivation = keyDerivation ?? DbKeyDerivation();
   final lazy = LazyDatabase(() async {
+    // Belt-and-suspenders: on Android, ensure package:sqlite3 loads
+    // libsqlcipher.so even if the app entrypoint did not call
+    // [configureSqlCipherOpen] (e.g. integration tests that open the DB
+    // directly). No-op on Apple platforms (Podfile linker ordering).
+    configureSqlCipherOpen();
     await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
 
     final dbPath = await resolveSqlCipherDatabasePath();
@@ -95,13 +132,45 @@ DatabaseConnection openSqlCipherConnection({DbKeyDerivation? keyDerivation}) {
   return DatabaseConnection(lazy, closeStreamsSynchronously: true);
 }
 
+/// Throws a [StateError] unless the active SQLite library is SQLCipher.
+///
+/// `PRAGMA cipher_version` is a library capability check — it returns a
+/// version string on an unkeyed SQLCipher connection and an empty result set
+/// under plain SQLite. Call this **before** applying `PRAGMA key` so key
+/// material is never submitted to a non-encrypting SQLite. Per the SQLCipher
+/// advisory (https://discuss.zetetic.net/t/important-advisory-sqlcipher-with-xcode-8-and-new-sdks/1688)
+/// this is the recommended runtime failsafe: refuse to operate on a connection
+/// that is not actually encrypting, on every platform, rather than silently
+/// persisting plaintext.
+void verifySqlCipherActive(Database rawDb) {
+  final result = rawDb.select('PRAGMA cipher_version;');
+  final version = result.isEmpty ? null : result.first.values.first;
+  if (version == null || (version is String && version.trim().isEmpty)) {
+    throw StateError(
+      'SQLCipher is not the active SQLite library (PRAGMA cipher_version '
+      'returned no value). Refusing to open a database that would not be '
+      'encrypted. This is a fatal configuration error.',
+    );
+  }
+}
+
 /// Applies the SQLCipher key and the v1 pragma set to a raw [Database].
 /// Extracted so tests using a non-encrypted in-memory DB can skip it.
 ///
-/// The key PRAGMA is executed first; any failure is re-thrown as a
-/// [StateError] with a sanitised message so key material cannot propagate
-/// through exception messages into crash reporters or logs.
+/// Verifies SQLCipher is active **before** applying the key so key material
+/// is never handed to a plain SQLite library (where `PRAGMA key` is a silent
+/// no-op but the key still enters the SQL API / statement text). Key PRAGMA
+/// failures are re-thrown as a [StateError] with a sanitised message so key
+/// material cannot propagate through exception messages into crash reporters
+/// or logs.
 void _applyKeyAndPragmas(Database rawDb, String pragmaKey) {
+  // Fail closed before keying. `PRAGMA cipher_version` is a library capability
+  // check (works on an unkeyed SQLCipher connection). Plain SQLite returns an
+  // empty result; refusing here avoids ever submitting the key to a
+  // non-encrypting SQLite. This also guards against the linking regression
+  // fixed in [configureSqlCipherOpen] ever recurring and silently writing an
+  // unencrypted database.
+  verifySqlCipherActive(rawDb);
   try {
     rawDb.execute("PRAGMA key = $pragmaKey;");
   } on Object catch (e) {
