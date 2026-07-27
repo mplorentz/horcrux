@@ -22,6 +22,7 @@ import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/initialization_error_screen.dart';
+import 'screens/login_relay_config_screen.dart';
 import 'utils/app_initialization.dart';
 import 'widgets/theme.dart';
 
@@ -193,9 +194,9 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     }
   }
 
-  /// Recovery path for an unrecoverable database: wipe local data, restore the
-  /// existing Nostr identity, and re-run initialization. Surfaced as the
-  /// "Reset Database" action on [InitializationErrorScreen].
+  /// Recovery path for an unrecoverable database: wipe local data (keeping the
+  /// Nostr identity), re-run initialization, then open [LoginRelayConfigScreen]
+  /// so the user can scan relays for vaults to restore.
   Future<void> _resetDatabaseAndReinitialize() async {
     setState(() {
       _isInitializing = true;
@@ -204,11 +205,28 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     try {
       await ref.read(logoutServiceProvider).resetDatabase();
       await initializeAppAndRefreshKeys(ref);
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-        });
+
+      final keyPair = await ref.read(loginServiceProvider).getStoredNostrKey();
+      final nsec = keyPair?.privateKeyBech32;
+
+      if (!mounted) return;
+      setState(() {
+        _isInitializing = false;
+      });
+
+      if (nsec != null && nsec.isNotEmpty) {
+        // Replace the init-error route so back cannot return to a stuck screen.
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => LoginRelayConfigScreen(
+              nsec: nsec,
+              skipOffersKeyBackup: false,
+            ),
+          ),
+          (route) => false,
+        );
       }
+      // No key → isLoggedInProvider will show onboarding via home.
     } catch (e, st) {
       Log.error('Database reset failed', e, st);
       if (mounted) {

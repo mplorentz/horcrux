@@ -8,7 +8,6 @@ import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:ndk/shared/nips/nip01/key_pair.dart';
 
 import '../helpers/test_database.dart';
 import 'logout_service_test.mocks.dart';
@@ -29,6 +28,44 @@ void main() {
     late MockProcessedNostrEventStore processedStore;
     late AppDatabase appDatabase;
 
+    var deletedDbFiles = false;
+    var clearedSharedPreferences = false;
+    var clearedSecureStorage = false;
+    var deletedDbKeySalt = false;
+
+    LogoutService buildService() {
+      return LogoutService(
+        vaultRepository: vaultRepository,
+        recoveryService: recoveryService,
+        relayScanService: relayScanService,
+        loginService: loginService,
+        processedNostrEventStore: processedStore,
+        appDatabase: appDatabase,
+        deleteDatabaseFiles: () async {
+          deletedDbFiles = true;
+        },
+        clearSharedPreferences: () async {
+          clearedSharedPreferences = true;
+        },
+        clearSecureStorage: () async {
+          clearedSecureStorage = true;
+        },
+        deleteDbKeySalt: () async {
+          deletedDbKeySalt = true;
+        },
+      );
+    }
+
+    void verifySharedWipeSteps() {
+      verify(relayScanService.stopRelayScanning()).called(1);
+      verify(vaultRepository.clearAll()).called(1);
+      verify(recoveryService.clearAll()).called(1);
+      verify(relayScanService.clearAll()).called(1);
+      verify(processedStore.clearAll()).called(1);
+      expect(deletedDbFiles, isTrue);
+      expect(clearedSharedPreferences, isTrue);
+    }
+
     setUp(() {
       vaultRepository = MockVaultRepository();
       recoveryService = MockRecoveryService();
@@ -36,6 +73,11 @@ void main() {
       loginService = MockLoginService();
       processedStore = MockProcessedNostrEventStore();
       appDatabase = newTestDatabase();
+
+      deletedDbFiles = false;
+      clearedSharedPreferences = false;
+      clearedSecureStorage = false;
+      deletedDbKeySalt = false;
 
       when(relayScanService.stopRelayScanning()).thenAnswer((_) async {});
       when(vaultRepository.clearAll()).thenAnswer((_) async {});
@@ -49,85 +91,29 @@ void main() {
       await appDatabase.close();
     });
 
-    test('closes DB, deletes files, and clears secure storage', () async {
-      var deletedDbFiles = false;
-      var clearedSharedPreferences = false;
-      var clearedSecureStorage = false;
-      final service = LogoutService(
-        vaultRepository: vaultRepository,
-        recoveryService: recoveryService,
-        relayScanService: relayScanService,
-        loginService: loginService,
-        processedNostrEventStore: processedStore,
-        appDatabase: appDatabase,
-        deleteDatabaseFiles: () async {
-          deletedDbFiles = true;
-        },
-        clearSharedPreferences: () async {
-          clearedSharedPreferences = true;
-        },
-        clearSecureStorage: () async {
-          clearedSecureStorage = true;
-        },
-      );
+    group('logout (preserveIdentity: false)', () {
+      test('clears identity and secure storage, does not delete salt alone', () async {
+        await buildService().logout();
 
-      await service.logout();
+        verifySharedWipeSteps();
+        verify(loginService.clearStoredKeys()).called(1);
+        expect(clearedSecureStorage, isTrue);
+        expect(deletedDbKeySalt, isFalse);
+      });
 
-      verify(relayScanService.stopRelayScanning()).called(1);
-      verify(vaultRepository.clearAll()).called(1);
-      verify(recoveryService.clearAll()).called(1);
-      verify(relayScanService.clearAll()).called(1);
-      verify(processedStore.clearAll()).called(1);
-      verify(loginService.clearStoredKeys()).called(1);
-      expect(deletedDbFiles, isTrue);
-      expect(clearedSharedPreferences, isTrue);
-      expect(clearedSecureStorage, isTrue);
-    });
+      test('continues when clearStoredKeys throws', () async {
+        when(loginService.clearStoredKeys()).thenThrow(StateError('key clear failed'));
 
-    test('continues cleanup when key clearing throws', () async {
-      when(loginService.clearStoredKeys()).thenThrow(StateError('key clear failed'));
-      var deletedDbFiles = false;
-      var clearedSharedPreferences = false;
-      var clearedSecureStorage = false;
-      final service = LogoutService(
-        vaultRepository: vaultRepository,
-        recoveryService: recoveryService,
-        relayScanService: relayScanService,
-        loginService: loginService,
-        processedNostrEventStore: processedStore,
-        appDatabase: appDatabase,
-        deleteDatabaseFiles: () async {
-          deletedDbFiles = true;
-        },
-        clearSharedPreferences: () async {
-          clearedSharedPreferences = true;
-        },
-        clearSecureStorage: () async {
-          clearedSecureStorage = true;
-        },
-      );
+        await buildService().logout();
 
-      await service.logout();
+        expect(deletedDbFiles, isTrue);
+        expect(clearedSharedPreferences, isTrue);
+        expect(clearedSecureStorage, isTrue);
+        expect(deletedDbKeySalt, isFalse);
+        verify(loginService.clearStoredKeys()).called(1);
+      });
 
-      expect(deletedDbFiles, isTrue);
-      expect(clearedSharedPreferences, isTrue);
-      expect(clearedSecureStorage, isTrue);
-      verify(loginService.clearStoredKeys()).called(1);
-    });
-
-    group('resetDatabase', () {
-      const privateKeyHex = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-      final keyPair = KeyPair(
-        privateKeyHex,
-        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-        'nsec-dummy',
-        'npub-dummy',
-      );
-
-      test('wipes data then re-imports the existing key', () async {
-        when(loginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
-        when(loginService.importHexPrivateKey(any)).thenAnswer((_) async => keyPair);
-        var deletedDbFiles = false;
+      test('continues when clearSecureStorage throws', () async {
         final service = LogoutService(
           vaultRepository: vaultRepository,
           recoveryService: recoveryService,
@@ -138,45 +124,74 @@ void main() {
           deleteDatabaseFiles: () async {
             deletedDbFiles = true;
           },
-          clearSharedPreferences: () async {},
-          clearSecureStorage: () async {},
+          clearSharedPreferences: () async {
+            clearedSharedPreferences = true;
+          },
+          clearSecureStorage: () async {
+            throw StateError('secure storage wipe failed');
+          },
+          deleteDbKeySalt: () async {
+            deletedDbKeySalt = true;
+          },
         );
 
-        await service.resetDatabase();
+        await service.logout();
 
         expect(deletedDbFiles, isTrue);
+        expect(clearedSharedPreferences, isTrue);
+        expect(deletedDbKeySalt, isFalse);
         verify(loginService.clearStoredKeys()).called(1);
-        verify(loginService.importHexPrivateKey(privateKeyHex)).called(1);
+      });
+
+      test('continues when stopRelayScanning throws', () async {
+        when(relayScanService.stopRelayScanning()).thenThrow(StateError('scan stop failed'));
+
+        await buildService().logout();
+
+        verifySharedWipeSteps();
+        verify(loginService.clearStoredKeys()).called(1);
+        expect(clearedSecureStorage, isTrue);
+      });
+
+      test('continues when repository clearAll throws', () async {
+        when(vaultRepository.clearAll()).thenThrow(StateError('db unopenable'));
+
+        await buildService().logout();
+
+        expect(deletedDbFiles, isTrue);
+        expect(clearedSharedPreferences, isTrue);
+        expect(clearedSecureStorage, isTrue);
+        verify(loginService.clearStoredKeys()).called(1);
+        expect(deletedDbKeySalt, isFalse);
+      });
+    });
+
+    group('resetDatabase (preserveIdentity: true)', () {
+      test('wipes data without clearing identity', () async {
+        await buildService().resetDatabase();
+
+        verifySharedWipeSteps();
+        expect(deletedDbKeySalt, isTrue);
+        expect(clearedSecureStorage, isFalse);
+        verifyNever(loginService.clearStoredKeys());
+        verifyNever(loginService.importHexPrivateKey(any));
+        verifyNever(loginService.getStoredNostrKey());
       });
 
       test('completes the wipe even when clearAll throws', () async {
         when(vaultRepository.clearAll()).thenThrow(StateError('db unopenable'));
-        when(loginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
-        when(loginService.importHexPrivateKey(any)).thenAnswer((_) async => keyPair);
-        var deletedDbFiles = false;
-        final service = LogoutService(
-          vaultRepository: vaultRepository,
-          recoveryService: recoveryService,
-          relayScanService: relayScanService,
-          loginService: loginService,
-          processedNostrEventStore: processedStore,
-          appDatabase: appDatabase,
-          deleteDatabaseFiles: () async {
-            deletedDbFiles = true;
-          },
-          clearSharedPreferences: () async {},
-          clearSecureStorage: () async {},
-        );
 
-        await service.resetDatabase();
+        await buildService().resetDatabase();
 
         expect(deletedDbFiles, isTrue);
-        verify(loginService.importHexPrivateKey(privateKeyHex)).called(1);
+        expect(clearedSharedPreferences, isTrue);
+        expect(deletedDbKeySalt, isTrue);
+        expect(clearedSecureStorage, isFalse);
+        verifyNever(loginService.clearStoredKeys());
+        verifyNever(loginService.importHexPrivateKey(any));
       });
 
-      test('skips re-import when no key is available', () async {
-        when(loginService.getStoredNostrKey()).thenAnswer((_) async => null);
-        var deletedDbFiles = false;
+      test('continues when deleteDbKeySalt throws', () async {
         final service = LogoutService(
           vaultRepository: vaultRepository,
           recoveryService: recoveryService,
@@ -187,14 +202,23 @@ void main() {
           deleteDatabaseFiles: () async {
             deletedDbFiles = true;
           },
-          clearSharedPreferences: () async {},
-          clearSecureStorage: () async {},
+          clearSharedPreferences: () async {
+            clearedSharedPreferences = true;
+          },
+          clearSecureStorage: () async {
+            clearedSecureStorage = true;
+          },
+          deleteDbKeySalt: () async {
+            throw StateError('salt delete failed');
+          },
         );
 
         await service.resetDatabase();
 
         expect(deletedDbFiles, isTrue);
-        verifyNever(loginService.importHexPrivateKey(any));
+        expect(clearedSharedPreferences, isTrue);
+        expect(clearedSecureStorage, isFalse);
+        verifyNever(loginService.clearStoredKeys());
       });
     });
   });

@@ -32,6 +32,7 @@ class InitializationErrorScreen extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => FeedbackScreen(
+          title: 'Contact Support',
           initialMessage: 'App failed to initialize:\n\n$error',
         ),
       ),
@@ -46,10 +47,8 @@ class InitializationErrorScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Reset Database?'),
         content: const Text(
-          'This permanently deletes all Horcrux data stored on this device, '
-          'including vaults and shares you hold. Your recovery key is kept, so '
-          'you can log back in and re-sync from your stewards. This cannot be '
-          'undone.',
+          'This will permanently delete Horcrux data stored on this device, '
+          'including vault data and keys you hold. Your sign-in key is kept and Horcrux will attempt to re-download your data from the network. If you had vault data stored locally you may need to recover it from your stewards. Contact support if you need help.',
         ),
         actions: [
           TextButton(
@@ -114,8 +113,8 @@ class InitializationErrorScreen extends StatelessWidget {
               buttons: [
                 RowButtonConfig(
                   onPressed: () => _openFeedback(context),
-                  icon: Icons.feedback_outlined,
-                  text: 'Send Feedback',
+                  icon: Icons.support_agent_outlined,
+                  text: 'Contact Support',
                 ),
                 RowButtonConfig(
                   onPressed: onRestart ?? () => exit(0),

@@ -18,13 +18,23 @@ import 'vault_list_screen.dart';
 
 enum _ScanState { editing, scanning, results }
 
-/// Shown after login so the user can configure which relays to scan for
-/// pre-existing vaults before entering the app.
+/// Shown after login or database reset so the user can configure which relays
+/// to scan for pre-existing vaults before entering the app.
 class LoginRelayConfigScreen extends ConsumerStatefulWidget {
-  /// The imported nsec — forwarded to [ImportSuccessScreen].
+  /// The imported nsec — forwarded to [ImportSuccessScreen] when
+  /// [skipOffersKeyBackup] is true.
   final String nsec;
 
-  const LoginRelayConfigScreen({super.key, required this.nsec});
+  /// When true (login import), Skip opens [ImportSuccessScreen] to offer
+  /// backing up the key. When false (database reset), Skip goes straight to
+  /// [VaultListScreen] like Continue.
+  final bool skipOffersKeyBackup;
+
+  const LoginRelayConfigScreen({
+    super.key,
+    required this.nsec,
+    this.skipOffersKeyBackup = true,
+  });
 
   @override
   ConsumerState<LoginRelayConfigScreen> createState() => _LoginRelayConfigScreenState();
@@ -191,12 +201,16 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     );
   }
 
-  /// Skip the scan — offer to back up the key in a vault first.
+  /// Skip the scan. Login import offers key backup; reset goes to vault list.
   void _skip() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
-      (route) => false,
-    );
+    if (widget.skipOffersKeyBackup) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
+        (route) => false,
+      );
+    } else {
+      _continue();
+    }
   }
 
   // ── build ──────────────────────────────────────────────────────────────────

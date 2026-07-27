@@ -31,11 +31,11 @@ void main() {
 
       expect(find.text('Initialization Failed'), findsOneWidget);
       expect(find.text('SQLiteException: database is locked'), findsOneWidget);
-      expect(find.text('Send Feedback'), findsOneWidget);
+      expect(find.text('Contact Support'), findsOneWidget);
       expect(find.text('Restart App'), findsOneWidget);
     });
 
-    testWidgets('Send Feedback opens form with error pre-filled', (tester) async {
+    testWidgets('Contact Support opens form with error pre-filled', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -53,10 +53,10 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Send Feedback'));
+      await tester.tap(find.text('Contact Support'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Feedback'), findsOneWidget);
+      expect(find.text('Contact Support'), findsWidgets);
       expect(
         find.textContaining('App failed to initialize'),
         findsOneWidget,

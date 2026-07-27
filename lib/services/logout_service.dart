@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import '../database/connection.dart';
+import '../database/db_key.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
 import 'login_service.dart';
@@ -39,6 +40,7 @@ class LogoutService {
   final Future<void> Function() _deleteDatabaseFiles;
   final Future<void> Function() _clearSharedPreferences;
   final Future<void> Function() _clearSecureStorage;
+  final Future<void> Function() _deleteDbKeySalt;
 
   LogoutService({
     required VaultRepository vaultRepository,
@@ -50,6 +52,7 @@ class LogoutService {
     Future<void> Function()? deleteDatabaseFiles,
     Future<void> Function()? clearSharedPreferences,
     Future<void> Function()? clearSecureStorage,
+    Future<void> Function()? deleteDbKeySalt,
   })  : _vaultRepository = vaultRepository,
         _recoveryService = recoveryService,
         _relayScanService = relayScanService,
@@ -58,7 +61,8 @@ class LogoutService {
         _appDatabase = appDatabase,
         _deleteDatabaseFiles = deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles,
         _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
-        _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe;
+        _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe,
+        _deleteDbKeySalt = deleteDbKeySalt ?? (() => DbKeyDerivation().deleteSalt());
 
   // TODO(horcrux_app-u86): Remove once remaining SharedPreferences users migrate off prefs.
   static Future<void> _clearAllSharedPreferences() async {
@@ -68,15 +72,41 @@ class LogoutService {
 
   Future<void> logout() async {
     Log.info('LogoutService: clearing all vault data and keys');
+    await _wipeLocalState(preserveIdentity: false);
+    Log.info('LogoutService: logout completed');
+  }
 
+  /// Wipes local data while keeping the Nostr private key in secure storage.
+  ///
+  /// Recovery path for an unrecoverable database (for example a
+  /// pre-SQLCipher-fix unencrypted file that can no longer be opened). Deletes
+  /// database files, prefs, and the DB key salt so the next open derives a
+  /// fresh empty encrypted database — without ever removing
+  /// `nostr_private_key`, so a failed reset cannot strand the user without an
+  /// identity.
+  ///
+  /// If secure storage has no key, the wipe still runs and the app falls
+  /// through to onboarding.
+  Future<void> resetDatabase() async {
+    Log.info('LogoutService: resetting database (preserving identity)');
+    await _wipeLocalState(preserveIdentity: true);
+    Log.info('LogoutService: database reset completed (identity preserved)');
+  }
+
+  /// Shared cleanup for [logout] and [resetDatabase].
+  ///
+  /// When [preserveIdentity] is true, skips [LoginService.clearStoredKeys] and
+  /// full secure-storage wipe; deletes only the SQLCipher salt so the next open
+  /// gets a new derivation while the Nostr key remains.
+  Future<void> _wipeLocalState({required bool preserveIdentity}) async {
     // Stop relay scanning first to stop NDK subscriptions
     // This must be done before invalidating the NDK provider
     try {
       await _relayScanService.stopRelayScanning();
       Log.info('LogoutService: stopped relay scanning');
     } catch (e) {
-      Log.error('Error stopping relay scanning during logout', e);
-      // Continue with logout even if this fails
+      Log.error('Error stopping relay scanning during wipe', e);
+      // Continue even if this fails
     }
 
     // Clear all service data (clear the on-disk processed Nostr event store
@@ -87,94 +117,68 @@ class LogoutService {
     try {
       await _vaultRepository.clearAll();
     } catch (e, st) {
-      Log.error('Error clearing vault repository during logout', e, st);
+      Log.error('Error clearing vault repository during wipe', e, st);
     }
     try {
       await _recoveryService.clearAll();
     } catch (e, st) {
-      Log.error('Error clearing recovery service during logout', e, st);
+      Log.error('Error clearing recovery service during wipe', e, st);
     }
     try {
       await _relayScanService.clearAll();
     } catch (e, st) {
-      Log.error('Error clearing relay scan service during logout', e, st);
+      Log.error('Error clearing relay scan service during wipe', e, st);
     }
     try {
       await _processedNostrEventStore.clearAll();
     } catch (e, st) {
-      Log.error('Error clearing processed Nostr event store during logout', e, st);
-      // Don't throw - keep going so the rest of logout can complete
+      Log.error('Error clearing processed Nostr event store during wipe', e, st);
     }
-    // Clear primary key material first so LoginService's in-memory cache is also reset.
-    try {
-      await _loginService.clearStoredKeys();
-    } catch (e, st) {
-      Log.error('Error clearing login keys during logout', e, st);
+
+    if (!preserveIdentity) {
+      // Clear primary key material so LoginService's in-memory cache is reset.
+      try {
+        await _loginService.clearStoredKeys();
+      } catch (e, st) {
+        Log.error('Error clearing login keys during wipe', e, st);
+      }
     }
 
     // Close drift before deleting SQLite files to avoid locked-file races.
     try {
       await _appDatabase.close();
     } catch (e, st) {
-      Log.error('Error closing app database during logout', e, st);
+      Log.error('Error closing app database during wipe', e, st);
     }
 
     try {
       await _deleteDatabaseFiles();
       Log.info('LogoutService: deleted SQLCipher database files');
     } catch (e, st) {
-      Log.error('Error deleting SQLCipher files during logout', e, st);
+      Log.error('Error deleting SQLCipher files during wipe', e, st);
     }
 
     try {
       await _clearSharedPreferences();
       Log.info('LogoutService: cleared SharedPreferences');
     } catch (e, st) {
-      Log.error('Error clearing SharedPreferences during logout', e, st);
+      Log.error('Error clearing SharedPreferences during wipe', e, st);
     }
 
-    try {
-      await _clearSecureStorage();
-      Log.info('LogoutService: cleared secure storage');
-    } catch (e, st) {
-      Log.error('Error clearing secure storage during logout', e, st);
-    }
-
-    Log.info('LogoutService: logout completed');
-  }
-
-  /// Wipes all local data like [logout] but restores the user's Nostr identity
-  /// afterwards, so they keep their account and can immediately re-sync.
-  ///
-  /// This is the recovery path for an unrecoverable database (for example a
-  /// pre-SQLCipher-fix unencrypted file that can no longer be opened). The
-  /// current key is read *before* the wipe; [logout] then deletes the database
-  /// files, salt, prefs, and stored keys; finally the key is re-imported so the
-  /// next open derives a fresh, empty, correctly-encrypted database.
-  ///
-  /// If no key can be read (secure storage is also gone), the wipe still runs
-  /// and the app falls through to onboarding.
-  Future<void> resetDatabase() async {
-    Log.info('LogoutService: resetting database (preserving identity)');
-
-    String? privateKey;
-    try {
-      final keyPair = await _loginService.getStoredNostrKey();
-      privateKey = keyPair?.privateKey;
-    } catch (e, st) {
-      Log.error('Error reading Nostr key before database reset', e, st);
-    }
-
-    await logout();
-
-    if (privateKey != null && privateKey.isNotEmpty) {
-      await _loginService.importHexPrivateKey(privateKey);
-      Log.info('LogoutService: restored Nostr identity after database reset');
+    if (preserveIdentity) {
+      try {
+        await _deleteDbKeySalt();
+        Log.info('LogoutService: deleted DB key salt (identity preserved)');
+      } catch (e, st) {
+        Log.error('Error deleting DB key salt during wipe', e, st);
+      }
     } else {
-      Log.warning(
-        'LogoutService: no Nostr key to restore after database reset; '
-        'user will land on onboarding',
-      );
+      try {
+        await _clearSecureStorage();
+        Log.info('LogoutService: cleared secure storage');
+      } catch (e, st) {
+        Log.error('Error clearing secure storage during wipe', e, st);
+      }
     }
   }
 }
