@@ -81,9 +81,24 @@ class LogoutService {
 
     // Clear all service data (clear the on-disk processed Nostr event store
     // after relay scanning has stopped so nothing is racing to write the WAL).
-    await _vaultRepository.clearAll();
-    await _recoveryService.clearAll();
-    await _relayScanService.clearAll();
+    // These touch the database; on an unopenable DB (the "Reset Database"
+    // recovery path) they throw. Swallow so the wipe below still runs and the
+    // user is not left stuck with a broken database.
+    try {
+      await _vaultRepository.clearAll();
+    } catch (e, st) {
+      Log.error('Error clearing vault repository during logout', e, st);
+    }
+    try {
+      await _recoveryService.clearAll();
+    } catch (e, st) {
+      Log.error('Error clearing recovery service during logout', e, st);
+    }
+    try {
+      await _relayScanService.clearAll();
+    } catch (e, st) {
+      Log.error('Error clearing relay scan service during logout', e, st);
+    }
     try {
       await _processedNostrEventStore.clearAll();
     } catch (e, st) {
@@ -126,5 +141,40 @@ class LogoutService {
     }
 
     Log.info('LogoutService: logout completed');
+  }
+
+  /// Wipes all local data like [logout] but restores the user's Nostr identity
+  /// afterwards, so they keep their account and can immediately re-sync.
+  ///
+  /// This is the recovery path for an unrecoverable database (for example a
+  /// pre-SQLCipher-fix unencrypted file that can no longer be opened). The
+  /// current key is read *before* the wipe; [logout] then deletes the database
+  /// files, salt, prefs, and stored keys; finally the key is re-imported so the
+  /// next open derives a fresh, empty, correctly-encrypted database.
+  ///
+  /// If no key can be read (secure storage is also gone), the wipe still runs
+  /// and the app falls through to onboarding.
+  Future<void> resetDatabase() async {
+    Log.info('LogoutService: resetting database (preserving identity)');
+
+    String? privateKey;
+    try {
+      final keyPair = await _loginService.getStoredNostrKey();
+      privateKey = keyPair?.privateKey;
+    } catch (e, st) {
+      Log.error('Error reading Nostr key before database reset', e, st);
+    }
+
+    await logout();
+
+    if (privateKey != null && privateKey.isNotEmpty) {
+      await _loginService.importHexPrivateKey(privateKey);
+      Log.info('LogoutService: restored Nostr identity after database reset');
+    } else {
+      Log.warning(
+        'LogoutService: no Nostr key to restore after database reset; '
+        'user will land on onboarding',
+      );
+    }
   }
 }

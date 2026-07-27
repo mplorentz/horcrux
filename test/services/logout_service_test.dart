@@ -8,6 +8,7 @@ import 'package:horcrux/services/recovery_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:ndk/shared/nips/nip01/key_pair.dart';
 
 import '../helpers/test_database.dart';
 import 'logout_service_test.mocks.dart';
@@ -112,6 +113,89 @@ void main() {
       expect(clearedSharedPreferences, isTrue);
       expect(clearedSecureStorage, isTrue);
       verify(loginService.clearStoredKeys()).called(1);
+    });
+
+    group('resetDatabase', () {
+      const privateKeyHex = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final keyPair = KeyPair(
+        privateKeyHex,
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        'nsec-dummy',
+        'npub-dummy',
+      );
+
+      test('wipes data then re-imports the existing key', () async {
+        when(loginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
+        when(loginService.importHexPrivateKey(any)).thenAnswer((_) async => keyPair);
+        var deletedDbFiles = false;
+        final service = LogoutService(
+          vaultRepository: vaultRepository,
+          recoveryService: recoveryService,
+          relayScanService: relayScanService,
+          loginService: loginService,
+          processedNostrEventStore: processedStore,
+          appDatabase: appDatabase,
+          deleteDatabaseFiles: () async {
+            deletedDbFiles = true;
+          },
+          clearSharedPreferences: () async {},
+          clearSecureStorage: () async {},
+        );
+
+        await service.resetDatabase();
+
+        expect(deletedDbFiles, isTrue);
+        verify(loginService.clearStoredKeys()).called(1);
+        verify(loginService.importHexPrivateKey(privateKeyHex)).called(1);
+      });
+
+      test('completes the wipe even when clearAll throws', () async {
+        when(vaultRepository.clearAll()).thenThrow(StateError('db unopenable'));
+        when(loginService.getStoredNostrKey()).thenAnswer((_) async => keyPair);
+        when(loginService.importHexPrivateKey(any)).thenAnswer((_) async => keyPair);
+        var deletedDbFiles = false;
+        final service = LogoutService(
+          vaultRepository: vaultRepository,
+          recoveryService: recoveryService,
+          relayScanService: relayScanService,
+          loginService: loginService,
+          processedNostrEventStore: processedStore,
+          appDatabase: appDatabase,
+          deleteDatabaseFiles: () async {
+            deletedDbFiles = true;
+          },
+          clearSharedPreferences: () async {},
+          clearSecureStorage: () async {},
+        );
+
+        await service.resetDatabase();
+
+        expect(deletedDbFiles, isTrue);
+        verify(loginService.importHexPrivateKey(privateKeyHex)).called(1);
+      });
+
+      test('skips re-import when no key is available', () async {
+        when(loginService.getStoredNostrKey()).thenAnswer((_) async => null);
+        var deletedDbFiles = false;
+        final service = LogoutService(
+          vaultRepository: vaultRepository,
+          recoveryService: recoveryService,
+          relayScanService: relayScanService,
+          loginService: loginService,
+          processedNostrEventStore: processedStore,
+          appDatabase: appDatabase,
+          deleteDatabaseFiles: () async {
+            deletedDbFiles = true;
+          },
+          clearSharedPreferences: () async {},
+          clearSecureStorage: () async {},
+        );
+
+        await service.resetDatabase();
+
+        expect(deletedDbFiles, isTrue);
+        verifyNever(loginService.importHexPrivateKey(any));
+      });
     });
   });
 }

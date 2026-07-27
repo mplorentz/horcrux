@@ -59,4 +59,7 @@ class _FakeLoginService extends LoginService {
 class _FakeLogoutService implements LogoutService {
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<void> resetDatabase() async {}
 }

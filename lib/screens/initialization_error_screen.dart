@@ -7,18 +7,25 @@ import 'feedback_screen.dart';
 
 /// Full-screen recovery UI when app initialization fails (e.g. database open).
 ///
-/// Offers restart plus a path to [FeedbackScreen] so users are not stuck with
-/// only a useless reload when the underlying error persists.
+/// Offers restart, a path to [FeedbackScreen], and — when [onResetDatabase] is
+/// provided — a destructive "Reset Database" recovery for an unrecoverable
+/// database, so users are not stuck with only a useless reload when the
+/// underlying error persists.
 class InitializationErrorScreen extends StatelessWidget {
   final String error;
 
   /// Override for tests; production defaults to [exit]ing the process.
   final VoidCallback? onRestart;
 
+  /// Wipes local data and re-logs-in with the existing key, then re-initializes.
+  /// When null (e.g. some tests) the Reset Database button is hidden.
+  final Future<void> Function()? onResetDatabase;
+
   const InitializationErrorScreen({
     super.key,
     required this.error,
     this.onRestart,
+    this.onResetDatabase,
   });
 
   void _openFeedback(BuildContext context) {
@@ -29,6 +36,36 @@ class InitializationErrorScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndReset(BuildContext context) async {
+    final reset = onResetDatabase;
+    if (reset == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Database?'),
+        content: const Text(
+          'This permanently deletes all Horcrux data stored on this device, '
+          'including vaults and shares you hold. Your recovery key is kept, so '
+          'you can log back in and re-sync from your stewards. This cannot be '
+          'undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Reset Database'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await reset();
+    }
   }
 
   @override
@@ -85,6 +122,12 @@ class InitializationErrorScreen extends StatelessWidget {
                   icon: Icons.refresh,
                   text: 'Restart App',
                 ),
+                if (onResetDatabase != null)
+                  RowButtonConfig(
+                    onPressed: () => _confirmAndReset(context),
+                    icon: Icons.delete_forever_outlined,
+                    text: 'Reset Database',
+                  ),
               ],
             ),
           ],

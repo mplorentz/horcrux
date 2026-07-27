@@ -66,6 +66,68 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('hides Reset Database when no callback is provided', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedbackServiceProvider.overrideWith(
+              (ref) => _FakeFeedbackService(),
+            ),
+          ],
+          child: const MaterialApp(
+            home: InitializationErrorScreen(error: 'boom'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reset Database'), findsNothing);
+    });
+
+    testWidgets('Reset Database confirms then invokes callback', (tester) async {
+      var resetCalls = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            feedbackServiceProvider.overrideWith(
+              (ref) => _FakeFeedbackService(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: horcrux3Dark,
+            home: InitializationErrorScreen(
+              error: 'boom',
+              onResetDatabase: () async {
+                resetCalls++;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Button visible when callback provided.
+      expect(find.text('Reset Database'), findsOneWidget);
+
+      // Tapping opens a confirmation dialog; nothing happens yet.
+      await tester.tap(find.text('Reset Database'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reset Database?'), findsOneWidget);
+      expect(resetCalls, 0);
+
+      // Cancel does not invoke the callback.
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(resetCalls, 0);
+
+      // Confirming invokes the callback once.
+      await tester.tap(find.text('Reset Database'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Reset Database'));
+      await tester.pumpAndSettle();
+      expect(resetCalls, 1);
+    });
   });
 }
 

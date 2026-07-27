@@ -17,6 +17,7 @@ import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
 import 'services/push_notification_receiver.dart';
 import 'services/log_export_service.dart';
+import 'services/logout_service.dart';
 import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -192,6 +193,33 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     }
   }
 
+  /// Recovery path for an unrecoverable database: wipe local data, restore the
+  /// existing Nostr identity, and re-run initialization. Surfaced as the
+  /// "Reset Database" action on [InitializationErrorScreen].
+  Future<void> _resetDatabaseAndReinitialize() async {
+    setState(() {
+      _isInitializing = true;
+      _initError = null;
+    });
+    try {
+      await ref.read(logoutServiceProvider).resetDatabase();
+      await initializeAppAndRefreshKeys(ref);
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    } catch (e, st) {
+      Log.error('Database reset failed', e, st);
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _initError = 'Reset failed: ${e.toString()}';
+        });
+      }
+    }
+  }
+
   void _setupLoginStateListener() {
     // This feels like a smell, I think the MaterialApp in build() should be reacting to the change
     // in isLoggedInProvider on its own but it isn't and I don't have time to fix it atm.
@@ -231,7 +259,10 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       home: _isInitializing
           ? const _InitializingScreen()
           : _initError != null
-              ? InitializationErrorScreen(error: _initError!)
+              ? InitializationErrorScreen(
+                  error: _initError!,
+                  onResetDatabase: _resetDatabaseAndReinitialize,
+                )
               : isLoggedInAsync.when(
                   data: (isLoggedIn) =>
                       isLoggedIn ? const VaultListScreen() : const OnboardingScreen(),
