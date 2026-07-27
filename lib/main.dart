@@ -17,10 +17,12 @@ import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
 import 'services/push_notification_receiver.dart';
 import 'services/log_export_service.dart';
+import 'services/logout_service.dart';
 import 'services/vault_export_service.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/initialization_error_screen.dart';
+import 'screens/login_relay_config_screen.dart';
 import 'utils/app_initialization.dart';
 import 'widgets/theme.dart';
 
@@ -192,6 +194,50 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     }
   }
 
+  /// Recovery path for an unrecoverable database: wipe local data (keeping the
+  /// Nostr identity), re-run initialization, then open [LoginRelayConfigScreen]
+  /// so the user can scan relays for vaults to restore.
+  Future<void> _resetDatabaseAndReinitialize() async {
+    setState(() {
+      _isInitializing = true;
+      _initError = null;
+    });
+    try {
+      await ref.read(logoutServiceProvider).resetDatabase();
+      await initializeAppAndRefreshKeys(ref);
+
+      final keyPair = await ref.read(loginServiceProvider).getStoredNostrKey();
+      final nsec = keyPair?.privateKeyBech32;
+
+      if (!mounted) return;
+      setState(() {
+        _isInitializing = false;
+      });
+
+      if (nsec != null && nsec.isNotEmpty) {
+        // Replace the init-error route so back cannot return to a stuck screen.
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => LoginRelayConfigScreen(
+              nsec: nsec,
+              skipOffersKeyBackup: false,
+            ),
+          ),
+          (route) => false,
+        );
+      }
+      // No key → isLoggedInProvider will show onboarding via home.
+    } catch (e, st) {
+      Log.error('Database reset failed', e, st);
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _initError = 'Reset failed: ${e.toString()}';
+        });
+      }
+    }
+  }
+
   void _setupLoginStateListener() {
     // This feels like a smell, I think the MaterialApp in build() should be reacting to the change
     // in isLoggedInProvider on its own but it isn't and I don't have time to fix it atm.
@@ -231,7 +277,10 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       home: _isInitializing
           ? const _InitializingScreen()
           : _initError != null
-              ? InitializationErrorScreen(error: _initError!)
+              ? InitializationErrorScreen(
+                  error: _initError!,
+                  onResetDatabase: _resetDatabaseAndReinitialize,
+                )
               : isLoggedInAsync.when(
                   data: (isLoggedIn) =>
                       isLoggedIn ? const VaultListScreen() : const OnboardingScreen(),

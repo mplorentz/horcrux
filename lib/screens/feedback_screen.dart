@@ -21,7 +21,15 @@ class FeedbackScreen extends ConsumerStatefulWidget {
   /// Optional pre-filled message (e.g. an initialization error dump).
   final String? initialMessage;
 
-  const FeedbackScreen({super.key, this.initialMessage});
+  /// App bar title. Defaults to "Feedback"; use "Contact Support" from
+  /// recovery paths that should read as support rather than product feedback.
+  final String title;
+
+  const FeedbackScreen({
+    super.key,
+    this.initialMessage,
+    this.title = 'Feedback',
+  });
 
   @override
   ConsumerState<FeedbackScreen> createState() => _FeedbackScreenState();
@@ -81,7 +89,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     final theme = Theme.of(context);
 
     return HorcruxScaffold(
-      appBar: const HorcruxAppBar(title: 'Feedback'),
+      appBar: HorcruxAppBar(title: widget.title),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
