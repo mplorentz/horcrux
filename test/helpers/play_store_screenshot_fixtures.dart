@@ -26,7 +26,10 @@ abstract final class PlayStoreScreenshotFixtures {
   static const marcusVaultId = 'vault-marcus-will';
 
   static const recoveryId = 'recovery-family-2025';
-  static final recoveryNow = DateTime(2026, 5, 21, 10, 30);
+
+  /// Anchor for recovery timestamps. Must stay relative to [DateTime.now] so
+  /// golden relative labels ("35m ago") do not drift as calendar time passes.
+  static DateTime get recoveryNow => DateTime.now();
 
   static Steward readySteward({
     required String pubkey,
