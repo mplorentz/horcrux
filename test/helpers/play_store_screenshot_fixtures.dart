@@ -26,7 +26,10 @@ abstract final class PlayStoreScreenshotFixtures {
   static const marcusVaultId = 'vault-marcus-will';
 
   static const recoveryId = 'recovery-family-2025';
-  static final recoveryNow = DateTime(2026, 5, 21, 10, 30);
+
+  /// Reference for recovery timestamps shown as relative "ago" labels.
+  /// Tracks [DateTime.now] so play-store goldens do not drift day-to-day.
+  static DateTime get recoveryNow => DateTime.now();
 
   static Steward readySteward({
     required String pubkey,
