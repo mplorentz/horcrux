@@ -479,15 +479,13 @@ void main() {
         stewards: testPeers,
       );
 
-      // Flip a single character in one share's base64url payload (still
-      // valid base64url, just produces a different y-byte). Without AEAD
-      // this would silently reconstruct the wrong secret.
+      // Flip the first base64url character so the decoded y-bytes change.
+      // (Mutating by last-char heuristics can be a no-op when the second-to-
+      // last character already matches the replacement.)
       final payload = shares[0].payload;
-      final mutant = StringBuffer()
-        ..write(payload.substring(0, payload.length - 2))
-        ..write(payload.endsWith('A') ? 'B' : 'A')
-        ..write(payload.substring(payload.length - 1));
-      final tampered = shares[0].copyWith(payload: mutant.toString());
+      final mutant = _flipFirstBase64Char(payload);
+      expect(mutant, isNot(equals(payload)));
+      final tampered = shares[0].copyWith(payload: mutant);
 
       expect(
         () => backupService.reconstructFromShares(
