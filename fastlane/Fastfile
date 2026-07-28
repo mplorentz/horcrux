@@ -4,6 +4,13 @@
 # Load environment variables from .env file
 require 'dotenv'
 
+# set_github_release uploads assets via excon, whose default write timeout
+# (~60s) aborts large APK uploads mid-stream. Raise the read/write timeouts so
+# multi-megabyte assets finish on slower connections.
+require 'excon'
+Excon.defaults[:write_timeout] = 600
+Excon.defaults[:read_timeout] = 600
+
 Dotenv.load
 
 # Helper method to get App Store Connect API key using standard fastlane env vars
