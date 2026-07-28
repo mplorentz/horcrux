@@ -17,6 +17,11 @@ enum NostrKind {
   /// as `Authorization: Nostr <base64>`.
   httpAuth(27235),
 
+  /// NIP-62: Request to Vanish
+  /// Requests that relays fully delete all events published by this pubkey
+  /// (used to implement in-app account deletion)
+  requestToVanish(62),
+
   /// Horcrux custom: Share distribution (Nostr kind 713; internal name only).
   /// Used to distribute Shamir secret shares to stewards
   shareData(713),
