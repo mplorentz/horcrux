@@ -91,8 +91,12 @@ class AccountDeletionService {
 
     final subscription =
         onRelayStatusUpdate == null ? null : broadcast.statusUpdates.listen(onRelayStatusUpdate);
-    final acknowledged = await broadcast.done;
-    await subscription?.cancel();
+    final Set<String> acknowledged;
+    try {
+      acknowledged = await broadcast.done;
+    } finally {
+      await subscription?.cancel();
+    }
 
     if (acknowledged.isEmpty) {
       Log.warning(

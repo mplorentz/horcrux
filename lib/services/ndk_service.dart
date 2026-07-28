@@ -1241,7 +1241,7 @@ class NdkService {
     );
 
     final statusUpdates = response.broadcastDone.map(
-      (results) => results.map(_toVanishStatus).toList(),
+      (results) => results.map((result) => _toVanishStatus(response: result)).toList(),
     );
 
     final done = response.broadcastDoneFuture.then((results) {
@@ -1263,15 +1263,16 @@ class NdkService {
     );
   }
 
-  RelayVanishStatus _toVanishStatus(RelayBroadcastResponse result) {
+  /// Maps an NDK relay broadcast response to its UI-facing vanish status.
+  RelayVanishStatus _toVanishStatus({required RelayBroadcastResponse response}) {
     return RelayVanishStatus(
-      relayUrl: result.relayUrl,
-      state: !result.okReceived
+      relayUrl: response.relayUrl,
+      state: !response.okReceived
           ? RelayVanishAckState.pending
-          : result.broadcastSuccessful
+          : response.broadcastSuccessful
               ? RelayVanishAckState.acknowledged
               : RelayVanishAckState.failed,
-      message: result.msg,
+      message: response.msg,
     );
   }
 
