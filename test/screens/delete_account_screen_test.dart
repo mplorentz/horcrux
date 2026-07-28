@@ -8,6 +8,7 @@ import 'package:horcrux/screens/delete_account_screen.dart';
 import 'package:horcrux/services/account_deletion_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
+import 'package:horcrux/widgets/row_button_stack.dart';
 import 'package:horcrux/widgets/theme.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -65,6 +66,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> enterConfirmText(WidgetTester tester, [String text = 'DELETE']) async {
+    await tester.enterText(find.byType(TextField), text);
+    await tester.pump();
+  }
+
   testWidgets('confirming state renders copy and buttons; Cancel pops without deleting', (
     tester,
   ) async {
@@ -83,6 +89,62 @@ void main() {
     ));
   });
 
+  testWidgets(
+    'Delete Account button is disabled until the confirm phrase is typed exactly',
+    (tester) async {
+      await openScreen(tester);
+
+      RowButtonConfig deleteButtonConfig() => tester
+          .widgetList<RowButtonStack>(find.byType(RowButtonStack))
+          .single
+          .buttons
+          .firstWhere((b) => b.text == 'Delete Account');
+
+      expect(deleteButtonConfig().onPressed, isNull);
+
+      await enterConfirmText(tester, 'delete');
+      expect(deleteButtonConfig().onPressed, isNull);
+
+      await enterConfirmText(tester, 'DELETE');
+      expect(deleteButtonConfig().onPressed, isNotNull);
+
+      verifyNever(accountDeletionService.deleteAccount(
+        onRelayStatusUpdate: anyNamed('onRelayStatusUpdate'),
+      ));
+    },
+  );
+
+  testWidgets('rapid double-tap on Delete Account only starts one deletion', (tester) async {
+    final relayConfigCompleter = Completer<List<RelayConfiguration>>();
+    when(relayScanService.getRelayConfigurations(enabledOnly: true))
+        .thenAnswer((_) => relayConfigCompleter.future);
+    when(accountDeletionService.deleteAccount(
+      onRelayStatusUpdate: anyNamed('onRelayStatusUpdate'),
+    )).thenAnswer(
+      (_) async => const AccountDeletionResult(
+        relayRequestAcknowledged: true,
+        relaysAcknowledged: 2,
+        relaysTotal: 2,
+      ),
+    );
+
+    await openScreen(tester);
+    await enterConfirmText(tester);
+
+    // Tap twice before the relay-configuration lookup resolves, simulating a
+    // double tap landing before the button has a chance to disable itself.
+    await tester.tap(find.byIcon(Icons.delete_forever));
+    await tester.tap(find.byIcon(Icons.delete_forever));
+    await tester.pump();
+
+    relayConfigCompleter.complete(relays);
+    await tester.pumpAndSettle();
+
+    verify(accountDeletionService.deleteAccount(
+      onRelayStatusUpdate: anyNamed('onRelayStatusUpdate'),
+    )).called(1);
+  });
+
   testWidgets('tapping Delete Account shows one row per configured relay and live updates icons', (
     tester,
   ) async {
@@ -97,6 +159,7 @@ void main() {
     });
 
     await openScreen(tester);
+    await enterConfirmText(tester);
 
     await tester.tap(find.byIcon(Icons.delete_forever));
     await tester.pump();
@@ -142,6 +205,7 @@ void main() {
     );
 
     await openScreen(tester);
+    await enterConfirmText(tester);
     await tester.tap(find.byIcon(Icons.delete_forever));
     await tester.pumpAndSettle();
 
@@ -162,6 +226,7 @@ void main() {
     });
 
     await openScreen(tester);
+    await enterConfirmText(tester);
     await tester.tap(find.byIcon(Icons.delete_forever));
     // The confirming->broadcasting->failure transition never emits a relay
     // status update in this test, so the row list keeps its initial pending

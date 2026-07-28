@@ -166,6 +166,32 @@ void main() {
       expect(received, [pending, settled]);
     });
 
+    test('cancels the relay-status subscription even when the broadcast fails', () async {
+      final relayUrls = ['wss://relay.one', 'wss://relay.two'];
+      final controller = StreamController<List<RelayVanishStatus>>.broadcast();
+      final doneCompleter = Completer<Set<String>>();
+      // Complete the error from a later task, mirroring handleFor, so the
+      // service's `await broadcast.done` is already attached when it fires.
+      Future<void>(() => doneCompleter.completeError(Exception('broadcast failed')));
+      final handle = VanishBroadcastHandle(
+        relayUrls: relayUrls,
+        statusUpdates: controller.stream,
+        done: doneCompleter.future,
+      );
+      when(
+        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+      ).thenAnswer((_) async => handle);
+
+      await expectLater(
+        service.deleteAccount(onRelayStatusUpdate: (_) {}),
+        throwsException,
+      );
+
+      expect(controller.hasListener, isFalse);
+      verifyNever(notificationService.deregister());
+      verifyNever(logoutService.logout());
+    });
+
     test('still wipes local state when notifier deregister fails', () async {
       when(
         ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),

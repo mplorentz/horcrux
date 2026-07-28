@@ -16,6 +16,10 @@ import '../widgets/row_button_stack.dart';
 
 enum _DeleteState { confirming, broadcasting, success, failure }
 
+/// Phrase the user must type in the confirming state before "Delete Account"
+/// is enabled, to guard against an accidental tap on this irreversible action.
+const _confirmPhrase = 'DELETE';
+
 /// Full-screen flow for irrevocably deleting the user's account: signs and
 /// broadcasts a NIP-62 "Request to Vanish" to every configured relay, then
 /// (only if at least one relay acknowledges) wipes all local app data.
@@ -29,51 +33,65 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   _DeleteState _state = _DeleteState.confirming;
   List<RelayVanishStatus> _relayStatuses = [];
+  final TextEditingController _confirmController = TextEditingController();
+  bool _deletionInFlight = false;
+
+  @override
+  void dispose() {
+    _confirmController.dispose();
+    super.dispose();
+  }
 
   Future<void> _startDeletion() async {
-    List<RelayConfiguration> relays = [];
+    if (_deletionInFlight) return;
+    _deletionInFlight = true;
     try {
-      relays = await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
-    } catch (e) {
-      Log.error('Error loading relay configurations for account deletion', e);
-    }
-    if (!mounted) return;
-
-    setState(() {
-      _state = _DeleteState.broadcasting;
-      _relayStatuses = [
-        for (final relay in relays)
-          RelayVanishStatus(relayUrl: relay.url, state: RelayVanishAckState.pending),
-      ];
-    });
-
-    try {
-      final result = await ref.read(accountDeletionServiceProvider).deleteAccount(
-        onRelayStatusUpdate: (statuses) {
-          if (!mounted) return;
-          setState(() => _relayStatuses = statuses);
-        },
-      );
+      List<RelayConfiguration> relays = [];
+      try {
+        relays = await ref.read(relayScanServiceProvider).getRelayConfigurations(enabledOnly: true);
+      } catch (e) {
+        Log.error('Error loading relay configurations for account deletion', e);
+      }
       if (!mounted) return;
-      if (result.relayRequestAcknowledged) {
-        ref.invalidate(currentPublicKeyProvider);
-        ref.invalidate(currentPublicKeyBech32Provider);
-        ref.invalidate(isLoggedInProvider);
-        ref.invalidate(vaultListProvider);
-        ref.invalidate(appDatabaseProvider);
-        ref.invalidate(ndkServiceProvider);
-        ref.invalidate(relayScanServiceProvider);
-        ref.invalidate(deepLinkServiceProvider);
-        setState(() => _state = _DeleteState.success);
-        // main.dart's login-state listener will pushAndRemoveUntil(OnboardingScreen)
-        // once isLoggedInProvider flips false; no manual navigation needed here.
-      } else {
+
+      setState(() {
+        _state = _DeleteState.broadcasting;
+        _relayStatuses = [
+          for (final relay in relays)
+            RelayVanishStatus(relayUrl: relay.url, state: RelayVanishAckState.pending),
+        ];
+      });
+
+      try {
+        final result = await ref.read(accountDeletionServiceProvider).deleteAccount(
+          onRelayStatusUpdate: (statuses) {
+            if (!mounted) return;
+            setState(() => _relayStatuses = statuses);
+          },
+        );
+        if (!mounted) return;
+        if (result.relayRequestAcknowledged) {
+          ref.invalidate(currentPublicKeyProvider);
+          ref.invalidate(currentPublicKeyBech32Provider);
+          ref.invalidate(isLoggedInProvider);
+          ref.invalidate(vaultListProvider);
+          ref.invalidate(appDatabaseProvider);
+          ref.invalidate(ndkServiceProvider);
+          ref.invalidate(relayScanServiceProvider);
+          ref.invalidate(deepLinkServiceProvider);
+          setState(() => _state = _DeleteState.success);
+          // main.dart's login-state listener will pushAndRemoveUntil(OnboardingScreen)
+          // once isLoggedInProvider flips false; no manual navigation needed here.
+        } else {
+          setState(() => _state = _DeleteState.failure);
+        }
+      } catch (e) {
+        Log.error('Error deleting account', e);
+        if (!mounted) return;
         setState(() => _state = _DeleteState.failure);
       }
-    } catch (e) {
-      Log.error('Error deleting account', e);
-      if (!mounted) return;
-      setState(() => _state = _DeleteState.failure);
+    } finally {
+      _deletionInFlight = false;
     }
   }
 
@@ -111,22 +129,45 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   'recover your vaults unless you delete them individually.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
+                const SizedBox(height: 24),
+                Text(
+                  'Type $_confirmPhrase to confirm.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _confirmController,
+                  textCapitalization: TextCapitalization.characters,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: _confirmPhrase,
+                  ),
+                ),
               ],
             ),
           ),
-          RowButtonStack(
-            buttons: [
-              RowButtonConfig(
-                onPressed: () => Navigator.pop(context),
-                icon: Icons.close,
-                text: 'Cancel',
-              ),
-              RowButtonConfig(
-                onPressed: _startDeletion,
-                icon: Icons.delete_forever,
-                text: 'Delete Account',
-              ),
-            ],
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _confirmController,
+            builder: (context, value, _) {
+              final confirmed = value.text.trim() == _confirmPhrase;
+              return RowButtonStack(
+                buttons: [
+                  RowButtonConfig(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icons.close,
+                    text: 'Cancel',
+                  ),
+                  RowButtonConfig(
+                    onPressed: confirmed ? _startDeletion : null,
+                    icon: Icons.delete_forever,
+                    text: 'Delete Account',
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -147,11 +188,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             ),
           ),
           Expanded(
-            child: ListView(
+            child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                for (final status in _relayStatuses) _VanishRelayRow(status: status),
-              ],
+              itemCount: _relayStatuses.length,
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) => _VanishRelayRow(status: _relayStatuses[index]),
             ),
           ),
         ],
@@ -203,11 +244,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             ),
           ),
           Expanded(
-            child: ListView(
+            child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                for (final status in _relayStatuses) _VanishRelayRow(status: status),
-              ],
+              itemCount: _relayStatuses.length,
+              separatorBuilder: (context, index) => const Divider(),
+              itemBuilder: (context, index) => _VanishRelayRow(status: _relayStatuses[index]),
             ),
           ),
           RowButtonStack(
@@ -257,15 +298,15 @@ class _VanishRelayRow extends StatelessWidget {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            RelayVanishAckState.acknowledged => const Icon(
+            RelayVanishAckState.acknowledged => Icon(
                 Icons.check_circle,
                 size: 20,
-                color: Colors.green,
+                color: theme.colorScheme.onSurface,
               ),
-            RelayVanishAckState.failed => const Icon(
+            RelayVanishAckState.failed => Icon(
                 Icons.cancel,
                 size: 20,
-                color: Colors.red,
+                color: theme.colorScheme.error,
               ),
           },
         ],
