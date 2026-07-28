@@ -4,7 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/entities.dart' show GiftWrapUnwrapResult;
+import 'package:ndk/entities.dart' show GiftWrapUnwrapResult, RelayBroadcastResponse;
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
@@ -99,6 +99,45 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
 
   return service;
 });
+
+/// One relay's live status while a [NdkService.requestAccountVanish]
+/// broadcast is in flight.
+enum RelayVanishAckState { pending, acknowledged, failed }
+
+class RelayVanishStatus {
+  final String relayUrl;
+  final RelayVanishAckState state;
+  final String message;
+
+  const RelayVanishStatus({
+    required this.relayUrl,
+    required this.state,
+    this.message = '',
+  });
+}
+
+/// Handle returned by [NdkService.requestAccountVanish]: lets the caller
+/// observe live per-relay progress (e.g. to drive a UI) as well as await the
+/// final outcome.
+class VanishBroadcastHandle {
+  /// The relays the vanish request was sent to.
+  final List<String> relayUrls;
+
+  /// Emits the full per-relay status snapshot every time any relay responds.
+  /// A relay not yet in [RelayVanishAckState.acknowledged] or
+  /// [RelayVanishAckState.failed] by the time [done] resolves timed out.
+  final Stream<List<RelayVanishStatus>> statusUpdates;
+
+  /// Resolves with the subset of [relayUrls] that acknowledged the
+  /// broadcast; an empty result means no relay confirmed receipt.
+  final Future<Set<String>> done;
+
+  const VanishBroadcastHandle({
+    required this.relayUrls,
+    required this.statusUpdates,
+    required this.done,
+  });
+}
 
 /// Service for managing NDK (Nostr Development Kit) connections and subscriptions
 /// Handles real-time listening for recovery requests and key share events
@@ -1150,6 +1189,90 @@ class NdkService {
     }
 
     return results;
+  }
+
+  /// Signs and broadcasts a NIP-62 "Request to Vanish" event (kind 62) asking
+  /// every relay in [relayUrls] to delete all events published by the
+  /// current user's pubkey.
+  ///
+  /// Unlike [publishEncryptedEvent], this event is a plain, unwrapped Nip01Event
+  /// signed with the real account key -- relays must be able to read the
+  /// pubkey and kind directly to act on it, so it cannot be gift wrapped.
+  ///
+  /// Broadcasts directly via the NDK broadcast primitive (bypassing
+  /// [PublishService]'s persistent outbox). Returns a [VanishBroadcastHandle]
+  /// exposing both a live per-relay status stream (for UI feedback while the
+  /// broadcast is in flight) and a [VanishBroadcastHandle.done] future the
+  /// caller can await to decide whether it's safe to wipe local identity: an
+  /// outbox retry would race a local wipe performed right after broadcasting.
+  ///
+  /// [relayUrls] must be non-empty.
+  Future<VanishBroadcastHandle> requestAccountVanish({
+    required List<String> relayUrls,
+    String? reason,
+  }) async {
+    if (relayUrls.isEmpty) {
+      throw ArgumentError.value(relayUrls, 'relayUrls', 'must not be empty');
+    }
+
+    await _ensureInitialized();
+    final pubkey = await getCurrentPubkey();
+    if (pubkey == null) {
+      throw Exception('No key pair available. Cannot request account deletion.');
+    }
+
+    final tags = <List<String>>[
+      for (final url in relayUrls) ['relay', url],
+      ['relay', 'ALL_RELAYS'],
+    ];
+
+    final event = Nip01Event(
+      pubKey: pubkey,
+      kind: NostrKind.requestToVanish.value,
+      tags: tags,
+      content: reason ?? '',
+      createdAt: DateTime.now().toUtc().secondsSinceEpoch,
+    );
+
+    final ndk = await getNdk();
+    final response = ndk.broadcast.broadcast(
+      nostrEvent: event,
+      specificRelays: relayUrls,
+    );
+
+    final statusUpdates = response.broadcastDone.map(
+      (results) => results.map(_toVanishStatus).toList(),
+    );
+
+    final done = response.broadcastDoneFuture.then((results) {
+      final acknowledged = results
+          .where((result) => result.broadcastSuccessful)
+          .map((result) => result.relayUrl)
+          .toSet();
+      Log.info(
+        'Request to Vanish (${event.id}) acknowledged by '
+        '${acknowledged.length}/${relayUrls.length} relay(s)',
+      );
+      return acknowledged;
+    });
+
+    return VanishBroadcastHandle(
+      relayUrls: relayUrls,
+      statusUpdates: statusUpdates,
+      done: done,
+    );
+  }
+
+  RelayVanishStatus _toVanishStatus(RelayBroadcastResponse result) {
+    return RelayVanishStatus(
+      relayUrl: result.relayUrl,
+      state: !result.okReceived
+          ? RelayVanishAckState.pending
+          : result.broadcastSuccessful
+              ? RelayVanishAckState.acknowledged
+              : RelayVanishAckState.failed,
+      message: result.msg,
+    );
   }
 
   /// Get the underlying NDK instance for advanced operations
