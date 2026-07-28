@@ -88,6 +88,7 @@ PushNotificationText? composeNotificationText({
     case NostrKind.shareError:
     case NostrKind.invitationInvalid:
     case NostrKind.keyHolderRemoved:
+    case NostrKind.requestToVanish:
       return null;
   }
 }
