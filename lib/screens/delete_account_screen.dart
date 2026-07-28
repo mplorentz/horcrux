@@ -165,6 +165,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     onPressed: confirmed ? _startDeletion : null,
                     icon: Icons.delete_forever,
                     text: 'Delete Account',
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ],
               );

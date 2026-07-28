@@ -101,6 +101,7 @@ void main() {
           .firstWhere((b) => b.text == 'Delete Account');
 
       expect(deleteButtonConfig().onPressed, isNull);
+      expect(deleteButtonConfig().color, horcrux3Dark.colorScheme.error);
 
       await enterConfirmText(tester, 'delete');
       expect(deleteButtonConfig().onPressed, isNull);
