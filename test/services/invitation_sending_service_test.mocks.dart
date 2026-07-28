@@ -7,10 +7,10 @@ import 'dart:async' as _i4;
 
 import 'package:horcrux/models/nostr_kinds.dart' as _i7;
 import 'package:horcrux/models/share.dart' as _i6;
-import 'package:horcrux/services/ndk_service.dart' as _i3;
+import 'package:horcrux/services/ndk_service.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:ndk/entities.dart' as _i5;
-import 'package:ndk/ndk.dart' as _i2;
+import 'package:ndk/ndk.dart' as _i3;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -26,8 +26,18 @@ import 'package:ndk/ndk.dart' as _i2;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeNdk_0 extends _i1.SmartFake implements _i2.Ndk {
-  _FakeNdk_0(
+class _FakeVanishBroadcastHandle_0 extends _i1.SmartFake implements _i2.VanishBroadcastHandle {
+  _FakeVanishBroadcastHandle_0(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
+  _FakeNdk_1(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -39,7 +49,7 @@ class _FakeNdk_0 extends _i1.SmartFake implements _i2.Ndk {
 /// A class which mocks [NdkService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkService extends _i1.Mock implements _i3.NdkService {
+class MockNdkService extends _i1.Mock implements _i2.NdkService {
   MockNdkService() {
     _i1.throwOnMissingStub(this);
   }
@@ -258,22 +268,49 @@ class MockNdkService extends _i1.Mock implements _i3.NdkService {
       ) as _i4.Future<List<_i5.Nip01Event?>>);
 
   @override
-  _i4.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
+  _i4.Future<_i2.VanishBroadcastHandle> requestAccountVanish({
+    required List<String>? relayUrls,
+    String? reason,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #requestAccountVanish,
+          [],
+          {
+            #relayUrls: relayUrls,
+            #reason: reason,
+          },
+        ),
+        returnValue: _i4.Future<_i2.VanishBroadcastHandle>.value(_FakeVanishBroadcastHandle_0(
+          this,
+          Invocation.method(
+            #requestAccountVanish,
+            [],
+            {
+              #relayUrls: relayUrls,
+              #reason: reason,
+            },
+          ),
+        )),
+      ) as _i4.Future<_i2.VanishBroadcastHandle>);
+
+  @override
+  _i4.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
         Invocation.method(
           #getNdk,
           [],
         ),
-        returnValue: _i4.Future<_i2.Ndk>.value(_FakeNdk_0(
+        returnValue: _i4.Future<_i3.Ndk>.value(_FakeNdk_1(
           this,
           Invocation.method(
             #getNdk,
             [],
           ),
         )),
-      ) as _i4.Future<_i2.Ndk>);
+      ) as _i4.Future<_i3.Ndk>);
 
   @override
-  void setNdkForTesting(_i2.Ndk? ndk) => super.noSuchMethod(
+  void setNdkForTesting(_i3.Ndk? ndk) => super.noSuchMethod(
         Invocation.method(
           #setNdkForTesting,
           [ndk],

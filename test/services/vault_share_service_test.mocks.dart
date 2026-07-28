@@ -12,13 +12,13 @@ import 'package:horcrux/models/share.dart' as _i10;
 import 'package:horcrux/models/vault.dart' as _i13;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i12;
 import 'package:horcrux/services/login_service.dart' as _i6;
-import 'package:horcrux/services/ndk_service.dart' as _i4;
+import 'package:horcrux/services/ndk_service.dart' as _i3;
 import 'package:horcrux/services/push_notification_receiver.dart' as _i14;
 import 'package:horcrux/services/relay_scan_service.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i8;
 import 'package:ndk/entities.dart' as _i9;
-import 'package:ndk/ndk.dart' as _i3;
+import 'package:ndk/ndk.dart' as _i4;
 import 'package:ndk/shared/nips/nip01/key_pair.dart' as _i2;
 
 // ignore_for_file: type=lint
@@ -45,8 +45,8 @@ class _FakeKeyPair_0 extends _i1.SmartFake implements _i2.KeyPair {
         );
 }
 
-class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
-  _FakeNdk_1(
+class _FakeVanishBroadcastHandle_1 extends _i1.SmartFake implements _i3.VanishBroadcastHandle {
+  _FakeVanishBroadcastHandle_1(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -55,8 +55,8 @@ class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
         );
 }
 
-class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
-  _FakeNdkService_2(
+class _FakeNdk_2 extends _i1.SmartFake implements _i4.Ndk {
+  _FakeNdk_2(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -65,8 +65,18 @@ class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
         );
 }
 
-class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus {
-  _FakeScanningStatus_3(
+class _FakeNdkService_3 extends _i1.SmartFake implements _i3.NdkService {
+  _FakeNdkService_3(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeScanningStatus_4 extends _i1.SmartFake implements _i5.ScanningStatus {
+  _FakeScanningStatus_4(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -284,7 +294,7 @@ class MockLoginService extends _i1.Mock implements _i6.LoginService {
 /// A class which mocks [NdkService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkService extends _i1.Mock implements _i4.NdkService {
+class MockNdkService extends _i1.Mock implements _i3.NdkService {
   MockNdkService() {
     _i1.throwOnMissingStub(this);
   }
@@ -502,22 +512,49 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i7.Future<List<_i9.Nip01Event?>>);
 
   @override
-  _i7.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
+  _i7.Future<_i3.VanishBroadcastHandle> requestAccountVanish({
+    required List<String>? relayUrls,
+    String? reason,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #requestAccountVanish,
+          [],
+          {
+            #relayUrls: relayUrls,
+            #reason: reason,
+          },
+        ),
+        returnValue: _i7.Future<_i3.VanishBroadcastHandle>.value(_FakeVanishBroadcastHandle_1(
+          this,
+          Invocation.method(
+            #requestAccountVanish,
+            [],
+            {
+              #relayUrls: relayUrls,
+              #reason: reason,
+            },
+          ),
+        )),
+      ) as _i7.Future<_i3.VanishBroadcastHandle>);
+
+  @override
+  _i7.Future<_i4.Ndk> getNdk() => (super.noSuchMethod(
         Invocation.method(
           #getNdk,
           [],
         ),
-        returnValue: _i7.Future<_i3.Ndk>.value(_FakeNdk_1(
+        returnValue: _i7.Future<_i4.Ndk>.value(_FakeNdk_2(
           this,
           Invocation.method(
             #getNdk,
             [],
           ),
         )),
-      ) as _i7.Future<_i3.Ndk>);
+      ) as _i7.Future<_i4.Ndk>);
 
   @override
-  void setNdkForTesting(_i3.Ndk? ndk) => super.noSuchMethod(
+  void setNdkForTesting(_i4.Ndk? ndk) => super.noSuchMethod(
         Invocation.method(
           #setNdkForTesting,
           [ndk],
@@ -816,13 +853,13 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
   }
 
   @override
-  _i4.NdkService get ndkService => (super.noSuchMethod(
+  _i3.NdkService get ndkService => (super.noSuchMethod(
         Invocation.getter(#ndkService),
-        returnValue: _FakeNdkService_2(
+        returnValue: _FakeNdkService_3(
           this,
           Invocation.getter(#ndkService),
         ),
-      ) as _i4.NdkService);
+      ) as _i3.NdkService);
 
   @override
   void disposeSync() => super.noSuchMethod(
@@ -930,7 +967,7 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
           #getScanningStatus,
           [],
         ),
-        returnValue: _i7.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValue: _i7.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_4(
           this,
           Invocation.method(
             #getScanningStatus,
