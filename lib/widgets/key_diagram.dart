@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// A single steward in the KeyDiagram.
 class KeyDiagramSteward {
@@ -189,27 +190,55 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
             child: AnimatedBuilder(
               animation: Listenable.merge([_transitionAnimation, _recoveryAnimation]),
               builder: (context, child) {
-                return CustomPaint(
-                  painter: KeyDiagramPainter(
-                    stewards: widget.stewards,
-                    threshold: widget.threshold,
-                    changeCounter: widget.changeCounter,
-                    stewardsBeforeUpdate: transitionIsRunning
-                        ? _buildPreviousStewards()
-                        : widget.stewards,
-                    thresholdBeforeUpdate: transitionIsRunning ? _prevThreshold : widget.threshold,
-                    changeCounterBeforeUpdate:
-                        transitionIsRunning ? _prevChangeCounter : widget.changeCounter,
-                    animationValue: _transitionAnimation.value,
-                    recoveryPhase: _recoveryPhase,
-                    recoveryStep: _recoveryStep,
-                    recoveryProgress: _recoveryAnimation.value,
-                    isDark: isDark,
-                    primaryText: theme.colorScheme.onSurface,
-                    dividerColor: theme.colorScheme.outline,
-                    secondaryText: theme.colorScheme.outline,
+                final dialRotation = _recoveryPhase == RecoveryPhase.dialRotate
+                    ? _recoveryAnimation.value * 90.0 * (pi / 180)
+                    : 0.0;
+
+                return Opacity(
+                  opacity: _transitionAnimation.value,
+                  child: Transform.scale(
+                    scale: 0.85 + _transitionAnimation.value * 0.15,
+                    child: Stack(
+                      children: [
+                        CustomPaint(
+                          painter: KeyDiagramPainter(
+                            stewards: widget.stewards,
+                            threshold: widget.threshold,
+                            changeCounter: widget.changeCounter,
+                            stewardsBeforeUpdate: transitionIsRunning
+                                ? _buildPreviousStewards()
+                                : widget.stewards,
+                            thresholdBeforeUpdate:
+                                transitionIsRunning ? _prevThreshold : widget.threshold,
+                            changeCounterBeforeUpdate:
+                                transitionIsRunning ? _prevChangeCounter : widget.changeCounter,
+                            animationValue: _transitionAnimation.value,
+                            recoveryPhase: _recoveryPhase,
+                            recoveryStep: _recoveryStep,
+                            recoveryProgress: _recoveryAnimation.value,
+                            isDark: isDark,
+                            primaryText: theme.colorScheme.onSurface,
+                            dividerColor: theme.colorScheme.outline,
+                            secondaryText: theme.colorScheme.outline,
+                          ),
+                          size: Size(availableWidth, height.clamp(200, 350)),
+                        ),
+                        Center(
+                          child: Transform.rotate(
+                            angle: dialRotation,
+                            child: SvgPicture.asset(
+                              'assets/icon/vault.svg',
+                              width: 40,
+                              colorFilter: ColorFilter.mode(
+                                theme.colorScheme.onSurface,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  size: Size(availableWidth, height.clamp(200, 350)),
                 );
               },
             ),
@@ -280,10 +309,7 @@ class KeyDiagramPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final n = stewards.length;
 
-    if (n == 0) {
-      _drawVaultIcon(canvas, center, 1.0, 0.0);
-      return;
-    }
+    if (n == 0) return;
 
     // Compute steward positions
     final stewardRadius = min(120.0, size.width / 2 - 30);
@@ -328,19 +354,11 @@ class KeyDiagramPainter extends CustomPainter {
 
     // Draw steward icons
     for (int i = 0; i < n; i++) {
-      // Check if this steward has checkmark (recovery demo)
       final showCheck = recoveryPhase == RecoveryPhase.spokesPulse &&
           i < threshold && i <= recoveryStep;
 
-      // Check if dial should show rotation effect
       _drawStewardIcon(canvas, positions[i], iconSize, stewards[i].label, showCheck);
     }
-
-    // Draw vault icon at center
-    const vaultScale = 1.0;
-    final dialRotation =
-        recoveryPhase == RecoveryPhase.dialRotate ? recoveryProgress * 90.0 * (pi / 180) : 0.0;
-    _drawVaultIcon(canvas, center, vaultScale, dialRotation);
   }
 
   Set<int> _computeSolidSpokes(int n) {
@@ -353,14 +371,12 @@ class KeyDiagramPainter extends CustomPainter {
 
   void _drawSpoke(Canvas canvas, Offset from, Offset to, bool isSolid, int index) {
     if (isSolid) {
-      // Solid spoke: 2pt
       final paint = Paint()
         ..color = primaryText
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
       canvas.drawLine(from, to, paint);
     } else {
-      // Dotted spoke: 1pt, 4pt dash 4pt gap
       final paint = Paint()
         ..color = primaryText
         ..strokeWidth = 1.0
@@ -380,43 +396,6 @@ class KeyDiagramPainter extends CustomPainter {
         distance += dash + gap;
       }
     }
-  }
-
-  void _drawVaultIcon(Canvas canvas, Offset center, double scale, double rotation) {
-    final vaultSize = 40.0 * scale;
-    final half = vaultSize / 2;
-
-    // Draw square vault
-    final vaultRect = Rect.fromCenter(center: center, width: vaultSize, height: vaultSize);
-    final vaultPaint = Paint()
-      ..color = primaryText
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawRect(vaultRect, vaultPaint);
-
-    // Draw combination dial INSIDE the vault box (bottom-right corner)
-    final dialCenter = center + Offset(half - 10, half - 10);
-    // Dial outer circle
-    final dialPaint = Paint()
-      ..color = primaryText
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(dialCenter, 6, dialPaint);
-
-    // Dial tick marks at 60° increments
-    for (int i = 0; i < 6; i++) {
-      final tickAngle = i * pi / 3;
-      final inner = dialCenter + Offset(cos(tickAngle) * 3, sin(tickAngle) * 3);
-      final outer = dialCenter + Offset(cos(tickAngle) * 6, sin(tickAngle) * 6);
-      canvas.drawLine(inner, outer, dialPaint);
-    }
-
-    // Dial inner circle (offset from center to indicate set combination)
-    final innerDialCenter = dialCenter + Offset(cos(rotation) * 2, sin(rotation) * 2);
-    final innerDialPaint = Paint()
-      ..color = primaryText
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(innerDialCenter, 2.5, innerDialPaint);
   }
 
   void _drawIcon(Canvas canvas, Offset center, IconData icon, double size, Color color) {

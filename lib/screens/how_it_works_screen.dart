@@ -152,28 +152,28 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
           color: primaryText,
           height: 1.6,
         ),
-        children: const [
+        children: [
           TextSpan(text: 'Horcrux stores your secrets in encrypted '),
           TextSpan(
             text: 'vaults',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           TextSpan(text: '. Each vault is split into multiple '),
           TextSpan(
             text: 'keys',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           TextSpan(
             text: ' held by trusted people called ',
           ),
           TextSpan(
             text: 'stewards',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           TextSpan(text: '. You choose how many keys to create, who holds them, and the '),
           TextSpan(
             text: 'threshold',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           TextSpan(
             text: ' — how many stewards must cooperate to open the vault. To recover your secrets, stewards request keys from each other. They\'ll receive a notification from Horcrux asking whether to share their key. Only when the threshold is met can the vault be opened.',
