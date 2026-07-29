@@ -169,7 +169,8 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           const TextSpan(
-            text: ' — how many stewards must cooperate to open the vault. To recover your secrets, stewards request keys from each other. They\'ll receive a notification from Horcrux asking whether to share their key. Only when the threshold is met can the vault be opened.',
+            text:
+                ' — how many stewards must cooperate to open the vault. To recover your secrets, stewards request keys from each other. They\'ll receive a notification from Horcrux asking whether to share their key. Only when the threshold is met can the vault be opened.',
           ),
         ],
       ),
