@@ -245,14 +245,14 @@ void main() {
       const anotherVaultId = 'owned-vault-2';
       const anotherStewardPubkey = 'steward-pubkey-xyz';
 
-      final steward = const Steward(
+      const steward = Steward(
         id: 'steward-1',
         pubkey: stewardPubkey,
         name: 'Steward One',
         status: StewardStatus.holdingKey,
       );
 
-      final anotherSteward = const Steward(
+      const anotherSteward = Steward(
         id: 'steward-2',
         pubkey: anotherStewardPubkey,
         name: 'Steward Two',
@@ -371,7 +371,7 @@ void main() {
       const vaultId = 'failing-vault';
       const stewardPubkey = 'steward-pubkey';
 
-      final steward = const Steward(
+      const steward = Steward(
         id: 'steward-1',
         pubkey: stewardPubkey,
         name: 'Steward',
