@@ -647,15 +647,15 @@ void main() {
     });
 
     test(
-      'vault stub created by createReceivedInvitation should persist only until cleanupPendingInvitationVault is called',
+      'stageReceivedInvitation stores in memory only — no vault or invitation row created',
       () async {
         // Arrange
         const vaultId = 'test-pending-vault';
         const ownerPubkey = TestHexPubkeys.alice;
         const inviteCode = 'test-pending-invite-code-valid-base64url-123';
 
-        // Act: Simulate opening an invitation link
-        await invitationService.createReceivedInvitation(
+        // Act: Simulate opening an invitation link (in-memory staging)
+        final staged = await invitationService.stageReceivedInvitation(
           inviteCode: inviteCode,
           vaultId: vaultId,
           ownerPubkey: ownerPubkey,
@@ -663,25 +663,51 @@ void main() {
           vaultName: 'Test Pending Vault',
         );
 
-        // Assert: Vault must exist (needed for FK constraint on invitations)
-        var vault = await realRepository.getVault(vaultId);
-        expect(vault, isNotNull,
-            reason: 'Vault stub must exist for FK constraint on invitations');
-        expect(vault!.backupConfig, isNull,
-            reason: 'Vault stub should have no backup config');
+        // Assert: staged link is returned
+        expect(staged, isNotNull, reason: 'A fresh invitation should be staged');
+        expect(staged!.inviteCode, inviteCode);
 
-        // Act: Simulate dismissing the invitation (back button or deny)
-        await invitationService.cleanupPendingInvitationVault(vaultId);
+        // Assert: No vault row was created
+        final vault = await realRepository.getVault(vaultId);
+        expect(vault, isNull, reason: 'No vault row should exist — nothing written to DB');
 
-        // Assert: Vault should be deleted (cascade deletes the invitation too)
-        vault = await realRepository.getVault(vaultId);
-        expect(vault, isNull,
-            reason: 'Pending vault stub should be cleaned up on dismiss');
-
-        // Verify the invitation was also removed (cascade)
+        // Assert: No invitation row was created
         final invitation = await invitationService.lookupInvitationByCode(inviteCode);
         expect(invitation, isNull,
-            reason: 'Invitation should be cascade-deleted with the vault');
+            reason: 'No invitation row should exist — nothing written to DB');
+
+        // Act: Simulate dismissing (back button) — nothing to clean up
+        // No-op: the staged entry is abandoned in memory
+
+        // Verify still no vault after dismiss
+        final vaultAfterDismiss = await realRepository.getVault(vaultId);
+        expect(vaultAfterDismiss, isNull, reason: 'No vault should ever have been created');
+      },
+    );
+
+    test(
+      'stageReceivedInvitation skips invite codes in the denied set (kv table)',
+      () async {
+        // Arrange
+        const inviteCode = 'test-denied-code-valid-base64url-456';
+        const vaultId = 'test-denied-vault';
+
+        // Seed the denied set in the kv table directly.
+        await testDb.appStateDao.setString(
+          key: 'denied_invite_codes',
+          value: '["$inviteCode"]',
+        );
+
+        // Act: Try to stage the denied code
+        final staged = await invitationService.stageReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: TestHexPubkeys.alice,
+          relayUrls: ['wss://relay.example.com'],
+        );
+
+        // Assert: Returns null (no re-prompt)
+        expect(staged, isNull, reason: 'Denied invitation should not be re-staged');
       },
     );
   });
