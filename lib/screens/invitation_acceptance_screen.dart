@@ -31,15 +31,24 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   bool _isProcessing = false;
   String? _errorMessage;
   bool _invitationResolved = false; // true when accepted or denied
+  // Cached references to avoid lazy provider initialization in dispose()
+  String? _cachedVaultId;
+  bool _disposeHandled = false;
 
   @override
   void dispose() {
-    if (!_invitationResolved) {
-      // User dismissed without accepting or denying — clean up the vault stub
-      final invitationService = ref.read(invitationServiceProvider);
-      final invitation = ref.read(invitationByCodeProvider(widget.inviteCode)).valueOrNull;
-      if (invitation != null) {
-        invitationService.cleanupPendingInvitationVault(invitation.vaultId);
+    if (!_invitationResolved && !_disposeHandled) {
+      _disposeHandled = true;
+      // User dismissed without accepting or denying — clean up the vault stub.
+      // Use cached vaultId to avoid reading providers during dispose (which
+      // can trigger MissingPluginException in test environments).
+      if (_cachedVaultId != null) {
+        try {
+          ref.read(invitationServiceProvider).cleanupPendingInvitationVault(_cachedVaultId!);
+        } catch (_) {
+          // Best-effort cleanup; safe to ignore errors (e.g. MissingPluginException
+          // in test environments where flutter_secure_storage isn't available).
+        }
       }
     }
     super.dispose();
@@ -84,6 +93,10 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
           ),
         ),
         data: (invitation) {
+          // Cache vaultId for use in dispose() without lazy provider reads
+          if (invitation != null && _cachedVaultId == null) {
+            _cachedVaultId = invitation.vaultId;
+          }
           if (invitation == null) {
             return Padding(
               padding: const EdgeInsets.all(16.0),
