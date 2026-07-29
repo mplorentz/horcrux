@@ -57,7 +57,6 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryText = theme.colorScheme.onSurface;
-    final secondaryText = theme.colorScheme.outline;
 
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'How It Works'),

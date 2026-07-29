@@ -297,9 +297,9 @@ class KeyDiagramPainter extends CustomPainter {
 
     // Draw spokes behind everything
     // Lines start 5px outside vault box and stop 5px short of key icons
-    final vaultHalf = 20.0; // vaultSize / 2
-    final spokeStartRadius = vaultHalf + 5;
-    final spokeEndFraction = 0.62; // ~5px before key icon at 0.67
+    const vaultHalf = 20.0; // vaultSize / 2
+    const spokeStartRadius = vaultHalf + 5;
+    const spokeEndFraction = 0.62; // ~5px before key icon at 0.67
     for (int i = 0; i < n; i++) {
       final isSolid = solidSpokes.contains(i);
       final spokeStart = Offset.lerp(
