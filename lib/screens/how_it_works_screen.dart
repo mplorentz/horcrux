@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -10,20 +9,18 @@ import 'account_choice_screen.dart';
 /// Onboarding explainer screen showing the interactive hub-and-spoke diagram.
 ///
 /// Flow: OnboardingScreen → [Learn More] → HowItWorksScreen → [Get Started] → AccountChoiceScreen
-class HowItWorksScreen extends ConsumerStatefulWidget {
+class HowItWorksScreen extends StatefulWidget {
   const HowItWorksScreen({super.key});
 
   @override
-  ConsumerState<HowItWorksScreen> createState() => _HowItWorksScreenState();
+  State<HowItWorksScreen> createState() => _HowItWorksScreenState();
 }
 
-class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
+class _HowItWorksScreenState extends State<HowItWorksScreen> {
   // Pre-populated: 3 stewards, threshold 2
   int _stewardCount = 3;
   int _threshold = 2;
   int _changeCounter = 0;
-  int _stewardSliderValue = 3;
-  int _thresholdSliderValue = 2;
 
   List<KeyDiagramSteward> get _stewards {
     return List.generate(
@@ -31,25 +28,21 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
       (i) => KeyDiagramSteward(
         id: 'steward_$i',
         label: 'Steward ${i + 1}',
-        isPlaceholder: true,
       ),
     );
   }
 
   void _onStewardSliderChanged(double value) {
     setState(() {
-      _stewardSliderValue = value.round().clamp(1, 8);
-      _stewardCount = _stewardSliderValue;
+      _stewardCount = value.round().clamp(1, 8);
       _threshold = _threshold.clamp(1, _stewardCount);
-      _thresholdSliderValue = _threshold;
       _changeCounter++;
     });
   }
 
   void _onThresholdSliderChanged(double value) {
     setState(() {
-      _thresholdSliderValue = value.round().clamp(1, _stewardCount);
-      _threshold = _thresholdSliderValue;
+      _threshold = value.round().clamp(1, _stewardCount);
       _changeCounter++;
     });
   }
@@ -213,7 +206,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
             ),
             Expanded(
               child: Slider(
-                value: _stewardSliderValue.toDouble(),
+                value: _stewardCount.toDouble(),
                 min: 1,
                 max: 8,
                 divisions: 7,
@@ -247,7 +240,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
             ),
             Expanded(
               child: Slider(
-                value: _thresholdSliderValue.toDouble(),
+                value: _threshold.toDouble(),
                 min: 1,
                 max: _stewardCount.toDouble(),
                 divisions: _stewardCount > 1 ? _stewardCount - 1 : null,

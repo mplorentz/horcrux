@@ -7,12 +7,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 class KeyDiagramSteward {
   final String id;
   final String label;
-  final bool isPlaceholder;
 
   const KeyDiagramSteward({
     required this.id,
     required this.label,
-    this.isPlaceholder = false,
   });
 }
 
@@ -22,8 +20,8 @@ enum RecoveryPhase { dialRotate, spokesPulse, pause, idle }
 /// Interactive hub-and-spoke key diagram rendered via CustomPainter.
 ///
 /// Two contexts:
-/// 1. OnboardingExplainerScreen — placeholder stewards, interactive demo controls
-/// 2. BackupConfigScreen — real steward data, real threshold (future integration)
+/// 1. HowItWorksScreen — demo stewards, interactive controls
+/// 2. BackupConfigScreen — real steward data (future integration)
 class KeyDiagram extends StatefulWidget {
   final List<KeyDiagramSteward> stewards;
   final int threshold;
@@ -183,10 +181,9 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
           // Height: 2 * stewardRadius + vaultSize + padding
           const stewardRadius = 120.0;
           const vaultSize = 40.0;
-          const height = stewardRadius * 2 + vaultSize + 32;
-          return SizedBox(
-            width: availableWidth,
-            height: height.clamp(200, 350),
+          const diagramSize = Size(availableWidth, stewardRadius * 2 + vaultSize + 32);
+          return SizedBox.fromSize(
+            size: diagramSize,
             child: AnimatedBuilder(
               animation: Listenable.merge([_transitionAnimation, _recoveryAnimation]),
               builder: (context, child) {
@@ -239,6 +236,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
+                  size: diagramSize,
                 );
               },
             ),
@@ -258,7 +256,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
               (i) => KeyDiagramSteward(
                 id: 'prev_$i',
                 label: 'Steward ${i + 1}',
-                isPlaceholder: true,
+
               ),
             )
           : [];
