@@ -55,6 +55,7 @@ class EventAuthorizer {
       case NostrKind.giftWrap:
       case NostrKind.httpAuth:
       case NostrKind.shareError:
+      case NostrKind.requestToVanish:
       case null:
         return AuthDecision.deny;
     }

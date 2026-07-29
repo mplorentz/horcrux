@@ -9,10 +9,11 @@ import '../services/logout_service.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
-import '../widgets/row_button.dart';
+import '../widgets/row_button_stack.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import 'delete_account_screen.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
 class AccountManagementScreen extends ConsumerStatefulWidget {
@@ -335,12 +336,21 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                 ),
               ),
             ),
-            // Logout button
-            RowButton(
-              onPressed: _handleLogout,
-              icon: Icons.logout,
-              text: 'Logout',
-              addBottomSafeArea: true,
+            RowButtonStack(
+              buttons: [
+                RowButtonConfig(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
+                  ),
+                  icon: Icons.delete_forever,
+                  text: 'Delete Account',
+                ),
+                RowButtonConfig(
+                  onPressed: _handleLogout,
+                  icon: Icons.logout,
+                  text: 'Logout',
+                ),
+              ],
             ),
           ],
         ),
