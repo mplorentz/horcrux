@@ -110,9 +110,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                     const SizedBox(height: 12),
                     Text(
                       reasonText,
-style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton.icon(
