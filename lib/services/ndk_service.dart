@@ -4,7 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ndk/entities.dart' show GiftWrapUnwrapResult, RelayBroadcastResponse;
+import 'package:ndk/entities.dart' show GiftWrapUnwrapResult;
 import 'package:ndk/ndk.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
@@ -117,6 +117,9 @@ class NdkService {
   final List<String> _activeRelays = [];
 
   late final PublishService _publishService;
+
+  /// The outbox-based [PublishService] owned by this service.
+  PublishService get publishService => _publishService;
 
   NdkService({
     required Ref ref,
@@ -1150,91 +1153,6 @@ class NdkService {
     }
 
     return results;
-  }
-
-  /// Signs and broadcasts a NIP-62 "Request to Vanish" event (kind 62) asking
-  /// every relay in [relayUrls] to delete all events published by the
-  /// current user's pubkey.
-  ///
-  /// Unlike [publishEncryptedEvent], this event is a plain, unwrapped Nip01Event
-  /// signed with the real account key -- relays must be able to read the
-  /// pubkey and kind directly to act on it, so it cannot be gift wrapped.
-  ///
-  /// Broadcasts directly via the NDK broadcast primitive (bypassing
-  /// [PublishService]'s persistent outbox). Returns a [PublishBroadcastHandle]
-  /// exposing both a live per-relay status stream (for UI feedback while the
-  /// broadcast is in flight) and a [PublishBroadcastHandle.done] future the
-  /// caller can await to decide whether it's safe to wipe local identity: an
-  /// outbox retry would race a local wipe performed right after broadcasting.
-  ///
-  /// [relayUrls] must be non-empty.
-  Future<PublishBroadcastHandle> requestAccountVanish({
-    required List<String> relayUrls,
-    String? reason,
-  }) async {
-    if (relayUrls.isEmpty) {
-      throw ArgumentError.value(relayUrls, 'relayUrls', 'must not be empty');
-    }
-
-    await _ensureInitialized();
-    final pubkey = await getCurrentPubkey();
-    if (pubkey == null) {
-      throw Exception('No key pair available. Cannot request account deletion.');
-    }
-
-    final tags = <List<String>>[
-      for (final url in relayUrls) ['relay', url],
-      ['relay', 'ALL_RELAYS'],
-    ];
-
-    final event = Nip01Event(
-      pubKey: pubkey,
-      kind: NostrKind.requestToVanish.value,
-      tags: tags,
-      content: reason ?? '',
-      createdAt: DateTime.now().toUtc().secondsSinceEpoch,
-    );
-
-    final ndk = await getNdk();
-    final response = ndk.broadcast.broadcast(
-      nostrEvent: event,
-      specificRelays: relayUrls,
-    );
-
-    final statusUpdates = response.broadcastDone.map(
-      (results) => results.map((result) => _toRelayPublishStatus(response: result)).toList(),
-    );
-
-    final done = response.broadcastDoneFuture.then((results) {
-      final acknowledged = results
-          .where((result) => result.broadcastSuccessful)
-          .map((result) => result.relayUrl)
-          .toSet();
-      Log.info(
-        'Request to Vanish (${event.id}) acknowledged by '
-        '${acknowledged.length}/${relayUrls.length} relay(s)',
-      );
-      return acknowledged;
-    });
-
-    return PublishBroadcastHandle(
-      relayUrls: relayUrls,
-      statusUpdates: statusUpdates,
-      done: done,
-    );
-  }
-
-  /// Maps an NDK relay broadcast response to its UI-facing publish status.
-  RelayPublishStatus _toRelayPublishStatus({required RelayBroadcastResponse response}) {
-    return RelayPublishStatus(
-      relayUrl: response.relayUrl,
-      state: !response.okReceived
-          ? RelayPublishAckState.pending
-          : response.broadcastSuccessful
-              ? RelayPublishAckState.acknowledged
-              : RelayPublishAckState.failed,
-      message: response.msg,
-    );
   }
 
   /// Get the underlying NDK instance for advanced operations

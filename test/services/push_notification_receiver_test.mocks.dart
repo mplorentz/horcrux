@@ -32,8 +32,8 @@ import 'package:ndk/ndk.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakePublishBroadcastHandle_0 extends _i1.SmartFake implements _i2.PublishBroadcastHandle {
-  _FakePublishBroadcastHandle_0(
+class _FakePublishService_0 extends _i1.SmartFake implements _i2.PublishService {
+  _FakePublishService_0(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -59,6 +59,15 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
   MockNdkService() {
     _i1.throwOnMissingStub(this);
   }
+
+  @override
+  _i2.PublishService get publishService => (super.noSuchMethod(
+        Invocation.getter(#publishService),
+        returnValue: _FakePublishService_0(
+          this,
+          Invocation.getter(#publishService),
+        ),
+      ) as _i2.PublishService);
 
   @override
   bool get isInitialized => (super.noSuchMethod(
@@ -272,33 +281,6 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
         ),
         returnValue: _i5.Future<List<_i6.Nip01Event?>>.value(<_i6.Nip01Event?>[]),
       ) as _i5.Future<List<_i6.Nip01Event?>>);
-
-  @override
-  _i5.Future<_i2.PublishBroadcastHandle> requestAccountVanish({
-    required List<String>? relayUrls,
-    String? reason,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #requestAccountVanish,
-          [],
-          {
-            #relayUrls: relayUrls,
-            #reason: reason,
-          },
-        ),
-        returnValue: _i5.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_0(
-          this,
-          Invocation.method(
-            #requestAccountVanish,
-            [],
-            {
-              #relayUrls: relayUrls,
-              #reason: reason,
-            },
-          ),
-        )),
-      ) as _i5.Future<_i2.PublishBroadcastHandle>);
 
   @override
   _i5.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(

@@ -33,8 +33,8 @@ import 'package:ndk/ndk.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakePublishBroadcastHandle_0 extends _i1.SmartFake implements _i2.PublishBroadcastHandle {
-  _FakePublishBroadcastHandle_0(
+class _FakePublishService_0 extends _i1.SmartFake implements _i2.PublishService {
+  _FakePublishService_0(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -53,8 +53,8 @@ class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
         );
 }
 
-class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
-  _FakeNdkService_2(
+class _FakePublishQueueResult_2 extends _i1.SmartFake implements _i2.PublishQueueResult {
+  _FakePublishQueueResult_2(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -63,8 +63,28 @@ class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
         );
 }
 
-class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus {
-  _FakeScanningStatus_3(
+class _FakePublishBroadcastHandle_3 extends _i1.SmartFake implements _i2.PublishBroadcastHandle {
+  _FakePublishBroadcastHandle_3(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeNdkService_4 extends _i1.SmartFake implements _i4.NdkService {
+  _FakeNdkService_4(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakeScanningStatus_5 extends _i1.SmartFake implements _i5.ScanningStatus {
+  _FakeScanningStatus_5(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -77,6 +97,19 @@ class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus 
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNdkService extends _i1.Mock implements _i4.NdkService {
+  @override
+  _i2.PublishService get publishService => (super.noSuchMethod(
+        Invocation.getter(#publishService),
+        returnValue: _FakePublishService_0(
+          this,
+          Invocation.getter(#publishService),
+        ),
+        returnValueForMissingStub: _FakePublishService_0(
+          this,
+          Invocation.getter(#publishService),
+        ),
+      ) as _i2.PublishService);
+
   @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
@@ -301,45 +334,6 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<List<_i7.Nip01Event?>>);
 
   @override
-  _i6.Future<_i2.PublishBroadcastHandle> requestAccountVanish({
-    required List<String>? relayUrls,
-    String? reason,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #requestAccountVanish,
-          [],
-          {
-            #relayUrls: relayUrls,
-            #reason: reason,
-          },
-        ),
-        returnValue: _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_0(
-          this,
-          Invocation.method(
-            #requestAccountVanish,
-            [],
-            {
-              #relayUrls: relayUrls,
-              #reason: reason,
-            },
-          ),
-        )),
-        returnValueForMissingStub:
-            _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_0(
-          this,
-          Invocation.method(
-            #requestAccountVanish,
-            [],
-            {
-              #relayUrls: relayUrls,
-              #reason: reason,
-            },
-          ),
-        )),
-      ) as _i6.Future<_i2.PublishBroadcastHandle>);
-
-  @override
   _i6.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
         Invocation.method(
           #getNdk,
@@ -390,6 +384,132 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i6.Future<void>);
 }
 
+/// A class which mocks [PublishService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockPublishService extends _i1.Mock implements _i2.PublishService {
+  @override
+  _i6.Future<void> initialize() => (super.noSuchMethod(
+        Invocation.method(
+          #initialize,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<_i2.PublishQueueResult> enqueueEvent({
+    required _i7.Nip01Event? event,
+    required List<String>? relays,
+    String? vaultId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #enqueueEvent,
+          [],
+          {
+            #event: event,
+            #relays: relays,
+            #vaultId: vaultId,
+          },
+        ),
+        returnValue: _i6.Future<_i2.PublishQueueResult>.value(_FakePublishQueueResult_2(
+          this,
+          Invocation.method(
+            #enqueueEvent,
+            [],
+            {
+              #event: event,
+              #relays: relays,
+              #vaultId: vaultId,
+            },
+          ),
+        )),
+        returnValueForMissingStub:
+            _i6.Future<_i2.PublishQueueResult>.value(_FakePublishQueueResult_2(
+          this,
+          Invocation.method(
+            #enqueueEvent,
+            [],
+            {
+              #event: event,
+              #relays: relays,
+              #vaultId: vaultId,
+            },
+          ),
+        )),
+      ) as _i6.Future<_i2.PublishQueueResult>);
+
+  @override
+  _i6.Future<void> onRelayReconnected(String? relayUrl) => (super.noSuchMethod(
+        Invocation.method(
+          #onRelayReconnected,
+          [relayUrl],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  void disposeSync() => super.noSuchMethod(
+        Invocation.method(
+          #disposeSync,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  _i6.Future<void> dispose() => (super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<_i2.PublishBroadcastHandle> requestAccountVanish({
+    required List<String>? relayUrls,
+    String? reason,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #requestAccountVanish,
+          [],
+          {
+            #relayUrls: relayUrls,
+            #reason: reason,
+          },
+        ),
+        returnValue: _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_3(
+          this,
+          Invocation.method(
+            #requestAccountVanish,
+            [],
+            {
+              #relayUrls: relayUrls,
+              #reason: reason,
+            },
+          ),
+        )),
+        returnValueForMissingStub:
+            _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_3(
+          this,
+          Invocation.method(
+            #requestAccountVanish,
+            [],
+            {
+              #relayUrls: relayUrls,
+              #reason: reason,
+            },
+          ),
+        )),
+      ) as _i6.Future<_i2.PublishBroadcastHandle>);
+}
+
 /// A class which mocks [RelayScanService].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -397,11 +517,11 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
   @override
   _i4.NdkService get ndkService => (super.noSuchMethod(
         Invocation.getter(#ndkService),
-        returnValue: _FakeNdkService_2(
+        returnValue: _FakeNdkService_4(
           this,
           Invocation.getter(#ndkService),
         ),
-        returnValueForMissingStub: _FakeNdkService_2(
+        returnValueForMissingStub: _FakeNdkService_4(
           this,
           Invocation.getter(#ndkService),
         ),
@@ -517,14 +637,14 @@ class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
           #getScanningStatus,
           [],
         ),
-        returnValue: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValue: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_5(
           this,
           Invocation.method(
             #getScanningStatus,
             [],
           ),
         )),
-        returnValueForMissingStub: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValueForMissingStub: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_5(
           this,
           Invocation.method(
             #getScanningStatus,

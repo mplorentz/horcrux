@@ -46,8 +46,8 @@ class _FakeKeyPair_0 extends _i1.SmartFake implements _i2.KeyPair {
         );
 }
 
-class _FakePublishBroadcastHandle_1 extends _i1.SmartFake implements _i3.PublishBroadcastHandle {
-  _FakePublishBroadcastHandle_1(
+class _FakePublishService_1 extends _i1.SmartFake implements _i3.PublishService {
+  _FakePublishService_1(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -301,6 +301,15 @@ class MockNdkService extends _i1.Mock implements _i5.NdkService {
   }
 
   @override
+  _i3.PublishService get publishService => (super.noSuchMethod(
+        Invocation.getter(#publishService),
+        returnValue: _FakePublishService_1(
+          this,
+          Invocation.getter(#publishService),
+        ),
+      ) as _i3.PublishService);
+
+  @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
         returnValue: false,
@@ -511,33 +520,6 @@ class MockNdkService extends _i1.Mock implements _i5.NdkService {
         ),
         returnValue: _i8.Future<List<_i10.Nip01Event?>>.value(<_i10.Nip01Event?>[]),
       ) as _i8.Future<List<_i10.Nip01Event?>>);
-
-  @override
-  _i8.Future<_i3.PublishBroadcastHandle> requestAccountVanish({
-    required List<String>? relayUrls,
-    String? reason,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #requestAccountVanish,
-          [],
-          {
-            #relayUrls: relayUrls,
-            #reason: reason,
-          },
-        ),
-        returnValue: _i8.Future<_i3.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_1(
-          this,
-          Invocation.method(
-            #requestAccountVanish,
-            [],
-            {
-              #relayUrls: relayUrls,
-              #reason: reason,
-            },
-          ),
-        )),
-      ) as _i8.Future<_i3.PublishBroadcastHandle>);
 
   @override
   _i8.Future<_i4.Ndk> getNdk() => (super.noSuchMethod(

@@ -85,7 +85,7 @@ class AccountDeletionService {
       throw StateError('No relays configured; cannot request account deletion.');
     }
 
-    final broadcast = await _ndkService.requestAccountVanish(
+    final broadcast = await _ndkService.publishService.requestAccountVanish(
       relayUrls: relayUrls,
       reason: reason,
     );

@@ -15,6 +15,7 @@ import 'account_deletion_service_test.mocks.dart';
 
 @GenerateNiceMocks([
   MockSpec<NdkService>(),
+  MockSpec<PublishService>(),
   MockSpec<RelayScanService>(),
   MockSpec<HorcruxNotificationService>(),
   MockSpec<LogoutService>(),
@@ -22,6 +23,7 @@ import 'account_deletion_service_test.mocks.dart';
 void main() {
   group('AccountDeletionService', () {
     late MockNdkService ndkService;
+    late MockPublishService publishService;
     late MockRelayScanService relayScanService;
     late MockHorcruxNotificationService notificationService;
     late MockLogoutService logoutService;
@@ -63,6 +65,7 @@ void main() {
 
     setUp(() {
       ndkService = MockNdkService();
+      publishService = MockPublishService();
       relayScanService = MockRelayScanService();
       notificationService = MockHorcruxNotificationService();
       logoutService = MockLogoutService();
@@ -73,6 +76,8 @@ void main() {
         logoutService: logoutService,
       );
 
+      when(ndkService.publishService).thenReturn(publishService);
+      when(ndkService.getCurrentPubkey()).thenAnswer((_) async => 'test-pubkey');
       when(
         relayScanService.getRelayConfigurations(enabledOnly: true),
       ).thenAnswer((_) async => relays);
@@ -82,7 +87,7 @@ void main() {
 
     test('wipes local state when at least one relay acknowledges', () async {
       when(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       ).thenAnswer(
         (_) async => handleFor([
           'wss://relay.one',
@@ -109,7 +114,7 @@ void main() {
       await expectLater(service.deleteAccount(), throwsStateError);
 
       verifyNever(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       );
       verifyNever(notificationService.deregister());
       verifyNever(logoutService.logout());
@@ -117,7 +122,7 @@ void main() {
 
     test('does not wipe local state when no relay acknowledges', () async {
       when(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       ).thenAnswer(
         (_) async => handleFor(['wss://relay.one', 'wss://relay.two'], {}),
       );
@@ -152,7 +157,7 @@ void main() {
         ),
       ];
       when(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       ).thenAnswer(
         (_) async => handleFor(
           ['wss://relay.one', 'wss://relay.two'],
@@ -180,7 +185,7 @@ void main() {
         done: doneCompleter.future,
       );
       when(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       ).thenAnswer((_) async => handle);
 
       await expectLater(
@@ -195,7 +200,7 @@ void main() {
 
     test('still wipes local state when notifier deregister fails', () async {
       when(
-        ndkService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
       ).thenAnswer(
         (_) async => handleFor([
           'wss://relay.one',
