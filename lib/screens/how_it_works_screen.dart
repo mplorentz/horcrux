@@ -103,21 +103,14 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
 
                           // External link
                           Center(
-                            child: TextButton(
+                            child: OutlinedButton(
                               onPressed: () {
-                                // ignore: deprecated_member_use
                                 launchUrl(
                                   Uri.parse('https://horcruxbackup.com/how-it-works/'),
                                   mode: LaunchMode.externalApplication,
                                 );
                               },
-                              child: Text(
-                                'Learn more on horcruxbackup.com',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: primaryText,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
+                              child: const Text('Learn More'),
                             ),
                           ),
                         ],
