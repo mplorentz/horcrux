@@ -54,15 +54,15 @@ class OnboardingScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 64),
                           // Body text explaining Horcrux - left aligned
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                ),
-                                child: Text(
-                                  'Horcrux is a tool for backing up sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux sends the sensitive data in pieces to your friends and family\'s devices. Recovery is accomplished by getting consent from these friends and family to reassemble your data.',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Text(
+                              'Horcrux is a tool for backing up sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux sends the sensitive data in pieces to your friends and family\'s devices. Recovery is accomplished by getting consent from these friends and family to reassemble your data.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
                           // Bottom spacer
                           const SizedBox(height: 16),
                         ],
