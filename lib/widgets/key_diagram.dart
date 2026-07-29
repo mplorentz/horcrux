@@ -181,9 +181,10 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
           // Height: 2 * stewardRadius + vaultSize + padding
           const stewardRadius = 120.0;
           const vaultSize = 40.0;
-          const diagramSize = Size(availableWidth, stewardRadius * 2 + vaultSize + 32);
-          return SizedBox.fromSize(
-            size: diagramSize,
+          final diagramSize = Size(availableWidth, stewardRadius * 2 + vaultSize + 32);
+          return SizedBox(
+            width: diagramSize.width,
+            height: diagramSize.height,
             child: AnimatedBuilder(
               animation: Listenable.merge([_transitionAnimation, _recoveryAnimation]),
               builder: (context, child) {
@@ -218,7 +219,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
                             dividerColor: theme.colorScheme.outline,
                             secondaryText: theme.colorScheme.outline,
                           ),
-                          size: Size(availableWidth, height.clamp(200, 350)),
+                          size: diagramSize,
                         ),
                         Center(
                           child: Transform.rotate(
