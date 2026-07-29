@@ -339,16 +339,16 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
             RowButtonStack(
               buttons: [
                 RowButtonConfig(
-                  onPressed: _handleLogout,
-                  icon: Icons.logout,
-                  text: 'Logout',
-                ),
-                RowButtonConfig(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
                   ),
                   icon: Icons.delete_forever,
                   text: 'Delete Account',
+                ),
+                RowButtonConfig(
+                  onPressed: _handleLogout,
+                  icon: Icons.logout,
+                  text: 'Logout',
                 ),
               ],
             ),

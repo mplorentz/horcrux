@@ -3,19 +3,20 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
+import 'dart:async' as _i6;
 
-import 'package:horcrux/models/nostr_kinds.dart' as _i8;
-import 'package:horcrux/models/relay_configuration.dart' as _i9;
-import 'package:horcrux/models/share.dart' as _i7;
-import 'package:horcrux/models/vault.dart' as _i12;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i10;
-import 'package:horcrux/services/logout_service.dart' as _i13;
-import 'package:horcrux/services/ndk_service.dart' as _i2;
-import 'package:horcrux/services/relay_scan_service.dart' as _i4;
+import 'package:horcrux/models/nostr_kinds.dart' as _i9;
+import 'package:horcrux/models/relay_configuration.dart' as _i10;
+import 'package:horcrux/models/share.dart' as _i8;
+import 'package:horcrux/models/vault.dart' as _i13;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i11;
+import 'package:horcrux/services/logout_service.dart' as _i14;
+import 'package:horcrux/services/ndk_service.dart' as _i4;
+import 'package:horcrux/services/publish_service.dart' as _i2;
+import 'package:horcrux/services/relay_scan_service.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i11;
-import 'package:ndk/entities.dart' as _i6;
+import 'package:mockito/src/dummies.dart' as _i12;
+import 'package:ndk/entities.dart' as _i7;
 import 'package:ndk/ndk.dart' as _i3;
 
 // ignore_for_file: type=lint
@@ -32,8 +33,8 @@ import 'package:ndk/ndk.dart' as _i3;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeVanishBroadcastHandle_0 extends _i1.SmartFake implements _i2.VanishBroadcastHandle {
-  _FakeVanishBroadcastHandle_0(
+class _FakePublishBroadcastHandle_0 extends _i1.SmartFake implements _i2.PublishBroadcastHandle {
+  _FakePublishBroadcastHandle_0(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -52,7 +53,7 @@ class _FakeNdk_1 extends _i1.SmartFake implements _i3.Ndk {
         );
 }
 
-class _FakeNdkService_2 extends _i1.SmartFake implements _i2.NdkService {
+class _FakeNdkService_2 extends _i1.SmartFake implements _i4.NdkService {
   _FakeNdkService_2(
     Object parent,
     Invocation parentInvocation,
@@ -62,7 +63,7 @@ class _FakeNdkService_2 extends _i1.SmartFake implements _i2.NdkService {
         );
 }
 
-class _FakeScanningStatus_3 extends _i1.SmartFake implements _i4.ScanningStatus {
+class _FakeScanningStatus_3 extends _i1.SmartFake implements _i5.ScanningStatus {
   _FakeScanningStatus_3(
     Object parent,
     Invocation parentInvocation,
@@ -75,7 +76,7 @@ class _FakeScanningStatus_3 extends _i1.SmartFake implements _i4.ScanningStatus 
 /// A class which mocks [NdkService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkService extends _i1.Mock implements _i2.NdkService {
+class MockNdkService extends _i1.Mock implements _i4.NdkService {
   @override
   bool get isInitialized => (super.noSuchMethod(
         Invocation.getter(#isInitialized),
@@ -84,48 +85,48 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
       ) as bool);
 
   @override
-  _i5.Future<void> initialize() => (super.noSuchMethod(
+  _i6.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> addRelay(String? relayUrl) => (super.noSuchMethod(
+  _i6.Future<void> addRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #addRelay,
           [relayUrl],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
+  _i6.Future<void> setActiveRelays(List<String>? relayUrls) => (super.noSuchMethod(
         Invocation.method(
           #setActiveRelays,
           [relayUrls],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
+  _i6.Future<void> removeRelay(String? relayUrl) => (super.noSuchMethod(
         Invocation.method(
           #removeRelay,
           [relayUrl],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> processGiftWrapFromForegroundPush(
-    _i6.Nip01Event? event, {
+  _i6.Future<void> processGiftWrapFromForegroundPush(
+    _i7.Nip01Event? event, {
     bool? allowLocalNotification = true,
   }) =>
       (super.noSuchMethod(
@@ -134,12 +135,12 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
           [event],
           {#allowLocalNotification: allowLocalNotification},
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<_i6.Nip01Event?> fetchGiftWrapByIdForPush({
+  _i6.Future<_i7.Nip01Event?> fetchGiftWrapByIdForPush({
     required String? eventIdHex,
     List<String>? relayHints,
   }) =>
@@ -152,12 +153,12 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i5.Future<_i6.Nip01Event?>.value(),
-        returnValueForMissingStub: _i5.Future<_i6.Nip01Event?>.value(),
-      ) as _i5.Future<_i6.Nip01Event?>);
+        returnValue: _i6.Future<_i7.Nip01Event?>.value(),
+        returnValueForMissingStub: _i6.Future<_i7.Nip01Event?>.value(),
+      ) as _i6.Future<_i7.Nip01Event?>);
 
   @override
-  _i5.Future<_i7.Share?> loadShareDataFromPublishedDistributionGiftWrap({
+  _i6.Future<_i8.Share?> loadShareDataFromPublishedDistributionGiftWrap({
     required String? giftWrapEventId,
     required List<String>? relayHints,
   }) =>
@@ -170,42 +171,42 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i5.Future<_i7.Share?>.value(),
-        returnValueForMissingStub: _i5.Future<_i7.Share?>.value(),
-      ) as _i5.Future<_i7.Share?>);
+        returnValue: _i6.Future<_i8.Share?>.value(),
+        returnValueForMissingStub: _i6.Future<_i8.Share?>.value(),
+      ) as _i6.Future<_i8.Share?>);
 
   @override
-  _i5.Future<String?> resolveVaultIdForGiftWrap(_i6.Nip01Event? giftWrap) => (super.noSuchMethod(
+  _i6.Future<String?> resolveVaultIdForGiftWrap(_i7.Nip01Event? giftWrap) => (super.noSuchMethod(
         Invocation.method(
           #resolveVaultIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i5.Future<String?>.value(),
-        returnValueForMissingStub: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
 
   @override
-  _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
-          _i6.Nip01Event? giftWrap) =>
+  _i6.Future<({_i9.NostrKind kind, String recoveryRequestId})?> resolveRecoveryRequestIdForGiftWrap(
+          _i7.Nip01Event? giftWrap) =>
       (super.noSuchMethod(
         Invocation.method(
           #resolveRecoveryRequestIdForGiftWrap,
           [giftWrap],
         ),
-        returnValue: _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
+        returnValue: _i6.Future<({_i9.NostrKind kind, String recoveryRequestId})?>.value(),
         returnValueForMissingStub:
-            _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?>.value(),
-      ) as _i5.Future<({_i8.NostrKind kind, String recoveryRequestId})?>);
+            _i6.Future<({_i9.NostrKind kind, String recoveryRequestId})?>.value(),
+      ) as _i6.Future<({_i9.NostrKind kind, String recoveryRequestId})?>);
 
   @override
-  _i5.Future<void> closeSubscriptions() => (super.noSuchMethod(
+  _i6.Future<void> closeSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeSubscriptions,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
   List<String> getActiveRelays() => (super.noSuchMethod(
@@ -218,29 +219,29 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
       ) as List<String>);
 
   @override
-  _i5.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
+  _i6.Future<void> queryHistoricalGiftWraps({required List<String>? relayUrls}) =>
       (super.noSuchMethod(
         Invocation.method(
           #queryHistoricalGiftWraps,
           [],
           {#relayUrls: relayUrls},
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
+  _i6.Future<String?> getCurrentPubkey() => (super.noSuchMethod(
         Invocation.method(
           #getCurrentPubkey,
           [],
         ),
-        returnValue: _i5.Future<String?>.value(),
-        returnValueForMissingStub: _i5.Future<String?>.value(),
-      ) as _i5.Future<String?>);
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
 
   @override
-  _i5.Future<_i6.Nip01Event?> publishEncryptedEvent({
+  _i6.Future<_i7.Nip01Event?> publishEncryptedEvent({
     required String? content,
     required int? kind,
     required String? recipientPubkey,
@@ -265,12 +266,12 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue: _i5.Future<_i6.Nip01Event?>.value(),
-        returnValueForMissingStub: _i5.Future<_i6.Nip01Event?>.value(),
-      ) as _i5.Future<_i6.Nip01Event?>);
+        returnValue: _i6.Future<_i7.Nip01Event?>.value(),
+        returnValueForMissingStub: _i6.Future<_i7.Nip01Event?>.value(),
+      ) as _i6.Future<_i7.Nip01Event?>);
 
   @override
-  _i5.Future<List<_i6.Nip01Event?>> publishEncryptedEventToMultiple({
+  _i6.Future<List<_i7.Nip01Event?>> publishEncryptedEventToMultiple({
     required String? content,
     required int? kind,
     required List<String>? recipientPubkeys,
@@ -295,12 +296,12 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             #nip40Expiration: nip40Expiration,
           },
         ),
-        returnValue: _i5.Future<List<_i6.Nip01Event?>>.value(<_i6.Nip01Event?>[]),
-        returnValueForMissingStub: _i5.Future<List<_i6.Nip01Event?>>.value(<_i6.Nip01Event?>[]),
-      ) as _i5.Future<List<_i6.Nip01Event?>>);
+        returnValue: _i6.Future<List<_i7.Nip01Event?>>.value(<_i7.Nip01Event?>[]),
+        returnValueForMissingStub: _i6.Future<List<_i7.Nip01Event?>>.value(<_i7.Nip01Event?>[]),
+      ) as _i6.Future<List<_i7.Nip01Event?>>);
 
   @override
-  _i5.Future<_i2.VanishBroadcastHandle> requestAccountVanish({
+  _i6.Future<_i2.PublishBroadcastHandle> requestAccountVanish({
     required List<String>? relayUrls,
     String? reason,
   }) =>
@@ -313,7 +314,7 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             #reason: reason,
           },
         ),
-        returnValue: _i5.Future<_i2.VanishBroadcastHandle>.value(_FakeVanishBroadcastHandle_0(
+        returnValue: _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_0(
           this,
           Invocation.method(
             #requestAccountVanish,
@@ -325,7 +326,7 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
           ),
         )),
         returnValueForMissingStub:
-            _i5.Future<_i2.VanishBroadcastHandle>.value(_FakeVanishBroadcastHandle_0(
+            _i6.Future<_i2.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_0(
           this,
           Invocation.method(
             #requestAccountVanish,
@@ -336,29 +337,29 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
             },
           ),
         )),
-      ) as _i5.Future<_i2.VanishBroadcastHandle>);
+      ) as _i6.Future<_i2.PublishBroadcastHandle>);
 
   @override
-  _i5.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
+  _i6.Future<_i3.Ndk> getNdk() => (super.noSuchMethod(
         Invocation.method(
           #getNdk,
           [],
         ),
-        returnValue: _i5.Future<_i3.Ndk>.value(_FakeNdk_1(
+        returnValue: _i6.Future<_i3.Ndk>.value(_FakeNdk_1(
           this,
           Invocation.method(
             #getNdk,
             [],
           ),
         )),
-        returnValueForMissingStub: _i5.Future<_i3.Ndk>.value(_FakeNdk_1(
+        returnValueForMissingStub: _i6.Future<_i3.Ndk>.value(_FakeNdk_1(
           this,
           Invocation.method(
             #getNdk,
             [],
           ),
         )),
-      ) as _i5.Future<_i3.Ndk>);
+      ) as _i6.Future<_i3.Ndk>);
 
   @override
   void setNdkForTesting(_i3.Ndk? ndk) => super.noSuchMethod(
@@ -379,22 +380,22 @@ class MockNdkService extends _i1.Mock implements _i2.NdkService {
       );
 
   @override
-  _i5.Future<void> dispose() => (super.noSuchMethod(
+  _i6.Future<void> dispose() => (super.noSuchMethod(
         Invocation.method(
           #dispose,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 }
 
 /// A class which mocks [RelayScanService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
+class MockRelayScanService extends _i1.Mock implements _i5.RelayScanService {
   @override
-  _i2.NdkService get ndkService => (super.noSuchMethod(
+  _i4.NdkService get ndkService => (super.noSuchMethod(
         Invocation.getter(#ndkService),
         returnValue: _FakeNdkService_2(
           this,
@@ -404,7 +405,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
           this,
           Invocation.getter(#ndkService),
         ),
-      ) as _i2.NdkService);
+      ) as _i4.NdkService);
 
   @override
   void disposeSync() => super.noSuchMethod(
@@ -416,212 +417,213 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       );
 
   @override
-  _i5.Future<void> initialize() => (super.noSuchMethod(
+  _i6.Future<void> initialize() => (super.noSuchMethod(
         Invocation.method(
           #initialize,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<List<_i9.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
+  _i6.Future<List<_i10.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i5.Future<List<_i9.RelayConfiguration>>.value(<_i9.RelayConfiguration>[]),
+        returnValue: _i6.Future<List<_i10.RelayConfiguration>>.value(<_i10.RelayConfiguration>[]),
         returnValueForMissingStub:
-            _i5.Future<List<_i9.RelayConfiguration>>.value(<_i9.RelayConfiguration>[]),
-      ) as _i5.Future<List<_i9.RelayConfiguration>>);
+            _i6.Future<List<_i10.RelayConfiguration>>.value(<_i10.RelayConfiguration>[]),
+      ) as _i6.Future<List<_i10.RelayConfiguration>>);
 
   @override
-  _i5.Future<_i9.RelayConfiguration?> getRelayConfiguration(String? relayId) => (super.noSuchMethod(
+  _i6.Future<_i10.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i5.Future<_i9.RelayConfiguration?>.value(),
-        returnValueForMissingStub: _i5.Future<_i9.RelayConfiguration?>.value(),
-      ) as _i5.Future<_i9.RelayConfiguration?>);
+        returnValue: _i6.Future<_i10.RelayConfiguration?>.value(),
+        returnValueForMissingStub: _i6.Future<_i10.RelayConfiguration?>.value(),
+      ) as _i6.Future<_i10.RelayConfiguration?>);
 
   @override
-  _i5.Future<void> addRelayConfiguration(_i9.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i6.Future<void> addRelayConfiguration(_i10.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> updateRelayConfiguration(_i9.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i6.Future<void> updateRelayConfiguration(_i10.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> removeRelayConfiguration(String? relayId) => (super.noSuchMethod(
+  _i6.Future<void> removeRelayConfiguration(String? relayId) => (super.noSuchMethod(
         Invocation.method(
           #removeRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> startRelayScanning({Duration? scanInterval}) => (super.noSuchMethod(
+  _i6.Future<void> startRelayScanning({Duration? scanInterval}) => (super.noSuchMethod(
         Invocation.method(
           #startRelayScanning,
           [],
           {#scanInterval: scanInterval},
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> stopRelayScanning() => (super.noSuchMethod(
+  _i6.Future<void> stopRelayScanning() => (super.noSuchMethod(
         Invocation.method(
           #stopRelayScanning,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<bool> isScanningActive() => (super.noSuchMethod(
+  _i6.Future<bool> isScanningActive() => (super.noSuchMethod(
         Invocation.method(
           #isScanningActive,
           [],
         ),
-        returnValue: _i5.Future<bool>.value(false),
-        returnValueForMissingStub: _i5.Future<bool>.value(false),
-      ) as _i5.Future<bool>);
+        returnValue: _i6.Future<bool>.value(false),
+        returnValueForMissingStub: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
 
   @override
-  _i5.Future<_i4.ScanningStatus> getScanningStatus() => (super.noSuchMethod(
+  _i6.Future<_i5.ScanningStatus> getScanningStatus() => (super.noSuchMethod(
         Invocation.method(
           #getScanningStatus,
           [],
         ),
-        returnValue: _i5.Future<_i4.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValue: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
           this,
           Invocation.method(
             #getScanningStatus,
             [],
           ),
         )),
-        returnValueForMissingStub: _i5.Future<_i4.ScanningStatus>.value(_FakeScanningStatus_3(
+        returnValueForMissingStub: _i6.Future<_i5.ScanningStatus>.value(_FakeScanningStatus_3(
           this,
           Invocation.method(
             #getScanningStatus,
             [],
           ),
         )),
-      ) as _i5.Future<_i4.ScanningStatus>);
+      ) as _i6.Future<_i5.ScanningStatus>);
 
   @override
-  _i5.Future<void> scanNow() => (super.noSuchMethod(
+  _i6.Future<void> scanNow() => (super.noSuchMethod(
         Invocation.method(
           #scanNow,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> clearAll() => (super.noSuchMethod(
+  _i6.Future<void> clearAll() => (super.noSuchMethod(
         Invocation.method(
           #clearAll,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> refresh() => (super.noSuchMethod(
+  _i6.Future<void> refresh() => (super.noSuchMethod(
         Invocation.method(
           #refresh,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> syncRelaysFromUrls(List<String>? relayUrls) => (super.noSuchMethod(
+  _i6.Future<void> syncRelaysFromUrls(List<String>? relayUrls) => (super.noSuchMethod(
         Invocation.method(
           #syncRelaysFromUrls,
           [relayUrls],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> ensureScanningStarted() => (super.noSuchMethod(
+  _i6.Future<void> ensureScanningStarted() => (super.noSuchMethod(
         Invocation.method(
           #ensureScanningStarted,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 }
 
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i11.HorcruxNotificationService {
   @override
-  _i5.Future<String> getBaseUrl() => (super.noSuchMethod(
+  _i6.Future<String> getBaseUrl() => (super.noSuchMethod(
         Invocation.method(
           #getBaseUrl,
           [],
         ),
-        returnValue: _i5.Future<String>.value(_i11.dummyValue<String>(
+        returnValue: _i6.Future<String>.value(_i12.dummyValue<String>(
           this,
           Invocation.method(
             #getBaseUrl,
             [],
           ),
         )),
-        returnValueForMissingStub: _i5.Future<String>.value(_i11.dummyValue<String>(
+        returnValueForMissingStub: _i6.Future<String>.value(_i12.dummyValue<String>(
           this,
           Invocation.method(
             #getBaseUrl,
             [],
           ),
         )),
-      ) as _i5.Future<String>);
+      ) as _i6.Future<String>);
 
   @override
-  _i5.Future<void> setBaseUrl(String? override) => (super.noSuchMethod(
+  _i6.Future<void> setBaseUrl(String? override) => (super.noSuchMethod(
         Invocation.method(
           #setBaseUrl,
           [override],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> register({
+  _i6.Future<void> register({
     required String? fcmToken,
-    required _i10.NotifierPlatform? platform,
+    required _i11.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -632,24 +634,24 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
             #platform: platform,
           },
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> deregister() => (super.noSuchMethod(
+  _i6.Future<void> deregister() => (super.noSuchMethod(
         Invocation.method(
           #deregister,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> updateToken({
+  _i6.Future<void> updateToken({
     required String? newToken,
-    required _i10.NotifierPlatform? platform,
+    required _i11.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -660,24 +662,24 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
             #platform: platform,
           },
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
+  _i6.Future<void> replaceConsents(List<String>? authorizedSenders) => (super.noSuchMethod(
         Invocation.method(
           #replaceConsents,
           [authorizedSenders],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
   List<String> computeConsentList({
     required String? currentUserPubkey,
-    required List<_i12.Vault>? vaults,
+    required List<_i13.Vault>? vaults,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -693,30 +695,30 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
       ) as List<String>);
 
   @override
-  _i5.Future<void> syncConsentList() => (super.noSuchMethod(
+  _i6.Future<void> syncConsentList() => (super.noSuchMethod(
         Invocation.method(
           #syncConsentList,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> deleteConsent(String? senderPubkey) => (super.noSuchMethod(
+  _i6.Future<void> deleteConsent(String? senderPubkey) => (super.noSuchMethod(
         Invocation.method(
           #deleteConsent,
           [senderPubkey],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> tryPushForEvent({
-    required _i6.Nip01Event? event,
-    required _i8.NostrKind? kind,
-    required _i12.Vault? vault,
+  _i6.Future<void> tryPushForEvent({
+    required _i7.Nip01Event? event,
+    required _i9.NostrKind? kind,
+    required _i13.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,
   }) =>
@@ -732,12 +734,12 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
             #recoveryApproved: recoveryApproved,
           },
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> push({
+  _i6.Future<void> push({
     required String? recipientPubkey,
     required String? title,
     required String? body,
@@ -758,9 +760,9 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
             #relayHints: relayHints,
           },
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -775,24 +777,24 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i10.HorcruxNot
 /// A class which mocks [LogoutService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLogoutService extends _i1.Mock implements _i13.LogoutService {
+class MockLogoutService extends _i1.Mock implements _i14.LogoutService {
   @override
-  _i5.Future<void> logout() => (super.noSuchMethod(
+  _i6.Future<void> logout() => (super.noSuchMethod(
         Invocation.method(
           #logout,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 
   @override
-  _i5.Future<void> resetDatabase() => (super.noSuchMethod(
+  _i6.Future<void> resetDatabase() => (super.noSuchMethod(
         Invocation.method(
           #resetDatabase,
           [],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
 }

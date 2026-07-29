@@ -5,9 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
-import 'package:horcrux/models/relay_configuration.dart' as _i6;
+import 'package:horcrux/models/relay_configuration.dart' as _i7;
 import 'package:horcrux/services/account_deletion_service.dart' as _i2;
 import 'package:horcrux/services/ndk_service.dart' as _i3;
+import 'package:horcrux/services/publish_service.dart' as _i6;
 import 'package:horcrux/services/relay_scan_service.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 
@@ -62,7 +63,7 @@ class MockAccountDeletionService extends _i1.Mock implements _i2.AccountDeletion
   @override
   _i5.Future<_i2.AccountDeletionResult> deleteAccount({
     String? reason,
-    void Function(List<_i3.RelayVanishStatus>)? onRelayStatusUpdate,
+    void Function(List<_i6.RelayPublishStatus>)? onRelayStatusUpdate,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -136,30 +137,30 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<List<_i6.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
+  _i5.Future<List<_i7.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i5.Future<List<_i6.RelayConfiguration>>.value(<_i6.RelayConfiguration>[]),
+        returnValue: _i5.Future<List<_i7.RelayConfiguration>>.value(<_i7.RelayConfiguration>[]),
         returnValueForMissingStub:
-            _i5.Future<List<_i6.RelayConfiguration>>.value(<_i6.RelayConfiguration>[]),
-      ) as _i5.Future<List<_i6.RelayConfiguration>>);
+            _i5.Future<List<_i7.RelayConfiguration>>.value(<_i7.RelayConfiguration>[]),
+      ) as _i5.Future<List<_i7.RelayConfiguration>>);
 
   @override
-  _i5.Future<_i6.RelayConfiguration?> getRelayConfiguration(String? relayId) => (super.noSuchMethod(
+  _i5.Future<_i7.RelayConfiguration?> getRelayConfiguration(String? relayId) => (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
         ),
-        returnValue: _i5.Future<_i6.RelayConfiguration?>.value(),
-        returnValueForMissingStub: _i5.Future<_i6.RelayConfiguration?>.value(),
-      ) as _i5.Future<_i6.RelayConfiguration?>);
+        returnValue: _i5.Future<_i7.RelayConfiguration?>.value(),
+        returnValueForMissingStub: _i5.Future<_i7.RelayConfiguration?>.value(),
+      ) as _i5.Future<_i7.RelayConfiguration?>);
 
   @override
-  _i5.Future<void> addRelayConfiguration(_i6.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i5.Future<void> addRelayConfiguration(_i7.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
@@ -169,7 +170,7 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> updateRelayConfiguration(_i6.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i5.Future<void> updateRelayConfiguration(_i7.RelayConfiguration? relay) => (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],

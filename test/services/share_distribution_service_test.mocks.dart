@@ -6,15 +6,16 @@
 import 'dart:async' as _i5;
 
 import 'package:horcrux/models/backup_config.dart' as _i10;
-import 'package:horcrux/models/nostr_kinds.dart' as _i15;
+import 'package:horcrux/models/nostr_kinds.dart' as _i16;
 import 'package:horcrux/models/recovery_request.dart' as _i13;
 import 'package:horcrux/models/share.dart' as _i12;
 import 'package:horcrux/models/steward_status.dart' as _i11;
 import 'package:horcrux/models/vault.dart' as _i9;
 import 'package:horcrux/providers/vault_provider.dart' as _i8;
-import 'package:horcrux/services/horcrux_notification_service.dart' as _i16;
+import 'package:horcrux/services/horcrux_notification_service.dart' as _i17;
 import 'package:horcrux/services/login_service.dart' as _i14;
-import 'package:horcrux/services/ndk_service.dart' as _i4;
+import 'package:horcrux/services/ndk_service.dart' as _i15;
+import 'package:horcrux/services/publish_service.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:ndk/domain_layer/entities/broadcast_state.dart' as _i7;
@@ -75,8 +76,8 @@ class _FakeKeyPair_3 extends _i1.SmartFake implements _i3.KeyPair {
         );
 }
 
-class _FakeVanishBroadcastHandle_4 extends _i1.SmartFake implements _i4.VanishBroadcastHandle {
-  _FakeVanishBroadcastHandle_4(
+class _FakePublishBroadcastHandle_4 extends _i1.SmartFake implements _i4.PublishBroadcastHandle {
+  _FakePublishBroadcastHandle_4(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -1294,7 +1295,7 @@ class MockLoginService extends _i1.Mock implements _i14.LoginService {
 /// A class which mocks [NdkService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNdkService extends _i1.Mock implements _i4.NdkService {
+class MockNdkService extends _i1.Mock implements _i15.NdkService {
   MockNdkService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1404,14 +1405,14 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i5.Future<String?>);
 
   @override
-  _i5.Future<({_i15.NostrKind kind, String recoveryRequestId})?>
+  _i5.Future<({_i16.NostrKind kind, String recoveryRequestId})?>
       resolveRecoveryRequestIdForGiftWrap(_i2.Nip01Event? giftWrap) => (super.noSuchMethod(
             Invocation.method(
               #resolveRecoveryRequestIdForGiftWrap,
               [giftWrap],
             ),
-            returnValue: _i5.Future<({_i15.NostrKind kind, String recoveryRequestId})?>.value(),
-          ) as _i5.Future<({_i15.NostrKind kind, String recoveryRequestId})?>);
+            returnValue: _i5.Future<({_i16.NostrKind kind, String recoveryRequestId})?>.value(),
+          ) as _i5.Future<({_i16.NostrKind kind, String recoveryRequestId})?>);
 
   @override
   _i5.Future<void> closeSubscriptions() => (super.noSuchMethod(
@@ -1512,7 +1513,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
       ) as _i5.Future<List<_i2.Nip01Event?>>);
 
   @override
-  _i5.Future<_i4.VanishBroadcastHandle> requestAccountVanish({
+  _i5.Future<_i4.PublishBroadcastHandle> requestAccountVanish({
     required List<String>? relayUrls,
     String? reason,
   }) =>
@@ -1525,7 +1526,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             #reason: reason,
           },
         ),
-        returnValue: _i5.Future<_i4.VanishBroadcastHandle>.value(_FakeVanishBroadcastHandle_4(
+        returnValue: _i5.Future<_i4.PublishBroadcastHandle>.value(_FakePublishBroadcastHandle_4(
           this,
           Invocation.method(
             #requestAccountVanish,
@@ -1536,7 +1537,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
             },
           ),
         )),
-      ) as _i5.Future<_i4.VanishBroadcastHandle>);
+      ) as _i5.Future<_i4.PublishBroadcastHandle>);
 
   @override
   _i5.Future<_i2.Ndk> getNdk() => (super.noSuchMethod(
@@ -1585,7 +1586,7 @@ class MockNdkService extends _i1.Mock implements _i4.NdkService {
 /// A class which mocks [HorcruxNotificationService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNotificationService {
+class MockHorcruxNotificationService extends _i1.Mock implements _i17.HorcruxNotificationService {
   MockHorcruxNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1618,7 +1619,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i5.Future<void> register({
     required String? fcmToken,
-    required _i16.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1646,7 +1647,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i5.Future<void> updateToken({
     required String? newToken,
-    required _i16.NotifierPlatform? platform,
+    required _i17.NotifierPlatform? platform,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1711,7 +1712,7 @@ class MockHorcruxNotificationService extends _i1.Mock implements _i16.HorcruxNot
   @override
   _i5.Future<void> tryPushForEvent({
     required _i2.Nip01Event? event,
-    required _i15.NostrKind? kind,
+    required _i16.NostrKind? kind,
     required _i9.Vault? vault,
     List<String>? relayHints,
     bool? recoveryApproved,

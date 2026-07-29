@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/relay_configuration.dart';
 import 'package:horcrux/screens/delete_account_screen.dart';
 import 'package:horcrux/services/account_deletion_service.dart';
-import 'package:horcrux/services/ndk_service.dart';
+import 'package:horcrux/services/publish_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:horcrux/widgets/row_button_stack.dart';
 import 'package:horcrux/widgets/theme.dart';
@@ -59,22 +59,27 @@ void main() {
     );
   }
 
-  Future<void> openScreen(WidgetTester tester) async {
+  /// Opens the account-deletion screen in the test harness.
+  Future<void> openScreen({required WidgetTester tester}) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
 
-  Future<void> enterConfirmText(WidgetTester tester, [String text = 'DELETE']) async {
-    await tester.enterText(find.byType(TextField), text);
+  /// Enters [confirmationText] into the deletion confirmation field.
+  Future<void> enterConfirmText({
+    required WidgetTester tester,
+    String confirmationText = 'DELETE ALL MY NOSTR DATA',
+  }) async {
+    await tester.enterText(find.byType(TextField), confirmationText);
     await tester.pump();
   }
 
   testWidgets('confirming state renders copy and buttons; Cancel pops without deleting', (
     tester,
   ) async {
-    await openScreen(tester);
+    await openScreen(tester: tester);
 
     expect(find.text('Delete Account'), findsWidgets);
     expect(find.text('Cancel'), findsOneWidget);
@@ -92,7 +97,7 @@ void main() {
   testWidgets(
     'Delete Account button is disabled until the confirm phrase is typed exactly',
     (tester) async {
-      await openScreen(tester);
+      await openScreen(tester: tester);
 
       RowButtonConfig deleteButtonConfig() => tester
           .widgetList<RowButtonStack>(find.byType(RowButtonStack))
@@ -103,10 +108,10 @@ void main() {
       expect(deleteButtonConfig().onPressed, isNull);
       expect(deleteButtonConfig().color, horcrux3Dark.colorScheme.error);
 
-      await enterConfirmText(tester, 'delete');
+      await enterConfirmText(tester: tester, confirmationText: 'delete');
       expect(deleteButtonConfig().onPressed, isNull);
 
-      await enterConfirmText(tester, 'DELETE');
+      await enterConfirmText(tester: tester, confirmationText: 'DELETE ALL MY NOSTR DATA');
       expect(deleteButtonConfig().onPressed, isNotNull);
 
       verifyNever(accountDeletionService.deleteAccount(
@@ -129,8 +134,8 @@ void main() {
       ),
     );
 
-    await openScreen(tester);
-    await enterConfirmText(tester);
+    await openScreen(tester: tester);
+    await enterConfirmText(tester: tester);
 
     // Tap twice before the relay-configuration lookup resolves, simulating a
     // double tap landing before the button has a chance to disable itself.
@@ -150,17 +155,17 @@ void main() {
     tester,
   ) async {
     final completer = Completer<AccountDeletionResult>();
-    void Function(List<RelayVanishStatus>)? capturedCallback;
+    void Function(List<RelayPublishStatus>)? capturedCallback;
     when(accountDeletionService.deleteAccount(
       onRelayStatusUpdate: anyNamed('onRelayStatusUpdate'),
     )).thenAnswer((invocation) {
       capturedCallback = invocation.namedArguments[#onRelayStatusUpdate] as void Function(
-          List<RelayVanishStatus>)?;
+          List<RelayPublishStatus>)?;
       return completer.future;
     });
 
-    await openScreen(tester);
-    await enterConfirmText(tester);
+    await openScreen(tester: tester);
+    await enterConfirmText(tester: tester);
 
     await tester.tap(find.byIcon(Icons.delete_forever));
     await tester.pump();
@@ -170,13 +175,13 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
 
     capturedCallback!([
-      const RelayVanishStatus(
+      const RelayPublishStatus(
         relayUrl: 'wss://relay.one',
-        state: RelayVanishAckState.acknowledged,
+        state: RelayPublishAckState.acknowledged,
       ),
-      const RelayVanishStatus(
+      const RelayPublishStatus(
         relayUrl: 'wss://relay.two',
-        state: RelayVanishAckState.pending,
+        state: RelayPublishAckState.pending,
       ),
     ]);
     await tester.pump();
@@ -205,8 +210,8 @@ void main() {
       ),
     );
 
-    await openScreen(tester);
-    await enterConfirmText(tester);
+    await openScreen(tester: tester);
+    await enterConfirmText(tester: tester);
     await tester.tap(find.byIcon(Icons.delete_forever));
     await tester.pumpAndSettle();
 
@@ -226,23 +231,23 @@ void main() {
       );
     });
 
-    await openScreen(tester);
-    await enterConfirmText(tester);
+    await openScreen(tester: tester);
+    await enterConfirmText(tester: tester);
     await tester.tap(find.byIcon(Icons.delete_forever));
-    // The confirming->broadcasting->failure transition never emits a relay
-    // status update in this test, so the row list keeps its initial pending
-    // spinners in the failure state; pumpAndSettle would time out on those
-    // indeterminate CircularProgressIndicators, so pump explicitly instead.
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
+    // The confirming->broadcasting->failure transition never emits a relay
+    // status update in this test, so both rows start and stay pending; the
+    // screen finalizes them to failed once the broadcast is known to be
+    // over, rather than leaving stale spinners for a request that's done.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byIcon(Icons.cancel), findsNWidgets(2));
     expect(find.textContaining('has not been'), findsOneWidget);
     expect(find.text('Try Again'), findsOneWidget);
     expect(callCount, 1);
 
     await tester.tap(find.text('Try Again'));
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(callCount, 2);
   });

@@ -6,6 +6,7 @@ import 'package:horcrux/services/account_deletion_service.dart';
 import 'package:horcrux/services/horcrux_notification_service.dart';
 import 'package:horcrux/services/logout_service.dart';
 import 'package:horcrux/services/ndk_service.dart';
+import 'package:horcrux/services/publish_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -31,7 +32,7 @@ void main() {
       const RelayConfiguration(id: 'r2', url: 'wss://relay.two', name: 'relay.two'),
     ];
 
-    /// Builds a fake [VanishBroadcastHandle] whose `done` future resolves
+    /// Builds a fake [PublishBroadcastHandle] whose `done` future resolves
     /// only after [statusEvents] (if any) have all been emitted on
     /// `statusUpdates`, mirroring how `ndk`'s real `broadcastDoneFuture` is
     /// derived from `broadcastDone.last`. Events are emitted from a macrotask
@@ -39,12 +40,12 @@ void main() {
     /// `AccountDeletionService.deleteAccount`'s `statusUpdates.listen(...)`
     /// call -- which happens synchronously once it awaits this handle -- is
     /// always attached before the first event fires.
-    VanishBroadcastHandle handleFor(
+    PublishBroadcastHandle handleFor(
       List<String> relayUrls,
       Set<String> acknowledged, {
-      List<List<RelayVanishStatus>> statusEvents = const [],
+      List<List<RelayPublishStatus>> statusEvents = const [],
     }) {
-      final controller = StreamController<List<RelayVanishStatus>>.broadcast();
+      final controller = StreamController<List<RelayPublishStatus>>.broadcast();
       final doneCompleter = Completer<Set<String>>();
       Future<void>(() async {
         for (final event in statusEvents) {
@@ -53,7 +54,7 @@ void main() {
         await controller.close();
         doneCompleter.complete(acknowledged);
       });
-      return VanishBroadcastHandle(
+      return PublishBroadcastHandle(
         relayUrls: relayUrls,
         statusUpdates: controller.stream,
         done: doneCompleter.future,
@@ -131,23 +132,23 @@ void main() {
 
     test('forwards live relay status updates via onRelayStatusUpdate', () async {
       const pending = [
-        RelayVanishStatus(
+        RelayPublishStatus(
           relayUrl: 'wss://relay.one',
-          state: RelayVanishAckState.pending,
+          state: RelayPublishAckState.pending,
         ),
-        RelayVanishStatus(
+        RelayPublishStatus(
           relayUrl: 'wss://relay.two',
-          state: RelayVanishAckState.pending,
+          state: RelayPublishAckState.pending,
         ),
       ];
       const settled = [
-        RelayVanishStatus(
+        RelayPublishStatus(
           relayUrl: 'wss://relay.one',
-          state: RelayVanishAckState.acknowledged,
+          state: RelayPublishAckState.acknowledged,
         ),
-        RelayVanishStatus(
+        RelayPublishStatus(
           relayUrl: 'wss://relay.two',
-          state: RelayVanishAckState.failed,
+          state: RelayPublishAckState.failed,
         ),
       ];
       when(
@@ -160,7 +161,7 @@ void main() {
         ),
       );
 
-      final received = <List<RelayVanishStatus>>[];
+      final received = <List<RelayPublishStatus>>[];
       await service.deleteAccount(onRelayStatusUpdate: received.add);
 
       expect(received, [pending, settled]);
@@ -168,12 +169,12 @@ void main() {
 
     test('cancels the relay-status subscription even when the broadcast fails', () async {
       final relayUrls = ['wss://relay.one', 'wss://relay.two'];
-      final controller = StreamController<List<RelayVanishStatus>>.broadcast();
+      final controller = StreamController<List<RelayPublishStatus>>.broadcast();
       final doneCompleter = Completer<Set<String>>();
       // Complete the error from a later task, mirroring handleFor, so the
       // service's `await broadcast.done` is already attached when it fires.
       Future<void>(() => doneCompleter.completeError(Exception('broadcast failed')));
-      final handle = VanishBroadcastHandle(
+      final handle = PublishBroadcastHandle(
         relayUrls: relayUrls,
         statusUpdates: controller.stream,
         done: doneCompleter.future,

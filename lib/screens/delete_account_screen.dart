@@ -9,6 +9,7 @@ import '../services/account_deletion_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/logger.dart';
 import '../services/ndk_service.dart';
+import '../services/publish_service.dart';
 import '../services/relay_scan_service.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -18,7 +19,7 @@ enum _DeleteState { confirming, broadcasting, success, failure }
 
 /// Phrase the user must type in the confirming state before "Delete Account"
 /// is enabled, to guard against an accidental tap on this irreversible action.
-const _confirmPhrase = 'DELETE';
+const _confirmPhrase = 'DELETE ALL MY NOSTR DATA';
 
 /// Full-screen flow for irrevocably deleting the user's account: signs and
 /// broadcasts a NIP-62 "Request to Vanish" to every configured relay, then
@@ -32,7 +33,7 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   _DeleteState _state = _DeleteState.confirming;
-  List<RelayVanishStatus> _relayStatuses = [];
+  List<RelayPublishStatus> _relayStatuses = [];
   final TextEditingController _confirmController = TextEditingController();
   bool _deletionInFlight = false;
 
@@ -58,7 +59,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
         _state = _DeleteState.broadcasting;
         _relayStatuses = [
           for (final relay in relays)
-            RelayVanishStatus(relayUrl: relay.url, state: RelayVanishAckState.pending),
+            RelayPublishStatus(relayUrl: relay.url, state: RelayPublishAckState.pending),
         ];
       });
 
@@ -83,16 +84,36 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           // main.dart's login-state listener will pushAndRemoveUntil(OnboardingScreen)
           // once isLoggedInProvider flips false; no manual navigation needed here.
         } else {
-          setState(() => _state = _DeleteState.failure);
+          setState(() {
+            _relayStatuses = _finalizePendingAsFailed(_relayStatuses);
+            _state = _DeleteState.failure;
+          });
         }
       } catch (e) {
         Log.error('Error deleting account', e);
         if (!mounted) return;
-        setState(() => _state = _DeleteState.failure);
+        setState(() {
+          _relayStatuses = _finalizePendingAsFailed(_relayStatuses);
+          _state = _DeleteState.failure;
+        });
       }
     } finally {
       _deletionInFlight = false;
     }
+  }
+
+  /// Once the broadcast has settled, any relay still in
+  /// [RelayPublishAckState.pending] never responded in time -- render those
+  /// as failed rather than leaving a spinner for an operation that's
+  /// actually over.
+  List<RelayPublishStatus> _finalizePendingAsFailed(List<RelayPublishStatus> statuses) {
+    return [
+      for (final status in statuses)
+        if (status.state == RelayPublishAckState.pending)
+          RelayPublishStatus(relayUrl: status.relayUrl, state: RelayPublishAckState.failed)
+        else
+          status,
+    ];
   }
 
   @override
@@ -194,7 +215,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _relayStatuses.length,
               separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) => _VanishRelayRow(status: _relayStatuses[index]),
+              itemBuilder: (context, index) =>
+                  _RelayPublishStatusRow(status: _relayStatuses[index]),
             ),
           ),
         ],
@@ -250,7 +272,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _relayStatuses.length,
               separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) => _VanishRelayRow(status: _relayStatuses[index]),
+              itemBuilder: (context, index) =>
+                  _RelayPublishStatusRow(status: _relayStatuses[index]),
             ),
           ),
           RowButtonStack(
@@ -273,10 +296,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   }
 }
 
-class _VanishRelayRow extends StatelessWidget {
-  final RelayVanishStatus status;
+class _RelayPublishStatusRow extends StatelessWidget {
+  final RelayPublishStatus status;
 
-  const _VanishRelayRow({required this.status});
+  const _RelayPublishStatusRow({required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -295,17 +318,17 @@ class _VanishRelayRow extends StatelessWidget {
             child: Text(status.relayUrl, style: theme.textTheme.bodyMedium),
           ),
           switch (status.state) {
-            RelayVanishAckState.pending => const SizedBox(
+            RelayPublishAckState.pending => const SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-            RelayVanishAckState.acknowledged => Icon(
+            RelayPublishAckState.acknowledged => Icon(
                 Icons.check_circle,
                 size: 20,
                 color: theme.colorScheme.onSurface,
               ),
-            RelayVanishAckState.failed => Icon(
+            RelayPublishAckState.failed => Icon(
                 Icons.cancel,
                 size: 20,
                 color: theme.colorScheme.error,

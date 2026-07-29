@@ -3,6 +3,7 @@ import 'horcrux_notification_service.dart';
 import 'logger.dart';
 import 'logout_service.dart';
 import 'ndk_service.dart';
+import 'publish_service.dart';
 import 'relay_scan_service.dart';
 
 /// Provider for [AccountDeletionService].
@@ -68,13 +69,13 @@ class AccountDeletionService {
   /// broadcast status every time any relay responds -- intended to drive a
   /// UI (e.g. [DeleteAccountScreen]) while the broadcast is in flight. It may
   /// fire zero or more times before this method resolves and has no bearing
-  /// on the local-wipe decision, which is always based on [VanishBroadcastHandle.done].
+  /// on the local-wipe decision, which is always based on [PublishBroadcastHandle.done].
   ///
   /// Throws a [StateError] if no relays are configured -- there is nowhere
   /// to send the vanish request.
   Future<AccountDeletionResult> deleteAccount({
     String? reason,
-    void Function(List<RelayVanishStatus> statuses)? onRelayStatusUpdate,
+    void Function(List<RelayPublishStatus> statuses)? onRelayStatusUpdate,
   }) async {
     final relayConfigurations = await _relayScanService.getRelayConfigurations(
       enabledOnly: true,

@@ -100,45 +100,6 @@ final Provider<NdkService> ndkServiceProvider = Provider<NdkService>((ref) {
   return service;
 });
 
-/// One relay's live status while a [NdkService.requestAccountVanish]
-/// broadcast is in flight.
-enum RelayVanishAckState { pending, acknowledged, failed }
-
-class RelayVanishStatus {
-  final String relayUrl;
-  final RelayVanishAckState state;
-  final String message;
-
-  const RelayVanishStatus({
-    required this.relayUrl,
-    required this.state,
-    this.message = '',
-  });
-}
-
-/// Handle returned by [NdkService.requestAccountVanish]: lets the caller
-/// observe live per-relay progress (e.g. to drive a UI) as well as await the
-/// final outcome.
-class VanishBroadcastHandle {
-  /// The relays the vanish request was sent to.
-  final List<String> relayUrls;
-
-  /// Emits the full per-relay status snapshot every time any relay responds.
-  /// A relay not yet in [RelayVanishAckState.acknowledged] or
-  /// [RelayVanishAckState.failed] by the time [done] resolves timed out.
-  final Stream<List<RelayVanishStatus>> statusUpdates;
-
-  /// Resolves with the subset of [relayUrls] that acknowledged the
-  /// broadcast; an empty result means no relay confirmed receipt.
-  final Future<Set<String>> done;
-
-  const VanishBroadcastHandle({
-    required this.relayUrls,
-    required this.statusUpdates,
-    required this.done,
-  });
-}
-
 /// Service for managing NDK (Nostr Development Kit) connections and subscriptions
 /// Handles real-time listening for recovery requests and key share events
 class NdkService {
@@ -1200,14 +1161,14 @@ class NdkService {
   /// pubkey and kind directly to act on it, so it cannot be gift wrapped.
   ///
   /// Broadcasts directly via the NDK broadcast primitive (bypassing
-  /// [PublishService]'s persistent outbox). Returns a [VanishBroadcastHandle]
+  /// [PublishService]'s persistent outbox). Returns a [PublishBroadcastHandle]
   /// exposing both a live per-relay status stream (for UI feedback while the
-  /// broadcast is in flight) and a [VanishBroadcastHandle.done] future the
+  /// broadcast is in flight) and a [PublishBroadcastHandle.done] future the
   /// caller can await to decide whether it's safe to wipe local identity: an
   /// outbox retry would race a local wipe performed right after broadcasting.
   ///
   /// [relayUrls] must be non-empty.
-  Future<VanishBroadcastHandle> requestAccountVanish({
+  Future<PublishBroadcastHandle> requestAccountVanish({
     required List<String> relayUrls,
     String? reason,
   }) async {
@@ -1241,7 +1202,7 @@ class NdkService {
     );
 
     final statusUpdates = response.broadcastDone.map(
-      (results) => results.map((result) => _toVanishStatus(response: result)).toList(),
+      (results) => results.map((result) => _toRelayPublishStatus(response: result)).toList(),
     );
 
     final done = response.broadcastDoneFuture.then((results) {
@@ -1256,22 +1217,22 @@ class NdkService {
       return acknowledged;
     });
 
-    return VanishBroadcastHandle(
+    return PublishBroadcastHandle(
       relayUrls: relayUrls,
       statusUpdates: statusUpdates,
       done: done,
     );
   }
 
-  /// Maps an NDK relay broadcast response to its UI-facing vanish status.
-  RelayVanishStatus _toVanishStatus({required RelayBroadcastResponse response}) {
-    return RelayVanishStatus(
+  /// Maps an NDK relay broadcast response to its UI-facing publish status.
+  RelayPublishStatus _toRelayPublishStatus({required RelayBroadcastResponse response}) {
+    return RelayPublishStatus(
       relayUrl: response.relayUrl,
       state: !response.okReceived
-          ? RelayVanishAckState.pending
+          ? RelayPublishAckState.pending
           : response.broadcastSuccessful
-              ? RelayVanishAckState.acknowledged
-              : RelayVanishAckState.failed,
+              ? RelayPublishAckState.acknowledged
+              : RelayPublishAckState.failed,
       message: response.msg,
     );
   }

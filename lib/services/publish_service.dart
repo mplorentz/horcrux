@@ -24,6 +24,46 @@ class PublishQueueResult {
   bool get allRelaysSucceeded => failedRelays.isEmpty && successfulRelays.isNotEmpty;
 }
 
+/// One relay's live acknowledgement status while a direct (non-outbox)
+/// broadcast is in flight -- see [PublishBroadcastHandle].
+enum RelayPublishAckState { pending, acknowledged, failed }
+
+class RelayPublishStatus {
+  final String relayUrl;
+  final RelayPublishAckState state;
+  final String message;
+
+  const RelayPublishStatus({
+    required this.relayUrl,
+    required this.state,
+    this.message = '',
+  });
+}
+
+/// Handle for a direct (non-outbox) broadcast: lets the caller observe live
+/// per-relay progress (e.g. to drive a UI) as well as await the final
+/// outcome. Used by callers that bypass [PublishService.enqueueEvent], e.g.
+/// [NdkService.requestAccountVanish].
+class PublishBroadcastHandle {
+  /// The relays the event was broadcast to.
+  final List<String> relayUrls;
+
+  /// Emits the full per-relay status snapshot every time any relay responds.
+  /// A relay not yet in [RelayPublishAckState.acknowledged] or
+  /// [RelayPublishAckState.failed] by the time [done] resolves timed out.
+  final Stream<List<RelayPublishStatus>> statusUpdates;
+
+  /// Resolves with the subset of [relayUrls] that acknowledged the
+  /// broadcast; an empty result means no relay confirmed receipt.
+  final Future<Set<String>> done;
+
+  const PublishBroadcastHandle({
+    required this.relayUrls,
+    required this.statusUpdates,
+    required this.done,
+  });
+}
+
 /// Persists publish work in the `outbox` / `outbox_relays` tables and drains it
 /// with periodic retries (replacing the legacy SharedPreferences queue).
 class PublishService {
