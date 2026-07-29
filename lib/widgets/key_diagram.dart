@@ -237,7 +237,6 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
-                  size: diagramSize,
                 );
               },
             ),
