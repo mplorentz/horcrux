@@ -371,8 +371,8 @@ class VaultShareService {
       }
 
       // Read reason from tags
-      final reason = _extractTagValue(event.tags, 'reason') ??
-          'This invitation has already been redeemed';
+      final reason =
+          _extractTagValue(event.tags, 'reason') ?? 'This invitation has already been redeemed';
 
       await repository.saveVault(
         vault.copyWith(
