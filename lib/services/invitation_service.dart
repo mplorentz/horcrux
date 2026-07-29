@@ -556,6 +556,7 @@ class InvitationService {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
+          vaultId: invitation.vaultId,
           inviteePubkey: invitation.redeemedBy!,
           relayUrls: invitation.relayUrls,
           reason: reason,
@@ -730,6 +731,7 @@ class InvitationService {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
+          vaultId: invitation.vaultId,
           inviteePubkey: inviteePubkey,
           relayUrls: invitation.relayUrls,
           reason: 'This invitation has already been redeemed by another user',

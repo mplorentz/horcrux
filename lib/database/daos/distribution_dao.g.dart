@@ -7,5 +7,6 @@ mixin _$DistributionDaoMixin on DatabaseAccessor<AppDatabase> {
   $VaultsTable get vaults => attachedDatabase.vaults;
   $DistributionsTable get distributions => attachedDatabase.distributions;
   $StewardsTable get stewards => attachedDatabase.stewards;
-  $DistributionSharesTable get distributionShares => attachedDatabase.distributionShares;
+  $DistributionSharesTable get distributionShares =>
+      attachedDatabase.distributionShares;
 }

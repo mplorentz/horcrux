@@ -339,6 +339,57 @@ class VaultShareService {
     Log.info('removeVaultShare: removed all held_shares for vault $vaultId');
   }
 
+  /// Process an invitation invalid event (kind invitationInvalid).
+  ///
+  /// Archives the vault with the reason from the event and deletes its held
+  /// share. Mirrors processKeyHolderRemoval — the authorizer guarantees the
+  /// event came from the vault owner and carries a vault_id tag.
+  Future<void> processInvitationInvalid({required Nip01Event event}) async {
+    try {
+      if (event.kind != NostrKind.invitationInvalid.value) {
+        throw ArgumentError(
+          'Invalid event kind: expected ${NostrKind.invitationInvalid.value}, '
+          'got ${event.kind}',
+        );
+      }
+
+      final vaultId = _extractTagValue(event.tags, 'vault_id');
+      if (vaultId == null || vaultId.isEmpty) {
+        throw ArgumentError('Missing vault_id tag in invitation invalid event');
+      }
+
+      Log.info(
+        'processInvitationInvalid: vault ${vaultId.substring(0, 8)}...',
+      );
+
+      final vault = await repository.getVault(vaultId);
+      if (vault == null) {
+        Log.warning(
+          'processInvitationInvalid: vault $vaultId not found — may already be deleted',
+        );
+        return;
+      }
+
+      // Read reason from tags
+      final reason = _extractTagValue(event.tags, 'reason') ??
+          'This invitation has already been redeemed';
+
+      await repository.saveVault(
+        vault.copyWith(
+          archivedAt: DateTime.now(),
+          archivedReason: reason,
+        ),
+      );
+      Log.info('processInvitationInvalid: archived vault $vaultId');
+
+      await removeVaultShare(vaultId);
+      Log.info('processInvitationInvalid: removed share for vault $vaultId');
+    } catch (e) {
+      Log.error('processInvitationInvalid: error processing event ${event.id}', e);
+      rethrow;
+    }
+  }
+
   /// Process a steward removal event (kind keyHolderRemoved).
   ///
   /// Archives the vault and deletes its held share.
