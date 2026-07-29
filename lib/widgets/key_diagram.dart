@@ -177,7 +177,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
           // Height: 2 * stewardRadius + vaultSize + padding
           const stewardRadius = 120.0;
           const vaultSize = 40.0;
-          final height = stewardRadius * 2 + vaultSize + 32;
+          const height = stewardRadius * 2 + vaultSize + 32;
           return SizedBox(
             width: availableWidth,
             height: height.clamp(200, 350),
@@ -323,7 +323,7 @@ class KeyDiagramPainter extends CustomPainter {
     }
 
     // Draw vault icon at center
-    final vaultScale = 1.0;
+    const vaultScale = 1.0;
     final dialRotation =
         recoveryPhase == RecoveryPhase.dialRotate ? recoveryProgress * 90.0 * (pi / 180) : 0.0;
     _drawVaultIcon(canvas, center, vaultScale, dialRotation);
