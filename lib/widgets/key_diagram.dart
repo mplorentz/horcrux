@@ -116,7 +116,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
 
   void _startRecoveryDemo() {
     // Guard: recovery demo requires at least 1 steward and threshold >= 1.
-    if (widget.stewards.length < 1 || widget.threshold < 1) {
+    if (widget.stewards.isEmpty || widget.threshold < 1) {
       return;
     }
     _recoveryPhase = RecoveryPhase.dialRotate;
