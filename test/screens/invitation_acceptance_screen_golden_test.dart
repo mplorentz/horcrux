@@ -43,75 +43,6 @@ void main() {
   }
 
   group('InvitationAcceptanceScreen Golden Tests', () {
-    testGoldens('loading state', (tester) async {
-      final harness = await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
-        overrides: [
-          // Use a Stream that never emits to show loading state
-          invitationByCodeProvider('test-code').overrideWith(
-            (ref) => Stream<InvitationLink?>.multi((controller) {
-              // Never emit, keeping the stream in loading state
-              // Don't await anything - just return without emitting
-            }),
-          ),
-          currentPublicKeyProvider.overrideWith(
-            (ref) => Future.value(testPubkey),
-          ),
-        ],
-
-        waitForSettle: false, // Loading state
-      );
-
-      await screenMatchesGoldenWithoutSettle<InvitationAcceptanceScreen>(
-        tester,
-        'invitation_acceptance_screen_loading',
-      );
-
-      await harness.dispose();
-    });
-
-    testGoldens('error state', (tester) async {
-      final harness = await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'test-code'),
-        overrides: [
-          invitationByCodeProvider(
-            'test-code',
-          ).overrideWith((ref) => Stream.error('Failed to load invitation')),
-          currentPublicKeyProvider.overrideWith(
-            (ref) => Future.value(testPubkey),
-          ),
-        ],
-      );
-
-      await screenMatchesGolden(tester, 'invitation_acceptance_screen_error');
-
-      await harness.dispose();
-    });
-
-    testGoldens('invitation not found', (tester) async {
-      final harness = await pumpGoldenWidget(
-        tester,
-        const InvitationAcceptanceScreen(inviteCode: 'invalid-code'),
-        overrides: [
-          invitationByCodeProvider(
-            'invalid-code',
-          ).overrideWith((ref) => Stream.value(null)),
-          currentPublicKeyProvider.overrideWith(
-            (ref) => Future.value(testPubkey),
-          ),
-        ],
-      );
-
-      await screenMatchesGolden(
-        tester,
-        'invitation_acceptance_screen_not_found',
-      );
-
-      await harness.dispose();
-    });
-
     testGoldens('active invitation - logged in user', (tester) async {
       final invitation = createTestInvitation(
         inviteCode: 'active-code',
@@ -122,11 +53,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -151,11 +79,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-2'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code-2',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -185,11 +110,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-3'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code-3',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -214,11 +136,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-4'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code-4',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith((ref) => Future.value(null)),
         ],
       );
@@ -241,11 +160,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-5'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code-5',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith((ref) {
             // Use a Completer that never completes to simulate loading state
             final completer = Completer<String?>();
@@ -274,11 +190,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'active-code-6'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'active-code-6',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.error('Failed to check account'),
           ),
@@ -305,11 +218,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'redeemed-code'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'redeemed-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -334,11 +244,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'denied-code'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'denied-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -360,11 +267,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'invalidated-code'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'invalidated-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -389,11 +293,8 @@ void main() {
 
       final harness = await pumpGoldenWidget(
         tester,
-        const InvitationAcceptanceScreen(inviteCode: 'error-code'),
+        InvitationAcceptanceScreen(invitation: invitation),
         overrides: [
-          invitationByCodeProvider(
-            'error-code',
-          ).overrideWith((ref) => Stream.value(invitation)),
           currentPublicKeyProvider.overrideWith(
             (ref) => Future.value(testPubkey),
           ),
@@ -418,9 +319,6 @@ void main() {
       );
 
       final harness = GoldenTestHarness.withOverrides([
-        invitationByCodeProvider(
-          'device-test-code',
-        ).overrideWith((ref) => Stream.value(invitation)),
         currentPublicKeyProvider.overrideWith(
           (ref) => Future.value(testPubkey),
         ),
@@ -431,9 +329,7 @@ void main() {
           devices: [Device.phone, Device.iphone11, Device.tabletPortrait],
         )
         ..addScenario(
-          widget: const InvitationAcceptanceScreen(
-            inviteCode: 'device-test-code',
-          ),
+          widget: InvitationAcceptanceScreen(invitation: invitation),
           name: 'active_invitation',
         );
 
