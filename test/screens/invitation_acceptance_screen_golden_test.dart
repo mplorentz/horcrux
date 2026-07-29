@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:horcrux/models/invitation_link.dart';
 import 'package:horcrux/models/invitation_status.dart';
-import 'package:horcrux/providers/invitation_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/screens/invitation_acceptance_screen.dart';
 import '../helpers/golden_test_helpers.dart';
