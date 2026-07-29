@@ -38,7 +38,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
 
   void _onStewardSliderChanged(double value) {
     setState(() {
-      _stewardSliderValue = value.round();
+      _stewardSliderValue = value.round().clamp(1, 8);
       _stewardCount = _stewardSliderValue;
       _threshold = _threshold.clamp(1, _stewardCount);
       _thresholdSliderValue = _threshold;
@@ -48,7 +48,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
 
   void _onThresholdSliderChanged(double value) {
     setState(() {
-      _thresholdSliderValue = value.round();
+      _thresholdSliderValue = value.round().clamp(1, _stewardCount);
       _threshold = _thresholdSliderValue;
       _changeCounter++;
     });

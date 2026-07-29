@@ -115,6 +115,10 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
   }
 
   void _startRecoveryDemo() {
+    // Guard: recovery demo requires at least 1 steward and threshold >= 1.
+    if (widget.stewards.length < 1 || widget.threshold < 1) {
+      return;
+    }
     _recoveryPhase = RecoveryPhase.dialRotate;
     _recoveryStep = 0;
     _recoveryController.duration = Duration(
@@ -126,6 +130,7 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
   void _onRecoveryTick() {
     final progress = _recoveryAnimation.value;
     final m = widget.threshold;
+    if (m < 1) return; // safety: recovery demo shouldn't start with 0 threshold
     final totalMs = _recoveryController.duration!.inMilliseconds.toDouble();
     final dialEnd = 400.0 / totalMs;
     final checkStart = 400.0 / totalMs;
