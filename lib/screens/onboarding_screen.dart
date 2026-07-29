@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
-import 'how_it_works_screen.dart';
+import 'account_choice_screen.dart';
 
 /// Onboarding screen shown when user is not logged in
 class OnboardingScreen extends ConsumerWidget {
@@ -72,18 +73,33 @@ class OnboardingScreen extends ConsumerWidget {
                 },
               ),
             ),
-            // Learn More button at bottom
+            // Learn More link at bottom
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Center(
+                child: OutlinedButton(
+                  onPressed: () {
+                    launchUrl(
+                      Uri.parse('https://horcruxbackup.com/how-it-works/'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: const Text('Learn More'),
+                ),
+              ),
+            ),
+            // Get Started button at bottom
             RowButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const HowItWorksScreen(),
+                    builder: (context) => const AccountChoiceScreen(),
                   ),
                 );
               },
               icon: Icons.arrow_forward,
-              text: 'Learn More',
+              text: 'Get Started',
               addBottomSafeArea: true,
             ),
           ],

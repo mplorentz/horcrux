@@ -21,7 +21,8 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
   int _stewardCount = 3;
   int _threshold = 2;
   int _changeCounter = 0;
-  bool _showRecoveryDemo = false;
+  int _stewardSliderValue = 3;
+  int _thresholdSliderValue = 2;
 
   List<KeyDiagramSteward> get _stewards {
     return List.generate(
@@ -34,32 +35,21 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
     );
   }
 
-  void _changeStewards(int delta) {
+  void _onStewardSliderChanged(double value) {
     setState(() {
-      _stewardCount = (_stewardCount + delta).clamp(1, 8);
+      _stewardSliderValue = value.round();
+      _stewardCount = _stewardSliderValue;
       _threshold = _threshold.clamp(1, _stewardCount);
+      _thresholdSliderValue = _threshold;
       _changeCounter++;
     });
   }
 
-  void _changeThreshold(int delta) {
+  void _onThresholdSliderChanged(double value) {
     setState(() {
-      _threshold = (_threshold + delta).clamp(1, _stewardCount);
+      _thresholdSliderValue = value.round();
+      _threshold = _thresholdSliderValue;
       _changeCounter++;
-    });
-  }
-
-  void _triggerRecoveryDemo() {
-    setState(() {
-      _showRecoveryDemo = true;
-    });
-    // Reset after animation completes (duration: threshold * 400 + 1200 ms)
-    Future.delayed(Duration(milliseconds: _threshold * 400 + 1500), () {
-      if (mounted) {
-        setState(() {
-          _showRecoveryDemo = false;
-        });
-      }
     });
   }
 
@@ -107,39 +97,8 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Stepper controls
-                          _buildStepperControls(context),
-                          const SizedBox(height: 16),
-
-                          // Demo Recovery button (centered)
-                          Center(
-                            child: OutlinedButton(
-                              onPressed: _stewardCount >= 2 && _threshold >= 1
-                                  ? _triggerRecoveryDemo
-                                  : null,
-                              child: Text(
-                                'Demo Recovery',
-                                style: TextStyle(
-                                  fontFamily: 'Archivo',
-                                  fontSize: 14,
-                                  color: primaryText,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Supporting line (centered)
-                          Center(
-                            child: Text(
-                              'Your secrets, backed up\nto people you trust.',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: secondaryText,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                          // Slider controls
+                          _buildSliderControls(context),
                         ],
                       ),
                     ),
@@ -215,40 +174,39 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
       stewards: _stewards,
       threshold: _threshold,
       changeCounter: _changeCounter,
-      showRecoveryDemo: _showRecoveryDemo,
+      showRecoveryDemo: false,
     );
   }
 
-  Widget _buildStepperControls(BuildContext context) {
+  Widget _buildSliderControls(BuildContext context) {
     final theme = Theme.of(context);
     final primaryText = theme.colorScheme.onSurface;
-    final secondaryText = theme.colorScheme.outline;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Stewards row
+        // Stewards slider
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Stewards:',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: secondaryText,
-              ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: _stewardCount > 1 ? () => _changeStewards(-1) : null,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(36, 36),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 90,
+              child: Text(
+                'Stewards',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: primaryText,
                 ),
               ),
-              child: const Text('−', style: TextStyle(fontSize: 18)),
             ),
-            const SizedBox(width: 12),
+            Expanded(
+              child: Slider(
+                value: _stewardSliderValue.toDouble(),
+                min: 1,
+                max: 8,
+                divisions: 7,
+                label: '$_stewardCount',
+                onChanged: _onStewardSliderChanged,
+              ),
+            ),
             SizedBox(
               width: 24,
               child: Text(
@@ -259,44 +217,30 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: _stewardCount < 8 ? () => _changeStewards(1) : null,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(36, 36),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              child: const Text('+', style: TextStyle(fontSize: 18)),
-            ),
           ],
         ),
-        const SizedBox(height: 16),
-        // Threshold row
+        // Threshold slider
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Threshold:',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: secondaryText,
-              ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: _threshold > 1 ? () => _changeThreshold(-1) : null,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(36, 36),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 90,
+              child: Text(
+                'Threshold',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: primaryText,
                 ),
               ),
-              child: const Text('−', style: TextStyle(fontSize: 18)),
             ),
-            const SizedBox(width: 12),
+            Expanded(
+              child: Slider(
+                value: _thresholdSliderValue.toDouble(),
+                min: 1,
+                max: _stewardCount.toDouble(),
+                divisions: _stewardCount - 1,
+                label: '$_threshold',
+                onChanged: _onThresholdSliderChanged,
+              ),
+            ),
             SizedBox(
               width: 24,
               child: Text(
@@ -306,18 +250,6 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                   color: primaryText,
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            OutlinedButton(
-              onPressed: _threshold < _stewardCount ? () => _changeThreshold(1) : null,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(36, 36),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              child: const Text('+', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),

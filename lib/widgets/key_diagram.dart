@@ -296,14 +296,23 @@ class KeyDiagramPainter extends CustomPainter {
     final solidSpokes = _computeSolidSpokes(n);
 
     // Draw spokes behind everything
+    // Lines start 5px outside vault box and stop 5px short of key icons
+    final vaultHalf = 20.0; // vaultSize / 2
+    final spokeStartRadius = vaultHalf + 5;
+    final spokeEndFraction = 0.62; // ~5px before key icon at 0.67
     for (int i = 0; i < n; i++) {
       final isSolid = solidSpokes.contains(i);
+      final spokeStart = Offset.lerp(
+        center,
+        positions[i],
+        spokeStartRadius / effectiveRadius,
+      )!;
       final spokeEnd = Offset.lerp(
         center,
         positions[i],
-        0.67, // key icon is at ~2/3 of radius
+        spokeEndFraction,
       )!;
-      _drawSpoke(canvas, center, spokeEnd, isSolid, i);
+      _drawSpoke(canvas, spokeStart, spokeEnd, isSolid, i);
     }
 
     // Draw key icons at spoke endpoints
@@ -341,14 +350,14 @@ class KeyDiagramPainter extends CustomPainter {
     if (isSolid) {
       // Solid spoke: 2pt
       final paint = Paint()
-        ..color = dividerColor
+        ..color = primaryText
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
       canvas.drawLine(from, to, paint);
     } else {
       // Dotted spoke: 1pt, 4pt dash 4pt gap
       final paint = Paint()
-        ..color = dividerColor
+        ..color = primaryText
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
       final path = Path()..moveTo(from.dx, from.dy)..lineTo(to.dx, to.dy);
@@ -375,25 +384,25 @@ class KeyDiagramPainter extends CustomPainter {
     // Draw square vault
     final vaultRect = Rect.fromCenter(center: center, width: vaultSize, height: vaultSize);
     final vaultPaint = Paint()
-      ..color = dividerColor
+      ..color = primaryText
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawRect(vaultRect, vaultPaint);
 
-    // Draw combination dial on right edge
-    final dialCenter = center + Offset(half + 10, 0);
+    // Draw combination dial INSIDE the vault box (bottom-right corner)
+    final dialCenter = center + Offset(half - 10, half - 10);
     // Dial outer circle
     final dialPaint = Paint()
-      ..color = dividerColor
+      ..color = primaryText
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawCircle(dialCenter, 7, dialPaint);
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(dialCenter, 6, dialPaint);
 
     // Dial tick marks at 60° increments
     for (int i = 0; i < 6; i++) {
       final tickAngle = i * pi / 3;
-      final inner = dialCenter + Offset(cos(tickAngle) * 4, sin(tickAngle) * 4);
-      final outer = dialCenter + Offset(cos(tickAngle) * 7, sin(tickAngle) * 7);
+      final inner = dialCenter + Offset(cos(tickAngle) * 3, sin(tickAngle) * 3);
+      final outer = dialCenter + Offset(cos(tickAngle) * 6, sin(tickAngle) * 6);
       canvas.drawLine(inner, outer, dialPaint);
     }
 
@@ -402,7 +411,7 @@ class KeyDiagramPainter extends CustomPainter {
     final innerDialPaint = Paint()
       ..color = primaryText
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(innerDialCenter, 3, innerDialPaint);
+    canvas.drawCircle(innerDialCenter, 2.5, innerDialPaint);
   }
 
   void _drawIcon(Canvas canvas, Offset center, IconData icon, double size, Color color) {
@@ -450,25 +459,6 @@ class KeyDiagramPainter extends CustomPainter {
       center.dy - textPainter.height / 2,
     );
     textPainter.paint(canvas, iconOffset);
-
-    // Draw label below icon
-    final labelPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: TextStyle(
-          fontFamily: 'FiraSans',
-          fontSize: 9,
-          color: secondaryText,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    labelPainter.layout();
-    final labelOffset = Offset(
-      center.dx - labelPainter.width / 2,
-      center.dy + size / 2 + 2,
-    );
-    labelPainter.paint(canvas, labelOffset);
 
     // Checkmark overlay for recovery demo
     if (showCheck) {
