@@ -118,6 +118,9 @@ class NdkService {
 
   late final PublishService _publishService;
 
+  /// The outbox-based [PublishService] owned by this service.
+  PublishService get publishService => _publishService;
+
   NdkService({
     required Ref ref,
     required LoginService loginService,

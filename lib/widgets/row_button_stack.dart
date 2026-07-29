@@ -7,10 +7,16 @@ class RowButtonConfig {
   final IconData icon;
   final String text;
 
+  /// Overrides the button's border/text color, e.g. `theme.colorScheme.error`
+  /// for a destructive action. Falls back to the stack's normal gradient/
+  /// onSurface styling when null.
+  final Color? color;
+
   const RowButtonConfig({
     required this.onPressed,
     required this.icon,
     required this.text,
+    this.color,
   });
 }
 
@@ -42,8 +48,9 @@ class RowButtonStack extends StatelessWidget {
             onPressed: buttons[i].onPressed,
             icon: buttons[i].icon,
             text: buttons[i].text,
-            backgroundColor: colors[i], // This controls the border color in outlined style
-            foregroundColor: buttonTextColor, // All buttons use onSurface for contrast
+            // This controls the border color in outlined style
+            backgroundColor: buttons[i].color ?? colors[i],
+            foregroundColor: buttons[i].color ?? buttonTextColor,
             addBottomSafeArea: i == buttons.length - 1, // Only add safe area to bottom button
           ),
       ],

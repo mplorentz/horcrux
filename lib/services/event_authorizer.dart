@@ -54,6 +54,7 @@ class EventAuthorizer {
       case NostrKind.httpAuth:
       case NostrKind.shareError:
       case NostrKind.invitationInvalid:
+      case NostrKind.requestToVanish:
       case null:
         return AuthDecision.deny;
     }
