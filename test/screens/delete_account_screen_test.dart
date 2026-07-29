@@ -154,6 +154,7 @@ void main() {
   testWidgets('tapping Delete Account shows one row per configured relay and live updates icons', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final completer = Completer<AccountDeletionResult>();
     void Function(List<RelayPublishStatus>)? capturedCallback;
     when(accountDeletionService.deleteAccount(
@@ -173,6 +174,7 @@ void main() {
     expect(find.text('wss://relay.one'), findsOneWidget);
     expect(find.text('wss://relay.two'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
+    expect(find.bySemanticsLabel('pending'), findsNWidgets(2));
 
     capturedCallback!([
       const RelayPublishStatus(
@@ -188,6 +190,8 @@ void main() {
 
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.bySemanticsLabel('acknowledged'), findsOneWidget);
+    expect(find.bySemanticsLabel('pending'), findsOneWidget);
 
     completer.complete(
       const AccountDeletionResult(
@@ -197,6 +201,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    semantics.dispose();
   });
 
   testWidgets('successful deletion shows the success state', (tester) async {
@@ -219,6 +224,7 @@ void main() {
   });
 
   testWidgets('failed deletion shows failure state with retry', (tester) async {
+    final semantics = tester.ensureSemantics();
     var callCount = 0;
     when(accountDeletionService.deleteAccount(
       onRelayStatusUpdate: anyNamed('onRelayStatusUpdate'),
@@ -242,6 +248,7 @@ void main() {
     // over, rather than leaving stale spinners for a request that's done.
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byIcon(Icons.cancel), findsNWidgets(2));
+    expect(find.bySemanticsLabel('failed'), findsNWidgets(2));
     expect(find.textContaining('has not been'), findsOneWidget);
     expect(find.text('Try Again'), findsOneWidget);
     expect(callCount, 1);
@@ -250,5 +257,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(callCount, 2);
+    semantics.dispose();
   });
 }

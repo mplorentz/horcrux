@@ -318,20 +318,32 @@ class _RelayPublishStatusRow extends StatelessWidget {
             child: Text(status.relayUrl, style: theme.textTheme.bodyMedium),
           ),
           switch (status.state) {
-            RelayPublishAckState.pending => const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            RelayPublishAckState.pending => Semantics(
+                label: 'pending',
+                container: true,
+                child: const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
-            RelayPublishAckState.acknowledged => Icon(
-                Icons.check_circle,
-                size: 20,
-                color: theme.colorScheme.onSurface,
+            RelayPublishAckState.acknowledged => Semantics(
+                label: 'acknowledged',
+                container: true,
+                child: Icon(
+                  Icons.check_circle,
+                  size: 20,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-            RelayPublishAckState.failed => Icon(
-                Icons.cancel,
-                size: 20,
-                color: theme.colorScheme.error,
+            RelayPublishAckState.failed => Semantics(
+                label: 'failed',
+                container: true,
+                child: Icon(
+                  Icons.cancel,
+                  size: 20,
+                  color: theme.colorScheme.error,
+                ),
               ),
           },
         ],
