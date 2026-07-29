@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/key_diagram.dart';
@@ -98,6 +99,27 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
 
                           // Slider controls
                           _buildSliderControls(context),
+                          const SizedBox(height: 16),
+
+                          // External link
+                          Center(
+                            child: TextButton(
+                              onPressed: () {
+                                // ignore: deprecated_member_use
+                                launchUrl(
+                                  Uri.parse('https://horcruxbackup.com/how-it-works/'),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              },
+                              child: Text(
+                                'Learn more on horcruxbackup.com',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: primaryText,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -235,7 +257,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                 value: _thresholdSliderValue.toDouble(),
                 min: 1,
                 max: _stewardCount.toDouble(),
-                divisions: _stewardCount - 1,
+                divisions: _stewardCount > 1 ? _stewardCount - 1 : null,
                 label: '$_threshold',
                 onChanged: _onThresholdSliderChanged,
               ),
