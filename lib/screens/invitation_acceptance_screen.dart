@@ -30,6 +30,20 @@ class InvitationAcceptanceScreen extends ConsumerStatefulWidget {
 class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanceScreen> {
   bool _isProcessing = false;
   String? _errorMessage;
+  bool _invitationResolved = false; // true when accepted or denied
+
+  @override
+  void dispose() {
+    if (!_invitationResolved) {
+      // User dismissed without accepting or denying — clean up the vault stub
+      final invitationService = ref.read(invitationServiceProvider);
+      final invitation = ref.read(invitationByCodeProvider(widget.inviteCode)).valueOrNull;
+      if (invitation != null) {
+        invitationService.cleanupPendingInvitationVault(invitation.vaultId);
+      }
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -418,6 +432,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       );
 
       if (mounted) {
+        _invitationResolved = true;
         // Remove the invitation screen and navigate to vault detail
         Navigator.pushReplacement(
           context,
@@ -503,6 +518,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       await invitationService.denyInvitation(inviteCode: widget.inviteCode);
 
       if (mounted) {
+        _invitationResolved = true;
         context.showHorcruxSnackBar(
           'Invitation denied',
           kind: HorcruxSnackKind.warning,

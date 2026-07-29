@@ -606,4 +606,83 @@ void main() {
       },
     );
   });
+
+  group('InvitationService - Received Invitation Vault Creation', () {
+    late MockNdkService mockNdkService;
+    late MockLoginService mockLoginService;
+    late VaultRepository realRepository;
+    late MockInvitationSendingService mockInvitationSendingService;
+    late MockRelayScanService mockRelayScanService;
+    late MockBackupService mockBackupService;
+    late InvitationService invitationService;
+    late AppDatabase testDb;
+
+    setUp(() async {
+      mockNdkService = MockNdkService();
+      mockLoginService = MockLoginService();
+      testDb = newTestDatabase();
+      realRepository = VaultRepository(mockLoginService, db: testDb);
+      mockInvitationSendingService = MockInvitationSendingService();
+      mockRelayScanService = MockRelayScanService();
+      mockBackupService = MockBackupService();
+
+      invitationService = InvitationService(
+        realRepository,
+        mockInvitationSendingService,
+        mockLoginService,
+        () => mockNdkService,
+        mockRelayScanService,
+        mockBackupService,
+        testDb,
+      );
+
+      when(mockLoginService.encryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.decryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+    });
+
+    tearDown(() async {
+      await testDb.close();
+    });
+
+    test(
+      'vault stub created by createReceivedInvitation should persist only until cleanupPendingInvitationVault is called',
+      () async {
+        // Arrange
+        const vaultId = 'test-pending-vault';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteCode = 'test-pending-invite-code-valid-base64url-123';
+
+        // Act: Simulate opening an invitation link
+        await invitationService.createReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Pending Vault',
+        );
+
+        // Assert: Vault must exist (needed for FK constraint on invitations)
+        var vault = await realRepository.getVault(vaultId);
+        expect(vault, isNotNull,
+            reason: 'Vault stub must exist for FK constraint on invitations');
+        expect(vault!.backupConfig, isNull,
+            reason: 'Vault stub should have no backup config');
+
+        // Act: Simulate dismissing the invitation (back button or deny)
+        await invitationService.cleanupPendingInvitationVault(vaultId);
+
+        // Assert: Vault should be deleted (cascade deletes the invitation too)
+        vault = await realRepository.getVault(vaultId);
+        expect(vault, isNull,
+            reason: 'Pending vault stub should be cleaned up on dismiss');
+
+        // Verify the invitation was also removed (cascade)
+        final invitation = await invitationService.lookupInvitationByCode(inviteCode);
+        expect(invitation, isNull,
+            reason: 'Invitation should be cascade-deleted with the vault');
+      },
+    );
+  });
 }

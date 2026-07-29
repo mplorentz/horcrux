@@ -257,6 +257,10 @@ class InvitationService {
       return;
     }
 
+    // Create a minimal vault stub if one doesn't exist yet. This is needed
+    // because the invitations table has a FOREIGN KEY constraint referencing
+    // vaults.id. The stub is cleaned up if the user dismisses the invitation
+    // screen without accepting (via cleanupPendingInvitationVault).
     final existingVault = await repository.getVault(vaultId);
     if (existingVault == null) {
       await repository.addVault(
@@ -302,6 +306,21 @@ class InvitationService {
     Log.info(
       'Created received invitation record for inviteCode=$inviteCode, vaultId=$vaultId',
     );
+  }
+
+  /// Deletes a vault stub that was created by [createReceivedInvitation] but
+  /// not yet accepted. Called when the user dismisses the invitation screen
+  /// via the back button or denies the invitation.
+  ///
+  /// Only deletes the vault if it has no backup config (i.e., it's still a
+  /// stub with no real data). The cascade delete on the foreign key will
+  /// also remove the associated invitation record.
+  Future<void> cleanupPendingInvitationVault(String vaultId) async {
+    final vault = await repository.getVault(vaultId);
+    if (vault != null && vault.backupConfig == null) {
+      Log.info('Cleaning up pending vault stub: $vaultId');
+      await repository.deleteVault(vaultId);
+    }
   }
 
   /// Processes invitation redemption when invitee accepts
@@ -510,6 +529,9 @@ class InvitationService {
     // Update invitation status to denied
     final deniedInvitation = invitation.updateStatus(InvitationStatus.denied);
     await _saveInvitation(deniedInvitation);
+
+    // Clean up the vault stub since the user explicitly denied
+    await cleanupPendingInvitationVault(invitation.vaultId);
 
     // Send denial event
     try {
