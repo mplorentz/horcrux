@@ -15,9 +15,9 @@ import 'login_screen.dart';
 class OnboardingRecoveryScreen extends StatelessWidget {
   const OnboardingRecoveryScreen({super.key});
 
-  @override
   /// Builds the recovery info screen showing recovery instructions and a
   /// "Login" button for users who already have their account key.
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 

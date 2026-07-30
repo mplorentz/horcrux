@@ -15,10 +15,10 @@ import 'onboarding_recovery_screen.dart';
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
-  @override
   /// Builds the start screen layout with a heading and two action cards:
   /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]) and
   /// "Something Else" (navigates to [AccountChoiceScreen]).
+  @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'Start'),
