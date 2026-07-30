@@ -169,8 +169,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           const TextSpan(
-            text:
-                ' — how many keys are needed to open the vault. Horcrux guides you '
+            text: ' — how many keys are needed to open the vault. Horcrux guides you '
                 'through the process.',
           ),
         ],
