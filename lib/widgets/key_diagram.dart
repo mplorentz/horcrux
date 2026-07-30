@@ -203,9 +203,8 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
                             stewards: widget.stewards,
                             threshold: widget.threshold,
                             changeCounter: widget.changeCounter,
-                            stewardsBeforeUpdate: transitionIsRunning
-                                ? _buildPreviousStewards()
-                                : widget.stewards,
+                            stewardsBeforeUpdate:
+                                transitionIsRunning ? _buildPreviousStewards() : widget.stewards,
                             thresholdBeforeUpdate:
                                 transitionIsRunning ? _prevThreshold : widget.threshold,
                             changeCounterBeforeUpdate:
@@ -256,7 +255,6 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
               (i) => KeyDiagramSteward(
                 id: 'prev_$i',
                 label: 'Steward ${i + 1}',
-
               ),
             )
           : [];
@@ -265,8 +263,6 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
     return widget.stewards;
   }
 }
-
-
 
 /// CustomPainter for the KeyDiagram.
 class KeyDiagramPainter extends CustomPainter {
@@ -352,8 +348,8 @@ class KeyDiagramPainter extends CustomPainter {
 
     // Draw steward icons
     for (int i = 0; i < n; i++) {
-      final showCheck = recoveryPhase == RecoveryPhase.spokesPulse &&
-          i < threshold && i <= recoveryStep;
+      final showCheck =
+          recoveryPhase == RecoveryPhase.spokesPulse && i < threshold && i <= recoveryStep;
 
       _drawStewardIcon(canvas, positions[i], iconSize, stewards[i].label, showCheck);
     }
@@ -379,7 +375,9 @@ class KeyDiagramPainter extends CustomPainter {
         ..color = primaryText
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
-      final path = Path()..moveTo(from.dx, from.dy)..lineTo(to.dx, to.dy);
+      final path = Path()
+        ..moveTo(from.dx, from.dy)
+        ..lineTo(to.dx, to.dy);
       _drawDashedPath(canvas, path, paint, 4.0, 4.0);
     }
   }

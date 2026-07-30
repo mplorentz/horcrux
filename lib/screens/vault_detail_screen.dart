@@ -174,10 +174,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
             data: (currentPubkey) {
-              final isVaultOwner =
-                  currentPubkey != null && vault.isVaultOwner(currentPubkey);
-              final canRedistribute =
-                  isVaultOwner &&
+              final isVaultOwner = currentPubkey != null && vault.isVaultOwner(currentPubkey);
+              final canRedistribute = isVaultOwner &&
                   vault.backupConfig != null &&
                   vault.backupConfig!.stewards.isNotEmpty;
 
@@ -232,8 +230,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
           // When a steward is awaiting their share the screen uses the scaffold
           // background (lighter) so the status banner stands out; all other
           // states use surfaceContainer.
-          final isAwaitingShare =
-              vault is StewardedVaultDetail && vault.latestShare == null;
+          final isAwaitingShare = vault is StewardedVaultDetail && vault.latestShare == null;
           final backgroundColor = isAwaitingShare
               ? Theme.of(context).scaffoldBackgroundColor
               : Theme.of(context).colorScheme.surfaceContainer;
@@ -377,14 +374,12 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     final action = isRedistribution ? 'Redistribute' : 'Distribute';
 
     // Build explanation message
-    String contentMessage =
-        'This will generate ${config.totalKeys} key shares '
+    String contentMessage = 'This will generate ${config.totalKeys} key shares '
         'and distribute them to ${config.stewards.length} steward${config.stewards.length > 1 ? 's' : ''}.\n\n'
         'Threshold: ${config.threshold} (minimum keys needed for recovery)';
 
     if (isRedistribution) {
-      contentMessage +=
-          '\n\n⚠️ This will invalidate previously distributed keys. '
+      contentMessage += '\n\n⚠️ This will invalidate previously distributed keys. '
           'All stewards will receive new keys.';
     }
 
