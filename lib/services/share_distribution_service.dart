@@ -254,7 +254,6 @@ class ShareDistributionService {
         // New Nostr wire format for manifest: empty content, tags from shareToNostrTags
         final manifestContent = shareToNostrContent(manifest);
         final manifestTags = shareToNostrTags(manifest);
-        manifestTags.insert(0, ['d', 'manifest_${config.vaultId}']);
         final publishedManifest = await _ndkService.publishEncryptedEvent(
           content: manifestContent,
           kind: NostrKind.shareData.value,
