@@ -4,11 +4,11 @@ import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/key_diagram.dart';
 import '../widgets/row_button.dart';
-import 'account_choice_screen.dart';
+import 'start_screen.dart';
 
 /// Onboarding explainer screen showing the interactive hub-and-spoke diagram.
 ///
-/// Flow: OnboardingScreen → [Learn More] → HowItWorksScreen → [Get Started] → AccountChoiceScreen
+/// Flow: OnboardingScreen → [Learn More] → HowItWorksScreen → [Get Started] → StartScreen → [Something Else] → AccountChoiceScreen
 class HowItWorksScreen extends StatefulWidget {
   const HowItWorksScreen({super.key});
 
@@ -120,7 +120,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AccountChoiceScreen(),
+                    builder: (context) => const StartScreen(),
                   ),
                 );
               },
