@@ -4,7 +4,6 @@ import '../providers/key_provider.dart';
 import '../utils/app_initialization.dart';
 import '../screens/account_created_screen.dart';
 import '../screens/login_screen.dart';
-import '../screens/vault_list_screen.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 
@@ -71,55 +70,6 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                     MaterialPageRoute(
                       builder: (context) => const LoginScreen(),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              // No Account card
-              _buildAccountCard(
-                context,
-                icon: Icons.arrow_forward,
-                title: 'Continue Without Account',
-                description: 'Use local-only mode',
-                onTap: () async {
-                  final navigator = Navigator.of(context);
-
-                  // Show warning dialog
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Are You Sure?'),
-                      content: const Text(
-                        'Without an account you will only be able to use Horcrux on this device and you will need to manually migrate your vaults to new devices. If you change your mind you can always back up your account keys from the app settings.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Continue Anyway'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirmed != true) return;
-
-                  // Generate key silently
-                  final loginService = ref.read(loginServiceProvider);
-                  await loginService.initializeKey();
-
-                  // Initialize services and refresh key providers
-                  await initializeAppAndRefreshKeys(ref);
-
-                  // Navigate to main app, clear onboarding stack
-                  navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => const VaultListScreen(),
-                    ),
-                    (route) => false,
                   );
                 },
               ),
