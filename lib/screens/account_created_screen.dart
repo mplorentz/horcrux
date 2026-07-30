@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/invitation_service.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/invitation_acceptance_screen.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
@@ -77,6 +79,21 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   }
 
   Future<void> _skipBackup() async {
+    // Check for a staged invitation that was picked up during onboarding
+    // (before the user had an account). Route to acceptance instead of the
+    // vault list so the user doesn't have to re-tap the deep link.
+    final invitationService = ref.read(invitationServiceProvider);
+    final staged = invitationService.getStagedInvitations();
+    if (staged.isNotEmpty && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => InvitationAcceptanceScreen(invitation: staged.first),
+        ),
+        (route) => false,
+      );
+      return;
+    }
+
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const VaultListScreen()),

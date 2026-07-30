@@ -341,6 +341,18 @@ class InvitationService {
     return _pendingReceivedInvitations[inviteCode];
   }
 
+  /// Returns all currently staged (not yet acted on) invitation links.
+  ///
+  /// Used by the post-account-create/login routing hook to pick up
+  /// invitations that were staged during onboarding (when the user was
+  /// not logged in).
+  List<InvitationLink> getStagedInvitations() {
+    return _pendingReceivedInvitations.values.toList();
+  }
+
+  /// Returns true if there are any staged invitations waiting to be acted on.
+  bool get hasStagedInvitations => _pendingReceivedInvitations.isNotEmpty;
+
   /// Processes invitation redemption when invitee accepts
   ///
   /// Validates invite code exists and is pending.

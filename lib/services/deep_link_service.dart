@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/key_provider.dart';
 import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/validators.dart';
@@ -19,6 +20,11 @@ import '../utils/snackbar_helper.dart';
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
+    isLoggedIn: () async {
+      final loginService = ref.read(loginServiceProvider);
+      final keyPair = await loginService.getStoredNostrKey();
+      return keyPair != null;
+    },
   );
   ref.onDispose(() => service.dispose());
   return service;
@@ -37,12 +43,16 @@ typedef InvitationLinkData = ({
 /// Service for handling deep links, Universal Links, and custom URL schemes
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
+  final Future<bool> Function() _isLoggedIn;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
-  DeepLinkService({required InvitationService Function() getInvitationService})
-      : _getInvitationService = getInvitationService;
+  DeepLinkService({
+    required InvitationService Function() getInvitationService,
+    required Future<bool> Function() isLoggedIn,
+  })  : _getInvitationService = getInvitationService,
+        _isLoggedIn = isLoggedIn;
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -155,6 +165,18 @@ class DeepLinkService {
       if (invitation == null) {
         // Already acted on (denied/accepted) — don't re-prompt.
         Log.info('Invitation $linkData.inviteCode already acted on, skipping navigation');
+        return;
+      }
+
+      // If the user is in onboarding (not logged in), stage silently and
+      // do NOT push the acceptance screen — it will dead-end with a
+      // "you need to be logged in" blocker. The staged invitation will
+      // be picked up after account creation / login (see Part 3).
+      if (!await _isLoggedIn()) {
+        Log.info(
+          'User not logged in; staged invitation ${linkData.inviteCode} '
+          'silently (onboarding pickup)',
+        );
         return;
       }
 
