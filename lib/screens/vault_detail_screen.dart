@@ -110,9 +110,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                     const SizedBox(height: 12),
                     Text(
                       reasonText,
-style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton.icon(
@@ -136,7 +136,11 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
     );
   }
 
-  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  Widget _buildVaultDetail(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return PopScope(
@@ -256,7 +260,9 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               VaultStatusBanner(vault: vault),
                               // Steward List (extends to edges)
                               Container(
-                                color: Theme.of(context).colorScheme.surfaceContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                                 child: StewardList(vaultId: vault.id),
                               ),
                             ],
@@ -280,7 +286,11 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showDeleteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -301,7 +311,9 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               // Notify all stewards before deleting the vault.
               if (vault.backupConfig != null) {
                 final config = vault.backupConfig!;
-                final invitationSendingService = ref.read(invitationSendingServiceProvider);
+                final invitationSendingService = ref.read(
+                  invitationSendingServiceProvider,
+                );
                 for (final steward in config.stewards) {
                   if (steward.pubkey != null && config.relays.isNotEmpty) {
                     await invitationSendingService.sendKeyHolderRemovalEvent(
@@ -327,7 +339,11 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
     );
   }
 
-  void _showRedistributeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showRedistributeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     if (vault.backupConfig == null) {
       context.showHorcruxSnackBar(
         'Recovery plan not found',
@@ -395,7 +411,11 @@ style: Theme.of(context).textTheme.bodyMedium?.copyWith(
     );
   }
 
-  Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, VaultDetail vault) async {
+  Future<void> _redistributeKeys(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) async {
     if (!context.mounted) return;
 
     // Show loading indicator on root navigator (so it persists even if context becomes unmounted)
