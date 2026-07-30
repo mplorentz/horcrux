@@ -419,6 +419,29 @@ class ShareDistributionService {
     }
 
     final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
+
+    // Skip if the steward already acknowledged this distribution version.
+    // Dedup keyed on the 1059 gift-wrap id is insufficient because the
+    // steward's confirmed_at tag changes on every call, minting a distinct
+    // inner rumor -> distinct 1059 every time. Without this semantic guard,
+    // duplicate share confirmations for the same (vault, steward, version)
+    // would each fire a redundant notification.
+    if (vaultBefore?.backupConfig != null) {
+      final existingSteward = vaultBefore!.backupConfig!.stewards
+          .where((s) => s.pubkey == keyHolderPubkey)
+          .firstOrNull;
+      if (existingSteward != null &&
+          existingSteward.acknowledgmentEventId != null &&
+          existingSteward.acknowledgedDistributionVersion != null &&
+          existingSteward.acknowledgedDistributionVersion! >= acknowledgedDistributionVersion) {
+        Log.info(
+          'Skipping duplicate share confirmation for vault $vaultId, share $shareIndex '
+          'from steward $keyHolderPubkey (already ack\'d v$acknowledgedDistributionVersion)',
+        );
+        return;
+      }
+    }
+
     await _repository.updateStewardStatus(
       vaultId: vaultId,
       pubkey: keyHolderPubkey,
