@@ -343,10 +343,9 @@ class InvitationService {
   /// where the database is not yet available (e.g. during onboarding before
   /// the user has created a Nostr key).
   ///
-  /// Attempts the full [stageReceivedInvitation] first (which checks denied/
-  /// accepted state via the DB). If the DB isn't available, falls back to
-  /// in-memory-only staging — which is safe during onboarding since the user
-  /// hasn't acted on any invitations yet.
+  /// Only falls back to in-memory-only staging when the user is NOT logged in
+  /// (onboarding). If the user is logged in, the DB error is re-thrown — the
+  /// denied/redeemed checks must not be skipped for an authenticated user.
   Future<InvitationLink?> stageReceivedInvitationSafely({
     required String inviteCode,
     required String vaultId,
@@ -365,6 +364,11 @@ class InvitationService {
         ownerName: ownerName,
       );
     } catch (e) {
+      // Only fall back to in-memory staging during onboarding (no key yet).
+      // Logged-in users must never bypass denied/redeemed checks.
+      final keyPair = await _loginService.getStoredNostrKey();
+      if (keyPair != null) rethrow;
+
       Log.info(
         'stageReceivedInvitationSafely: DB not available ($e), staging in memory only',
       );

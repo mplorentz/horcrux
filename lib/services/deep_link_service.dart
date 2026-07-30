@@ -24,13 +24,15 @@ final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
 
   // Listen for login state changes so the deep link handler navigates
   // to the acceptance screen for post-onboarding deep links.
+  // fireImmediately ensures _isLoggedIn is set correctly even if the
+  // provider resolves before the listener is attached.
   ref.listen(isLoggedInProvider, (prev, next) {
     next.whenData((loggedIn) {
       if (loggedIn) {
         service.setLoggedIn();
       }
     });
-  });
+  }, fireImmediately: true);
 
   ref.onDispose(() => service.dispose());
   return service;
