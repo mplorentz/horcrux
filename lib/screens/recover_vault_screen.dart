@@ -15,6 +15,8 @@ class RecoverVaultScreen extends StatelessWidget {
   const RecoverVaultScreen({super.key});
 
   @override
+  /// Builds the recovery info screen showing instructions for vault recovery
+  /// and a "Login" button for users who already have their account key.
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 

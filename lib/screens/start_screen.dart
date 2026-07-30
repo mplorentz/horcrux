@@ -7,18 +7,21 @@ import 'recover_vault_screen.dart';
 /// Start screen shown after onboarding explainer.
 ///
 /// Title: "How would you like to start?"
-/// Initially contains only a "Something Else" button that routes to
-/// AccountChoiceScreen. Three additional buttons land in subsequent PRs:
-/// "I have an invitation", "Recover a Vault", "Create a Vault".
+/// Presents two options:
+/// - "Recover a Vault" → [RecoverVaultScreen] (explains recovery, offers Login)
+/// - "Something Else" → [AccountChoiceScreen] (Create Account / Login)
 ///
 /// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → RecoverVaultScreen
 ///                                             → [Something Else] → AccountChoiceScreen
 ///
-/// Other buttons ("I have an invitation", "Create a Vault") land in subsequent PRs.
+/// Additional buttons ("I have an invitation", "Create a Vault") land in subsequent PRs.
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
   @override
+  /// Builds the start screen layout with a heading and two action buttons:
+  /// "Recover a Vault" (navigates to [RecoverVaultScreen]) and
+  /// "Something Else" (navigates to [AccountChoiceScreen]).
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
