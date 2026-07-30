@@ -90,15 +90,18 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.primary, width: 0.5),
-          borderRadius: BorderRadius.circular(8),
-          color: theme.colorScheme.surface,
-        ),
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.primary, width: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
         child: Row(
           children: [
             Icon(icon, size: 32, color: theme.colorScheme.onSurface),
@@ -125,6 +128,8 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 }
