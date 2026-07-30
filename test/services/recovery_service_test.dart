@@ -958,7 +958,7 @@ void main() {
       'exitRecoveryMode preserves owner content when ending a practice recovery',
       () async {
         // Arrange: Set up owned vault content so the vault hydrates as
-        // OwnedVaultDetail (which gates the Travel Mode button).
+        // OwnedVaultDetail (which gates the Seal Vault button).
         await repository.saveOwnedVaultContent(testVaultId, 'ciphertext-AAA');
 
         // Initiate a practice recovery
@@ -973,7 +973,7 @@ void main() {
         // Act: Exit practice recovery mode
         await recoveryService.exitRecoveryMode(request.id);
 
-        // Assert: Vault content is still present (Travel Mode button stays visible)
+        // Assert: Vault content is still present (Seal Vault button stays visible)
         final ownedRow = await testDb.ownedVaultDao.getByVaultId(testVaultId);
         expect(
           ownedRow,
