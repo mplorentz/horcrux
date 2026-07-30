@@ -18,17 +18,20 @@ import '../utils/snackbar_helper.dart';
 /// Watching [invitationServiceProvider] here would create a circular
 /// dependency; the lazy callback matches [ndkServiceProvider].
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
-  // Capture login state at construction time (before any onboarding key
-  // generation) so the deep link handler uses the pre-session state.
-  // Eager evaluation avoids the race where the key is generated during
-  // onboarding before the initial deep link is processed.
-  final loginService = ref.read(loginServiceProvider);
-  final isLoggedIn = loginService.hasStoredKey();
-
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
-    isLoggedIn: isLoggedIn,
   );
+
+  // Listen for login state changes so the deep link handler navigates
+  // to the acceptance screen for post-onboarding deep links.
+  ref.listen(isLoggedInProvider, (prev, next) {
+    next.whenData((loggedIn) {
+      if (loggedIn) {
+        service.setLoggedIn();
+      }
+    });
+  });
+
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -46,16 +49,22 @@ typedef InvitationLinkData = ({
 /// Service for handling deep links, Universal Links, and custom URL schemes
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
-  final Future<bool> Function() _isLoggedIn;
-  final bool isLoggedIn;
+  bool _isLoggedIn = false;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
   DeepLinkService({
     required InvitationService Function() getInvitationService,
-    required this.isLoggedIn,
-  })  : _getInvitationService = getInvitationService;
+  }) : _getInvitationService = getInvitationService;
+
+  /// Marks the user as logged in. Called when the on-boarding flow completes
+  /// (account creation or login) so subsequent deep links can navigate to the
+  /// invitation acceptance screen. Defaults to false at construction time,
+  /// which causes deep links to stage silently during onboarding.
+  void setLoggedIn() {
+    _isLoggedIn = true;
+  }
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -175,7 +184,7 @@ class DeepLinkService {
 
       // If the user is in onboarding (not logged in at construction time),
       // stage silently and do NOT push the acceptance screen.
-      if (!isLoggedIn) {
+      if (!_isLoggedIn) {
         Log.info(
           'User not logged in; staged invitation ${linkData.inviteCode} '
           'silently (onboarding pickup)',
