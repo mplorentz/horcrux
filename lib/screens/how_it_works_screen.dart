@@ -4,7 +4,7 @@ import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/key_diagram.dart';
 import '../widgets/row_button.dart';
-import 'account_choice_screen.dart';
+import 'start_screen.dart';
 
 /// Onboarding explainer screen showing the interactive hub-and-spoke diagram.
 ///
@@ -81,7 +81,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
                           // Dynamic threshold text
                           Center(
                             child: Text(
-                              '$_stewardCount stewards, any $_threshold can recover',
+                              '$_stewardCount stewards, any $_threshold can open',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w500,
                                 color: primaryText,
@@ -120,7 +120,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AccountChoiceScreen(),
+                    builder: (context) => const StartScreen(),
                   ),
                 );
               },
@@ -151,7 +151,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             text: 'vaults',
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
-          const TextSpan(text: '. Each vault is split into multiple '),
+          const TextSpan(text: '. Each vault can be opened by multiple '),
           TextSpan(
             text: 'keys',
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
@@ -169,8 +169,8 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           const TextSpan(
-            text:
-                ' — how many stewards must cooperate to open the vault. To recover your secrets, stewards request keys from each other. They\'ll receive a notification from Horcrux asking whether to share their key. Only when the threshold is met can the vault be opened.',
+            text: ' — how many keys are needed to open the vault. Horcrux guides you '
+                'through the process.',
           ),
         ],
       ),
