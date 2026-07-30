@@ -243,7 +243,11 @@ class InvitationService {
   /// [stageReceivedInvitation] and consumed by [redeemInvitation] /
   /// [denyInvitation]. Nothing is written to the database until the user
   /// explicitly accepts or denies.
-  final Map<String, InvitationLink> _pendingReceivedInvitations = {};
+  ///
+  /// Static so it survives [InvitationService] recreation (the provider is
+  /// recreated when the database is re-initialized after account creation,
+  /// which would otherwise lose staged invitations during onboarding).
+  static final Map<String, InvitationLink> _pendingReceivedInvitations = {};
 
   /// Key used in the [AppDatabase] kv table to store denied invite codes.
   static const String _deniedInviteCodesKvKey = 'denied_invite_codes';
