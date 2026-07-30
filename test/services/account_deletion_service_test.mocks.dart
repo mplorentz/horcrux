@@ -991,7 +991,8 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
           [],
         ),
         returnValue: _i6.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
-        returnValueForMissingStub: _i6.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
+        returnValueForMissingStub:
+            _i6.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
       ) as _i6.Future<List<_i13.Vault>>);
 
   @override
@@ -1108,7 +1109,8 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<_i16.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<_i16.BackupConfig?> getBackupConfig(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getBackupConfig,
           [vaultId],
@@ -1156,7 +1158,8 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<bool>);
 
   @override
-  _i6.Future<bool> isOwnedVaultForCurrentUser(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<bool> isOwnedVaultForCurrentUser(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #isOwnedVaultForCurrentUser,
           [vaultId],
@@ -1183,17 +1186,20 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i8.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<List<_i8.Share>> getSharesForVault(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getSharesForVault,
           [vaultId],
         ),
         returnValue: _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
-        returnValueForMissingStub: _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
+        returnValueForMissingStub:
+            _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
       ) as _i6.Future<List<_i8.Share>>);
 
   @override
-  _i6.Future<int> maxHeldShareDistributionVersion(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<int> maxHeldShareDistributionVersion(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #maxHeldShareDistributionVersion,
           [vaultId],
@@ -1258,7 +1264,8 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<void> ensureOwnedVaultShell(String? vaultId) => (super.noSuchMethod(
+  _i6.Future<void> ensureOwnedVaultShell(String? vaultId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #ensureOwnedVaultShell,
           [vaultId],
@@ -1387,15 +1394,17 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i18.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+  _i6.Future<List<_i18.RecoveryRequest>> getRecoveryRequestsForVault(
+          String? vaultId) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRecoveryRequestsForVault,
           [vaultId],
         ),
-        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
-        returnValueForMissingStub:
-            _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(
+            <_i18.RecoveryRequest>[]),
+        returnValueForMissingStub: _i6.Future<List<_i18.RecoveryRequest>>.value(
+            <_i18.RecoveryRequest>[]),
       ) as _i6.Future<List<_i18.RecoveryRequest>>);
 
   @override
@@ -1410,14 +1419,16 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
       ) as _i6.Future<_i18.RecoveryRequest?>);
 
   @override
-  _i6.Future<List<_i18.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+  _i6.Future<List<_i18.RecoveryRequest>> getAllRecoveryRequests() =>
+      (super.noSuchMethod(
         Invocation.method(
           #getAllRecoveryRequests,
           [],
         ),
-        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
-        returnValueForMissingStub:
-            _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(
+            <_i18.RecoveryRequest>[]),
+        returnValueForMissingStub: _i6.Future<List<_i18.RecoveryRequest>>.value(
+            <_i18.RecoveryRequest>[]),
       ) as _i6.Future<List<_i18.RecoveryRequest>>);
 
   @override
@@ -1433,7 +1444,8 @@ class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
 /// A class which mocks [InvitationSendingService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockInvitationSendingService extends _i1.Mock implements _i19.InvitationSendingService {
+class MockInvitationSendingService extends _i1.Mock
+    implements _i19.InvitationSendingService {
   @override
   _i4.NdkService get ndkService => (super.noSuchMethod(
         Invocation.getter(#ndkService),
@@ -1568,7 +1580,8 @@ class MockInvitationSendingService extends _i1.Mock implements _i19.InvitationSe
     required String? vaultId,
     required String? removedStewardPubkey,
     required List<String>? relayUrls,
-    _i20.KeyHolderRemovalReason? reason = _i20.KeyHolderRemovalReason.stewardRemoved,
+    _i20.KeyHolderRemovalReason? reason =
+        _i20.KeyHolderRemovalReason.stewardRemoved,
   }) =>
       (super.noSuchMethod(
         Invocation.method(

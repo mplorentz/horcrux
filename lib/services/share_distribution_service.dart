@@ -430,9 +430,8 @@ class ShareDistributionService {
     // duplicate share confirmations for the same (vault, steward, version)
     // would each fire a redundant notification.
     if (vaultBefore?.backupConfig != null) {
-      final existingSteward = vaultBefore!.backupConfig!.stewards
-          .where((s) => s.pubkey == keyHolderPubkey)
-          .firstOrNull;
+      final existingSteward =
+          vaultBefore!.backupConfig!.stewards.where((s) => s.pubkey == keyHolderPubkey).firstOrNull;
       if (existingSteward != null &&
           existingSteward.acknowledgmentEventId != null &&
           existingSteward.acknowledgedDistributionVersion != null &&
