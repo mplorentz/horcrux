@@ -59,7 +59,7 @@ class OnboardingScreen extends ConsumerWidget {
                               horizontal: 16.0,
                             ),
                             child: Text(
-                              'Horcrux is a tool for backing up sensitive data like digital wills, passwords, and cryptographic keys. Rather than backing the data up to the cloud, Horcrux sends the sensitive data in pieces to your friends and family\'s devices. Recovery is accomplished by getting consent from these friends and family to reassemble your data.',
+                              'Horcrux is a tool for backing up sensitive data like digital wills, passwords, and cryptographic keys. Unlike traditional backup tools Horcrux uses your friends and family\'s devices to store and recover the data.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),

@@ -100,8 +100,8 @@ void main() {
       container.dispose();
     });
 
-    testWidgets(
-      'shows Travel Mode button when owner has content and owner steward configured',
+  testWidgets(
+      'shows Seal Vault button when owner has content and owner steward configured',
       (tester) async {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);
         final otherSteward = createSteward(pubkey: otherPubkey, name: 'Alice');
@@ -145,13 +145,13 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        expect(find.text('Travel Mode'), findsOneWidget);
+        expect(find.text('Seal Vault'), findsOneWidget);
 
         container.dispose();
       },
     );
 
-    testWidgets('shows Travel Mode after distribution even without owner steward', (
+    testWidgets('shows Seal Vault after distribution even without owner steward', (
       tester,
     ) async {
       final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
@@ -195,7 +195,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Travel Mode'), findsOneWidget);
+      expect(find.text('Seal Vault'), findsOneWidget);
 
       container.dispose();
     });
