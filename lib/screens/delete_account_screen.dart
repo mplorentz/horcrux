@@ -142,13 +142,11 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
               children: [
                 Text(
-                  'Danger! Deleting your account is irreversible. This '
-                  'will send a request to all relays to delete all of your '
-                  'data, then remove your private key and all vault '
-                  'contents from this device. Note that if you use other '
-                  'Nostr apps with this account their data will also be '
-                  'deleted. Your stewards will still be able to recover '
-                  'your vaults unless you delete them individually.',
+                  'Danger! Deleting your account is irreversible. '
+                  'This will send a request to all your stewards and relays to destory all '
+                  'of your vaults, then destroy your private key and all vaults on '
+                  'this device. Note that if you use other Nostr apps with this account '
+                  'their data will also be deleted.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),

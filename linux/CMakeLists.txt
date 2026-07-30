@@ -3,8 +3,9 @@ cmake_minimum_required(VERSION 3.13)
 
 # Force use of g++-12 instead of clang++
 # Must be set before project() call
-set(CMAKE_CXX_COMPILER "g++-12")
-set(CMAKE_C_COMPILER "gcc-12")
+# Using CACHE FORCE so CMAKE_CXX_COMPILER appears in CMakeCache.txt (required by Flutter 3.44+)
+set(CMAKE_CXX_COMPILER "g++-12" CACHE STRING "" FORCE)
+set(CMAKE_C_COMPILER "gcc-12" CACHE STRING "" FORCE)
 
 project(runner LANGUAGES CXX)
 

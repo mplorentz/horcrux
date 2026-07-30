@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -479,12 +481,14 @@ void main() {
         stewards: testPeers,
       );
 
-      // Flip the first base64url character so the decoded y-bytes change.
-      // (Mutating by last-char heuristics can be a no-op when the second-to-
-      // last character already matches the replacement.)
-      final payload = shares[0].payload;
-      final mutant = _flipFirstBase64Char(payload);
-      expect(mutant, isNot(equals(payload)));
+      // Corrupt a y-byte, not the x-coordinate. Byte 0 of the decoded payload
+      // is the Shamir x-coordinate (validated separately for 0/duplicates);
+      // mutating it would trip those checks before AEAD ever runs. Flip the
+      // last byte instead so reconstruction proceeds and Poly1305 rejects it.
+      final decoded = base64Url.decode(shares[0].payload);
+      decoded[decoded.length - 1] ^= 0xFF;
+      final mutant = base64Url.encode(decoded);
+      expect(mutant, isNot(equals(shares[0].payload)));
       final tampered = shares[0].copyWith(payload: mutant);
 
       expect(

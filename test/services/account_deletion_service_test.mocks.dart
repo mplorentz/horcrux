@@ -5,11 +5,17 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i6;
 
+import 'package:horcrux/models/backup_config.dart' as _i16;
+import 'package:horcrux/models/key_holder_removal_reason.dart' as _i20;
 import 'package:horcrux/models/nostr_kinds.dart' as _i9;
+import 'package:horcrux/models/recovery_request.dart' as _i18;
 import 'package:horcrux/models/relay_configuration.dart' as _i10;
 import 'package:horcrux/models/share.dart' as _i8;
+import 'package:horcrux/models/steward_status.dart' as _i17;
 import 'package:horcrux/models/vault.dart' as _i13;
+import 'package:horcrux/providers/vault_provider.dart' as _i15;
 import 'package:horcrux/services/horcrux_notification_service.dart' as _i11;
+import 'package:horcrux/services/invitation_sending_service.dart' as _i19;
 import 'package:horcrux/services/logout_service.dart' as _i14;
 import 'package:horcrux/services/ndk_service.dart' as _i4;
 import 'package:horcrux/services/publish_service.dart' as _i2;
@@ -917,4 +923,637 @@ class MockLogoutService extends _i1.Mock implements _i14.LogoutService {
         returnValue: _i6.Future<void>.value(),
         returnValueForMissingStub: _i6.Future<void>.value(),
       ) as _i6.Future<void>);
+}
+
+/// A class which mocks [VaultRepository].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockVaultRepository extends _i1.Mock implements _i15.VaultRepository {
+  @override
+  _i6.Stream<List<_i13.Vault>> get vaultsStream => (super.noSuchMethod(
+        Invocation.getter(#vaultsStream),
+        returnValue: _i6.Stream<List<_i13.Vault>>.empty(),
+        returnValueForMissingStub: _i6.Stream<List<_i13.Vault>>.empty(),
+      ) as _i6.Stream<List<_i13.Vault>>);
+
+  @override
+  _i6.Future<void> initialize() => (super.noSuchMethod(
+        Invocation.method(
+          #initialize,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Stream<_i13.Vault?> watchVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #watchVault,
+          [id],
+        ),
+        returnValue: _i6.Stream<_i13.Vault?>.empty(),
+        returnValueForMissingStub: _i6.Stream<_i13.Vault?>.empty(),
+      ) as _i6.Stream<_i13.Vault?>);
+
+  @override
+  _i6.Future<List<_i13.Vault>> getAllVaults() => (super.noSuchMethod(
+        Invocation.method(
+          #getAllVaults,
+          [],
+        ),
+        returnValue: _i6.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
+        returnValueForMissingStub: _i6.Future<List<_i13.Vault>>.value(<_i13.Vault>[]),
+      ) as _i6.Future<List<_i13.Vault>>);
+
+  @override
+  _i6.Future<_i13.Vault?> getVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #getVault,
+          [id],
+        ),
+        returnValue: _i6.Future<_i13.Vault?>.value(),
+        returnValueForMissingStub: _i6.Future<_i13.Vault?>.value(),
+      ) as _i6.Future<_i13.Vault?>);
+
+  @override
+  _i6.Future<void> saveVault(_i13.Vault? vault) => (super.noSuchMethod(
+        Invocation.method(
+          #saveVault,
+          [vault],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> addVault(_i13.Vault? vault) => (super.noSuchMethod(
+        Invocation.method(
+          #addVault,
+          [vault],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> updateVault(
+    String? id,
+    String? name,
+    String? content,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateVault,
+          [
+            id,
+            name,
+            content,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> setPushEnabled(
+    String? vaultId,
+    bool? enabled,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setPushEnabled,
+          [
+            vaultId,
+            enabled,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteVault(String? id) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteVault,
+          [id],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> clearAll() => (super.noSuchMethod(
+        Invocation.method(
+          #clearAll,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> refresh() => (super.noSuchMethod(
+        Invocation.method(
+          #refresh,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> updateBackupConfig(
+    String? vaultId,
+    _i16.BackupConfig? config,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateBackupConfig,
+          [
+            vaultId,
+            config,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<_i16.BackupConfig?> getBackupConfig(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #getBackupConfig,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<_i16.BackupConfig?>.value(),
+        returnValueForMissingStub: _i6.Future<_i16.BackupConfig?>.value(),
+      ) as _i6.Future<_i16.BackupConfig?>);
+
+  @override
+  _i6.Future<void> updateStewardStatus({
+    required String? vaultId,
+    required String? pubkey,
+    _i17.StewardStatus? status,
+    DateTime? acknowledgedAt,
+    String? acknowledgmentEventId,
+    int? acknowledgedDistributionVersion,
+    String? giftWrapEventId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateStewardStatus,
+          [],
+          {
+            #vaultId: vaultId,
+            #pubkey: pubkey,
+            #status: status,
+            #acknowledgedAt: acknowledgedAt,
+            #acknowledgmentEventId: acknowledgmentEventId,
+            #acknowledgedDistributionVersion: acknowledgedDistributionVersion,
+            #giftWrapEventId: giftWrapEventId,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<bool> isOwnedVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isOwnedVault,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<bool>.value(false),
+        returnValueForMissingStub: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
+
+  @override
+  _i6.Future<bool> isOwnedVaultForCurrentUser(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isOwnedVaultForCurrentUser,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<bool>.value(false),
+        returnValueForMissingStub: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
+
+  @override
+  _i6.Future<void> addShareToVault(
+    String? vaultId,
+    _i8.Share? share,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addShareToVault,
+          [
+            vaultId,
+            share,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<List<_i8.Share>> getSharesForVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #getSharesForVault,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
+        returnValueForMissingStub: _i6.Future<List<_i8.Share>>.value(<_i8.Share>[]),
+      ) as _i6.Future<List<_i8.Share>>);
+
+  @override
+  _i6.Future<int> maxHeldShareDistributionVersion(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #maxHeldShareDistributionVersion,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<int>.value(0),
+        returnValueForMissingStub: _i6.Future<int>.value(0),
+      ) as _i6.Future<int>);
+
+  @override
+  _i6.Future<void> clearSharesForVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #clearSharesForVault,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> upsertStewardRow({
+    required String? id,
+    required String? vaultId,
+    required int? shareIndex,
+    String? pubkey,
+    String? name,
+    String? contactInfo,
+    bool? isOwner = false,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #upsertStewardRow,
+          [],
+          {
+            #id: id,
+            #vaultId: vaultId,
+            #shareIndex: shareIndex,
+            #pubkey: pubkey,
+            #name: name,
+            #contactInfo: contactInfo,
+            #isOwner: isOwner,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> mergeVaultRowFromIncomingShare(
+    String? vaultId,
+    _i8.Share? share,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #mergeVaultRowFromIncomingShare,
+          [
+            vaultId,
+            share,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> ensureOwnedVaultShell(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #ensureOwnedVaultShell,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> saveOwnedVaultContent(
+    String? vaultId,
+    String? content,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveOwnedVaultContent,
+          [
+            vaultId,
+            content,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteVaultContent(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteVaultContent,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<bool> isKeyHolderForVault(String? vaultId) => (super.noSuchMethod(
+        Invocation.method(
+          #isKeyHolderForVault,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<bool>.value(false),
+        returnValueForMissingStub: _i6.Future<bool>.value(false),
+      ) as _i6.Future<bool>);
+
+  @override
+  _i6.Future<void> addRecoveryRequestToVault(
+    String? vaultId,
+    _i18.RecoveryRequest? request,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addRecoveryRequestToVault,
+          [
+            vaultId,
+            request,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> updateRecoveryRequestInVault(
+    String? vaultId,
+    String? requestId,
+    _i18.RecoveryRequest? updatedRequest,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateRecoveryRequestInVault,
+          [
+            vaultId,
+            requestId,
+            updatedRequest,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteRecoveryResponseSharesForRequest({
+    required String? vaultId,
+    required String? requestId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteRecoveryResponseSharesForRequest,
+          [],
+          {
+            #vaultId: vaultId,
+            #requestId: requestId,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> deleteRecoveryResponsesForRequest({
+    required String? vaultId,
+    required String? requestId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #deleteRecoveryResponsesForRequest,
+          [],
+          {
+            #vaultId: vaultId,
+            #requestId: requestId,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> cleanupExpiredRecoverySessions() => (super.noSuchMethod(
+        Invocation.method(
+          #cleanupExpiredRecoverySessions,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<List<_i18.RecoveryRequest>> getRecoveryRequestsForVault(String? vaultId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getRecoveryRequestsForVault,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+        returnValueForMissingStub:
+            _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+      ) as _i6.Future<List<_i18.RecoveryRequest>>);
+
+  @override
+  _i6.Future<_i18.RecoveryRequest?> getActiveRecoveryRequest(String? vaultId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getActiveRecoveryRequest,
+          [vaultId],
+        ),
+        returnValue: _i6.Future<_i18.RecoveryRequest?>.value(),
+        returnValueForMissingStub: _i6.Future<_i18.RecoveryRequest?>.value(),
+      ) as _i6.Future<_i18.RecoveryRequest?>);
+
+  @override
+  _i6.Future<List<_i18.RecoveryRequest>> getAllRecoveryRequests() => (super.noSuchMethod(
+        Invocation.method(
+          #getAllRecoveryRequests,
+          [],
+        ),
+        returnValue: _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+        returnValueForMissingStub:
+            _i6.Future<List<_i18.RecoveryRequest>>.value(<_i18.RecoveryRequest>[]),
+      ) as _i6.Future<List<_i18.RecoveryRequest>>);
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [InvitationSendingService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockInvitationSendingService extends _i1.Mock implements _i19.InvitationSendingService {
+  @override
+  _i4.NdkService get ndkService => (super.noSuchMethod(
+        Invocation.getter(#ndkService),
+        returnValue: _FakeNdkService_4(
+          this,
+          Invocation.getter(#ndkService),
+        ),
+        returnValueForMissingStub: _FakeNdkService_4(
+          this,
+          Invocation.getter(#ndkService),
+        ),
+      ) as _i4.NdkService);
+
+  @override
+  _i6.Future<String?> sendInvitationAcceptanceEvent({
+    required String? inviteCode,
+    required String? vaultId,
+    required String? ownerPubkey,
+    required List<String>? relayUrls,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendInvitationAcceptanceEvent,
+          [],
+          {
+            #inviteCode: inviteCode,
+            #vaultId: vaultId,
+            #ownerPubkey: ownerPubkey,
+            #relayUrls: relayUrls,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
+  _i6.Future<String?> sendDenialEvent({
+    required String? inviteCode,
+    required String? vaultId,
+    required String? ownerPubkey,
+    required List<String>? relayUrls,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendDenialEvent,
+          [],
+          {
+            #inviteCode: inviteCode,
+            #vaultId: vaultId,
+            #ownerPubkey: ownerPubkey,
+            #relayUrls: relayUrls,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
+  _i6.Future<String?> sendShareConfirmationEvent({
+    required String? vaultId,
+    required int? shareIndex,
+    required String? ownerPubkey,
+    required List<String>? relayUrls,
+    int? distributionVersion,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendShareConfirmationEvent,
+          [],
+          {
+            #vaultId: vaultId,
+            #shareIndex: shareIndex,
+            #ownerPubkey: ownerPubkey,
+            #relayUrls: relayUrls,
+            #distributionVersion: distributionVersion,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
+  _i6.Future<String?> sendShareErrorEvent({
+    required String? vaultId,
+    required int? shareIndex,
+    required String? ownerPubkey,
+    required List<String>? relayUrls,
+    required String? error,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendShareErrorEvent,
+          [],
+          {
+            #vaultId: vaultId,
+            #shareIndex: shareIndex,
+            #ownerPubkey: ownerPubkey,
+            #relayUrls: relayUrls,
+            #error: error,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
+  _i6.Future<String?> sendInvitationInvalidEvent({
+    required String? inviteCode,
+    required String? vaultId,
+    required String? inviteePubkey,
+    required List<String>? relayUrls,
+    required String? reason,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendInvitationInvalidEvent,
+          [],
+          {
+            #inviteCode: inviteCode,
+            #vaultId: vaultId,
+            #inviteePubkey: inviteePubkey,
+            #relayUrls: relayUrls,
+            #reason: reason,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
+
+  @override
+  _i6.Future<String?> sendKeyHolderRemovalEvent({
+    required String? vaultId,
+    required String? removedStewardPubkey,
+    required List<String>? relayUrls,
+    _i20.KeyHolderRemovalReason? reason = _i20.KeyHolderRemovalReason.stewardRemoved,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendKeyHolderRemovalEvent,
+          [],
+          {
+            #vaultId: vaultId,
+            #removedStewardPubkey: removedStewardPubkey,
+            #relayUrls: relayUrls,
+            #reason: reason,
+          },
+        ),
+        returnValue: _i6.Future<String?>.value(),
+        returnValueForMissingStub: _i6.Future<String?>.value(),
+      ) as _i6.Future<String?>);
 }
