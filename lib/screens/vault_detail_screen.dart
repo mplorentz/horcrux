@@ -136,7 +136,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  Widget _buildVaultDetail(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return PopScope(
@@ -256,7 +260,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                               VaultStatusBanner(vault: vault),
                               // Steward List (extends to edges)
                               Container(
-                                color: Theme.of(context).colorScheme.surfaceContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                                 child: StewardList(vaultId: vault.id),
                               ),
                             ],
@@ -280,7 +286,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showDeleteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -301,7 +311,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
               // Notify all stewards before deleting the vault.
               if (vault.backupConfig != null) {
                 final config = vault.backupConfig!;
-                final invitationSendingService = ref.read(invitationSendingServiceProvider);
+                final invitationSendingService = ref.read(
+                  invitationSendingServiceProvider,
+                );
                 for (final steward in config.stewards) {
                   if (steward.pubkey != null && config.relays.isNotEmpty) {
                     await invitationSendingService.sendKeyHolderRemovalEvent(
@@ -327,7 +339,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showRedistributeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showRedistributeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     if (vault.backupConfig == null) {
       context.showHorcruxSnackBar(
         'Recovery plan not found',
@@ -395,7 +411,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, VaultDetail vault) async {
+  Future<void> _redistributeKeys(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) async {
     if (!context.mounted) return;
 
     // Show loading indicator on root navigator (so it persists even if context becomes unmounted)

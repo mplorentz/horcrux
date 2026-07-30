@@ -608,4 +608,109 @@ void main() {
       },
     );
   });
+
+  group('InvitationService - Received Invitation Vault Creation', () {
+    late MockNdkService mockNdkService;
+    late MockLoginService mockLoginService;
+    late VaultRepository realRepository;
+    late MockInvitationSendingService mockInvitationSendingService;
+    late MockRelayScanService mockRelayScanService;
+    late MockBackupService mockBackupService;
+    late InvitationService invitationService;
+    late AppDatabase testDb;
+
+    setUp(() async {
+      mockNdkService = MockNdkService();
+      mockLoginService = MockLoginService();
+      testDb = newTestDatabase();
+      realRepository = VaultRepository(mockLoginService, db: testDb);
+      mockInvitationSendingService = MockInvitationSendingService();
+      mockRelayScanService = MockRelayScanService();
+      mockBackupService = MockBackupService();
+
+      invitationService = InvitationService(
+        realRepository,
+        mockInvitationSendingService,
+        mockLoginService,
+        () => mockNdkService,
+        mockRelayScanService,
+        mockBackupService,
+        testDb,
+      );
+
+      when(mockLoginService.encryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.decryptText(any))
+          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+    });
+
+    tearDown(() async {
+      await testDb.close();
+    });
+
+    test(
+      'stageReceivedInvitation stores in memory only — no vault or invitation row created',
+      () async {
+        // Arrange
+        const vaultId = 'test-pending-vault';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteCode = 'test-pending-invite-code-valid-base64url-123';
+
+        // Act: Simulate opening an invitation link (in-memory staging)
+        final staged = await invitationService.stageReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Pending Vault',
+        );
+
+        // Assert: staged link is returned
+        expect(staged, isNotNull, reason: 'A fresh invitation should be staged');
+        expect(staged!.inviteCode, inviteCode);
+
+        // Assert: No vault row was created
+        final vault = await realRepository.getVault(vaultId);
+        expect(vault, isNull, reason: 'No vault row should exist — nothing written to DB');
+
+        // Assert: No invitation row was created
+        final invitation = await invitationService.lookupInvitationByCode(inviteCode);
+        expect(invitation, isNull,
+            reason: 'No invitation row should exist — nothing written to DB');
+
+        // Act: Simulate dismissing (back button) — nothing to clean up
+        // No-op: the staged entry is abandoned in memory
+
+        // Verify still no vault after dismiss
+        final vaultAfterDismiss = await realRepository.getVault(vaultId);
+        expect(vaultAfterDismiss, isNull, reason: 'No vault should ever have been created');
+      },
+    );
+
+    test(
+      'stageReceivedInvitation skips invite codes in the denied set (kv table)',
+      () async {
+        // Arrange
+        const inviteCode = 'test-denied-code-valid-base64url-456';
+        const vaultId = 'test-denied-vault';
+
+        // Seed the denied set in the kv table directly.
+        await testDb.appStateDao.setString(
+          key: 'denied_invite_codes',
+          value: '["$inviteCode"]',
+        );
+
+        // Act: Try to stage the denied code
+        final staged = await invitationService.stageReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: TestHexPubkeys.alice,
+          relayUrls: ['wss://relay.example.com'],
+        );
+
+        // Assert: Returns null (no re-prompt)
+        expect(staged, isNull, reason: 'Denied invitation should not be re-staged');
+      },
+    );
+  });
 }

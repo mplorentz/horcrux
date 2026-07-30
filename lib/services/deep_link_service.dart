@@ -142,9 +142,8 @@ class DeepLinkService {
         'Parsed invitation link: inviteCode=${linkData.inviteCode}, vaultId=${linkData.vaultId}, vaultName=${linkData.vaultName}',
       );
 
-      // Create/update invitation record on receiving side
-      // This allows the invitation acceptance screen to load the invitation
-      await _getInvitationService().createReceivedInvitation(
+      // Stage invitation in memory (no DB writes) and get the parsed link.
+      final invitation = await _getInvitationService().stageReceivedInvitation(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,
@@ -153,11 +152,17 @@ class DeepLinkService {
         ownerName: linkData.ownerName,
       );
 
+      if (invitation == null) {
+        // Already acted on (denied/accepted) — don't re-prompt.
+        Log.info('Invitation $linkData.inviteCode already acted on, skipping navigation');
+        return;
+      }
+
       // Navigate to invitation acceptance screen
       if (_navigatorKey?.currentContext != null) {
         Navigator.of(_navigatorKey!.currentContext!).push(
           MaterialPageRoute(
-            builder: (context) => InvitationAcceptanceScreen(inviteCode: linkData.inviteCode),
+            builder: (context) => InvitationAcceptanceScreen(invitation: invitation),
           ),
         );
         Log.info('Navigated to invitation acceptance screen');
