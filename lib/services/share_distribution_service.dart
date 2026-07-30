@@ -359,7 +359,10 @@ class ShareDistributionService {
   /// (gift-wrap seal author), not a redundant tag. Confirmations tagged with a
   /// future [distribution_version] are dropped. Status is derived from ack
   /// version vs current distribution version.
-  Future<void> processShareConfirmationEvent({
+  /// Returns `true` when a new acknowledgment was persisted, `false` when
+  /// the confirmation was skipped as a duplicate (steward already acknowledged
+  /// this distribution version).
+  Future<bool> processShareConfirmationEvent({
     required Nip01Event event,
   }) async {
     // Validate event kind
@@ -415,7 +418,7 @@ class ShareDistributionService {
         'Cannot process share confirmation for future distribution v$tagDistributionVersion '
         '(current v$currentDistributionVersion) on vault $vaultId, share $shareIndex',
       );
-      return;
+      return false;
     }
 
     final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
@@ -438,7 +441,7 @@ class ShareDistributionService {
           'Skipping duplicate share confirmation for vault $vaultId, share $shareIndex '
           'from steward $keyHolderPubkey (already ack\'d v$acknowledgedDistributionVersion)',
         );
-        return;
+        return false;
       }
     }
 
@@ -458,6 +461,7 @@ class ShareDistributionService {
       'Processed share confirmation event for vault $vaultId, share $shareIndex '
       'from steward $keyHolderPubkey (ack v$acknowledgedDistributionVersion, status $status)',
     );
+    return true;
   }
 
   /// Processes share error event received from steward (kind 719).
