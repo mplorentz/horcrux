@@ -1,75 +1,119 @@
 import 'package:flutter/material.dart';
+import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/row_button.dart';
 import 'account_choice_screen.dart';
-import 'recover_vault_screen.dart';
+import 'onboarding_recovery_screen.dart';
 
 /// Start screen shown after onboarding explainer.
 ///
-/// Title: "How would you like to start?"
-/// Presents two options:
-/// - "Recover a Vault" → [RecoverVaultScreen] (explains recovery, offers Login)
-/// - "Something Else" → [AccountChoiceScreen] (Create Account / Login)
+/// Presents "Recover a Vault" and a "Something Else" button that routes to
+/// AccountChoiceScreen. Additional buttons ("I have an invitation", "Create a
+/// Vault") will land in subsequent PRs.
 ///
-/// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → RecoverVaultScreen
+/// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
 ///                                             → [Something Else] → AccountChoiceScreen
-///
-/// Additional buttons ("I have an invitation", "Create a Vault") land in subsequent PRs.
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
   @override
-  /// Builds the start screen layout with a heading and two action buttons:
-  /// "Recover a Vault" (navigates to [RecoverVaultScreen]) and
+  /// Builds the start screen layout with a heading and two action cards:
+  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]) and
   /// "Something Else" (navigates to [AccountChoiceScreen]).
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return HorcruxScaffold(
+      appBar: const HorcruxAppBar(title: 'Start'),
       body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            const Spacer(),
-            // Heading
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 24),
+              Text(
                 'How would you like to start?',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            const Spacer(),
-            // Recover a Vault button
-            RowButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RecoverVaultScreen(),
+              const SizedBox(height: 32),
+              _buildAccountCard(
+                context,
+                icon: Icons.restore,
+                title: 'Recover a Vault',
+                description: 'Restore vault data from your stewards',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OnboardingRecoveryScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildAccountCard(
+                context,
+                icon: Icons.arrow_forward,
+                title: 'Something Else',
+                description: 'Create or import an account',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountChoiceScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccountCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.colorScheme.primary, width: 0.5),
+          borderRadius: BorderRadius.circular(8),
+          color: theme.colorScheme.surface,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 32, color: theme.colorScheme.onSurface),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                );
-              },
-              icon: Icons.restore,
-              text: 'Recover a Vault',
+                  const SizedBox(height: 4),
+                  Text(description, style: textTheme.bodyMedium),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            // Something Else button at bottom
-            RowButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AccountChoiceScreen(),
-                  ),
-                );
-              },
-              icon: Icons.arrow_forward,
-              text: 'Something Else',
-              addBottomSafeArea: true,
+            Icon(
+              Icons.chevron_right,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ],
         ),
