@@ -313,7 +313,8 @@ void main() {
 
       // Capture the relayUrls from the first 721 call to verify the
       // union of vault relays and account-vanish relays.
-      final capturedRelays = verify(invitationSendingService.sendKeyHolderRemovalEvent(
+      final capturedRelays =
+          verify(invitationSendingService.sendKeyHolderRemovalEvent(
         vaultId: vaultId,
         removedStewardPubkey: stewardPubkey,
         relayUrls: captureAnyNamed('relayUrls'),

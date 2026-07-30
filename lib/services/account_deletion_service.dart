@@ -215,8 +215,9 @@ class AccountDeletionService {
         // account-vanish relay set. The union ensures stewards receive
         // the 721 even if the vault's relay list differs from the
         // account-vanish relay set.
-        final vaultRelayUrls =
-            config.relays.isNotEmpty ? {...config.relays, ...relayUrls}.toList() : relayUrls;
+        final vaultRelayUrls = config.relays.isNotEmpty
+            ? {...config.relays, ...relayUrls}.toList()
+            : relayUrls;
 
         for (final steward in activeStewards) {
           try {
