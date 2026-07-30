@@ -306,6 +306,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (dialogResult == 'save') {
           await _saveBackup();
         } else if (dialogResult == 'discard') {
+          await _restoreInitialConfig();
+          if (!context.mounted) return;
           await _popWithOwnerPushPrompt();
         }
       },
@@ -1380,12 +1382,20 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   }
 
   /// Save when no stewards are configured. Persists the push notification
-  /// preference and navigates back without writing a backup config.
+  /// preference, deletes the backup config if one exists, and navigates back.
   Future<void> _handleSkip() async {
     if (!mounted) return;
     try {
       final repository = ref.read(vaultRepositoryProvider);
       await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
+
+      // If a backup config existed (stewards were removed), delete it so the
+      // empty state is persisted. Otherwise the stale config reloads on re-entry.
+      final existingConfig = await repository.getBackupConfig(widget.vaultId);
+      if (existingConfig != null) {
+        final backupService = ref.read(backupServiceProvider);
+        await backupService.deleteBackupConfig(widget.vaultId);
+      }
     } catch (e) {
       if (mounted) {
         context.showHorcruxSnackBar(
