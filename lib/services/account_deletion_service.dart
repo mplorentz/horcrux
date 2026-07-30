@@ -105,13 +105,15 @@ class AccountDeletionService {
     );
     final relayUrls = relayConfigurations.map((r) => r.url).toList();
 
-    // Step 0: Before the vanish broadcast, notify all active stewards of
-    // owned vaults to destroy their held shares (kind 721, vaultDeleted).
-    // This is best-effort — failures don't abort the deletion.
-    await _notifyStewardsOfOwnedVaults(relayUrls);
+    // Step 0: Validate relays before doing anything else.
     if (relayUrls.isEmpty) {
       throw StateError('No relays configured; cannot request account deletion.');
     }
+
+    // Step 1: Before the vanish broadcast, notify all active stewards of
+    // owned vaults to destroy their held shares (kind 721, vaultDeleted).
+    // This is best-effort — failures don't abort the deletion.
+    await _notifyStewardsOfOwnedVaults(relayUrls);
 
     final broadcast = await _ndkService.publishService.requestAccountVanish(
       relayUrls: relayUrls,
@@ -185,8 +187,16 @@ class AccountDeletionService {
           continue;
         }
 
+        // Include both holdingKey (confirmed share) and awaitingNewKey
+        // (has old share, needs updated one) — both hold a share that
+        // must be destroyed on account deletion.
         final activeStewards = config.stewards
-            .where((s) => s.status == StewardStatus.holdingKey && s.pubkey != null)
+            .where(
+              (s) =>
+                  (s.status == StewardStatus.holdingKey ||
+                      s.status == StewardStatus.awaitingNewKey) &&
+                  s.pubkey != null,
+            )
             .toList();
 
         if (activeStewards.isEmpty) {
@@ -201,18 +211,26 @@ class AccountDeletionService {
           '${activeStewards.length} steward(s) of vault ${vault.id}',
         );
 
+        // Use the vault's configured relays, falling back to the
+        // account-vanish relay set. The union ensures stewards receive
+        // the 721 even if the vault's relay list differs from the
+        // account-vanish relay set.
+        final vaultRelayUrls = config.relays.isNotEmpty
+            ? {...config.relays, ...relayUrls}.toList()
+            : relayUrls;
+
         for (final steward in activeStewards) {
           try {
             await _invitationSendingService.sendKeyHolderRemovalEvent(
               vaultId: vault.id,
               removedStewardPubkey: steward.pubkey!,
-              relayUrls: relayUrls,
+              relayUrls: vaultRelayUrls,
               reason: KeyHolderRemovalReason.vaultDeleted,
             );
           } catch (e, st) {
             Log.warning(
               'AccountDeletionService: failed to send vaultDeleted 721 to '
-              'steward ${steward.pubkey} for vault ${vault.id}',
+              'steward ${steward.id} for vault ${vault.id}',
               e,
               st,
             );

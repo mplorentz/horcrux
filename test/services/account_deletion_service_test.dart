@@ -311,23 +311,95 @@ void main() {
 
       final result = await service.deleteAccount();
 
-      // Verify 721s were sent to each active steward before the wipe
+      // Verify 721s were sent to each active steward before the wipe,
+      // and that they happen before logout().
+      verifyInOrder([
+        invitationSendingService.sendKeyHolderRemovalEvent(
+          vaultId: vaultId,
+          removedStewardPubkey: stewardPubkey,
+          relayUrls: anyNamed('relayUrls'),
+          reason: KeyHolderRemovalReason.vaultDeleted,
+        ),
+        invitationSendingService.sendKeyHolderRemovalEvent(
+          vaultId: anotherVaultId,
+          removedStewardPubkey: anotherStewardPubkey,
+          relayUrls: anyNamed('relayUrls'),
+          reason: KeyHolderRemovalReason.vaultDeleted,
+        ),
+        logoutService.logout(),
+      ]);
+
+      expect(result.relayRequestAcknowledged, isTrue);
+    });
+
+    test('includes awaitingNewKey stewards when notifying owned vaults', () async {
+      const vaultId = 'owned-vault-awaiting-new-key';
+      const holdingStewardPubkey = 'holding-steward-pubkey';
+      const awaitingNewStewardPubkey = 'awaiting-new-steward-pubkey';
+
+      const holdingSteward = Steward(
+        id: 'steward-hold',
+        pubkey: holdingStewardPubkey,
+        name: 'Holding Steward',
+        status: StewardStatus.holdingKey,
+      );
+
+      const awaitingNewSteward = Steward(
+        id: 'steward-awaiting',
+        pubkey: awaitingNewStewardPubkey,
+        name: 'Awaiting New Key Steward',
+        status: StewardStatus.awaitingNewKey,
+      );
+
+      final now = DateTime(2024);
+      final config = BackupConfig(
+        vaultId: vaultId,
+        stewards: [holdingSteward, awaitingNewSteward],
+        threshold: 1,
+        createdAt: now,
+        relays: ['wss://relay.one'],
+        distributionVersion: 2,
+      );
+
+      final vault = Vault(
+        id: vaultId,
+        name: 'Vault with awaitingNewKey steward',
+        createdAt: DateTime(2024),
+        ownerPubkey: 'owner-pubkey',
+        backupConfig: config,
+      );
+
+      when(vaultRepository.getAllVaults()).thenAnswer((_) async => [vault]);
+      when(vaultRepository.isOwnedVault(vaultId)).thenAnswer((_) async => true);
+
+      when(
+        publishService.requestAccountVanish(relayUrls: anyNamed('relayUrls')),
+      ).thenAnswer(
+        (_) async => handleFor([
+          'wss://relay.one',
+          'wss://relay.two'
+        ], {
+          'wss://relay.one',
+        }),
+      );
+
+      await service.deleteAccount();
+
+      // Both stewards should receive a 721
       verify(invitationSendingService.sendKeyHolderRemovalEvent(
         vaultId: vaultId,
-        removedStewardPubkey: stewardPubkey,
+        removedStewardPubkey: holdingStewardPubkey,
         relayUrls: anyNamed('relayUrls'),
         reason: KeyHolderRemovalReason.vaultDeleted,
       )).called(1);
       verify(invitationSendingService.sendKeyHolderRemovalEvent(
-        vaultId: anotherVaultId,
-        removedStewardPubkey: anotherStewardPubkey,
+        vaultId: vaultId,
+        removedStewardPubkey: awaitingNewStewardPubkey,
         relayUrls: anyNamed('relayUrls'),
         reason: KeyHolderRemovalReason.vaultDeleted,
       )).called(1);
 
-      // Verify the wipe still happened
       verify(logoutService.logout()).called(1);
-      expect(result.relayRequestAcknowledged, isTrue);
     });
 
     test('skips vaults without backup config when notifying stewards', () async {
