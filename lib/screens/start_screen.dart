@@ -38,7 +38,7 @@ class StartScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               _buildAccountCard(
-                context,
+                context: context,
                 icon: Icons.restore,
                 title: 'Recover a Vault',
                 description: 'Restore vault data from your stewards',
@@ -53,7 +53,7 @@ class StartScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildAccountCard(
-                context,
+                context: context,
                 icon: Icons.arrow_forward,
                 title: 'Something Else',
                 description: 'Create or import an account',
@@ -73,8 +73,9 @@ class StartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountCard(
-    BuildContext context, {
+  /// Builds a tappable card for an account-starting flow.
+  Widget _buildAccountCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
