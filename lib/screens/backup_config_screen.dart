@@ -1401,27 +1401,29 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
 
-    // T022: Warn about 1-of-1 owner-only backup
-    final onlyOwnerSteward = _stewards.length == 1 && _stewards.first.isOwner && _threshold == 1;
-    if (onlyOwnerSteward) {
+    // T022: Warn about 1-of-1 threshold — any single steward is a single point of failure
+    if (_threshold == 1) {
+      final message = _stewards.length == 1 && _stewards.first.isOwner
+          ? 'You\'re setting up a 1-of-1 backup with only yourself as the steward.'
+          : 'You\'re setting up a 1-of-1 backup. If that single steward loses their key, recovery is impossible.';
       final shouldContinue = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Single Owner Backup'),
-          content: const Column(
+          title: const Text('Single Point of Failure'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'You\'re setting up a 1-of-1 backup with only yourself as the steward.',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 12),
-              Text(
+              const SizedBox(height: 12),
+              const Text(
                 'This means if you lose access to your device, you won\'t be able to recover this vault.',
               ),
-              SizedBox(height: 12),
-              Text('Consider adding additional stewards for better security.'),
+              const SizedBox(height: 12),
+              const Text('Consider adding additional stewards for better security.'),
             ],
           ),
           actions: [
