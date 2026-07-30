@@ -603,6 +603,8 @@ class NdkService {
         );
       } else if (unwrappedEvent.kind == NostrKind.keyHolderRemoved.value) {
         await _handleKeyHolderRemoved(unwrappedEvent);
+      } else if (unwrappedEvent.kind == NostrKind.invitationInvalid.value) {
+        await _handleInvitationInvalid(unwrappedEvent);
       } else {
         Log.warning('Unknown gift wrap inner kind: ${unwrappedEvent.kind}');
       }
@@ -902,6 +904,15 @@ class NdkService {
     final vaultShareService = _ref.read(vaultShareServiceProvider);
     await vaultShareService.processKeyHolderRemoval(event: event);
     Log.info('Successfully processed steward removed event: ${event.id}');
+  }
+
+  /// Handle incoming invitation invalid event (kind 720). Errors propagate.
+  Future<void> _handleInvitationInvalid(Nip01Event event) async {
+    Log.info('Processing invitation invalid event: ${event.id}');
+    Log.debug('Invitation invalid event tags: ${event.tags}');
+    final vaultShareService = _ref.read(vaultShareServiceProvider);
+    await vaultShareService.processInvitationInvalid(event: event);
+    Log.info('Successfully processed invitation invalid event: ${event.id}');
   }
 
   /// Close all active gift-wrap subscriptions.
