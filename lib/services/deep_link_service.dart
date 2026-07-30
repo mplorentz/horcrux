@@ -18,13 +18,16 @@ import '../utils/snackbar_helper.dart';
 /// Watching [invitationServiceProvider] here would create a circular
 /// dependency; the lazy callback matches [ndkServiceProvider].
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
+  // Capture login state at construction time (before any onboarding key
+  // generation) so the deep link handler uses the pre-session state.
+  // Eager evaluation avoids the race where the key is generated during
+  // onboarding before the initial deep link is processed.
+  final loginService = ref.read(loginServiceProvider);
+  final isLoggedIn = loginService.hasStoredKey();
+
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
-    isLoggedIn: () async {
-      final loginService = ref.read(loginServiceProvider);
-      final keyPair = await loginService.getStoredNostrKey();
-      return keyPair != null;
-    },
+    isLoggedIn: isLoggedIn,
   );
   ref.onDispose(() => service.dispose());
   return service;
@@ -44,15 +47,15 @@ typedef InvitationLinkData = ({
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
   final Future<bool> Function() _isLoggedIn;
+  final bool isLoggedIn;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
   DeepLinkService({
     required InvitationService Function() getInvitationService,
-    required Future<bool> Function() isLoggedIn,
-  })  : _getInvitationService = getInvitationService,
-        _isLoggedIn = isLoggedIn;
+    required this.isLoggedIn,
+  })  : _getInvitationService = getInvitationService;
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -153,7 +156,9 @@ class DeepLinkService {
       );
 
       // Stage invitation in memory (no DB writes) and get the parsed link.
-      final invitation = await _getInvitationService().stageReceivedInvitation(
+      // Uses the safe variant that handles the case where the database is
+      // not yet available (e.g. during onboarding).
+      final invitation = await _getInvitationService().stageReceivedInvitationSafely(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,
@@ -168,11 +173,9 @@ class DeepLinkService {
         return;
       }
 
-      // If the user is in onboarding (not logged in), stage silently and
-      // do NOT push the acceptance screen — it will dead-end with a
-      // "you need to be logged in" blocker. The staged invitation will
-      // be picked up after account creation / login (see Part 3).
-      if (!await _isLoggedIn()) {
+      // If the user is in onboarding (not logged in at construction time),
+      // stage silently and do NOT push the acceptance screen.
+      if (!isLoggedIn) {
         Log.info(
           'User not logged in; staged invitation ${linkData.inviteCode} '
           'silently (onboarding pickup)',

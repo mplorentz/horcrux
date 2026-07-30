@@ -335,6 +335,59 @@ class InvitationService {
     );
   }
 
+  /// Stage an invitation parsed from a deep link, safely handling the case
+  /// where the database is not yet available (e.g. during onboarding before
+  /// the user has created a Nostr key).
+  ///
+  /// Attempts the full [stageReceivedInvitation] first (which checks denied/
+  /// accepted state via the DB). If the DB isn't available, falls back to
+  /// in-memory-only staging — which is safe during onboarding since the user
+  /// hasn't acted on any invitations yet.
+  Future<InvitationLink?> stageReceivedInvitationSafely({
+    required String inviteCode,
+    required String vaultId,
+    required String ownerPubkey,
+    required List<String> relayUrls,
+    String? vaultName,
+    String? ownerName,
+  }) async {
+    try {
+      return await stageReceivedInvitation(
+        inviteCode: inviteCode,
+        vaultId: vaultId,
+        ownerPubkey: ownerPubkey,
+        relayUrls: relayUrls,
+        vaultName: vaultName,
+        ownerName: ownerName,
+      );
+    } catch (e) {
+      Log.info(
+        'stageReceivedInvitationSafely: DB not available ($e), staging in memory only',
+      );
+    }
+
+    // DB not available — skip denied/accepted checks and stage in memory.
+    final invitation = createInvitationLink(
+      inviteCode: inviteCode,
+      vaultId: vaultId,
+      vaultName: vaultName,
+      ownerPubkey: ownerPubkey,
+      ownerName: ownerName,
+      relayUrls: relayUrls,
+      inviteeName: null,
+    );
+    final pendingInvitation = invitation.updateStatus(InvitationStatus.pending);
+    validateInvitationLink(pendingInvitation);
+
+    _pendingReceivedInvitations[inviteCode] = pendingInvitation;
+    _notifyInvitationsChanged();
+
+    Log.info(
+      'Staged received invitation in memory (no DB): inviteCode=$inviteCode, vaultId=$vaultId',
+    );
+    return pendingInvitation;
+  }
+
   /// Public getter so the invitation acceptance screen can read a staged
   /// invitation directly without going through the DB-backed provider.
   InvitationLink? getPendingInvitation(String inviteCode) {
