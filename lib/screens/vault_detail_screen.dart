@@ -95,10 +95,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.archive_outlined,
                       size: 80,
-                      color: Theme.of(context).colorScheme.error,
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -112,8 +111,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                     Text(
                       reasonText,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton.icon(

@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart';
+import 'package:ndk/entities.dart' show RelayBroadcastResponse;
 import 'package:ndk/ndk.dart';
 
 import '../database/app_database.dart';
+import '../models/nostr_kinds.dart';
+import '../utils/date_time_extensions.dart';
 import 'logger.dart';
 
 typedef NdkSupplier = Future<Ndk> Function();
@@ -22,6 +25,46 @@ class PublishQueueResult {
   });
 
   bool get allRelaysSucceeded => failedRelays.isEmpty && successfulRelays.isNotEmpty;
+}
+
+/// One relay's live acknowledgement status while a direct (non-outbox)
+/// broadcast is in flight -- see [PublishBroadcastHandle].
+enum RelayPublishAckState { pending, acknowledged, failed }
+
+class RelayPublishStatus {
+  final String relayUrl;
+  final RelayPublishAckState state;
+  final String message;
+
+  const RelayPublishStatus({
+    required this.relayUrl,
+    required this.state,
+    this.message = '',
+  });
+}
+
+/// Handle for a direct (non-outbox) broadcast: lets the caller observe live
+/// per-relay progress (e.g. to drive a UI) as well as await the final
+/// outcome. Used by callers that bypass [PublishService.enqueueEvent], e.g.
+/// [PublishService.requestAccountVanish].
+class PublishBroadcastHandle {
+  /// The relays the event was broadcast to.
+  final List<String> relayUrls;
+
+  /// Emits the full per-relay status snapshot every time any relay responds.
+  /// A relay not yet in [RelayPublishAckState.acknowledged] or
+  /// [RelayPublishAckState.failed] by the time [done] resolves timed out.
+  final Stream<List<RelayPublishStatus>> statusUpdates;
+
+  /// Resolves with the subset of [relayUrls] that acknowledged the
+  /// broadcast; an empty result means no relay confirmed receipt.
+  final Future<Set<String>> done;
+
+  const PublishBroadcastHandle({
+    required this.relayUrls,
+    required this.statusUpdates,
+    required this.done,
+  });
 }
 
 /// Persists publish work in the `outbox` / `outbox_relays` tables and drains it
@@ -354,6 +397,82 @@ class PublishService {
     final delay = Duration(seconds: seconds.toInt());
     if (delay > _maxBackoff) return _maxBackoff;
     return delay;
+  }
+
+  /// Broadcasts a NIP-62 "Request to Vanish" (kind 62) to [relayUrls],
+  /// asking relays to delete all events for the current user's pubkey
+  /// (obtained from the NDK instance). Bypasses the outbox (retry after a
+  /// local key wipe is impossible), instead returning a [PublishBroadcastHandle]
+  /// the caller can await before wiping local state.
+  ///
+  /// [relayUrls] must be non-empty.
+  Future<PublishBroadcastHandle> requestAccountVanish({
+    required List<String> relayUrls,
+    String? reason,
+  }) async {
+    if (relayUrls.isEmpty) {
+      throw ArgumentError.value(relayUrls, 'relayUrls', 'must not be empty');
+    }
+
+    await _ensureInitialized();
+
+    final ndk = await _getNdk();
+    final pubkey = ndk.accounts.getPublicKey();
+    if (pubkey == null) {
+      throw Exception('No key pair available. Cannot request account deletion.');
+    }
+
+    final tags = <List<String>>[
+      for (final url in relayUrls) ['relay', url],
+      ['relay', 'ALL_RELAYS'],
+    ];
+
+    final event = Nip01Event(
+      pubKey: pubkey,
+      kind: NostrKind.requestToVanish.value,
+      tags: tags,
+      content: reason ?? '',
+      createdAt: DateTime.now().toUtc().secondsSinceEpoch,
+    );
+
+    final response = ndk.broadcast.broadcast(
+      nostrEvent: event,
+      specificRelays: relayUrls,
+    );
+
+    final statusUpdates = response.broadcastDone.map(
+      (results) => results.map((result) => _toRelayPublishStatus(response: result)).toList(),
+    );
+
+    final done = response.broadcastDoneFuture.then((results) {
+      final acknowledged = results
+          .where((result) => result.broadcastSuccessful)
+          .map((result) => result.relayUrl)
+          .toSet();
+      Log.info(
+        'Request to Vanish (${event.id}) acknowledged by '
+        '${acknowledged.length}/${relayUrls.length} relay(s)',
+      );
+      return acknowledged;
+    });
+
+    return PublishBroadcastHandle(
+      relayUrls: relayUrls,
+      statusUpdates: statusUpdates,
+      done: done,
+    );
+  }
+
+  RelayPublishStatus _toRelayPublishStatus({required RelayBroadcastResponse response}) {
+    return RelayPublishStatus(
+      relayUrl: response.relayUrl,
+      state: !response.okReceived
+          ? RelayPublishAckState.pending
+          : response.broadcastSuccessful
+              ? RelayPublishAckState.acknowledged
+              : RelayPublishAckState.failed,
+      message: response.msg,
+    );
   }
 }
 

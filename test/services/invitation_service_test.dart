@@ -432,6 +432,7 @@ void main() {
         // Stub sendInvitationInvalidEvent to succeed
         when(mockInvitationSendingService.sendInvitationInvalidEvent(
           inviteCode: anyNamed('inviteCode'),
+          vaultId: anyNamed('vaultId'),
           inviteePubkey: anyNamed('inviteePubkey'),
           relayUrls: anyNamed('relayUrls'),
           reason: anyNamed('reason'),
@@ -512,6 +513,7 @@ void main() {
         // Assert: sendInvitationInvalidEvent was called for Device C with correct parameters
         verify(mockInvitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
+          vaultId: anyNamed('vaultId'),
           inviteePubkey: deviceCPubkey,
           relayUrls: anyNamed('relayUrls'),
           reason: anyNamed('reason'),

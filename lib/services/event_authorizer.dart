@@ -47,13 +47,15 @@ class EventAuthorizer {
         return _authorizeKnownSteward(rumor, verifiedSenderPubkey);
       case NostrKind.keyHolderRemoved:
         return _authorizeOwnerOnly(rumor, verifiedSenderPubkey);
+      case NostrKind.invitationInvalid:
+        return _authorizeOwnerOnly(rumor, verifiedSenderPubkey);
 
       // deny all kinds without handlers in NdkService.
       case NostrKind.seal:
       case NostrKind.giftWrap:
       case NostrKind.httpAuth:
       case NostrKind.shareError:
-      case NostrKind.invitationInvalid:
+      case NostrKind.requestToVanish:
       case null:
         return AuthDecision.deny;
     }

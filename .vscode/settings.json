@@ -34,9 +34,14 @@
     "commandCenter.border": "#e7e7e799",
     "sash.hoverBorder": "#4e3e5f",
     "titleBar.activeBackground": "#352a40",
-    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.activeForeground": "#595959",
     "titleBar.inactiveBackground": "#352a4099",
-    "titleBar.inactiveForeground": "#e7e7e799"
+    "titleBar.inactiveForeground": "#e7e7e799",
+    "activityBarTop.activeBackground": "#4e3e5f",
+    "activityBarTop.background": "#4e3e5f",
+    "activityBarTop.foreground": "#e7e7e7",
+    "activityBarTop.inactiveForeground": "#e7e7e799",
+    "commandCenter.foreground": "#595959"
   },
   "peacock.color": "#352A40",
   "dart.flutterSdkPath": ".fvm/versions/3.41.9"
