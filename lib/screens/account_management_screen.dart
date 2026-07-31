@@ -9,6 +9,7 @@ import '../services/logout_service.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
+import '../utils/app_initialization.dart';
 import '../widgets/row_button_stack.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
@@ -119,6 +120,12 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
       ref.invalidate(ndkServiceProvider); // Reset NDK service to clear relay connections
       ref.invalidate(relayScanServiceProvider); // Reset relay scan service to clear stale state
       ref.invalidate(deepLinkServiceProvider);
+
+      // The invalidated deepLinkServiceProvider has no navigator key and no
+      // live app_links listener until something restarts it. Without this,
+      // an invitation link tapped during the onboarding session that follows
+      // logout is silently dropped until the user creates a new account.
+      await initializePreLoginDeepLinking(ref);
 
       if (!mounted) return;
 

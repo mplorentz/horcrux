@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/logger.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button_stack.dart';
@@ -12,8 +13,19 @@ import 'login_screen.dart';
 /// account key proceed to log in.
 ///
 /// Flow: StartScreen → [Recover a Vault] → OnboardingRecoveryScreen → [Login] → LoginScreen
-class OnboardingRecoveryScreen extends StatelessWidget {
+class OnboardingRecoveryScreen extends StatefulWidget {
   const OnboardingRecoveryScreen({super.key});
+
+  @override
+  State<OnboardingRecoveryScreen> createState() => _OnboardingRecoveryScreenState();
+}
+
+class _OnboardingRecoveryScreenState extends State<OnboardingRecoveryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Log.info('[onboarding] OnboardingRecoveryScreen: shown');
+  }
 
   /// Builds the recovery info screen showing recovery instructions and a
   /// "Login" button for users who already have their account key.

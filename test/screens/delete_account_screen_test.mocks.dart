@@ -5,8 +5,10 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
 
+import 'package:flutter/material.dart' as _i9;
 import 'package:horcrux/models/relay_configuration.dart' as _i7;
 import 'package:horcrux/services/account_deletion_service.dart' as _i2;
+import 'package:horcrux/services/deep_link_service.dart' as _i8;
 import 'package:horcrux/services/ndk_service.dart' as _i3;
 import 'package:horcrux/services/publish_service.dart' as _i6;
 import 'package:horcrux/services/relay_scan_service.dart' as _i4;
@@ -291,4 +293,79 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
+}
+
+/// A class which mocks [DeepLinkService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockDeepLinkService extends _i1.Mock implements _i8.DeepLinkService {
+  @override
+  void setNavigatorKey(_i9.GlobalKey<_i9.NavigatorState>? navigatorKey) => super.noSuchMethod(
+        Invocation.method(
+          #setNavigatorKey,
+          [navigatorKey],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  _i5.Future<void> initializeDeepLinking() => (super.noSuchMethod(
+        Invocation.method(
+          #initializeDeepLinking,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> handleInitialLink() => (super.noSuchMethod(
+        Invocation.method(
+          #handleInitialLink,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void handleIncomingLink(Uri? uri) => super.noSuchMethod(
+        Invocation.method(
+          #handleIncomingLink,
+          [uri],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  ({
+    String inviteCode,
+    String? ownerName,
+    String ownerPubkey,
+    List<String> relayUrls,
+    String vaultId,
+    String? vaultName
+  })? parseInvitationLink(Uri? uri) => (super.noSuchMethod(
+        Invocation.method(
+          #parseInvitationLink,
+          [uri],
+        ),
+        returnValueForMissingStub: null,
+      ) as ({
+        String inviteCode,
+        String? ownerName,
+        String ownerPubkey,
+        List<String> relayUrls,
+        String vaultId,
+        String? vaultName
+      })?);
 }

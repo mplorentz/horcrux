@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/invitation_acceptance_screen.dart';
 import '../screens/vault_list_screen.dart';
 import '../services/invitation_service.dart';
+import '../services/logger.dart';
 
 /// Ends an onboarding flow by routing to [InvitationAcceptanceScreen] if a
 /// staged invitation exists (picked up via deep link before the user had an
@@ -15,10 +16,13 @@ void routeToVaultListOrStagedInvitation({
   required WidgetRef ref,
 }) {
   final invitationService = ref.read(invitationServiceProvider);
-  final staged = invitationService.getStagedInvitations();
-  final destination = staged.isNotEmpty
-      ? InvitationAcceptanceScreen(invitation: staged.first)
-      : const VaultListScreen();
+  final staged = invitationService.getStagedInvitation();
+  Log.debug(
+    '[onboarding] routeToVaultListOrStagedInvitation: '
+    'InvitationService(${invitationService.hashCode}), staged=${staged?.inviteCode ?? 'none'}',
+  );
+  final destination =
+      staged != null ? InvitationAcceptanceScreen(invitation: staged) : const VaultListScreen();
 
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute(builder: (_) => destination),

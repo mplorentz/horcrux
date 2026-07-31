@@ -26,8 +26,9 @@ class LoginRelayConfigScreen extends ConsumerStatefulWidget {
   final String nsec;
 
   /// When true (login import), Skip opens [ImportSuccessScreen] to offer
-  /// backing up the key. When false (database reset), Skip goes straight to
-  /// [VaultListScreen] like Continue.
+  /// backing up the key. When false (database reset), Skip routes to the vault
+  /// list or the staged invitation acceptance screen via
+  /// [routeToVaultListOrStagedInvitation].
   final bool skipOffersKeyBackup;
 
   const LoginRelayConfigScreen({
@@ -62,6 +63,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   @override
   void initState() {
     super.initState();
+    Log.info('[onboarding] LoginRelayConfigScreen: shown');
     _relays = [
       RelayConfiguration(
         id: 'horcrux-default',

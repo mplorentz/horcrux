@@ -4,6 +4,7 @@ import '../models/invitation_link.dart';
 import '../models/invitation_status.dart';
 import '../models/invitation_exceptions.dart';
 import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/snackbar_helper.dart';
@@ -48,6 +49,15 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   /// Resolve the effective invite code from either the direct object or the
   /// fallback parameter.
   String get _effectiveInviteCode => widget.invitation?.inviteCode ?? widget.inviteCode!;
+
+  @override
+  void initState() {
+    super.initState();
+    Log.info(
+      '[onboarding] InvitationAcceptanceScreen: shown, '
+      'inviteCode=$_effectiveInviteCode, hasDirectInvitation=${widget.invitation != null}',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
