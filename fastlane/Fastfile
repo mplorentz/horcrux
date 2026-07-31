@@ -51,21 +51,31 @@ end
 # Default platform (needed for iOS actions in top-level lanes like set_version)
 default_platform(:ios)
 
+
+# pubspec.yaml is the single source of truth for the build number. This reads
+# the current "+N" from pubspec.yaml, increments it, and pushes that exact
+# value into the Xcode project (and Info.plist). Do NOT let this read the
+# build number from the xcodeproj — that was the old behavior and it let the
+# xcodeproj's stale CURRENT_PROJECT_VERSION silently overwrite manual edits
+# to pubspec.yaml.
 private_lane :ios_increment_build_sync_pubspec do
+  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+  pubspec_content = File.read(pubspec_path)
+  m = pubspec_content.match(/^version:\s*(.+)\+(\d+)\s*$/)
+  UI.user_error!("Could not parse version+build from pubspec.yaml") unless m
+  current_version = m[1].strip
+  new_build_number = m[2].to_i + 1
+
   increment_build_number(
+    build_number: new_build_number.to_s,
     xcodeproj: "ios/Runner.xcodeproj"
   )
 
-  current_version = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
-  build_number = get_build_number(xcodeproj: "ios/Runner.xcodeproj")
-
-  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
-  pubspec_content = File.read(pubspec_path)
-  new_version = "#{current_version}+#{build_number}"
+  new_version = "#{current_version}+#{new_build_number}"
   pubspec_content.gsub!(/^version: .*$/, "version: #{new_version}")
   File.write(pubspec_path, pubspec_content)
 
-  UI.success("✅ Build number bumped to #{build_number}")
+  UI.success("✅ Build number bumped to #{new_build_number}")
   UI.success("✅ Updated pubspec.yaml version to #{new_version}")
 end
 
