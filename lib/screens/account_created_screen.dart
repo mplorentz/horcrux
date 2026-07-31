@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/consent_screen.dart';
 import '../screens/vault_explainer_screen.dart';
 import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
@@ -46,14 +47,16 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     });
 
     try {
-      // Navigate to vault explainer with nsec prefilled
+      // Navigate through consent screen first, then to vault explainer
       if (mounted) {
         await Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => VaultExplainerScreen(
-              initialContent: widget.nsec,
-              initialName: 'Nostr Key Backup',
-              isOnboarding: true,
+            builder: (context) => ConsentScreen(
+              nextScreen: VaultExplainerScreen(
+                initialContent: widget.nsec,
+                initialName: 'Nostr Key Backup',
+                isOnboarding: true,
+              ),
             ),
           ),
           (route) => false, // Clear all previous routes
@@ -79,7 +82,11 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   Future<void> _skipBackup() async {
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const VaultListScreen()),
+        MaterialPageRoute(
+          builder: (context) => const ConsentScreen(
+            nextScreen: VaultListScreen(),
+          ),
+        ),
         (route) => false,
       );
     }

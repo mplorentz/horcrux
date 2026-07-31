@@ -12,6 +12,7 @@ import '../utils/invite_code_utils.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/consent_screen.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
 import 'vault_list_screen.dart';
@@ -193,19 +194,29 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     });
   }
 
-  /// After a successful scan the user goes straight to the vault list.
+  /// After a successful scan the user goes to the consent screen, then the
+  /// vault list.
   void _continue() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const VaultListScreen()),
+      MaterialPageRoute(
+        builder: (_) => const ConsentScreen(
+          nextScreen: VaultListScreen(),
+        ),
+      ),
       (route) => false,
     );
   }
 
   /// Skip the scan. Login import offers key backup; reset goes to vault list.
+  /// Both paths route through the consent screen first.
   void _skip() {
     if (widget.skipOffersKeyBackup) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
+        MaterialPageRoute(
+          builder: (_) => ConsentScreen(
+            nextScreen: ImportSuccessScreen(nsec: widget.nsec),
+          ),
+        ),
         (route) => false,
       );
     } else {
