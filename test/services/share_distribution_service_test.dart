@@ -436,9 +436,7 @@ void main() {
       expect(capturedTagLists, hasLength(3));
 
       final manifestTags = capturedTagLists.firstWhere(
-        (tags) => tags.any(
-          (t) => t.isNotEmpty && t[0] == 'd' && t.length > 1 && t[1].startsWith('manifest_'),
-        ),
+        (tags) => tags.any((t) => t[0] == 'blob'),
       );
       expect(
         manifestTags.any((t) => t[0] == 'blob' && t[1] == sampleBlob),

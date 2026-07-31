@@ -171,7 +171,6 @@ class InvitationSendingService {
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'share_error_${vaultId}_$shareIndex'],
           ['vault_id', vaultId],
           ['error', error],
         ],
