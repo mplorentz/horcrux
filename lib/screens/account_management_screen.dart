@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
 import '../providers/vault_provider.dart';
-import '../screens/consent_screen.dart';
 import '../services/deep_link_service.dart';
 import '../services/logout_service.dart';
 import '../services/ndk_service.dart';
@@ -338,44 +337,6 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                             ],
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Terms & Privacy section
-                    Text(
-                      'Legal',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.description_outlined,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        title: const Text('Terms & Privacy'),
-                        subtitle: const Text('View and accept Terms of Service'),
-                        trailing: Icon(
-                          Icons.chevron_right,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const ConsentScreen(viewOnly: true),
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ],
