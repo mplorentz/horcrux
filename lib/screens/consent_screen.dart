@@ -179,9 +179,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
-        title: widget.viewOnly
-            ? 'Terms of Service'
-            : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
+        title: 'Consent',
         automaticallyImplyLeading: widget.viewOnly ? false : widget.nextScreen == null,
       ),
       body: SafeArea(
@@ -253,23 +251,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          Text(
-            'Terms of Service & Privacy Policy',
-            style: textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Version ${tos.version}',
-              style: textTheme.bodySmall,
-            ),
-          ),
-          const SizedBox(height: 16),
           MarkdownBody(
             data: tos.text,
             styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
