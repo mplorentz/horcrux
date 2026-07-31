@@ -4,6 +4,7 @@ import '../services/invitation_service.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button.dart';
+import 'account_choice_screen.dart';
 
 /// Informational screen shown when the user taps "I have an invitation" on
 /// the Start screen. Explains that they should leave the app and tap the
@@ -72,7 +73,12 @@ class InvitationInstructionsScreen extends ConsumerWidget {
                 final invitationService = ref.read(invitationServiceProvider);
                 if (invitationService.hasStagedInvitations) {
                   // Route to account creation so the pickup hook fires.
-                  Navigator.pushReplacementNamed(context, '/account-choice');
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountChoiceScreen(),
+                    ),
+                  );
                   return;
                 }
                 Navigator.pop(context);
