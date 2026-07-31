@@ -13,14 +13,24 @@ import 'login_screen.dart';
 /// account key proceed to log in.
 ///
 /// Flow: StartScreen → [Recover a Vault] → OnboardingRecoveryScreen → [Login] → LoginScreen
-class OnboardingRecoveryScreen extends StatelessWidget {
+class OnboardingRecoveryScreen extends StatefulWidget {
   const OnboardingRecoveryScreen({super.key});
+
+  @override
+  State<OnboardingRecoveryScreen> createState() => _OnboardingRecoveryScreenState();
+}
+
+class _OnboardingRecoveryScreenState extends State<OnboardingRecoveryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Log.info('[onboarding] OnboardingRecoveryScreen: shown');
+  }
 
   /// Builds the recovery info screen showing recovery instructions and a
   /// "Login" button for users who already have their account key.
   @override
   Widget build(BuildContext context) {
-    Log.debug('[onboarding] OnboardingRecoveryScreen: build');
     final theme = Theme.of(context);
 
     return HorcruxScaffold(

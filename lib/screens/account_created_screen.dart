@@ -25,7 +25,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   @override
   void initState() {
     super.initState();
-    Log.debug('[onboarding] AccountCreatedScreen: initState');
+    Log.info('[onboarding] AccountCreatedScreen: shown');
   }
 
   String _getRedactedNsec() {

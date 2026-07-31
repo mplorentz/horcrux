@@ -22,7 +22,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
   void initState() {
     super.initState();
     final hasStaged = ref.read(invitationServiceProvider).hasStagedInvitations;
-    Log.debug('[onboarding] AccountChoiceScreen: initState, hasStagedInvitations=$hasStaged');
+    Log.info('[onboarding] AccountChoiceScreen: shown, hasStagedInvitations=$hasStaged');
   }
 
   @override

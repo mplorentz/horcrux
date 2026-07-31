@@ -31,7 +31,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
   @override
   void initState() {
     super.initState();
-    Log.debug('[onboarding] HowItWorksScreen: initState');
+    Log.info('[onboarding] HowItWorksScreen: shown');
   }
 
   List<KeyDiagramSteward> get _stewards {

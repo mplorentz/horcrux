@@ -137,14 +137,7 @@ class DeepLinkService {
   Future<void> _processLink(Uri uri) async {
     // Check if this looks like an invitation link before attempting to parse
     // Silently ignore non-invitation URLs (e.g., root path on web startup)
-    // Accept both /invite/{code} (horcruxbackup.com) and horcrux://join/{code} formats
-    if (uri.pathSegments.isEmpty) {
-      Log.debug('Ignoring non-invitation URL');
-      return;
-    }
-    final isInvitePath = uri.pathSegments[0] == 'invite';
-    final isJoinHost = uri.host == 'join' && uri.pathSegments.length == 1;
-    if (!isInvitePath && !isJoinHost) {
+    if (uri.pathSegments.isEmpty || uri.pathSegments[0] != 'invite') {
       Log.debug('Ignoring non-invitation URL');
       return;
     }
@@ -236,8 +229,8 @@ class DeepLinkService {
   /// Parses invitation link URL and extracts parameters
   ///
   /// Handles both Universal Links (`https://horcruxbackup.com/invite/{code}`)
-  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`) formats.
-  /// Also supports the `horcrux://join/{inviteCode}` format.
+  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`)
+  /// formats — the only formats [InvitationLink.toUrl] generates.
   /// Extracts invite code from path.
   /// Extracts owner pubkey and relay URLs from query params.
   /// Returns parsed data or throws InvalidInvitationLinkException if invalid.
@@ -252,33 +245,25 @@ class DeepLinkService {
       }
 
       // Validate host
-      // Allow localhost for testing on web; join is for horcrux://join/{code} format
-      final allowedHosts = ['horcruxbackup.com', 'localhost', 'join'];
+      // Allow localhost for testing on web
+      final allowedHosts = ['horcruxbackup.com', 'localhost'];
       if (!allowedHosts.contains(uri.host)) {
         throw InvalidInvitationLinkException(
           uri.toString(),
-          'Invalid host: ${uri.host}. Expected horcruxbackup.com or join',
+          'Invalid host: ${uri.host}. Expected horcruxbackup.com',
         );
       }
 
-      // Extract invite code from path: /invite/{code} or /{code} (join host)
+      // Extract invite code from path: /invite/{code}
       final pathSegments = uri.pathSegments;
-      final isJoinFormat = uri.host == 'join';
-      if (isJoinFormat) {
-        if (pathSegments.length != 1) {
-          throw InvalidInvitationLinkException(
-            uri.toString(),
-            'Invalid path format: ${uri.path}. Expected format: /{inviteCode}',
-          );
-        }
-      } else if (pathSegments.length != 2 || pathSegments[0] != 'invite') {
+      if (pathSegments.length != 2 || pathSegments[0] != 'invite') {
         throw InvalidInvitationLinkException(
           uri.toString(),
           'Invalid path format: ${uri.path}. Expected format: /invite/{code}',
         );
       }
 
-      final inviteCode = isJoinFormat ? pathSegments[0] : pathSegments[1];
+      final inviteCode = pathSegments[1];
       if (!isValidInviteCode(inviteCode)) {
         throw InvalidInvitationLinkException(
           uri.toString(),

@@ -27,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    Log.debug('[onboarding] LoginScreen: initState');
+    Log.info('[onboarding] LoginScreen: shown');
   }
 
   @override

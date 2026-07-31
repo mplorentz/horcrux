@@ -51,11 +51,16 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   String get _effectiveInviteCode => widget.invitation?.inviteCode ?? widget.inviteCode!;
 
   @override
-  Widget build(BuildContext context) {
-    Log.debug(
-      '[onboarding] InvitationAcceptanceScreen: build, '
+  void initState() {
+    super.initState();
+    Log.info(
+      '[onboarding] InvitationAcceptanceScreen: shown, '
       'inviteCode=$_effectiveInviteCode, hasDirectInvitation=${widget.invitation != null}',
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // If we have the invitation directly, use it synchronously.
     // Otherwise fall back to the DB-backed provider (e.g. for re-opened
     // already-persisted invites).

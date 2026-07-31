@@ -15,8 +15,19 @@ import 'onboarding_recovery_screen.dart';
 ///                                             → [I have an invitation] → InvitationOnboardingScreen
 ///                                             → [Recover a Vault] → OnboardingRecoveryScreen
 ///                                             → [Something Else] → AccountChoiceScreen
-class StartScreen extends StatelessWidget {
+class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
+
+  @override
+  State<StartScreen> createState() => _StartScreenState();
+}
+
+class _StartScreenState extends State<StartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Log.info('[onboarding] StartScreen: shown');
+  }
 
   /// Builds the start screen layout with a heading and four action cards:
   /// "Create a Vault" (navigates to [AccountChoiceScreen]),
@@ -25,7 +36,6 @@ class StartScreen extends StatelessWidget {
   /// "Something Else" (navigates to [AccountChoiceScreen]).
   @override
   Widget build(BuildContext context) {
-    Log.debug('[onboarding] StartScreen: build');
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'Start'),
       body: SafeArea(

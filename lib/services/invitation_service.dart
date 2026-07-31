@@ -47,7 +47,8 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
 
   // Properly clean up when the provider is disposed
   ref.onDispose(() {
-    Log.debug('[onboarding] invitationServiceProvider: disposing InvitationService(${service.hashCode})');
+    Log.debug(
+        '[onboarding] invitationServiceProvider: disposing InvitationService(${service.hashCode})');
     service.dispose();
   });
 
@@ -309,6 +310,17 @@ class InvitationService {
       return _pendingReceivedInvitation;
     }
 
+    final previouslyStaged = _pendingReceivedInvitation;
+    if (previouslyStaged != null) {
+      // Only one invitation is staged at a time — staging this one discards
+      // whatever was previously staged and not yet acted on. Log which one,
+      // since this is otherwise a silent loss of in-memory state.
+      Log.warning(
+        'Replacing staged invitation ${previouslyStaged.inviteCode} '
+        '(vault ${previouslyStaged.vaultId}) with $inviteCode; the previous one is now lost',
+      );
+    }
+
     // Build the invitation link object (no DB writes).
     final invitation = createInvitationLink(
       inviteCode: inviteCode,
@@ -416,8 +428,7 @@ class InvitationService {
     }
 
     // Look up in-memory first, fall back to DB.
-    final invitation =
-        _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
+    final invitation = _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }
@@ -570,8 +581,7 @@ class InvitationService {
     }
 
     // Look up in-memory first, fall back to DB.
-    final invitation =
-        _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
+    final invitation = _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }

@@ -17,7 +17,7 @@ import 'account_choice_screen.dart';
 ///       → [Continue] → AccountChoiceScreen
 ///
 /// Subscribes directly to [InvitationService.invitationsChangedStream] (same
-/// pattern as [BackupConfigScreen]) so it can advance automatically the
+/// pattern as `BackupConfigScreen`) so it can advance automatically the
 /// moment a staged invitation shows up (cold-start scenario, or the user
 /// returning to the app after tapping the link) rather than waiting for the
 /// user to notice and tap the button.
@@ -25,8 +25,7 @@ class InvitationOnboardingScreen extends ConsumerStatefulWidget {
   const InvitationOnboardingScreen({super.key});
 
   @override
-  ConsumerState<InvitationOnboardingScreen> createState() =>
-      _InvitationOnboardingScreenState();
+  ConsumerState<InvitationOnboardingScreen> createState() => _InvitationOnboardingScreenState();
 }
 
 class _InvitationOnboardingScreenState extends ConsumerState<InvitationOnboardingScreen> {
@@ -37,7 +36,7 @@ class _InvitationOnboardingScreenState extends ConsumerState<InvitationOnboardin
   @override
   void initState() {
     super.initState();
-    Log.debug('[onboarding] InvitationOnboardingScreen: initState');
+    Log.info('[onboarding] InvitationOnboardingScreen: shown');
     // Set up the subscription after first frame when ref is available, and
     // check right away in case an invitation was already staged before this
     // screen was built (e.g. cold-start deep link processed during launch).
@@ -74,7 +73,8 @@ class _InvitationOnboardingScreenState extends ConsumerState<InvitationOnboardin
 
   void _goToAccountChoice() {
     if (_navigated) {
-      Log.debug('[onboarding] InvitationOnboardingScreen: _goToAccountChoice already navigated, skipping');
+      Log.debug(
+          '[onboarding] InvitationOnboardingScreen: _goToAccountChoice already navigated, skipping');
       return;
     }
     _navigated = true;
