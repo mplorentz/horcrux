@@ -7,16 +7,14 @@ import '../models/relay_configuration.dart';
 import '../providers/vault_provider.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
-import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/invite_code_utils.dart';
+import '../utils/onboarding_navigation.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
-import 'invitation_acceptance_screen.dart';
-import 'vault_list_screen.dart';
 
 enum _ScanState { editing, scanning, results }
 
@@ -198,7 +196,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   /// After a successful scan the user goes straight to the vault list,
   /// or to the invitation acceptance screen if a staged invitation exists.
   void _continue() {
-    _routeToVaultListOrStagedInvitation();
+    routeToVaultListOrStagedInvitation(context, ref);
   }
 
   /// Skip the scan. Login import offers key backup; reset goes to vault list
@@ -211,26 +209,6 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
       );
     } else {
       _continue();
-    }
-  }
-
-  /// Routes to [InvitationAcceptanceScreen] if a staged invitation exists,
-  /// otherwise to [VaultListScreen].
-  void _routeToVaultListOrStagedInvitation() {
-    final invitationService = ref.read(invitationServiceProvider);
-    final staged = invitationService.getStagedInvitations();
-    if (staged.isNotEmpty) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => InvitationAcceptanceScreen(invitation: staged.first),
-        ),
-        (route) => false,
-      );
-    } else {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const VaultListScreen()),
-        (route) => false,
-      );
     }
   }
 

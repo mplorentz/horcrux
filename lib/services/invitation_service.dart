@@ -258,6 +258,12 @@ class InvitationService {
   /// [_pendingReceivedInvitations]. No vault row, no invitation row, no DB
   /// write of any kind.
   ///
+  /// The denied/redeemed checks below require the [AppDatabase], which isn't
+  /// available yet during onboarding (before the user has a Nostr key). If
+  /// those checks throw, we fall back to staging in memory without them —
+  /// but only when the user is NOT logged in. A logged-in user must never
+  /// bypass the denied/redeemed checks just because of a transient DB error.
+  ///
   /// Returns the staged [InvitationLink], or null if the invitation was
   /// already acted on (denied/accepted) or already staged.
   Future<InvitationLink?> stageReceivedInvitation({
@@ -268,17 +274,26 @@ class InvitationService {
     String? vaultName,
     String? ownerName,
   }) async {
-    // 1. Check if already denied (kv table).
-    if (await _isInviteCodeDenied(inviteCode)) {
-      Log.debug('Invitation $inviteCode was previously denied, skipping');
-      return null;
-    }
+    try {
+      // 1. Check if already denied (kv table).
+      if (await _isInviteCodeDenied(inviteCode)) {
+        Log.debug('Invitation $inviteCode was previously denied, skipping');
+        return null;
+      }
 
-    // 2. Check if already accepted (invitations table, status=redeemed).
-    final existing = await _loadInvitation(inviteCode);
-    if (existing != null && existing.status == InvitationStatus.redeemed) {
-      Log.debug('Invitation $inviteCode already redeemed, skipping');
-      return null;
+      // 2. Check if already accepted (invitations table, status=redeemed).
+      final existing = await _loadInvitation(inviteCode);
+      if (existing != null && existing.status == InvitationStatus.redeemed) {
+        Log.debug('Invitation $inviteCode already redeemed, skipping');
+        return null;
+      }
+    } catch (e) {
+      final keyPair = await _loginService.getStoredNostrKey();
+      if (keyPair != null) rethrow;
+
+      Log.info(
+        'stageReceivedInvitation: DB not available ($e), staging in memory only',
+      );
     }
 
     // 3. Check if already staged this session.
@@ -337,63 +352,6 @@ class InvitationService {
       key: _deniedInviteCodesKvKey,
       value: jsonEncode(codes.toList()),
     );
-  }
-
-  /// Stage an invitation parsed from a deep link, safely handling the case
-  /// where the database is not yet available (e.g. during onboarding before
-  /// the user has created a Nostr key).
-  ///
-  /// Only falls back to in-memory-only staging when the user is NOT logged in
-  /// (onboarding). If the user is logged in, the DB error is re-thrown — the
-  /// denied/redeemed checks must not be skipped for an authenticated user.
-  Future<InvitationLink?> stageReceivedInvitationSafely({
-    required String inviteCode,
-    required String vaultId,
-    required String ownerPubkey,
-    required List<String> relayUrls,
-    String? vaultName,
-    String? ownerName,
-  }) async {
-    try {
-      return await stageReceivedInvitation(
-        inviteCode: inviteCode,
-        vaultId: vaultId,
-        ownerPubkey: ownerPubkey,
-        relayUrls: relayUrls,
-        vaultName: vaultName,
-        ownerName: ownerName,
-      );
-    } catch (e) {
-      // Only fall back to in-memory staging during onboarding (no key yet).
-      // Logged-in users must never bypass denied/redeemed checks.
-      final keyPair = await _loginService.getStoredNostrKey();
-      if (keyPair != null) rethrow;
-
-      Log.info(
-        'stageReceivedInvitationSafely: DB not available ($e), staging in memory only',
-      );
-    }
-
-    // DB not available — skip denied/accepted checks and stage in memory.
-    final invitation = createInvitationLink(
-      inviteCode: inviteCode,
-      vaultId: vaultId,
-      vaultName: vaultName,
-      ownerPubkey: ownerPubkey,
-      ownerName: ownerName,
-      relayUrls: relayUrls,
-      inviteeName: null,
-    );
-    final pendingInvitation = invitation.updateStatus(InvitationStatus.pending);
-    validateInvitationLink(pendingInvitation);
-
-    _pendingReceivedInvitations[inviteCode] = pendingInvitation;
-    _notifyInvitationsChanged();
-
-    Log.info(
-      'Staged received invitation in memory (no DB): inviteCode=$inviteCode, vaultId=$vaultId',
-    );
-    return pendingInvitation;
   }
 
   /// Public getter so the invitation acceptance screen can read a staged

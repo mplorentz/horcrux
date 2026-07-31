@@ -152,7 +152,7 @@ class DeepLinkService {
       // Stage invitation in memory (no navigation). The invitation
       // acceptance screen will be pushed by the account-created or login
       // screen that picks up staged invitations.
-      final invitation = await _getInvitationService().stageReceivedInvitationSafely(
+      final invitation = await _getInvitationService().stageReceivedInvitation(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,

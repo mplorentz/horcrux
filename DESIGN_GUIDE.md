@@ -4,7 +4,7 @@
 
 **Keywords**: Stark monochrome, terminal-inspired, brutalist, confident typography, high contrast
 
-The horcrux3 theme emphasizes a **minimalist, brutalist aesthetic** with a stark black and white palette. The design is deliberately restrained, using only shades of gray for UI elements. Both light and dark modes are supported, following system preferences for a modern, accessible experience.
+The horcrux3 theme emphasizes a **minimalist, brutalist aesthetic** with a stark black and white palette. The design is deliberately restrained, using only shades of gray for UI elements. Only dark mode is supported for now.
 
 ---
 
