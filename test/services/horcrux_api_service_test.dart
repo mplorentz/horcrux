@@ -10,6 +10,7 @@ import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
 
 import 'package:horcrux/database/app_database.dart';
+import 'package:horcrux/models/terms_of_service.dart';
 import 'package:horcrux/services/horcrux_api_service.dart';
 import 'package:horcrux/services/login_service.dart';
 
@@ -43,43 +44,6 @@ void main() {
 
   tearDown(() async {
     await testDatabase.close();
-  });
-
-  group('fetchTermsOfService', () {
-    test('returns TermsOfService on 200', () async {
-      final mockClient = MockClient((request) async {
-        capturedRequests.add(request);
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'text': 'Test terms of service.',
-            'version': 3,
-          })),
-          200,
-          headers: {'content-type': 'application/json'},
-        );
-      });
-
-      final service = createService(mockClient);
-      final tos = await service.fetchTermsOfService();
-
-      expect(tos.text, 'Test terms of service.');
-      expect(tos.version, 3);
-      expect(capturedRequests, hasLength(1));
-      expect(capturedRequests.first.url.path, '/tos');
-      expect(capturedRequests.first.method, 'GET');
-    });
-
-    test('throws on non-200 response', () async {
-      final mockClient = MockClient((_) async {
-        return http.Response('{"error":"internal error"}', 500);
-      });
-
-      final service = createService(mockClient);
-      expect(
-        () => service.fetchTermsOfService(),
-        throwsA(isA<HorcruxApiException>()),
-      );
-    });
   });
 
   group('acceptTermsOfService', () {
@@ -143,78 +107,35 @@ void main() {
   });
 
   group('needsConsentAcceptance', () {
+    // The ToS version check is now purely local (bundled kCurrentTosVersion
+    // vs. the last accepted version in the DB) — no network call, so these
+    // tests don't need to configure the mock client's response.
     test('returns true when no version has been accepted', () async {
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'text': 'Terms v1',
-            'version': 1,
-          })),
-          200,
-          headers: {'content-type': 'application/json'},
-        );
-      });
-
-      final service = createService(mockClient);
+      final service = createService(MockClient((_) async => http.Response('', 200)));
       final needs = await service.needsConsentAcceptance();
 
       expect(needs, isTrue);
     });
 
-    test('returns true when served version is newer than accepted', () async {
-      // Pre-accept version 1.
+    test('returns true when accepted version is older than the bundled version', () async {
       await testDatabase.appStateDao.setInt(
         key: HorcruxApiService.tosAcceptedVersionKey,
-        value: 1,
+        value: 0,
       );
 
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'text': 'Terms v2',
-            'version': 2,
-          })),
-          200,
-          headers: {'content-type': 'application/json'},
-        );
-      });
-
-      final service = createService(mockClient);
+      final service = createService(MockClient((_) async => http.Response('', 200)));
       final needs = await service.needsConsentAcceptance();
 
       expect(needs, isTrue);
     });
 
-    test('returns false when served version matches accepted', () async {
-      // Pre-accept version 1.
+    test('returns false when accepted version matches the bundled version', () async {
       await testDatabase.appStateDao.setInt(
         key: HorcruxApiService.tosAcceptedVersionKey,
-        value: 1,
+        value: kCurrentTosVersion,
       );
 
-      final mockClient = MockClient((request) async {
-        return http.Response.bytes(
-          utf8.encode(jsonEncode({
-            'text': 'Terms v1',
-            'version': 1,
-          })),
-          200,
-          headers: {'content-type': 'application/json'},
-        );
-      });
-
-      final service = createService(mockClient);
-      final needs = await service.needsConsentAcceptance();
-
-      expect(needs, isFalse);
-    });
-
-    test('returns false when API is unreachable', () async {
-      final mockClient = MockClient((_) async {
-        throw Exception('Connection refused');
-      });
-
-      final service = createService(mockClient);
+      final service = createService(MockClient((_) async => http.Response('', 200)));
       final needs = await service.needsConsentAcceptance();
 
       expect(needs, isFalse);

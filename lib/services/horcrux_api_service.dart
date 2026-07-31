@@ -56,8 +56,11 @@ class HorcruxApiException implements Exception {
 ///
 /// | Method | Path | Auth | Description |
 /// |--------|------|------|-------------|
-/// | GET | `/tos` | No | Fetch current ToS text + version |
 /// | POST | `/tos/accept` | NIP-98 | Record acceptance of a ToS version |
+///
+/// The ToS/Privacy Policy text itself is bundled with the app (see
+/// [TermsOfService]) rather than fetched from the server, so onboarding
+/// doesn't depend on API reachability.
 ///
 /// ## Base URL
 ///
@@ -99,29 +102,6 @@ class HorcruxApiService {
   // ---------------------------------------------------------------------------
   // ToS endpoints
   // ---------------------------------------------------------------------------
-
-  /// Fetches the current Terms of Service text and version from the API.
-  ///
-  /// This is a public endpoint — no auth required.
-  Future<TermsOfService> fetchTermsOfService() async {
-    final base = await getBaseUrl();
-    final url = Uri.parse('$base/tos');
-    Log.info('HorcruxApiService: fetching ToS from $url');
-
-    final response = await _httpClient
-        .get(url, headers: {'Accept': 'application/json'})
-        .timeout(_requestTimeout);
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      return TermsOfService.fromJson(json);
-    }
-
-    throw HorcruxApiException(
-      statusCode: response.statusCode,
-      message: 'Failed to fetch Terms of Service: HTTP ${response.statusCode}',
-    );
-  }
 
   /// Records acceptance of the given [tosVersion] against the current user's
   /// npub on the horcrux-api server.
@@ -181,35 +161,16 @@ class HorcruxApiService {
 
   /// Checks whether the user needs to accept the current ToS version.
   ///
-  /// Returns `true` if:
-  /// - The user has never accepted the ToS (no stored version), OR
-  /// - The served version is greater than the last accepted version.
-  ///
-  /// Returns `false` if the API is unreachable (network error, server down).
-  /// This prevents blocking the user from using the app when the server is
-  /// unavailable.
+  /// Returns `true` if the user has never accepted the ToS (no stored
+  /// version), or if [kCurrentTosVersion] is greater than the last accepted
+  /// version. Purely local — the ToS text and version are bundled with the
+  /// app, so this never depends on network reachability.
   Future<bool> needsConsentAcceptance() async {
-    TermsOfService current;
-    try {
-      current = await fetchTermsOfService();
-    } catch (e) {
-      Log.warning('HorcruxApiService: cannot check ToS version (server unreachable)', e);
-      return false;
-    }
-
     final accepted = await getLastAcceptedVersion();
     if (accepted == null) {
       return true; // Never accepted
     }
-    return current.version > accepted;
-  }
-
-  /// Convenience: calls [acceptTermsOfService] with the current version from
-  /// the server. Returns `true` if acceptance was recorded successfully.
-  Future<bool> acceptCurrentTerms() async {
-    final tos = await fetchTermsOfService();
-    await acceptTermsOfService(tos.version);
-    return true;
+    return kCurrentTosVersion > accepted;
   }
 
   // ---------------------------------------------------------------------------
@@ -234,8 +195,7 @@ class HorcruxApiService {
     );
   }
 
-  static String _stripTrailingSlash(String s) =>
-      s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+  static String _stripTrailingSlash(String s) => s.endsWith('/') ? s.substring(0, s.length - 1) : s;
 
   /// Closes the underlying [http.Client] if this service owns it.
   void dispose() {

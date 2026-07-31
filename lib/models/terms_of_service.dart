@@ -1,28 +1,33 @@
-/// Response from `GET /tos` on the horcrux-api.
+import 'package:flutter/services.dart' show rootBundle;
+
+/// The current bundled Terms of Service / Privacy Policy version.
 ///
-/// Contains the current Terms of Service text and its version number.
-/// The version is used to detect when the ToS has been updated (re-prompt)
-/// and to stamp the `POST /tos/accept` request.
+/// Bump this whenever `assets/legal/terms_of_service.md` or
+/// `assets/legal/privacy_policy.md` changes, as part of an app update.
+/// [HorcruxApiService.needsConsentAcceptance] re-prompts the user when this
+/// is greater than their last locally-accepted version. `POST /tos/accept`
+/// records acceptance against this version for the server-side audit trail.
+const int kCurrentTosVersion = 1;
+
+/// The Terms of Service and Privacy Policy, bundled with the app so they're
+/// available offline during onboarding.
 class TermsOfService {
-  /// The ToS / Privacy Policy text body (Markdown).
+  /// Combined ToS + Privacy Policy text (Markdown), for display.
   final String text;
 
-  /// Monotonically increasing version number. Bumped when the operator
-  /// updates the terms; clients must re-accept when the served version is
-  /// greater than the last locally-accepted version.
+  /// The bundled version. See [kCurrentTosVersion].
   final int version;
 
   const TermsOfService({required this.text, required this.version});
 
-  factory TermsOfService.fromJson(Map<String, dynamic> json) {
+  /// Loads the bundled Terms of Service and Privacy Policy from assets and
+  /// concatenates them for display.
+  static Future<TermsOfService> loadBundled() async {
+    final tos = await rootBundle.loadString('assets/legal/terms_of_service.md');
+    final privacyPolicy = await rootBundle.loadString('assets/legal/privacy_policy.md');
     return TermsOfService(
-      text: json['text'] as String? ?? '',
-      version: json['version'] as int? ?? 0,
+      text: '$tos\n\n---\n\n$privacyPolicy',
+      version: kCurrentTosVersion,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'text': text,
-        'version': version,
-      };
 }

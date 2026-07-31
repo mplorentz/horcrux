@@ -43,8 +43,7 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
   }
 
   @override
-  set onSecureStorageReadFailure(
-          _i4.Future<void> Function()? _onSecureStorageReadFailure) =>
+  set onSecureStorageReadFailure(_i4.Future<void> Function()? _onSecureStorageReadFailure) =>
       super.noSuchMethod(
         Invocation.setter(
           #onSecureStorageReadFailure,
@@ -84,8 +83,7 @@ class MockLoginService extends _i1.Mock implements _i3.LoginService {
       ) as _i4.Future<_i2.KeyPair>);
 
   @override
-  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) =>
-      (super.noSuchMethod(
+  _i4.Future<_i2.KeyPair> importHexPrivateKey(String? hexPrivateKey) => (super.noSuchMethod(
         Invocation.method(
           #importHexPrivateKey,
           [hexPrivateKey],

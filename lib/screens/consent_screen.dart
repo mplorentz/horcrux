@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/terms_of_service.dart';
@@ -16,9 +17,9 @@ import '../widgets/row_button.dart';
 /// email/mailing-list fields (qiec) onto this screen.
 ///
 /// The screen:
-/// 1. Fetches the current ToS text + version from `GET /tos` on the
-///    operator-run horcrux-api.
-/// 2. Renders the text (scrollable).
+/// 1. Loads the bundled ToS + Privacy Policy text and version from local
+///    assets (see [TermsOfService.loadBundled]) — no network required.
+/// 2. Renders the text as Markdown (scrollable).
 /// 3. Requires the user to tap "I agree to the Terms & Privacy Policy"
 ///    checkbox before proceeding.
 /// 4. On acceptance: `POST /tos/accept` with the current version, then
@@ -80,8 +81,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     });
 
     try {
-      final api = ref.read(horcruxApiServiceProvider);
-      final tos = await api.fetchTermsOfService();
+      final tos = await TermsOfService.loadBundled();
       if (mounted) {
         setState(() {
           _tos = tos;
@@ -96,8 +96,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       Log.error('ConsentScreen: failed to load ToS', e, st);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Could not load Terms of Service. '
-              'Please check your internet connection and try again.';
+          _errorMessage = 'Could not load Terms of Service.';
           _isLoading = false;
         });
       }
@@ -180,7 +179,9 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
-        title: widget.viewOnly ? 'Terms of Service' : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
+        title: widget.viewOnly
+            ? 'Terms of Service'
+            : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
         automaticallyImplyLeading: widget.viewOnly ? false : widget.nextScreen == null,
       ),
       body: SafeArea(
@@ -223,7 +224,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.cloud_off,
+                Icons.error_outline,
                 size: 48,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
@@ -269,9 +270,11 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            tos.text,
-            style: textTheme.bodyMedium?.copyWith(height: 1.6),
+          MarkdownBody(
+            data: tos.text,
+            styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+              p: textTheme.bodyMedium?.copyWith(height: 1.6),
+            ),
           ),
           const SizedBox(height: 24),
         ],
