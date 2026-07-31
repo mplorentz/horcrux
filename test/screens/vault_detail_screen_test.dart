@@ -100,7 +100,7 @@ void main() {
       container.dispose();
     });
 
-  testWidgets(
+    testWidgets(
       'shows Seal Vault button when owner has content and owner steward configured',
       (tester) async {
         final ownerSteward = createOwnerSteward(pubkey: testPubkey);

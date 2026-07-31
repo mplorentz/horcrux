@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/key_provider.dart';
+import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../utils/app_initialization.dart';
 import '../screens/account_created_screen.dart';
 import '../screens/login_screen.dart';
@@ -16,6 +18,13 @@ class AccountChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final hasStaged = ref.read(invitationServiceProvider).hasStagedInvitations;
+    Log.info('[onboarding] AccountChoiceScreen: shown, hasStagedInvitations=$hasStaged');
+  }
+
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
@@ -44,11 +53,20 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                 onTap: () async {
                   final navigator = Navigator.of(context);
 
+                  Log.debug('[onboarding] AccountChoiceScreen: Create Account tapped');
                   final loginService = ref.read(loginServiceProvider);
                   final keyPair = await loginService.generateAndStoreNostrKey();
 
                   // Initialize services and refresh key providers
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: calling initializeAppAndRefreshKeys '
+                    '(this reinitializes deep link handling)',
+                  );
                   await initializeAppAndRefreshKeys(ref);
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: initializeAppAndRefreshKeys done, '
+                    'hasStagedInvitations=${ref.read(invitationServiceProvider).hasStagedInvitations}',
+                  );
 
                   navigator.push(
                     MaterialPageRoute(
@@ -102,34 +120,33 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
             border: Border.all(color: theme.colorScheme.primary, width: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
-        child: Row(
-          children: [
-            Icon(icon, size: 32, color: theme.colorScheme.onSurface),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+          child: Row(
+            children: [
+              Icon(icon, size: 32, color: theme.colorScheme.onSurface),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(description, style: textTheme.bodyMedium),
-                ],
+                    const SizedBox(height: 4),
+                    Text(description, style: textTheme.bodyMedium),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ],
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }

@@ -265,7 +265,7 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 
 **Shamir Constraints**: Min threshold 1, max total keys 10 (see `VaultBackupConstraints`).
 
-**Deep Links**: Invitation links use format `horcrux://join/{inviteCode}`. Handle via `DeepLinkService` with validation.
+**Deep Links**: Invitation links are generated (`InvitationLink.toUrl()`) as `https://horcruxbackup.com/invite/{inviteCode}?vault=...&owner=...&relays=...`; the `horcrux://` custom scheme is also accepted for the same `/invite/{code}` path. Handle via `DeepLinkService` with validation.
 
 ## Important Cursor Rules (from .cursorrules)
 
