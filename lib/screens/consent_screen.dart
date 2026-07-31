@@ -24,16 +24,18 @@ import '../widgets/row_button.dart';
 /// 4. On acceptance: `POST /tos/accept` with the current version, then
 ///    either navigates to [nextScreen] (if provided) or pops back.
 ///
+/// ## View-only mode ([viewOnly])
+///
+/// When opened from Settings > Account > Terms & Privacy, the screen shows
+/// the terms without a checkbox or approve button. It auto-accepts silently
+/// on load (forced accept) and pops back to the previous screen. The back
+/// button is hidden -- the user cannot dismiss without accepting.
+///
 /// ## Re-prompt
 ///
 /// When the served version is greater than the last locally-accepted version,
 /// this screen is shown again (triggered from app start via
 /// [HorcruxApiService.needsConsentAcceptance]).
-///
-/// ## Settings entry
-///
-/// Accessible from Settings → Account → Terms & Privacy for viewing or
-/// re-accepting updated terms.
 class ConsentScreen extends ConsumerStatefulWidget {
   /// Optional screen to navigate to after the user accepts the terms.
   ///
@@ -43,21 +45,25 @@ class ConsentScreen extends ConsumerStatefulWidget {
   /// `pushAndRemoveUntil`).
   final Widget? nextScreen;
 
-  const ConsentScreen({super.key, this.nextScreen});
+  /// When `true`, renders as a view-only screen with no checkbox or approve
+  /// button. The terms are auto-accepted silently on load. Used from
+  /// Settings > Account > Terms & Privacy.
+  final bool viewOnly;
+
+  const ConsentScreen({super.key, this.nextScreen, this.viewOnly = false});
 
   @override
   ConsumerState<ConsentScreen> createState() => _ConsentScreenState();
 }
 
 class _ConsentScreenState extends ConsumerState<ConsentScreen> {
-  /// The fetched ToS data, or null if still loading / errored.
   TermsOfService? _tos;
-
-  /// Non-null when loading or an error occurred.
   String? _errorMessage;
   bool _isLoading = true;
   bool _isAccepting = false;
   bool _agreed = false;
+  bool _viewOnlyAccepted = false;
+  bool _viewOnlyAutoAcceptStarted = false;
 
   @override
   void initState() {
@@ -79,6 +85,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           _tos = tos;
           _isLoading = false;
         });
+        // In view-only mode, auto-accept after loading.
+        if (widget.viewOnly) {
+          _autoAcceptTerms(tos);
+        }
       }
     } catch (e, st) {
       Log.error('ConsentScreen: failed to load ToS', e, st);
@@ -88,6 +98,37 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
               'Please check your internet connection and try again.';
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  /// Auto-accepts the current terms silently (view-only mode).
+  Future<void> _autoAcceptTerms(TermsOfService tos) async {
+    if (_viewOnlyAutoAcceptStarted) return;
+    _viewOnlyAutoAcceptStarted = true;
+
+    try {
+      final api = ref.read(horcruxApiServiceProvider);
+      await api.acceptTermsOfService(tos.version);
+
+      if (!mounted) return;
+
+      setState(() => _viewOnlyAccepted = true);
+
+      // Brief delay so the user sees the "Accepted" state, then pop back.
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e, st) {
+      Log.error('ConsentScreen: auto-accept failed', e, st);
+      if (mounted) {
+        context.showHorcruxSnackBar(
+          'Failed to accept Terms of Service: $e',
+          kind: HorcruxSnackKind.error,
+        );
+        // Allow the user to dismiss on error (back button is hidden in
+        // view-only mode, but the error state shows a retry button).
       }
     }
   }
@@ -103,7 +144,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
       if (!mounted) return;
 
-      // Navigate onward or pop back.
       final next = widget.nextScreen;
       if (next != null) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -136,8 +176,8 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
-        title: _isAccepting ? 'Accepting...' : 'Terms & Privacy',
-        automaticallyImplyLeading: widget.nextScreen == null,
+        title: widget.viewOnly ? 'Terms of Service' : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
+        automaticallyImplyLeading: widget.viewOnly ? false : widget.nextScreen == null,
       ),
       body: SafeArea(
         bottom: false,
@@ -146,8 +186,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             Expanded(
               child: _buildBody(theme, textTheme),
             ),
-            // Agree checkbox + Continue button
-            if (_tos != null && !_isAccepting) _buildFooter(theme, textTheme),
+            // View-only mode: show "Accepted" indicator after auto-accept.
+            if (widget.viewOnly && _viewOnlyAccepted) _buildViewOnlyAccepted(theme, textTheme),
+            // Onboarding mode: show checkbox + continue button.
+            if (!widget.viewOnly && _tos != null && !_isAccepting) _buildFooter(theme, textTheme),
             if (_isAccepting) _buildAcceptingIndicator(theme),
           ],
         ),
@@ -291,6 +333,29 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           ),
           SizedBox(width: 12),
           Text('Recording acceptance...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewOnlyAccepted(ThemeData theme, TextTheme textTheme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.check_circle,
+            size: 20,
+            color: theme.colorScheme.onSurface,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Terms accepted',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );

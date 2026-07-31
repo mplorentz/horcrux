@@ -372,7 +372,7 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => const ConsentScreen(),
+                              builder: (context) => const ConsentScreen(viewOnly: true),
                             ),
                           );
                         },
