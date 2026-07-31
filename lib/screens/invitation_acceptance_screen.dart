@@ -12,7 +12,7 @@ import '../widgets/horcrux_scaffold.dart';
 import '../widgets/name_label.dart';
 import '../widgets/row_button.dart';
 import '../widgets/row_button_stack.dart';
-import 'vault_detail_screen.dart';
+import 'vault_list_screen.dart';
 
 /// Screen for accepting or denying an invitation link.
 ///
@@ -440,18 +440,21 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
     try {
       final invitationService = ref.read(invitationServiceProvider);
-      final vaultId = await invitationService.redeemInvitation(
+      await invitationService.redeemInvitation(
         inviteCode: _effectiveInviteCode,
         inviteePubkey: inviteePubkey,
       );
 
       if (mounted) {
-        // Remove the invitation screen and navigate to vault detail
-        Navigator.pushReplacement(
+        // Navigate to the vault list so the user can see their new vault
+        // and navigate freely. Using pushAndRemoveUntil ensures the
+        // invitation acceptance screen is removed from the stack.
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => VaultDetailScreen(vaultId: vaultId),
+            builder: (context) => const VaultListScreen(),
           ),
+          (route) => false,
         );
       }
     } on InvitationAlreadyRedeemedException {
