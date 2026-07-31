@@ -180,7 +180,9 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
-        title: widget.viewOnly ? 'Terms of Service' : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
+        title: widget.viewOnly
+            ? 'Terms of Service'
+            : (_isAccepting ? 'Accepting...' : 'Terms & Privacy'),
         automaticallyImplyLeading: widget.viewOnly ? false : widget.nextScreen == null,
       ),
       body: SafeArea(

@@ -109,8 +109,7 @@ class HorcruxApiService {
     Log.info('HorcruxApiService: fetching ToS from $url');
 
     final response = await _httpClient
-        .get(url, headers: {'Accept': 'application/json'})
-        .timeout(_requestTimeout);
+        .get(url, headers: {'Accept': 'application/json'}).timeout(_requestTimeout);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
@@ -234,8 +233,7 @@ class HorcruxApiService {
     );
   }
 
-  static String _stripTrailingSlash(String s) =>
-      s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+  static String _stripTrailingSlash(String s) => s.endsWith('/') ? s.substring(0, s.length - 1) : s;
 
   /// Closes the underlying [http.Client] if this service owns it.
   void dispose() {
