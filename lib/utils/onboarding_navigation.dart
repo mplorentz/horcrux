@@ -10,7 +10,10 @@ import '../services/invitation_service.dart';
 /// account or was logged in), otherwise to [VaultListScreen].
 ///
 /// Clears the entire navigation stack so the user can't back into onboarding.
-void routeToVaultListOrStagedInvitation(BuildContext context, WidgetRef ref) {
+void routeToVaultListOrStagedInvitation({
+  required BuildContext context,
+  required WidgetRef ref,
+}) {
   final invitationService = ref.read(invitationServiceProvider);
   final staged = invitationService.getStagedInvitations();
   final destination = staged.isNotEmpty
