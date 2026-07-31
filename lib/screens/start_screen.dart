@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/key_provider.dart';
-import '../utils/app_initialization.dart';
-import '../screens/account_created_screen.dart';
-import '../screens/login_screen.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import 'account_choice_screen.dart';
+import 'onboarding_recovery_screen.dart';
 
-/// Screen allowing users to choose how to set up their account
-class AccountChoiceScreen extends ConsumerStatefulWidget {
-  const AccountChoiceScreen({super.key});
+/// Start screen shown after onboarding explainer.
+///
+/// Presents "Recover a Vault" and a "Something Else" button that routes to
+/// AccountChoiceScreen. Additional buttons ("I have an invitation", "Create a
+/// Vault") will land in subsequent PRs.
+///
+/// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
+///                                             → [Something Else] → AccountChoiceScreen
+class StartScreen extends StatelessWidget {
+  const StartScreen({super.key});
 
-  @override
-  ConsumerState<AccountChoiceScreen> createState() => _AccountChoiceScreenState();
-}
-
-class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
+  /// Builds the start screen layout with a heading and two action cards:
+  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]) and
+  /// "Something Else" (navigates to [AccountChoiceScreen]).
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
-      appBar: const HorcruxAppBar(title: 'Setup'),
+      appBar: const HorcruxAppBar(title: 'Start'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -27,48 +29,39 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 24),
-              // Explainer text
-              const Text(
-                'Horcrux uses the Nostr network to store and transmit data. '
-                'Nostr is a digital commons that prevents vendor lock-in. '
-                'We can create a new Nostr account for you or you can log in with an existing one.',
-                style: TextStyle(fontSize: 16, height: 1.5),
+              Text(
+                'How would you like to start?',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // Create Account card
               _buildAccountCard(
-                context,
-                icon: Icons.add_circle_outline,
-                title: 'Create Account',
-                description: 'Generate a new Nostr identity',
-                onTap: () async {
-                  final navigator = Navigator.of(context);
-
-                  final loginService = ref.read(loginServiceProvider);
-                  final keyPair = await loginService.generateAndStoreNostrKey();
-
-                  // Initialize services and refresh key providers
-                  await initializeAppAndRefreshKeys(ref);
-
-                  navigator.push(
+                context: context,
+                icon: Icons.restore,
+                title: 'Recover a Vault',
+                description: 'Restore vault data from your stewards',
+                onTap: () {
+                  Navigator.push(
+                    context,
                     MaterialPageRoute(
-                      builder: (context) => AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                      builder: (context) => const OnboardingRecoveryScreen(),
                     ),
                   );
                 },
               ),
               const SizedBox(height: 16),
-              // Login card
               _buildAccountCard(
-                context,
-                icon: Icons.login,
-                title: 'Login',
-                description: 'Import existing Nostr key',
+                context: context,
+                icon: Icons.arrow_forward,
+                title: 'Something Else',
+                description: 'Create or import an account',
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
+                      builder: (context) => const AccountChoiceScreen(),
                     ),
                   );
                 },
@@ -80,8 +73,8 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
     );
   }
 
-  Widget _buildAccountCard(
-    BuildContext context, {
+  Widget _buildAccountCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
@@ -130,6 +123,5 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
       ),
     ),
   );
-}
-
+  }
 }
