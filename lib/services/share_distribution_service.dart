@@ -94,8 +94,6 @@ class ShareDistributionService {
           // New Nostr wire format: content is raw payload, tags from shareToNostrTags
           final nostrContent = shareToNostrContent(shareWithRelays);
           final nostrTags = shareToNostrTags(shareWithRelays);
-          // Add d tag for dedup (stable identifier for replaceable event)
-          nostrTags.insert(0, ['d', 'share_${config.vaultId}_$i']);
 
           Log.debug('recipient pubkey: ${keyHolder.pubkey}');
 
@@ -254,7 +252,6 @@ class ShareDistributionService {
         // New Nostr wire format for manifest: empty content, tags from shareToNostrTags
         final manifestContent = shareToNostrContent(manifest);
         final manifestTags = shareToNostrTags(manifest);
-        manifestTags.insert(0, ['d', 'manifest_${config.vaultId}']);
         final publishedManifest = await _ndkService.publishEncryptedEvent(
           content: manifestContent,
           kind: NostrKind.shareData.value,

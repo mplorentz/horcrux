@@ -74,7 +74,7 @@ class DeepLinkService {
     try {
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        Log.info('App opened via deep link: $initialLink');
+        Log.info('App opened via deep link');
         await _processLink(initialLink);
       }
     } catch (e) {
@@ -84,7 +84,7 @@ class DeepLinkService {
     // Set up listener for incoming links (app already running)
     _linkSubscription = _appLinks.uriLinkStream.listen(
       (Uri uri) {
-        Log.info('Received deep link while app running: $uri');
+        Log.info('Received deep link while app running');
         _processLink(uri);
       },
       onError: (error) {
@@ -104,7 +104,7 @@ class DeepLinkService {
     try {
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        Log.info('Handling initial link: $initialLink');
+        Log.info('Handling initial link');
         await _processLink(initialLink);
       }
     } catch (e) {
@@ -119,7 +119,7 @@ class DeepLinkService {
   /// Validates link format.
   /// Routes to invitation acceptance flow.
   void handleIncomingLink(Uri uri) {
-    Log.info('Handling incoming link: $uri');
+    Log.info('Handling incoming link');
     _processLink(uri);
   }
 
@@ -133,21 +133,19 @@ class DeepLinkService {
     // Silently ignore non-invitation URLs (e.g., root path on web startup)
     if (uri.pathSegments.isEmpty ||
         (uri.pathSegments.isNotEmpty && uri.pathSegments[0] != 'invite')) {
-      Log.debug('Ignoring non-invitation URL: $uri');
+      Log.debug('Ignoring non-invitation URL');
       return;
     }
 
     try {
       final linkData = parseInvitationLink(uri);
       if (linkData == null) {
-        Log.warning('Invalid invitation link format: $uri');
+        Log.warning('Invalid invitation link format');
         _showErrorToUser('Invalid invitation link format');
         return;
       }
 
-      Log.info(
-        'Parsed invitation link: inviteCode=${linkData.inviteCode}, vaultId=${linkData.vaultId}, vaultName=${linkData.vaultName}',
-      );
+      Log.info('Parsed invitation link (relays=${linkData.relayUrls.length})');
 
       // Stage invitation in memory (no navigation). The invitation
       // acceptance screen will be pushed by the account-created or login
@@ -163,19 +161,20 @@ class DeepLinkService {
 
       if (invitation == null) {
         // Already acted on (denied/accepted) — don't re-prompt.
-        Log.info('Invitation $linkData.inviteCode already acted on, skipping');
+        Log.info('Invitation already acted on, skipping');
         return;
       }
 
-      Log.info(
-        'Deep link processed; invitation ${linkData.inviteCode} staged in memory',
-      );
+      Log.info('Deep link processed; invitation staged in memory');
     } on InvalidInvitationLinkException catch (e) {
-      Log.error('Invalid invitation link: $uri', e);
+      // Log only the reason, not `e` itself — InvalidInvitationLinkException
+      // embeds the full source URI (invite code, owner pubkey, etc.) in its
+      // toString(), which the logger would otherwise print.
+      Log.error('Invalid invitation link: ${e.reason}');
       _showErrorToUser(e.reason);
     } catch (e) {
       Log.error('Error processing deep link', e);
-      _showErrorToUser('Failed to process invitation link: $e');
+      _showErrorToUser('Failed to process invitation link');
     }
   }
 
@@ -296,9 +295,7 @@ class DeepLinkService {
         );
       }
 
-      Log.info(
-        'Successfully parsed invitation link: inviteCode=$inviteCode, vaultId=$vaultId, vaultName=$vaultName, owner=$ownerPubkey, ownerName=$ownerName, relays=${relayUrls.length}',
-      );
+      Log.info('Successfully parsed invitation link (relays=${relayUrls.length})');
 
       return (
         inviteCode: inviteCode,
@@ -313,7 +310,7 @@ class DeepLinkService {
     } on InvalidInvitationLinkException {
       rethrow;
     } catch (e) {
-      Log.error('Error parsing invitation link: $uri', e);
+      Log.error('Error parsing invitation link', e);
       throw InvalidInvitationLinkException(
         uri.toString(),
         'Failed to parse invitation link: $e',

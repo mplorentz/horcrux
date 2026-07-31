@@ -39,6 +39,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     # Required by drift database (SQLite for in-memory tests)
     libsqlite3-dev \
+    # Flutter 3.41.9+ needs lld linker
+    lld \
+    lld-14 \
+    # socat for Marionette VM service proxy
+    socat \
     # Secret Service for libsecret: session D-Bus + gnome-keyring (headless Docker)
     dbus-x11 \
     gnome-keyring \
@@ -79,8 +84,8 @@ RUN apt-get update && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Flutter 3.35.0
-ENV FLUTTER_VERSION=3.35.0
+# Install Flutter 3.41.9 (project minimum SDK requirement)
+ENV FLUTTER_VERSION=3.41.9
 ENV FLUTTER_HOME=/opt/flutter
 ENV PATH="${FLUTTER_HOME}/bin:${PATH}"
 RUN mkdir -p /root/.flutter /root/.pub-cache
@@ -88,6 +93,10 @@ RUN mkdir -p /root/.flutter /root/.pub-cache
 RUN git clone --branch ${FLUTTER_VERSION} --depth 1 https://github.com/flutter/flutter.git ${FLUTTER_HOME} && \
     flutter doctor && \
     flutter config --enable-linux-desktop
+
+# Install Rust (required by ndk package native hooks)
+RUN curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Marionette MCP globally
 RUN dart pub global activate marionette_mcp
