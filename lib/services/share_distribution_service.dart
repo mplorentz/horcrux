@@ -94,8 +94,6 @@ class ShareDistributionService {
           // New Nostr wire format: content is raw payload, tags from shareToNostrTags
           final nostrContent = shareToNostrContent(shareWithRelays);
           final nostrTags = shareToNostrTags(shareWithRelays);
-          // Add d tag for dedup (stable identifier for replaceable event)
-          nostrTags.insert(0, ['d', 'share_${config.vaultId}_$i']);
 
           Log.debug('recipient pubkey: ${keyHolder.pubkey}');
 
