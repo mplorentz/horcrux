@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'account_choice_screen.dart';
+import 'invitation_instructions_screen.dart';
 import 'onboarding_recovery_screen.dart';
 
 /// Start screen shown after onboarding explainer.
 ///
-/// Presents "Recover a Vault" and a "Something Else" button that routes to
-/// AccountChoiceScreen. Additional buttons ("I have an invitation", "Create a
-/// Vault") will land in subsequent PRs.
+/// Presents "Recover a Vault", "I have an invitation", and "Something Else"
+/// buttons.
 ///
 /// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
+///                                             → [I have an invitation] → InvitationInstructionsScreen
 ///                                             → [Something Else] → AccountChoiceScreen
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
-  /// Builds the start screen layout with a heading and two action cards:
-  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]) and
+  /// Builds the start screen layout with a heading and three action cards:
+  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]),
+  /// "I have an invitation" (navigates to [InvitationInstructionsScreen]), and
   /// "Something Else" (navigates to [AccountChoiceScreen]).
   @override
   Widget build(BuildContext context) {
@@ -47,6 +49,21 @@ class StartScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const OnboardingRecoveryScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildAccountCard(
+                context: context,
+                icon: Icons.mail_outline,
+                title: 'I have an invitation',
+                description: 'Accept an invitation from a vault owner',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InvitationInstructionsScreen(),
                     ),
                   );
                 },

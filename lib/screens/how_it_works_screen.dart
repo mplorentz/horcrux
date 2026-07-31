@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/invitation_service.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/key_diagram.dart';
 import '../widgets/row_button.dart';
+import 'account_choice_screen.dart';
 import 'start_screen.dart';
 
 /// Onboarding explainer screen showing the interactive hub-and-spoke diagram.
 ///
-/// Flow: OnboardingScreen → [Learn More] → HowItWorksScreen → [Get Started] → AccountChoiceScreen
-class HowItWorksScreen extends StatefulWidget {
+/// Flow: OnboardingScreen → [Learn More] → HowItWorksScreen → [Get Started] → StartScreen
+/// If a staged invitation exists (cold-start), skips StartScreen and goes
+/// directly to AccountChoiceScreen so the pickup hook can fire.
+class HowItWorksScreen extends ConsumerStatefulWidget {
   const HowItWorksScreen({super.key});
 
   @override
-  State<HowItWorksScreen> createState() => _HowItWorksScreenState();
+  ConsumerState<HowItWorksScreen> createState() => _HowItWorksScreenState();
 }
 
-class _HowItWorksScreenState extends State<HowItWorksScreen> {
+class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
   // Pre-populated: 3 stewards, threshold 2
   int _stewardCount = 3;
   int _threshold = 2;
@@ -117,6 +122,18 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             // Get Started button at bottom
             RowButton(
               onPressed: () {
+                // Cold-start: if a staged invitation exists, skip StartScreen
+                // and go directly to account creation so the pickup hook fires.
+                final invitationService = ref.read(invitationServiceProvider);
+                if (invitationService.hasStagedInvitations) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountChoiceScreen(),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
