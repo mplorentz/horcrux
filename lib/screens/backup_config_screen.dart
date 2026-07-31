@@ -1403,9 +1403,15 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
     // T022: Warn about 1-of-1 threshold — any single steward is a single point of failure
     if (_threshold == 1) {
-      final message = _stewards.length == 1 && _stewards.first.isOwner
+      final isSingleSteward = _stewards.length == 1;
+      final message = isSingleSteward && _stewards.first.isOwner
           ? 'You\'re setting up a 1-of-1 backup with only yourself as the steward.'
-          : 'You\'re setting up a 1-of-1 backup. If that single steward loses their key, recovery is impossible.';
+          : isSingleSteward
+              ? 'You\'re setting up a 1-of-1 backup. If that steward loses their key, recovery is impossible.'
+              : 'You\'re setting up a 1-of-${_stewards.length} backup. Any one steward key satisfies threshold 1.';
+      final detailMessage = isSingleSteward
+          ? 'This means if you lose access to your device, you won\'t be able to recover this vault.'
+          : 'This means anyone with a single key can recover the vault, which reduces security.';
       final shouldContinue = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -1419,9 +1425,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'This means if you lose access to your device, you won\'t be able to recover this vault.',
-              ),
+              Text(detailMessage),
               const SizedBox(height: 12),
               const Text('Consider adding additional stewards for better security.'),
             ],
