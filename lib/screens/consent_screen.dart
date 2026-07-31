@@ -75,6 +75,8 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _viewOnlyAutoAcceptStarted = false;
+      _viewOnlyAccepted = false;
     });
 
     try {
@@ -123,12 +125,14 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     } catch (e, st) {
       Log.error('ConsentScreen: auto-accept failed', e, st);
       if (mounted) {
+        setState(() {
+          _errorMessage = 'Could not accept Terms of Service. '
+              'Please check your internet connection and try again.';
+        });
         context.showHorcruxSnackBar(
           'Failed to accept Terms of Service: $e',
           kind: HorcruxSnackKind.error,
         );
-        // Allow the user to dismiss on error (back button is hidden in
-        // view-only mode, but the error state shows a retry button).
       }
     }
   }
