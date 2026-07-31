@@ -582,6 +582,14 @@ class BackupService {
       final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
 
       if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
+        // Check if there are at least 2 stewards (Shamir requires numParts >= 2)
+        if (backupConfig.stewards.length < 2) {
+          Log.info(
+            'Skipping auto-distribution: need at least 2 stewards (have ${backupConfig.stewards.length})',
+          );
+          return;
+        }
+
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)

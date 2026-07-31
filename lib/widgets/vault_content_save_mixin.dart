@@ -68,7 +68,9 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
 
           // Automatically distribute keys if backup config exists and can distribute
           final updatedConfig = await repository.getBackupConfig(vaultId);
-          if (updatedConfig != null && updatedConfig.canDistribute) {
+          if (updatedConfig != null &&
+              updatedConfig.canDistribute &&
+              updatedConfig.stewards.length >= 2) {
             try {
               await backupService.createAndDistributeBackup(vaultId: vaultId);
               if (mounted) {

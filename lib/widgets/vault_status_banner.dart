@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/key_provider.dart';
+import '../screens/backup_config_screen.dart';
 import '../screens/recovery_status_screen.dart';
 
 /// Status variant enum for internal use
@@ -11,6 +12,7 @@ enum _StatusVariant {
   almostReady,
   waitingOnStewards,
   noPlan,
+  needsMoreStewards,
   keysNotDistributed,
   planNeedsAttention,
   stewardWaitingKey,
@@ -139,6 +141,31 @@ class VaultStatusBanner extends ConsumerWidget {
 
     // Plan exists but not ready
     if (!backupConfig.isReady) {
+      // Single-steward plan — can't distribute until more stewards are added
+      if (backupConfig.stewards.length < 2) {
+        return _buildBanner(
+          context,
+          const _StatusData(
+            headline: 'Invite more stewards',
+            subtext:
+                'At least 2 stewards are required to distribute keys. Add another steward in your recovery plan.',
+            icon: Icons.group_add,
+            accentColor: Color(0xFF7A4A2F), // Umber
+            variant: _StatusVariant.needsMoreStewards,
+          ),
+          true,
+          false,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BackupConfigScreen(vaultId: vault.id),
+              ),
+            );
+          },
+        );
+      }
+
       // Plan is invalid
       if (!backupConfig.isValid) {
         return _buildBanner(

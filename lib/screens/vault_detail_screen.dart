@@ -437,6 +437,19 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     try {
       final backupService = ref.read(backupServiceProvider);
       final config = vault.backupConfig;
+
+      // Guard: single-steward plans can't distribute keys
+      if (config != null && config.stewards.length < 2) {
+        navigatorKey.currentState?.pop();
+        if (context.mounted) {
+          context.showHorcruxSnackBar(
+            'You need at least 2 stewards to distribute keys. Invite another steward first.',
+            kind: HorcruxSnackKind.warning,
+          );
+        }
+        return;
+      }
+
       if (config != null && config.hasBeenDistributed) {
         await backupService.redistributeKeys(vaultId: vault.id);
       } else {
