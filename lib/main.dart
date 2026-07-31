@@ -13,6 +13,7 @@ import 'app_navigator.dart';
 import 'firebase_options.dart';
 import 'providers/key_provider.dart';
 import 'services/app_log_file_setup.dart';
+import 'services/deep_link_service.dart';
 import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
 import 'services/push_notification_receiver.dart';
@@ -175,6 +176,12 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       if (existingKey != null) {
         // User is logged in - initialize services
         await initializeAppServices(ref);
+      } else {
+        // Not logged in — initialize deep linking so cold-start
+        // invitation links are captured before onboarding begins.
+        final deepLinkService = ref.read(deepLinkServiceProvider);
+        deepLinkService.setNavigatorKey(navigatorKey);
+        await deepLinkService.initializeDeepLinking();
       }
       // If no key exists, we'll show onboarding screen
 
