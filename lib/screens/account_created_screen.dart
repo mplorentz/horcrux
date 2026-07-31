@@ -5,8 +5,8 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
-import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
+import '../utils/onboarding_navigation.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Screen shown after account creation, allowing user to back up their key
@@ -78,10 +78,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
 
   Future<void> _skipBackup() async {
     if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const VaultListScreen()),
-        (route) => false,
-      );
+      routeToVaultListOrStagedInvitation(context: context, ref: ref);
     }
   }
 

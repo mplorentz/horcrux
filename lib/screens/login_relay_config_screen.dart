@@ -9,12 +9,12 @@ import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../utils/invite_code_utils.dart';
+import '../utils/onboarding_navigation.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
-import 'vault_list_screen.dart';
 
 enum _ScanState { editing, scanning, results }
 
@@ -193,15 +193,14 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     });
   }
 
-  /// After a successful scan the user goes straight to the vault list.
+  /// After a successful scan the user goes straight to the vault list,
+  /// or to the invitation acceptance screen if a staged invitation exists.
   void _continue() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const VaultListScreen()),
-      (route) => false,
-    );
+    routeToVaultListOrStagedInvitation(context: context, ref: ref);
   }
 
-  /// Skip the scan. Login import offers key backup; reset goes to vault list.
+  /// Skip the scan. Login import offers key backup; reset goes to vault list
+  /// or to the invitation acceptance screen if a staged invitation exists.
   void _skip() {
     if (widget.skipOffersKeyBackup) {
       Navigator.of(context).pushAndRemoveUntil(

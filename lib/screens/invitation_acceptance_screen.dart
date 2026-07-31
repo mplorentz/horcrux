@@ -13,15 +13,29 @@ import '../widgets/name_label.dart';
 import '../widgets/row_button.dart';
 import '../widgets/row_button_stack.dart';
 import 'vault_detail_screen.dart';
+import 'vault_list_screen.dart';
 
-/// Screen for accepting or denying an invitation link
+/// Screen for accepting or denying an invitation link.
 ///
-/// This screen is accessed via deep link and displays invitation details
-/// allowing the user to accept or deny the invitation.
+/// Receives the parsed [InvitationLink] directly (in-memory staging) for
+/// deep-link invitations, with a fallback to the DB-backed provider for
+/// already-persisted invitations (owner-side, re-opened accepted invites).
 class InvitationAcceptanceScreen extends ConsumerStatefulWidget {
-  final String inviteCode;
+  /// Parsed invitation link, passed directly for the in-memory staging case.
+  final InvitationLink? invitation;
 
-  const InvitationAcceptanceScreen({super.key, required this.inviteCode});
+  /// Invite code — used as fallback when [invitation] is null (e.g. for
+  /// owner-side or re-opened already-persisted invitations).
+  final String? inviteCode;
+
+  const InvitationAcceptanceScreen({
+    super.key,
+    this.invitation,
+    this.inviteCode,
+  }) : assert(
+          invitation != null || inviteCode != null,
+          'Either invitation or inviteCode must be provided',
+        );
 
   @override
   ConsumerState<InvitationAcceptanceScreen> createState() => _InvitationAcceptanceScreenState();
@@ -31,10 +45,23 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   bool _isProcessing = false;
   String? _errorMessage;
 
+  /// Resolve the effective invite code from either the direct object or the
+  /// fallback parameter.
+  String get _effectiveInviteCode => widget.invitation?.inviteCode ?? widget.inviteCode!;
+
   @override
   Widget build(BuildContext context) {
+    // If we have the invitation directly, use it synchronously.
+    // Otherwise fall back to the DB-backed provider (e.g. for re-opened
+    // already-persisted invites).
+    if (widget.invitation != null) {
+      final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
+      return _buildContent(widget.invitation!, currentPubkeyAsync);
+    }
+
+    // Fallback: load from DB provider.
     final invitationAsync = ref.watch(
-      invitationByCodeProvider(widget.inviteCode),
+      invitationByCodeProvider(widget.inviteCode!),
     );
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
@@ -98,14 +125,13 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
               ),
             );
           }
-
-          return _buildInvitationContent(invitation, currentPubkeyAsync);
+          return _buildContent(invitation, currentPubkeyAsync);
         },
       ),
     );
   }
 
-  Widget _buildInvitationContent(
+  Widget _buildContent(
     InvitationLink invitation,
     AsyncValue<String?> currentPubkeyAsync,
   ) {
@@ -116,261 +142,264 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         ? trimmedOwnerName
         : 'The vault owner';
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Status Banner
-                if (isTerminal)
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    margin: const EdgeInsets.only(bottom: 16.0),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(
-                        invitation.status,
-                      ).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4.0),
-                      border: Border.all(
-                        color: _getStatusColor(invitation.status),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _getStatusIcon(invitation.status),
-                          color: _getStatusColor(invitation.status),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            invitation.status.description,
-                            style: TextStyle(
-                              color: _getStatusColor(invitation.status),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Title
-                Text(
-                  '$ownerHeadlineLabel is asking you to steward their vault.',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-                const SizedBox(height: 8),
-
-                // Explainer text
-                Text(
-                  'Stewardship means you will store one key to their vault on '
-                  'this device. The vault requires multiple keys to open. If the '
-                  'vault ever needs to be opened you\'ll be asked to provide your '
-                  'key. If you accept, it\'s important that you keep Horcrux '
-                  'installed and up to date - especially when you get a new phone.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                ),
-                const SizedBox(height: 24),
-
-                // Owner information
-                Text(
-                  'From',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                ),
-                const SizedBox(height: 4),
-                NameLabel(
-                  name: invitation.ownerName,
-                  pubkey: invitation.ownerPubkey,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: 24),
-
-                // Invitee name (if provided)
-                if (invitation.inviteeName != null) ...[
-                  Text(
-                    'To',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    invitation.inviteeName!,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Vault name (if available)
-                if (invitation.vaultName != defaultVaultName) ...[
-                  Text(
-                    'Vault Name',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    invitation.vaultName,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Error Message
-                if (_errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4.0),
-                      border: Border.all(color: Colors.red, width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-
-        // Action Buttons
-        if (!isTerminal)
-          currentPubkeyAsync.when(
-            loading: () => const RowButton(
-              onPressed: null,
-              icon: Icons.hourglass_empty,
-              text: 'Checking account...',
-            ),
-            error: (error, _) => Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12.0),
-                  margin: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4.0),
-                    border: Border.all(color: Colors.red, width: 1),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Error checking account. Please ensure you are logged in.',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                RowButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icons.arrow_back,
-                  text: 'Go Back',
-                ),
-              ],
-            ),
-            data: (pubkey) {
-              if (pubkey == null) {
-                return Column(
-                  children: [
+    return HorcruxScaffold(
+      appBar: const HorcruxAppBar(title: 'Vault Invitation'),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status Banner
+                  if (isTerminal)
                     Container(
                       padding: const EdgeInsets.all(12.0),
-                      margin: const EdgeInsets.all(16.0),
+                      margin: const EdgeInsets.only(bottom: 16.0),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
+                        color: _getStatusColor(
+                          invitation.status,
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4.0),
-                        border: Border.all(color: Colors.orange, width: 1),
+                        border: Border.all(
+                          color: _getStatusColor(invitation.status),
+                          width: 1,
+                        ),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(
-                            Icons.warning_amber,
-                            color: Colors.orange,
-                            size: 20,
+                            _getStatusIcon(invitation.status),
+                            color: _getStatusColor(invitation.status),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'You need to be logged in to accept an invitation.',
-                              style: TextStyle(color: Colors.orange),
+                              invitation.status.description,
+                              style: TextStyle(
+                                color: _getStatusColor(invitation.status),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    RowButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icons.arrow_back,
-                      text: 'Go Back',
+
+                  // Title
+                  Text(
+                    '$ownerHeadlineLabel is asking you to steward their vault.',
+                    style: Theme.of(context).textTheme.headlineLarge,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Explainer text
+                  Text(
+                    'Stewardship means you will store one key to their vault on '
+                    'this device. The vault requires multiple keys to open. If the '
+                    'vault ever needs to be opened you\'ll be asked to provide your '
+                    'key. If you accept, it\'s important that you keep Horcrux '
+                    'installed and up to date - especially when you get a new phone.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Owner information
+                  Text(
+                    'From',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  NameLabel(
+                    name: invitation.ownerName,
+                    pubkey: invitation.ownerPubkey,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Invitee name (if provided)
+                  if (invitation.inviteeName != null) ...[
+                    Text(
+                      'To',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      invitation.inviteeName!,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Vault name (if available)
+                  if (invitation.vaultName != defaultVaultName) ...[
+                    Text(
+                      'Vault Name',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      invitation.vaultName,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Error Message
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4.0),
+                        border: Border.all(color: Colors.red, width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // Action Buttons
+          if (!isTerminal)
+            currentPubkeyAsync.when(
+              loading: () => const RowButton(
+                onPressed: null,
+                icon: Icons.hourglass_empty,
+                text: 'Checking account...',
+              ),
+              error: (error, _) => Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    margin: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4.0),
+                      border: Border.all(color: Colors.red, width: 1),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Error checking account. Please ensure you are logged in.',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  RowButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icons.arrow_back,
+                    text: 'Go Back',
+                  ),
+                ],
+              ),
+              data: (pubkey) {
+                if (pubkey == null) {
+                  return Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        margin: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4.0),
+                          border: Border.all(color: Colors.orange, width: 1),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'You need to be logged in to accept an invitation.',
+                                style: TextStyle(color: Colors.orange),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      RowButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icons.arrow_back,
+                        text: 'Go Back',
+                      ),
+                    ],
+                  );
+                }
+
+                return RowButtonStack(
+                  buttons: [
+                    RowButtonConfig(
+                      onPressed: canAct ? _denyInvitation : null,
+                      icon: Icons.close,
+                      text: 'Deny',
+                    ),
+                    RowButtonConfig(
+                      onPressed: canAct && !_isProcessing ? () => _acceptInvitation(pubkey) : null,
+                      icon: _isProcessing ? Icons.hourglass_empty : Icons.check,
+                      text: _isProcessing ? 'Processing...' : 'Accept',
                     ),
                   ],
                 );
-              }
-
-              return RowButtonStack(
-                buttons: [
-                  RowButtonConfig(
-                    onPressed: canAct ? _denyInvitation : null,
-                    icon: Icons.close,
-                    text: 'Deny',
-                  ),
-                  RowButtonConfig(
-                    onPressed: canAct && !_isProcessing ? () => _acceptInvitation(pubkey) : null,
-                    icon: _isProcessing ? Icons.hourglass_empty : Icons.check,
-                    text: _isProcessing ? 'Processing...' : 'Accept',
-                  ),
-                ],
-              );
-            },
-          )
-        else
-          RowButton(
-            onPressed: () => Navigator.pop(context),
-            icon: Icons.arrow_back,
-            text: 'Go Back',
-          ),
-      ],
+              },
+            )
+          else
+            RowButton(
+              onPressed: () => Navigator.pop(context),
+              icon: Icons.arrow_back,
+              text: 'Go Back',
+            ),
+        ],
+      ),
     );
   }
 
@@ -413,13 +442,23 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
     try {
       final invitationService = ref.read(invitationServiceProvider);
       final vaultId = await invitationService.redeemInvitation(
-        inviteCode: widget.inviteCode,
+        inviteCode: _effectiveInviteCode,
         inviteePubkey: inviteePubkey,
       );
 
       if (mounted) {
-        // Remove the invitation screen and navigate to vault detail
-        Navigator.pushReplacement(
+        // Replace the entire stack with vault list -> vault detail, so the
+        // user lands on the vault they just joined but can navigate back to
+        // the vault list (and isn't trapped with no way out, nor dropped
+        // straight onto the list without seeing the vault they joined).
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VaultListScreen(),
+          ),
+          (route) => false,
+        );
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VaultDetailScreen(vaultId: vaultId),
@@ -431,26 +470,26 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         _errorMessage = 'This invitation has already been redeemed.';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on InvitationInvalidatedException catch (e) {
       setState(() {
         _errorMessage = 'This invitation has been invalidated: ${e.reason}';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on InvitationNotFoundException {
       setState(() {
         _errorMessage = 'Invitation not found. It may have expired or been removed.';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on ArgumentError catch (e) {
       // Handle various argument errors including duplicate redemption and owner redemption
       setState(() {
         _errorMessage = e.message;
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } catch (e) {
       if (mounted) {
         final errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -500,7 +539,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
     try {
       final invitationService = ref.read(invitationServiceProvider);
-      await invitationService.denyInvitation(inviteCode: widget.inviteCode);
+      await invitationService.denyInvitation(inviteCode: _effectiveInviteCode);
 
       if (mounted) {
         context.showHorcruxSnackBar(
@@ -509,12 +548,24 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         );
 
         // Refresh the invitation data
-        ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+        ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
 
-        // Navigate back after a short delay
+        // Navigate back after a short delay. This screen is reached via
+        // pushAndRemoveUntil during onboarding (see
+        // routeToVaultListOrStagedInvitation), so there's nothing to pop
+        // back to — fall back to the vault list in that case instead of
+        // leaving an empty navigator stack (blank screen).
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            Navigator.pop(context);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const VaultListScreen()),
+                (route) => false,
+              );
+            }
           }
         });
       }
@@ -523,25 +574,25 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         _errorMessage = 'Invitation not found. It may have expired or been removed.';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on InvitationAlreadyRedeemedException {
       setState(() {
         _errorMessage = 'This invitation has already been redeemed.';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on InvitationInvalidatedException catch (e) {
       setState(() {
         _errorMessage = 'This invitation has been invalidated: ${e.reason}';
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } on ArgumentError catch (e) {
       setState(() {
         _errorMessage = e.message;
         _isProcessing = false;
       });
-      ref.invalidate(invitationByCodeProvider(widget.inviteCode));
+      ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
     } catch (e) {
       if (mounted) {
         setState(() {

@@ -1155,6 +1155,7 @@ class MockInvitationSendingService extends _i1.Mock implements _i18.InvitationSe
   @override
   _i8.Future<String?> sendInvitationInvalidEvent({
     required String? inviteCode,
+    required String? vaultId,
     required String? inviteePubkey,
     required List<String>? relayUrls,
     required String? reason,
@@ -1165,6 +1166,7 @@ class MockInvitationSendingService extends _i1.Mock implements _i18.InvitationSe
           [],
           {
             #inviteCode: inviteCode,
+            #vaultId: vaultId,
             #inviteePubkey: inviteePubkey,
             #relayUrls: relayUrls,
             #reason: reason,

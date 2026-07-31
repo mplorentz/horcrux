@@ -6,7 +6,6 @@ import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/validators.dart';
 import '../models/invitation_exceptions.dart';
-import '../screens/invitation_acceptance_screen.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Provider for DeepLinkService
@@ -34,7 +33,14 @@ typedef InvitationLinkData = ({
   List<String> relayUrls,
 });
 
-/// Service for handling deep links, Universal Links, and custom URL schemes
+/// Service for handling deep links, Universal Links, and custom URL schemes.
+///
+/// Deep links always stage invitations in memory (no navigation). The
+/// invitation acceptance screen is pushed by account-created and login
+/// screens that check for staged invitations via
+/// [InvitationService.getStagedInvitations()]. This avoids pushing the
+/// acceptance screen during onboarding when the user doesn't have an
+/// account yet.
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
   final AppLinks _appLinks = AppLinks();
@@ -68,7 +74,7 @@ class DeepLinkService {
     try {
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        Log.info('App opened via deep link: $initialLink');
+        Log.info('App opened via deep link');
         await _processLink(initialLink);
       }
     } catch (e) {
@@ -78,7 +84,7 @@ class DeepLinkService {
     // Set up listener for incoming links (app already running)
     _linkSubscription = _appLinks.uriLinkStream.listen(
       (Uri uri) {
-        Log.info('Received deep link while app running: $uri');
+        Log.info('Received deep link while app running');
         _processLink(uri);
       },
       onError: (error) {
@@ -98,7 +104,7 @@ class DeepLinkService {
     try {
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        Log.info('Handling initial link: $initialLink');
+        Log.info('Handling initial link');
         await _processLink(initialLink);
       }
     } catch (e) {
@@ -113,38 +119,38 @@ class DeepLinkService {
   /// Validates link format.
   /// Routes to invitation acceptance flow.
   void handleIncomingLink(Uri uri) {
-    Log.info('Handling incoming link: $uri');
+    Log.info('Handling incoming link');
     _processLink(uri);
   }
 
   /// Processes a deep link URI
   ///
-  /// Parses the link and routes to appropriate handler.
-  /// Currently only handles invitation links.
+  /// Parses the link and stages the invitation in memory.
+  /// The invitation acceptance screen is pushed by the account-created or
+  /// login screens that pick up staged invitations.
   Future<void> _processLink(Uri uri) async {
     // Check if this looks like an invitation link before attempting to parse
     // Silently ignore non-invitation URLs (e.g., root path on web startup)
     if (uri.pathSegments.isEmpty ||
         (uri.pathSegments.isNotEmpty && uri.pathSegments[0] != 'invite')) {
-      Log.debug('Ignoring non-invitation URL: $uri');
+      Log.debug('Ignoring non-invitation URL');
       return;
     }
 
     try {
       final linkData = parseInvitationLink(uri);
       if (linkData == null) {
-        Log.warning('Invalid invitation link format: $uri');
+        Log.warning('Invalid invitation link format');
         _showErrorToUser('Invalid invitation link format');
         return;
       }
 
-      Log.info(
-        'Parsed invitation link: inviteCode=${linkData.inviteCode}, vaultId=${linkData.vaultId}, vaultName=${linkData.vaultName}',
-      );
+      Log.info('Parsed invitation link (relays=${linkData.relayUrls.length})');
 
-      // Create/update invitation record on receiving side
-      // This allows the invitation acceptance screen to load the invitation
-      await _getInvitationService().createReceivedInvitation(
+      // Stage invitation in memory (no navigation). The invitation
+      // acceptance screen will be pushed by the account-created or login
+      // screen that picks up staged invitations.
+      final invitation = await _getInvitationService().stageReceivedInvitation(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,
@@ -153,26 +159,22 @@ class DeepLinkService {
         ownerName: linkData.ownerName,
       );
 
-      // Navigate to invitation acceptance screen
-      if (_navigatorKey?.currentContext != null) {
-        Navigator.of(_navigatorKey!.currentContext!).push(
-          MaterialPageRoute(
-            builder: (context) => InvitationAcceptanceScreen(inviteCode: linkData.inviteCode),
-          ),
-        );
-        Log.info('Navigated to invitation acceptance screen');
-      } else {
-        Log.warning(
-          'Navigator key not set, cannot navigate to invitation screen',
-        );
-        _showErrorToUser('Unable to open invitation. Please try again.');
+      if (invitation == null) {
+        // Already acted on (denied/accepted) — don't re-prompt.
+        Log.info('Invitation already acted on, skipping');
+        return;
       }
+
+      Log.info('Deep link processed; invitation staged in memory');
     } on InvalidInvitationLinkException catch (e) {
-      Log.error('Invalid invitation link: $uri', e);
+      // Log only the reason, not `e` itself — InvalidInvitationLinkException
+      // embeds the full source URI (invite code, owner pubkey, etc.) in its
+      // toString(), which the logger would otherwise print.
+      Log.error('Invalid invitation link: ${e.reason}');
       _showErrorToUser(e.reason);
     } catch (e) {
       Log.error('Error processing deep link', e);
-      _showErrorToUser('Failed to process invitation link: $e');
+      _showErrorToUser('Failed to process invitation link');
     }
   }
 
@@ -259,18 +261,15 @@ class DeepLinkService {
 
       // Extract vault name from query params (optional)
       final vaultName = uri.queryParameters['name'];
-      // Decode if present, otherwise use null (will fallback to defaultVaultName in createInvitationLink)
 
       // Extract owner name from query params (optional)
       final ownerName = uri.queryParameters['ownerName'];
-      // Decode if present, otherwise use null
 
       // Extract relay URLs from query params (comma-separated)
       final relayUrlsParam = uri.queryParameters['relays'];
       final relayUrls = <String>[];
 
       if (relayUrlsParam != null && relayUrlsParam.isNotEmpty) {
-        // Split by comma and decode each URL
         final relayUrlStrings = relayUrlsParam.split(',');
         for (final relayUrlStr in relayUrlStrings) {
           final decodedUrl = Uri.decodeComponent(relayUrlStr.trim());
@@ -278,12 +277,10 @@ class DeepLinkService {
             relayUrls.add(decodedUrl);
           } else {
             Log.warning('Invalid relay URL: $decodedUrl');
-            // Continue processing other URLs, but log the invalid one
           }
         }
       }
 
-      // Validate we have at least one relay URL
       if (relayUrls.isEmpty) {
         throw InvalidInvitationLinkException(
           uri.toString(),
@@ -291,7 +288,6 @@ class DeepLinkService {
         );
       }
 
-      // Validate we don't have too many relay URLs (max 3)
       if (relayUrls.length > 3) {
         throw InvalidInvitationLinkException(
           uri.toString(),
@@ -299,9 +295,7 @@ class DeepLinkService {
         );
       }
 
-      Log.info(
-        'Successfully parsed invitation link: inviteCode=$inviteCode, vaultId=$vaultId, vaultName=$vaultName, owner=$ownerPubkey, ownerName=$ownerName, relays=${relayUrls.length}',
-      );
+      Log.info('Successfully parsed invitation link (relays=${relayUrls.length})');
 
       return (
         inviteCode: inviteCode,
@@ -316,7 +310,7 @@ class DeepLinkService {
     } on InvalidInvitationLinkException {
       rethrow;
     } catch (e) {
-      Log.error('Error parsing invitation link: $uri', e);
+      Log.error('Error parsing invitation link', e);
       throw InvalidInvitationLinkException(
         uri.toString(),
         'Failed to parse invitation link: $e',

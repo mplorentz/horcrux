@@ -1,5 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/key_holder_removal_reason.dart';
+import '../models/steward_status.dart';
+import '../models/vault.dart';
+import '../providers/vault_provider.dart';
 import 'horcrux_notification_service.dart';
+import 'invitation_sending_service.dart';
 import 'logger.dart';
 import 'logout_service.dart';
 import 'ndk_service.dart';
@@ -13,6 +18,8 @@ final accountDeletionServiceProvider = Provider<AccountDeletionService>((ref) {
     relayScanService: ref.watch(relayScanServiceProvider),
     notificationService: ref.watch(horcruxNotificationServiceProvider),
     logoutService: ref.watch(logoutServiceProvider),
+    vaultRepository: ref.watch(vaultRepositoryProvider),
+    invitationSendingService: ref.watch(invitationSendingServiceProvider),
   );
 });
 
@@ -34,34 +41,50 @@ class AccountDeletionResult {
   });
 }
 
-/// Orchestrates in-app account deletion (bead horcrux_app-tn3y):
+/// Orchestrates in-app account deletion (bead horcrux_app-tn3y + r6ng):
 ///
-/// 1. Signs and broadcasts a NIP-62 "Request to Vanish" (kind 62) to every
+/// 1. Before broadcasting the vanish request, sends a kind-721
+///    (`reason: vault_deleted`) to every active steward of every vault the
+///    user owns, so stewards destroy their held shares. Failures are logged
+///    and swallowed — the deletion proceeds regardless.
+/// 2. Signs and broadcasts a NIP-62 "Request to Vanish" (kind 62) to every
 ///    enabled configured relay, asking relays to delete all of this user's
 ///    events.
-/// 2. Best-effort deregisters this device from `horcrux-notifier` (the only
+/// 3. Best-effort deregisters this device from `horcrux-notifier` (the only
 ///    server-side state this client manages) -- failures are logged and
 ///    swallowed, since the relay broadcast is the authoritative deletion
 ///    signal.
-/// 3. Only if at least one relay acknowledged the request: wipes all local
+/// 4. Only if at least one relay acknowledged the request: wipes all local
 ///    app data and the Nostr private key via [LogoutService.logout]. If no
 ///    relay acknowledged, local state (including the key needed to retry)
 ///    is left untouched.
+///
+/// Held-shares (vaults where the user is a STEWARD for someone else):
+/// no protocol event is sent, because `logout()` already wipes the local
+/// `held_shares` row. The owner is not notified and silently loses one
+/// steward; this is accepted for v1 (a future steward_resigned event will
+/// address this).
 class AccountDeletionService {
   final NdkService _ndkService;
   final RelayScanService _relayScanService;
   final HorcruxNotificationService _notificationService;
   final LogoutService _logoutService;
+  final VaultRepository _vaultRepository;
+  final InvitationSendingService _invitationSendingService;
 
   AccountDeletionService({
     required NdkService ndkService,
     required RelayScanService relayScanService,
     required HorcruxNotificationService notificationService,
     required LogoutService logoutService,
+    required VaultRepository vaultRepository,
+    required InvitationSendingService invitationSendingService,
   })  : _ndkService = ndkService,
         _relayScanService = relayScanService,
         _notificationService = notificationService,
-        _logoutService = logoutService;
+        _logoutService = logoutService,
+        _vaultRepository = vaultRepository,
+        _invitationSendingService = invitationSendingService;
 
   /// Requests account deletion. See class doc for the full sequence.
   ///
@@ -81,9 +104,16 @@ class AccountDeletionService {
       enabledOnly: true,
     );
     final relayUrls = relayConfigurations.map((r) => r.url).toList();
+
+    // Step 0: Validate relays before doing anything else.
     if (relayUrls.isEmpty) {
       throw StateError('No relays configured; cannot request account deletion.');
     }
+
+    // Step 1: Before the vanish broadcast, notify all active stewards of
+    // owned vaults to destroy their held shares (kind 721, vaultDeleted).
+    // This is best-effort — failures don't abort the deletion.
+    await _notifyStewardsOfOwnedVaults(relayUrls);
 
     final broadcast = await _ndkService.publishService.requestAccountVanish(
       relayUrls: relayUrls,
@@ -124,5 +154,96 @@ class AccountDeletionService {
       relaysAcknowledged: acknowledged.length,
       relaysTotal: relayUrls.length,
     );
+  }
+
+  /// Best-effort: for each vault the user owns, sends a kind-721
+  /// (`reason: vaultDeleted`) to each active steward. Failures are logged
+  /// and swallowed so the overall deletion is never blocked by a flaky relay
+  /// or a bad steward pubkey.
+  Future<void> _notifyStewardsOfOwnedVaults(List<String> relayUrls) async {
+    try {
+      final allVaults = await _vaultRepository.getAllVaults();
+      // Filter to vaults owned by the current user
+      final ownedVaults = <Vault>[];
+      for (final vault in allVaults) {
+        if (await _vaultRepository.isOwnedVault(vault.id)) {
+          ownedVaults.add(vault);
+        }
+      }
+
+      if (ownedVaults.isEmpty) {
+        Log.info('AccountDeletionService: no owned vaults to notify stewards for');
+        return;
+      }
+
+      Log.info(
+        'AccountDeletionService: notifying stewards of ${ownedVaults.length} owned vault(s)',
+      );
+
+      for (final vault in ownedVaults) {
+        final config = vault.backupConfig;
+        if (config == null) {
+          Log.debug('AccountDeletionService: vault ${vault.id} has no backup config, skipping');
+          continue;
+        }
+
+        // Include both holdingKey (confirmed share) and awaitingNewKey
+        // (has old share, needs updated one) — both hold a share that
+        // must be destroyed on account deletion.
+        final activeStewards = config.stewards
+            .where(
+              (s) =>
+                  (s.status == StewardStatus.holdingKey ||
+                      s.status == StewardStatus.awaitingNewKey) &&
+                  s.pubkey != null,
+            )
+            .toList();
+
+        if (activeStewards.isEmpty) {
+          Log.debug(
+            'AccountDeletionService: vault ${vault.id} has no active stewards with pubkeys, skipping',
+          );
+          continue;
+        }
+
+        Log.info(
+          'AccountDeletionService: sending vaultDeleted to '
+          '${activeStewards.length} steward(s) of vault ${vault.id}',
+        );
+
+        // Use the vault's configured relays, falling back to the
+        // account-vanish relay set. The union ensures stewards receive
+        // the 721 even if the vault's relay list differs from the
+        // account-vanish relay set.
+        final vaultRelayUrls =
+            config.relays.isNotEmpty ? {...config.relays, ...relayUrls}.toList() : relayUrls;
+
+        for (final steward in activeStewards) {
+          try {
+            await _invitationSendingService.sendKeyHolderRemovalEvent(
+              vaultId: vault.id,
+              removedStewardPubkey: steward.pubkey!,
+              relayUrls: vaultRelayUrls,
+              reason: KeyHolderRemovalReason.vaultDeleted,
+            );
+          } catch (e, st) {
+            Log.warning(
+              'AccountDeletionService: failed to send vaultDeleted 721 to '
+              'steward ${steward.id} for vault ${vault.id}',
+              e,
+              st,
+            );
+            // Best-effort — don't abort the deletion.
+          }
+        }
+      }
+    } catch (e, st) {
+      Log.warning(
+        'AccountDeletionService: error notifying stewards during account deletion',
+        e,
+        st,
+      );
+      // Best-effort — don't abort the deletion.
+    }
   }
 }
