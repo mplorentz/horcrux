@@ -994,7 +994,6 @@ class RecoveryService {
         recipientPubkeys: recipients,
         relays: relays,
         tags: [
-          ['d', 'recovery_request_${request.id}'],
           ['vault_id', request.vaultId],
           ['recovery_request_id', request.id],
           ['is_practice', request.isPractice.toString()],
@@ -1066,7 +1065,6 @@ class RecoveryService {
 
       // Build tags: recovery_request_id, vault_id, is_practice, and share metadata
       final tags = <List<String>>[
-        ['d', 'recovery_response_${request.id}_$currentPubkey'],
         ['recovery_request_id', request.id],
         ['vault_id', request.vaultId],
       ];
