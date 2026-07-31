@@ -6,9 +6,10 @@ import 'onboarding_recovery_screen.dart';
 
 /// Start screen shown after onboarding explainer.
 ///
-/// Presents "Recover a Vault" and a "Something Else" button that routes to
-/// AccountChoiceScreen. Additional buttons ("I have an invitation", "Create a
-/// Vault") will land in subsequent PRs.
+/// Presents "Create a Vault", "Recover a Vault", and "Something Else"
+/// buttons. "Create a Vault" routes to AccountChoiceScreen which handles
+/// account creation. The key-backup offer is skipped when a staged
+/// invitation is present.
 ///
 /// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
 ///                                             → [Something Else] → AccountChoiceScreen
@@ -47,6 +48,21 @@ class StartScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const OnboardingRecoveryScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildAccountCard(
+                context: context,
+                icon: Icons.add,
+                title: 'Create a Vault',
+                description: 'Set up a new backup plan with your stewards',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountChoiceScreen(),
                     ),
                   );
                 },
