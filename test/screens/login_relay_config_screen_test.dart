@@ -50,6 +50,10 @@ void main() {
     // ConsentScreen should be shown
     expect(find.byType(ConsentScreen), findsOneWidget);
 
+    // Check the 'I agree' checkbox first (ConsentScreen requires it)
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+
     // Tap 'Agree & Continue' to accept terms
     await tester.tap(find.text('Agree & Continue'));
     await tester.pumpAndSettle();
@@ -85,6 +89,10 @@ void main() {
 
     // ConsentScreen should be shown
     expect(find.byType(ConsentScreen), findsOneWidget);
+
+    // Check the 'I agree' checkbox first (ConsentScreen requires it)
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
 
     // Tap 'Agree & Continue' to accept terms
     await tester.tap(find.text('Agree & Continue'));
