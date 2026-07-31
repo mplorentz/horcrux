@@ -40,7 +40,7 @@ class InvitationInstructionsScreen extends ConsumerWidget {
                     Icon(
                       Icons.mail_outline,
                       size: 48,
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSurface,
                     ),
                     const SizedBox(height: 24),
                     Text(
