@@ -7,8 +7,10 @@ import 'onboarding_recovery_screen.dart';
 
 /// Start screen shown after onboarding explainer.
 ///
-/// Presents "Recover a Vault", "I have an invitation", and "Something Else"
-/// buttons.
+/// Presents "Create a Vault", "Recover a Vault", "I have an invitation", and "Something Else"
+/// buttons. "Create a Vault" routes to AccountChoiceScreen which handles
+/// account creation. The key-backup offer is skipped when a staged
+/// invitation is present.
 ///
 /// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
 ///                                             → [I have an invitation] → InvitationInstructionsScreen
@@ -16,7 +18,8 @@ import 'onboarding_recovery_screen.dart';
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
-  /// Builds the start screen layout with a heading and three action cards:
+  /// Builds the start screen layout with a heading and action cards:
+  /// "Create a Vault" (navigates to [AccountChoiceScreen]),
   /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]),
   /// "I have an invitation" (navigates to [InvitationInstructionsScreen]), and
   /// "Something Else" (navigates to [AccountChoiceScreen]).
@@ -39,6 +42,21 @@ class StartScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
+              _buildAccountCard(
+                context: context,
+                icon: Icons.add,
+                title: 'Create a Vault',
+                description: 'Set up a new backup plan with your stewards',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AccountChoiceScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
               _buildAccountCard(
                 context: context,
                 icon: Icons.restore,

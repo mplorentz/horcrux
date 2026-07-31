@@ -196,7 +196,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   /// After a successful scan the user goes straight to the vault list,
   /// or to the invitation acceptance screen if a staged invitation exists.
   void _continue() {
-    routeToVaultListOrStagedInvitation(context, ref);
+    routeToVaultListOrStagedInvitation(context: context, ref: ref);
   }
 
   /// Skip the scan. Login import offers key backup; reset goes to vault list

@@ -78,7 +78,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
 
   Future<void> _skipBackup() async {
     if (mounted) {
-      routeToVaultListOrStagedInvitation(context, ref);
+      routeToVaultListOrStagedInvitation(context: context, ref: ref);
     }
   }
 
