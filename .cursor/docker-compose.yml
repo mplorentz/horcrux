@@ -21,7 +21,7 @@ services:
       - "8182:8182"
       # Also expose common Flutter Marionette VM Service ports in case direct connection works
       - "8181:8181"
-      - "9100:9100"  # DevTools port
+      - "9101:9100"  # DevTools port (host 9101 -> container 9100)
       - "5900:5900"  # VNC server (for visual testing)
     environment:
       - DISPLAY=:99

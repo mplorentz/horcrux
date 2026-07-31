@@ -237,12 +237,26 @@ class InvitationService {
     return await _loadInvitation(inviteCode);
   }
 
-  /// Creates an invitation record when received via deep link
+  /// In-memory staging of invitations received via deep link.
   ///
-  /// This is called when an invitee opens an invitation link.
-  /// Creates a local invitation record so it can be displayed and processed.
-  /// If the invitation already exists, updates it with the latest data.
-  Future<void> createReceivedInvitation({
+  /// Map of inviteCode → parsed InvitationLink, populated by
+  /// [stageReceivedInvitation] and consumed by [redeemInvitation] /
+  /// [denyInvitation]. Nothing is written to the database until the user
+  /// explicitly accepts or denies.
+  final Map<String, InvitationLink> _pendingReceivedInvitations = {};
+
+  /// Key used in the [AppDatabase] kv table to store denied invite codes.
+  static const String _deniedInviteCodesKvKey = 'denied_invite_codes';
+
+  /// Stage an invitation parsed from a deep link — in-memory only.
+  ///
+  /// Validates the link data, builds an [InvitationLink], and stores it in
+  /// [_pendingReceivedInvitations]. No vault row, no invitation row, no DB
+  /// write of any kind.
+  ///
+  /// Returns the staged [InvitationLink], or null if the invitation was
+  /// already acted on (denied/accepted) or already staged.
+  Future<InvitationLink?> stageReceivedInvitation({
     required String inviteCode,
     required String vaultId,
     required String ownerPubkey,
@@ -250,30 +264,26 @@ class InvitationService {
     String? vaultName,
     String? ownerName,
   }) async {
-    // Check if invitation already exists
+    // 1. Check if already denied (kv table).
+    if (await _isInviteCodeDenied(inviteCode)) {
+      Log.debug('Invitation $inviteCode was previously denied, skipping');
+      return null;
+    }
+
+    // 2. Check if already accepted (invitations table, status=redeemed).
     final existing = await _loadInvitation(inviteCode);
-    if (existing != null) {
-      Log.debug('Invitation $inviteCode already exists, skipping creation');
-      return;
+    if (existing != null && existing.status == InvitationStatus.redeemed) {
+      Log.debug('Invitation $inviteCode already redeemed, skipping');
+      return null;
     }
 
-    final existingVault = await repository.getVault(vaultId);
-    if (existingVault == null) {
-      await repository.addVault(
-        Vault(
-          id: vaultId,
-          name: vaultName ?? defaultVaultName,
-          createdAt: DateTime.now(),
-          ownerPubkey: ownerPubkey,
-          ownerName: ownerName,
-          backupConfig: null,
-          pushEnabled: false,
-        ),
-      );
+    // 3. Check if already staged this session.
+    if (_pendingReceivedInvitations.containsKey(inviteCode)) {
+      Log.debug('Invitation $inviteCode already staged, skipping');
+      return _pendingReceivedInvitations[inviteCode];
     }
 
-    // Create invitation record from received link data
-    // Note: inviteeName is not known on the receiving side, so we pass null
+    // Build the invitation link object (no DB writes).
     final invitation = createInvitationLink(
       inviteCode: inviteCode,
       vaultId: vaultId,
@@ -281,27 +291,54 @@ class InvitationService {
       ownerPubkey: ownerPubkey,
       ownerName: ownerName,
       relayUrls: relayUrls,
-      inviteeName: null, // Not available on receiving side
+      inviteeName: null,
     );
-
-    // Set status to pending (awaiting acceptance)
     final pendingInvitation = invitation.updateStatus(InvitationStatus.pending);
-
-    // Validate the invitation
     validateInvitationLink(pendingInvitation);
 
-    // Store invitation locally
-    await _saveInvitation(pendingInvitation);
-
-    // Note: We don't add to vault invitations index on the receiving side
-    // because the invitee doesn't own the vault - that index is owner-only
-
-    // Notify listeners
+    // Store in memory only.
+    _pendingReceivedInvitations[inviteCode] = pendingInvitation;
     _notifyInvitationsChanged();
 
     Log.info(
-      'Created received invitation record for inviteCode=$inviteCode, vaultId=$vaultId',
+      'Staged received invitation in memory: inviteCode=$inviteCode, vaultId=$vaultId',
     );
+    return pendingInvitation;
+  }
+
+  /// Check whether [inviteCode] is in the denied set in the kv table.
+  Future<bool> _isInviteCodeDenied(String inviteCode) async {
+    final json = await _db.appStateDao.getString(_deniedInviteCodesKvKey);
+    if (json == null || json.isEmpty) return false;
+    try {
+      final codes = (jsonDecode(json) as List<dynamic>).cast<String>();
+      return codes.contains(inviteCode);
+    } catch (e) {
+      Log.error('Error parsing denied invite codes', e);
+      return false;
+    }
+  }
+
+  /// Persist [inviteCode] into the denied set in the kv table.
+  Future<void> _addDeniedInviteCode(String inviteCode) async {
+    final json = await _db.appStateDao.getString(_deniedInviteCodesKvKey);
+    final codes = <String>{};
+    if (json != null && json.isNotEmpty) {
+      try {
+        codes.addAll((jsonDecode(json) as List<dynamic>).cast<String>());
+      } catch (_) {}
+    }
+    codes.add(inviteCode);
+    await _db.appStateDao.setString(
+      key: _deniedInviteCodesKvKey,
+      value: jsonEncode(codes.toList()),
+    );
+  }
+
+  /// Public getter so the invitation acceptance screen can read a staged
+  /// invitation directly without going through the DB-backed provider.
+  InvitationLink? getPendingInvitation(String inviteCode) {
+    return _pendingReceivedInvitations[inviteCode];
   }
 
   /// Processes invitation redemption when invitee accepts
@@ -330,8 +367,9 @@ class InvitationService {
       );
     }
 
-    // Load invitation
-    final invitation = await _loadInvitation(inviteCode);
+    // Look up in-memory first, fall back to DB.
+    final invitation =
+        _pendingReceivedInvitations.remove(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }
@@ -483,8 +521,9 @@ class InvitationService {
       );
     }
 
-    // Load invitation
-    final invitation = await _loadInvitation(inviteCode);
+    // Look up in-memory first, fall back to DB.
+    final invitation =
+        _pendingReceivedInvitations.remove(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }
@@ -507,9 +546,8 @@ class InvitationService {
       );
     }
 
-    // Update invitation status to denied
-    final deniedInvitation = invitation.updateStatus(InvitationStatus.denied);
-    await _saveInvitation(deniedInvitation);
+    // Persist a minimal dedup record (kv table) — no vault row created.
+    await _addDeniedInviteCode(inviteCode);
 
     // Send denial event
     try {
@@ -556,6 +594,7 @@ class InvitationService {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
+          vaultId: invitation.vaultId,
           inviteePubkey: invitation.redeemedBy!,
           relayUrls: invitation.relayUrls,
           reason: reason,
@@ -730,6 +769,7 @@ class InvitationService {
       try {
         await invitationSendingService.sendInvitationInvalidEvent(
           inviteCode: inviteCode,
+          vaultId: invitation.vaultId,
           inviteePubkey: inviteePubkey,
           relayUrls: invitation.relayUrls,
           reason: 'This invitation has already been redeemed by another user',

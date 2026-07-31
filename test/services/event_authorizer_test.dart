@@ -437,12 +437,64 @@ void main() {
       },
     );
 
+    test('authorizes invitationInvalid only from the vault owner', () async {
+      final rumor = event(
+        kind: NostrKind.invitationInvalid,
+        tags: [
+          ['vault_id', vaultId],
+        ],
+      );
+
+      expect(
+        await authorizer.authorize(
+          rumor: rumor,
+          verifiedSenderPubkey: TestHexPubkeys.alice,
+        ),
+        AuthDecision.allow,
+      );
+      expect(
+        await authorizer.authorize(
+          rumor: rumor,
+          verifiedSenderPubkey: TestHexPubkeys.bob,
+        ),
+        AuthDecision.deny,
+      );
+    });
+
+    test('denies invitationInvalid event without vault_id tag', () async {
+      expect(
+        await authorizer.authorize(
+          rumor: event(kind: NostrKind.invitationInvalid),
+          verifiedSenderPubkey: TestHexPubkeys.alice,
+        ),
+        AuthDecision.deny,
+      );
+    });
+
+    test('denies invitationInvalid when vault not found locally', () async {
+      final rumor = event(
+        kind: NostrKind.invitationInvalid,
+        tags: [
+          ['vault_id', 'nonexistent-vault'],
+        ],
+      );
+
+      expect(
+        await authorizer.authorize(
+          rumor: rumor,
+          verifiedSenderPubkey: TestHexPubkeys.alice,
+        ),
+        AuthDecision.deny,
+      );
+    });
+
     test('denies enforcing kinds when required tags are absent', () async {
       for (final kind in [
         NostrKind.recoveryRequest,
         NostrKind.recoveryResponse,
         NostrKind.shareConfirmation,
         NostrKind.keyHolderRemoved,
+        NostrKind.invitationInvalid,
       ]) {
         expect(
           await authorizer.authorize(

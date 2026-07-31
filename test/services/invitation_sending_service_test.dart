@@ -210,6 +210,7 @@ void main() {
 
       await service.sendInvitationInvalidEvent(
         inviteCode: 'invite-123',
+        vaultId: 'test-vault-id',
         inviteePubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         relayUrls: ['wss://relay.example.com'],
         reason: 'Steward removed',
@@ -217,6 +218,7 @@ void main() {
 
       expect(capturedContent, isEmpty);
       expect(_hasTag(capturedTags, 'invite_code', 'invite-123'), isTrue);
+      expect(_hasTag(capturedTags, 'vault_id', 'test-vault-id'), isTrue);
       expect(_hasTag(capturedTags, 'reason', 'Steward removed'), isTrue);
     });
 
