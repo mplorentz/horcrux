@@ -40,21 +40,6 @@ class StartScreen extends StatelessWidget {
               const SizedBox(height: 32),
               _buildAccountCard(
                 context: context,
-                icon: Icons.restore,
-                title: 'Recover a Vault',
-                description: 'Restore vault data from your stewards',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OnboardingRecoveryScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildAccountCard(
-                context: context,
                 icon: Icons.add,
                 title: 'Create a Vault',
                 description: 'Set up a new backup plan with your stewards',
@@ -63,6 +48,21 @@ class StartScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const AccountChoiceScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildAccountCard(
+                context: context,
+                icon: Icons.restore,
+                title: 'Recover a Vault',
+                description: 'Restore vault data from your stewards',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OnboardingRecoveryScreen(),
                     ),
                   );
                 },
