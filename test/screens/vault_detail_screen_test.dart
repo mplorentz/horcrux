@@ -461,8 +461,8 @@ void main() {
                 .overrideWith((ref) => Stream.value(vaultDetail)),
             currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
             recoveryStatusProvider.overrideWith(
-              (ref, vaultId) => AsyncValue.data(
-                const RecoveryStatus(
+              (ref, vaultId) => const AsyncValue.data(
+                RecoveryStatus(
                   hasActiveRecovery: false,
                   canRecover: false,
                   activeRecoveryRequest: null,
