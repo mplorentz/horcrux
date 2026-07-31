@@ -2,12 +2,10 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/key_provider.dart';
 import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/validators.dart';
 import '../models/invitation_exceptions.dart';
-import '../screens/invitation_acceptance_screen.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Provider for DeepLinkService
@@ -21,19 +19,6 @@ final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
-
-  // Listen for login state changes so the deep link handler navigates
-  // to the acceptance screen for post-onboarding deep links.
-  // fireImmediately ensures _isLoggedIn is set correctly even if the
-  // provider resolves before the listener is attached.
-  ref.listen(isLoggedInProvider, (prev, next) {
-    next.whenData((loggedIn) {
-      if (loggedIn) {
-        service.setLoggedIn();
-      }
-    });
-  }, fireImmediately: true);
-
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -48,25 +33,22 @@ typedef InvitationLinkData = ({
   List<String> relayUrls,
 });
 
-/// Service for handling deep links, Universal Links, and custom URL schemes
+/// Service for handling deep links, Universal Links, and custom URL schemes.
+///
+/// Deep links always stage invitations in memory (no navigation). The
+/// invitation acceptance screen is pushed by account-created and login
+/// screens that check for staged invitations via
+/// [InvitationService.getStagedInvitations()]. This avoids pushing the
+/// acceptance screen during onboarding when the user doesn't have an
+/// account yet.
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
-  bool _isLoggedIn = false;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
-  DeepLinkService({
-    required InvitationService Function() getInvitationService,
-  }) : _getInvitationService = getInvitationService;
-
-  /// Marks the user as logged in. Called when the on-boarding flow completes
-  /// (account creation or login) so subsequent deep links can navigate to the
-  /// invitation acceptance screen. Defaults to false at construction time,
-  /// which causes deep links to stage silently during onboarding.
-  void setLoggedIn() {
-    _isLoggedIn = true;
-  }
+  DeepLinkService({required InvitationService Function() getInvitationService})
+      : _getInvitationService = getInvitationService;
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -143,8 +125,9 @@ class DeepLinkService {
 
   /// Processes a deep link URI
   ///
-  /// Parses the link and routes to appropriate handler.
-  /// Currently only handles invitation links.
+  /// Parses the link and stages the invitation in memory.
+  /// The invitation acceptance screen is pushed by the account-created or
+  /// login screens that pick up staged invitations.
   Future<void> _processLink(Uri uri) async {
     // Check if this looks like an invitation link before attempting to parse
     // Silently ignore non-invitation URLs (e.g., root path on web startup)
@@ -166,9 +149,9 @@ class DeepLinkService {
         'Parsed invitation link: inviteCode=${linkData.inviteCode}, vaultId=${linkData.vaultId}, vaultName=${linkData.vaultName}',
       );
 
-      // Stage invitation in memory (no DB writes) and get the parsed link.
-      // Uses the safe variant that handles the case where the database is
-      // not yet available (e.g. during onboarding).
+      // Stage invitation in memory (no navigation). The invitation
+      // acceptance screen will be pushed by the account-created or login
+      // screen that picks up staged invitations.
       final invitation = await _getInvitationService().stageReceivedInvitationSafely(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
@@ -180,34 +163,13 @@ class DeepLinkService {
 
       if (invitation == null) {
         // Already acted on (denied/accepted) — don't re-prompt.
-        Log.info('Invitation $linkData.inviteCode already acted on, skipping navigation');
+        Log.info('Invitation $linkData.inviteCode already acted on, skipping');
         return;
       }
 
-      // If the user is in onboarding (not logged in at construction time),
-      // stage silently and do NOT push the acceptance screen.
-      if (!_isLoggedIn) {
-        Log.info(
-          'User not logged in; staged invitation ${linkData.inviteCode} '
-          'silently (onboarding pickup)',
-        );
-        return;
-      }
-
-      // Navigate to invitation acceptance screen
-      if (_navigatorKey?.currentContext != null) {
-        Navigator.of(_navigatorKey!.currentContext!).push(
-          MaterialPageRoute(
-            builder: (context) => InvitationAcceptanceScreen(invitation: invitation),
-          ),
-        );
-        Log.info('Navigated to invitation acceptance screen');
-      } else {
-        Log.warning(
-          'Navigator key not set, cannot navigate to invitation screen',
-        );
-        _showErrorToUser('Unable to open invitation. Please try again.');
-      }
+      Log.info(
+        'Deep link processed; invitation ${linkData.inviteCode} staged in memory',
+      );
     } on InvalidInvitationLinkException catch (e) {
       Log.error('Invalid invitation link: $uri', e);
       _showErrorToUser(e.reason);
@@ -300,18 +262,15 @@ class DeepLinkService {
 
       // Extract vault name from query params (optional)
       final vaultName = uri.queryParameters['name'];
-      // Decode if present, otherwise use null (will fallback to defaultVaultName in createInvitationLink)
 
       // Extract owner name from query params (optional)
       final ownerName = uri.queryParameters['ownerName'];
-      // Decode if present, otherwise use null
 
       // Extract relay URLs from query params (comma-separated)
       final relayUrlsParam = uri.queryParameters['relays'];
       final relayUrls = <String>[];
 
       if (relayUrlsParam != null && relayUrlsParam.isNotEmpty) {
-        // Split by comma and decode each URL
         final relayUrlStrings = relayUrlsParam.split(',');
         for (final relayUrlStr in relayUrlStrings) {
           final decodedUrl = Uri.decodeComponent(relayUrlStr.trim());
@@ -319,12 +278,10 @@ class DeepLinkService {
             relayUrls.add(decodedUrl);
           } else {
             Log.warning('Invalid relay URL: $decodedUrl');
-            // Continue processing other URLs, but log the invalid one
           }
         }
       }
 
-      // Validate we have at least one relay URL
       if (relayUrls.isEmpty) {
         throw InvalidInvitationLinkException(
           uri.toString(),
@@ -332,7 +289,6 @@ class DeepLinkService {
         );
       }
 
-      // Validate we don't have too many relay URLs (max 3)
       if (relayUrls.length > 3) {
         throw InvalidInvitationLinkException(
           uri.toString(),
