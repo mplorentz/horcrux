@@ -95,33 +95,33 @@ class StartScreen extends StatelessWidget {
             border: Border.all(color: theme.colorScheme.primary, width: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
-        child: Row(
-          children: [
-            Icon(icon, size: 32, color: theme.colorScheme.onSurface),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+          child: Row(
+            children: [
+              Icon(icon, size: 32, color: theme.colorScheme.onSurface),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(description, style: textTheme.bodyMedium),
-                ],
+                    const SizedBox(height: 4),
+                    Text(description, style: textTheme.bodyMedium),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ],
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
