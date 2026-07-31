@@ -166,14 +166,23 @@ abstract final class HorcruxSnackBar {
   }
 
   /// Shows a toast via [Overlay]. Prefer [BuildContext.showHorcruxSnackBar].
+  ///
+  /// [overlay] lets callers that only hold a [GlobalKey]<[NavigatorState]>
+  /// (e.g. a service reaching [context] via `navigatorKey.currentContext`)
+  /// pass `navigatorKey.currentState?.overlay` directly. [Overlay.maybeOf]
+  /// searches ancestors, but a `Navigator`'s own context sits *above* the
+  /// [Overlay] it creates internally, so the lookup would otherwise always
+  /// miss and silently fall back to the bottom-anchored [ScaffoldMessenger]
+  /// snackbar.
   static void show(
     BuildContext context, {
     required String message,
     HorcruxSnackKind kind = HorcruxSnackKind.info,
     Duration? duration,
     SnackBarAction? action,
+    OverlayState? overlay,
   }) {
-    final overlay = Overlay.maybeOf(context);
+    final resolvedOverlay = overlay ?? Overlay.maybeOf(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -213,7 +222,7 @@ abstract final class HorcruxSnackBar {
     final actionForeground =
         snackBarTheme.actionTextColor ?? snackBarTheme.contentTextStyle?.color ?? contentColor;
 
-    if (overlay == null) {
+    if (resolvedOverlay == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message, style: textStyle),
@@ -258,7 +267,7 @@ abstract final class HorcruxSnackBar {
     );
 
     _activeEntry = entry;
-    overlay.insert(entry);
+    resolvedOverlay.insert(entry);
     _scheduleAutoDismiss(entry, effectiveDuration);
   }
 }

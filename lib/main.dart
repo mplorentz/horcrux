@@ -171,10 +171,19 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       // Check if user has a key - if yes, initialize services
       final loginService = ref.read(loginServiceProvider);
       final existingKey = await loginService.getStoredNostrKey();
+      Log.debug(
+        '[onboarding] _initializeApp: existingKey=${existingKey != null ? 'present' : 'none'}',
+      );
 
       if (existingKey != null) {
         // User is logged in - initialize services
         await initializeAppServices(ref);
+      } else {
+        // No key yet (onboarding). Still start deep link handling so an
+        // invitation link tapped before account creation is staged
+        // immediately instead of only being picked up once
+        // initializeAppAndRefreshKeys runs later (after Create Account).
+        await initializePreLoginDeepLinking(ref);
       }
       // If no key exists, we'll show onboarding screen
 

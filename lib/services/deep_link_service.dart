@@ -19,6 +19,7 @@ final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
   );
+  Log.debug('[onboarding] deepLinkServiceProvider: created DeepLinkService(${service.hashCode})');
   ref.onDispose(() => service.dispose());
   return service;
 });
@@ -37,8 +38,8 @@ typedef InvitationLinkData = ({
 ///
 /// Deep links always stage invitations in memory (no navigation). The
 /// invitation acceptance screen is pushed by account-created and login
-/// screens that check for staged invitations via
-/// [InvitationService.getStagedInvitations()]. This avoids pushing the
+/// screens that check for a staged invitation via
+/// [InvitationService.getStagedInvitation()]. This avoids pushing the
 /// acceptance screen during onboarding when the user doesn't have an
 /// account yet.
 class DeepLinkService {
@@ -53,10 +54,12 @@ class DeepLinkService {
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
     _navigatorKey = navigatorKey;
+    Log.debug('[onboarding] DeepLinkService($hashCode): navigator key set');
   }
 
   /// Disposes resources
   void dispose() {
+    Log.debug('[onboarding] DeepLinkService($hashCode): disposing, canceling link subscription');
     _linkSubscription?.cancel();
     _linkSubscription = null;
   }
@@ -68,7 +71,7 @@ class DeepLinkService {
   /// Sets up stream listener for subsequent links.
   /// Supports both Universal Links and custom URL scheme.
   Future<void> initializeDeepLinking() async {
-    Log.info('Initializing deep link handling');
+    Log.info('[onboarding] DeepLinkService($hashCode): initializing deep link handling');
 
     // Handle initial link (app opened via link on cold start)
     try {
@@ -76,6 +79,8 @@ class DeepLinkService {
       if (initialLink != null) {
         Log.info('App opened via deep link');
         await _processLink(initialLink);
+      } else {
+        Log.debug('[onboarding] DeepLinkService($hashCode): no initial link on this launch');
       }
     } catch (e) {
       Log.error('Error handling initial link', e);
@@ -92,7 +97,8 @@ class DeepLinkService {
       },
     );
 
-    Log.info('Deep link handling initialized');
+    Log.info('[onboarding] DeepLinkService($hashCode): deep link handling initialized '
+        '(live listener active)');
   }
 
   /// Handles link that opened the app (cold start)
@@ -131,8 +137,7 @@ class DeepLinkService {
   Future<void> _processLink(Uri uri) async {
     // Check if this looks like an invitation link before attempting to parse
     // Silently ignore non-invitation URLs (e.g., root path on web startup)
-    if (uri.pathSegments.isEmpty ||
-        (uri.pathSegments.isNotEmpty && uri.pathSegments[0] != 'invite')) {
+    if (uri.pathSegments.isEmpty || uri.pathSegments[0] != 'invite') {
       Log.debug('Ignoring non-invitation URL');
       return;
     }
@@ -150,7 +155,11 @@ class DeepLinkService {
       // Stage invitation in memory (no navigation). The invitation
       // acceptance screen will be pushed by the account-created or login
       // screen that picks up staged invitations.
-      final invitation = await _getInvitationService().stageReceivedInvitation(
+      final invitationService = _getInvitationService();
+      Log.debug(
+        '[onboarding] _processLink: staging via InvitationService(${invitationService.hashCode})',
+      );
+      final invitation = await invitationService.stageReceivedInvitation(
         inviteCode: linkData.inviteCode,
         vaultId: linkData.vaultId,
         ownerPubkey: linkData.ownerPubkey,
@@ -166,6 +175,7 @@ class DeepLinkService {
       }
 
       Log.info('Deep link processed; invitation staged in memory');
+      _showSuccessToUser('Invitation saved!');
     } on InvalidInvitationLinkException catch (e) {
       // Log only the reason, not `e` itself — InvalidInvitationLinkException
       // embeds the full source URI (invite code, owner pubkey, etc.) in its
@@ -180,12 +190,38 @@ class DeepLinkService {
 
   /// Shows an error message to the user via a snackbar or dialog
   void _showErrorToUser(String message) {
-    if (_navigatorKey?.currentContext != null) {
-      final context = _navigatorKey!.currentContext!;
-      context.showHorcruxSnackBar(
-        message,
+    final context = _navigatorKey?.currentContext;
+    final overlay = _navigatorKey?.currentState?.overlay;
+    Log.debug(
+      '[onboarding] _showErrorToUser: context=${context != null}, overlay=${overlay != null}',
+    );
+    if (context != null) {
+      HorcruxSnackBar.show(
+        context,
+        message: message,
         kind: HorcruxSnackKind.error,
         duration: const Duration(seconds: 5),
+        // navigatorKey.currentContext sits above the Overlay the Navigator
+        // creates internally, so Overlay.maybeOf(context) can't find it via
+        // ancestor lookup. Pass the OverlayState directly instead.
+        overlay: overlay,
+      );
+    }
+  }
+
+  /// Shows a success message to the user via a toast.
+  void _showSuccessToUser(String message) {
+    final context = _navigatorKey?.currentContext;
+    final overlay = _navigatorKey?.currentState?.overlay;
+    Log.debug(
+      '[onboarding] _showSuccessToUser: context=${context != null}, overlay=${overlay != null}',
+    );
+    if (context != null) {
+      HorcruxSnackBar.show(
+        context,
+        message: message,
+        kind: HorcruxSnackKind.success,
+        overlay: overlay,
       );
     }
   }
@@ -193,8 +229,9 @@ class DeepLinkService {
   /// Parses invitation link URL and extracts parameters
   ///
   /// Handles both Universal Links (`https://horcruxbackup.com/invite/{code}`)
-  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`) formats.
-  /// Extracts invite code from path (same path structure for both).
+  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`)
+  /// formats — the only formats [InvitationLink.toUrl] generates.
+  /// Extracts invite code from path.
   /// Extracts owner pubkey and relay URLs from query params.
   /// Returns parsed data or throws InvalidInvitationLinkException if invalid.
   InvitationLinkData? parseInvitationLink(Uri uri) {

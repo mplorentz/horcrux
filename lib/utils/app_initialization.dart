@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../services/logger.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/deep_link_service.dart';
@@ -10,6 +11,30 @@ import '../services/push_notification_receiver.dart';
 import '../services/recovery_service.dart';
 import '../services/log_export_service.dart';
 import '../services/vault_export_service.dart';
+
+/// Starts deep link handling for a session with no logged-in user: initial
+/// onboarding (cold start, no key yet) and the window right after a logout
+/// or account deletion, before a new account exists.
+///
+/// [initializeAppServices] already does this as part of the full post-login
+/// service init, but that path is skipped while there's no key. Without this,
+/// [deepLinkServiceProvider] sits uninitialized — no navigator key, no live
+/// `app_links` stream listener — so an invitation link tapped during
+/// onboarding is silently dropped.
+///
+/// Isolated in its own try/catch: a failure here (e.g. a platform channel
+/// hiccup) must not block the rest of onboarding/logout cleanup.
+Future<void> initializePreLoginDeepLinking(WidgetRef ref) async {
+  try {
+    final deepLinkService = ref.read(deepLinkServiceProvider);
+    deepLinkService.setNavigatorKey(navigatorKey);
+    Log.debug('[onboarding] initializePreLoginDeepLinking: starting deep link handling');
+    await deepLinkService.initializeDeepLinking();
+    Log.debug('[onboarding] initializePreLoginDeepLinking: deep link handling started');
+  } catch (e, st) {
+    Log.error('[onboarding] initializePreLoginDeepLinking: failed', e, st);
+  }
+}
 
 /// Initializes app services (deep linking and relay scanning).
 /// Optionally initializes a key if one doesn't exist.
