@@ -893,7 +893,7 @@ class NdkService {
             .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
       }
     } else {
-      Log.info('Duplicate shard confirmation skipped: ${event.id}');
+      Log.info('Shard confirmation skipped: ${event.id}');
     }
   }
 
