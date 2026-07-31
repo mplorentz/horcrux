@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/logger.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button_stack.dart';
@@ -19,6 +20,7 @@ class OnboardingRecoveryScreen extends StatelessWidget {
   /// "Login" button for users who already have their account key.
   @override
   Widget build(BuildContext context) {
+    Log.debug('[onboarding] OnboardingRecoveryScreen: build');
     final theme = Theme.of(context);
 
     return HorcruxScaffold(

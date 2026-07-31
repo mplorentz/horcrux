@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/shared/nips/nip01/key_pair.dart';
 import '../providers/key_provider.dart';
+import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../utils/validators.dart';
 import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
@@ -21,6 +23,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _controller = TextEditingController();
   String? _errorText;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Log.debug('[onboarding] LoginScreen: initState');
+  }
 
   @override
   void dispose() {
@@ -89,7 +97,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       // Initialize services and refresh key providers
+      Log.debug(
+        '[onboarding] LoginScreen: calling initializeAppAndRefreshKeys '
+        '(this reinitializes deep link handling)',
+      );
       await initializeAppAndRefreshKeys(ref);
+      Log.debug(
+        '[onboarding] LoginScreen: initializeAppAndRefreshKeys done, '
+        'hasStagedInvitations=${ref.read(invitationServiceProvider).hasStagedInvitations}',
+      );
 
       // Navigate to relay config screen so the user can scan for existing vaults.
       final privateKey = keyPair.privateKeyBech32;

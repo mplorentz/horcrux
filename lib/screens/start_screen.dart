@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
+import '../services/logger.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'account_choice_screen.dart';
-import 'invitation_instructions_screen.dart';
+import 'invitation_onboarding_screen.dart';
 import 'onboarding_recovery_screen.dart';
 
 /// Start screen shown after onboarding explainer.
 ///
-/// Presents "Create a Vault", "Recover a Vault", "I have an invitation", and "Something Else"
-/// buttons. "Create a Vault" routes to AccountChoiceScreen which handles
-/// account creation. The key-backup offer is skipped when a staged
-/// invitation is present.
+/// Presents "Create a Vault", "I have an invitation", "Recover a Vault", and
+/// "Something Else" buttons.
 ///
-/// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Recover a Vault] → OnboardingRecoveryScreen
-///                                             → [I have an invitation] → InvitationInstructionsScreen
+/// Flow: HowItWorksScreen → [Get Started] → StartScreen → [Create a Vault] → AccountChoiceScreen
+///                                             → [I have an invitation] → InvitationOnboardingScreen
+///                                             → [Recover a Vault] → OnboardingRecoveryScreen
 ///                                             → [Something Else] → AccountChoiceScreen
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
 
-  /// Builds the start screen layout with a heading and action cards:
+  /// Builds the start screen layout with a heading and four action cards:
   /// "Create a Vault" (navigates to [AccountChoiceScreen]),
-  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]),
-  /// "I have an invitation" (navigates to [InvitationInstructionsScreen]), and
+  /// "I have an invitation" (navigates to [InvitationOnboardingScreen]),
+  /// "Recover a Vault" (navigates to [OnboardingRecoveryScreen]), and
   /// "Something Else" (navigates to [AccountChoiceScreen]).
   @override
   Widget build(BuildContext context) {
+    Log.debug('[onboarding] StartScreen: build');
     return HorcruxScaffold(
       appBar: const HorcruxAppBar(title: 'Start'),
       body: SafeArea(
@@ -59,6 +60,22 @@ class StartScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildAccountCard(
                 context: context,
+                icon: Icons.mail_outline,
+                title: 'I have an invitation',
+                description: 'Accept an invitation from a vault owner',
+                onTap: () {
+                  Log.debug('[onboarding] StartScreen: I have an invitation tapped');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InvitationOnboardingScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildAccountCard(
+                context: context,
                 icon: Icons.restore,
                 title: 'Recover a Vault',
                 description: 'Restore vault data from your stewards',
@@ -67,21 +84,6 @@ class StartScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const OnboardingRecoveryScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildAccountCard(
-                context: context,
-                icon: Icons.mail_outline,
-                title: 'I have an invitation',
-                description: 'Accept an invitation from a vault owner',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const InvitationInstructionsScreen(),
                     ),
                   );
                 },

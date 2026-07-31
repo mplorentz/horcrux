@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/logger.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'how_it_works_screen.dart';
@@ -10,6 +11,7 @@ class OnboardingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Log.debug('[onboarding] OnboardingScreen: build');
     return HorcruxScaffold(
       body: SafeArea(
         bottom: false, // Exclude bottom safe area, let RowButton handle it

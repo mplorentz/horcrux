@@ -63,6 +63,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   @override
   void initState() {
     super.initState();
+    Log.debug('[onboarding] LoginRelayConfigScreen: initState');
     _relays = [
       RelayConfiguration(
         id: 'horcrux-default',

@@ -4,6 +4,7 @@ import '../models/invitation_link.dart';
 import '../models/invitation_status.dart';
 import '../models/invitation_exceptions.dart';
 import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/snackbar_helper.dart';
@@ -51,6 +52,10 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
 
   @override
   Widget build(BuildContext context) {
+    Log.debug(
+      '[onboarding] InvitationAcceptanceScreen: build, '
+      'inviteCode=$_effectiveInviteCode, hasDirectInvitation=${widget.invitation != null}',
+    );
     // If we have the invitation directly, use it synchronously.
     // Otherwise fall back to the DB-backed provider (e.g. for re-opened
     // already-persisted invites).

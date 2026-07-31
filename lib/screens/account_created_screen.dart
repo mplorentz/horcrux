@@ -22,6 +22,12 @@ class AccountCreatedScreen extends ConsumerStatefulWidget {
 class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   bool _isBackingUp = false;
 
+  @override
+  void initState() {
+    super.initState();
+    Log.debug('[onboarding] AccountCreatedScreen: initState');
+  }
+
   String _getRedactedNsec() {
     final nsec = widget.nsec;
     if (nsec.length <= 15) {
@@ -77,6 +83,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   }
 
   Future<void> _skipBackup() async {
+    Log.debug('[onboarding] AccountCreatedScreen: Skip for Now tapped');
     if (mounted) {
       routeToVaultListOrStagedInvitation(context: context, ref: ref);
     }

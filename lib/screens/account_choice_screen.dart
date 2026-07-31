@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/key_provider.dart';
+import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../utils/app_initialization.dart';
 import '../screens/account_created_screen.dart';
 import '../screens/login_screen.dart';
@@ -16,6 +18,13 @@ class AccountChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final hasStaged = ref.read(invitationServiceProvider).hasStagedInvitations;
+    Log.debug('[onboarding] AccountChoiceScreen: initState, hasStagedInvitations=$hasStaged');
+  }
+
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
@@ -44,11 +53,20 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                 onTap: () async {
                   final navigator = Navigator.of(context);
 
+                  Log.debug('[onboarding] AccountChoiceScreen: Create Account tapped');
                   final loginService = ref.read(loginServiceProvider);
                   final keyPair = await loginService.generateAndStoreNostrKey();
 
                   // Initialize services and refresh key providers
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: calling initializeAppAndRefreshKeys '
+                    '(this reinitializes deep link handling)',
+                  );
                   await initializeAppAndRefreshKeys(ref);
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: initializeAppAndRefreshKeys done, '
+                    'hasStagedInvitations=${ref.read(invitationServiceProvider).hasStagedInvitations}',
+                  );
 
                   navigator.push(
                     MaterialPageRoute(
