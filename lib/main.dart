@@ -15,10 +15,12 @@ import 'providers/key_provider.dart';
 import 'services/app_log_file_setup.dart';
 import 'services/logger.dart';
 import 'services/processed_nostr_event_store.dart';
+import 'services/horcrux_api_service.dart';
 import 'services/push_notification_receiver.dart';
 import 'services/log_export_service.dart';
 import 'services/logout_service.dart';
 import 'services/vault_export_service.dart';
+import 'screens/consent_screen.dart';
 import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/initialization_error_screen.dart';
@@ -157,6 +159,27 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     }
   }
 
+  /// Fires-and-forgets a ToS re-prompt check after the app is loaded.
+  ///
+  /// If the served ToS version is greater than the last locally-accepted
+  /// version (or the user has never accepted), pushes [ConsentScreen] on
+  /// top of whatever screen is currently displayed.
+  Future<void> _maybePromptForUpdatedTerms(WidgetRef ref) async {
+    try {
+      final api = ref.read(horcruxApiServiceProvider);
+      final needsConsent = await api.needsConsentAcceptance();
+      if (needsConsent && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigatorKey.currentState?.push(
+            MaterialPageRoute(builder: (_) => const ConsentScreen()),
+          );
+        });
+      }
+    } catch (e, st) {
+      Log.warning('ToS re-prompt check failed (server unreachable?)', e, st);
+    }
+  }
+
   Future<void> _sweepVaultExports() async {
     try {
       await ref.read(vaultExportServiceProvider).clearExportDirectory();
@@ -178,6 +201,10 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
       if (existingKey != null) {
         // User is logged in - initialize services
         await initializeAppServices(ref);
+
+        // Check for ToS version bump (re-prompt). Fire-and-forget so the
+        // app loads immediately; the consent screen is pushed on top.
+        unawaited(_maybePromptForUpdatedTerms(ref));
       } else {
         // No key yet (onboarding). Still start deep link handling so an
         // invitation link tapped before account creation is staged

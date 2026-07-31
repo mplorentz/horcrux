@@ -13,6 +13,7 @@ import '../utils/onboarding_navigation.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/consent_screen.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
 
@@ -195,18 +196,29 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     });
   }
 
-  /// After a successful scan the user goes straight to the vault list,
-  /// or to the invitation acceptance screen if a staged invitation exists.
-  void _continue() {
-    routeToVaultListOrStagedInvitation(context: context, ref: ref);
+  /// After a successful scan the user goes to the consent screen, then the
+  /// vault list or invitation acceptance screen.
+  Future<void> _continue() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ConsentScreen()),
+    );
+
+    if (mounted) {
+      routeToVaultListOrStagedInvitation(context: context, ref: ref);
+    }
   }
 
   /// Skip the scan. Login import offers key backup; reset goes to vault list
   /// or to the invitation acceptance screen if a staged invitation exists.
+  /// Both paths route through the consent screen first.
   void _skip() {
     if (widget.skipOffersKeyBackup) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
+        MaterialPageRoute(
+          builder: (_) => ConsentScreen(
+            nextScreen: ImportSuccessScreen(nsec: widget.nsec),
+          ),
+        ),
         (route) => false,
       );
     } else {
