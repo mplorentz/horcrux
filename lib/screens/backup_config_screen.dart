@@ -1247,9 +1247,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     }
 
-    // If steward has accepted (has pubkey), send removal event
-    await _sendRemovalEventsForStewards([steward]);
-
+    // Remove from local state immediately so the UI updates without waiting
+    // for the network call to send the removal event. If the relay is slow
+    // or unreachable, the user shouldn't be stuck waiting.
     setState(() {
       _stewards.removeWhere((s) => s.id == steward.id);
       if (steward.name != null) {
@@ -1270,6 +1270,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       _hasUnsavedChanges = true;
     });
+
+    // If steward has accepted (has pubkey), send removal event (fire-and-forget
+    // — the network call should not block the UI update).
+    unawaited(_sendRemovalEventsForStewards([steward]));
   }
 
   Future<void> _regenerateInvitationLink(Steward steward, InvitationLink oldInvitation) async {
