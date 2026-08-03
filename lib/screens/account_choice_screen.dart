@@ -5,6 +5,7 @@ import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/app_initialization.dart';
 import '../screens/account_created_screen.dart';
+import '../screens/consent_screen.dart';
 import '../screens/login_screen.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -70,7 +71,9 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
 
                   navigator.push(
                     MaterialPageRoute(
-                      builder: (context) => AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                      builder: (context) => ConsentScreen(
+                        nextScreen: AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                      ),
                     ),
                   );
                 },

@@ -303,7 +303,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         RowButton(
           onPressed: _agreed ? _handleAccept : null,
           icon: Icons.check,
-          text: 'Agree & Continue',
+          text: 'Continue',
           addBottomSafeArea: true,
         ),
       ],
