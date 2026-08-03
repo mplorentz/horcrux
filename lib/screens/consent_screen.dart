@@ -81,7 +81,9 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     });
 
     try {
-      final tos = await TermsOfService.loadBundled();
+      final tos = await TermsOfService.loadBundled(
+        bundle: DefaultAssetBundle.of(context),
+      );
       if (mounted) {
         setState(() {
           _tos = tos;
