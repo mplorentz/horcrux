@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/consent_screen.dart';
 import '../screens/vault_explainer_screen.dart';
-import '../screens/vault_list_screen.dart';
 import '../services/logger.dart';
+import '../utils/onboarding_navigation.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Screen shown after account creation, allowing user to back up their key
@@ -21,6 +22,12 @@ class AccountCreatedScreen extends ConsumerStatefulWidget {
 
 class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   bool _isBackingUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Log.info('[onboarding] AccountCreatedScreen: shown');
+  }
 
   String _getRedactedNsec() {
     final nsec = widget.nsec;
@@ -46,14 +53,16 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
     });
 
     try {
-      // Navigate to vault explainer with nsec prefilled
+      // Navigate through consent screen first, then to vault explainer
       if (mounted) {
         await Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => VaultExplainerScreen(
-              initialContent: widget.nsec,
-              initialName: 'Nostr Key Backup',
-              isOnboarding: true,
+            builder: (context) => ConsentScreen(
+              nextScreen: VaultExplainerScreen(
+                initialContent: widget.nsec,
+                initialName: 'Nostr Key Backup',
+                isOnboarding: true,
+              ),
             ),
           ),
           (route) => false, // Clear all previous routes
@@ -77,11 +86,16 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   }
 
   Future<void> _skipBackup() async {
+    Log.debug('[onboarding] AccountCreatedScreen: Skip for Now tapped');
     if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const VaultListScreen()),
-        (route) => false,
+      // Route through consent screen first.
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const ConsentScreen()),
       );
+
+      if (mounted) {
+        routeToVaultListOrStagedInvitation(context: context, ref: ref);
+      }
     }
   }
 

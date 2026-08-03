@@ -11,6 +11,7 @@ import '../services/logger.dart';
 import '../services/ndk_service.dart';
 import '../services/publish_service.dart';
 import '../services/relay_scan_service.dart';
+import '../utils/app_initialization.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/keyboard_dismiss_wrapper.dart';
@@ -81,6 +82,13 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           ref.invalidate(ndkServiceProvider);
           ref.invalidate(relayScanServiceProvider);
           ref.invalidate(deepLinkServiceProvider);
+
+          // The invalidated deepLinkServiceProvider has no navigator key and
+          // no live app_links listener until something restarts it. Without
+          // this, an invitation link tapped during the onboarding session
+          // that follows deletion is silently dropped.
+          await initializePreLoginDeepLinking(ref);
+
           setState(() => _state = _DeleteState.success);
           // main.dart's login-state listener will pushAndRemoveUntil(OnboardingScreen)
           // once isLoggedInProvider flips false; no manual navigation needed here.

@@ -40,9 +40,15 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
     ref.watch(backupServiceProvider),
     ref.watch(appDatabaseProvider),
   );
+  Log.debug(
+    '[onboarding] invitationServiceProvider: created InvitationService(${service.hashCode}), '
+    'hasStagedInvitations=${service.hasStagedInvitations}',
+  );
 
   // Properly clean up when the provider is disposed
   ref.onDispose(() {
+    Log.debug(
+        '[onboarding] invitationServiceProvider: disposing InvitationService(${service.hashCode})');
     service.dispose();
   });
 
@@ -237,13 +243,19 @@ class InvitationService {
     return await _loadInvitation(inviteCode);
   }
 
-  /// In-memory staging of invitations received via deep link.
+  /// In-memory staging of the most recently received invitation via deep
+  /// link.
   ///
-  /// Map of inviteCode → parsed InvitationLink, populated by
-  /// [stageReceivedInvitation] and consumed by [redeemInvitation] /
-  /// [denyInvitation]. Nothing is written to the database until the user
-  /// explicitly accepts or denies.
-  final Map<String, InvitationLink> _pendingReceivedInvitations = {};
+  /// Populated by [stageReceivedInvitation] and consumed by
+  /// [redeemInvitation] / [denyInvitation]. Nothing is written to the
+  /// database until the user explicitly accepts or denies. Only one
+  /// invitation is staged at a time — staging a new one replaces whatever
+  /// was there before.
+  ///
+  /// Static so it survives [InvitationService] recreation (the provider is
+  /// recreated when the database is re-initialized after account creation,
+  /// which would otherwise lose the staged invitation during onboarding).
+  static InvitationLink? _pendingReceivedInvitation;
 
   /// Key used in the [AppDatabase] kv table to store denied invite codes.
   static const String _deniedInviteCodesKvKey = 'denied_invite_codes';
@@ -253,6 +265,12 @@ class InvitationService {
   /// Validates the link data, builds an [InvitationLink], and stores it in
   /// [_pendingReceivedInvitations]. No vault row, no invitation row, no DB
   /// write of any kind.
+  ///
+  /// The denied/redeemed checks below require the [AppDatabase], which isn't
+  /// available yet during onboarding (before the user has a Nostr key). If
+  /// those checks throw, we fall back to staging in memory without them —
+  /// but only when the user is NOT logged in. A logged-in user must never
+  /// bypass the denied/redeemed checks just because of a transient DB error.
   ///
   /// Returns the staged [InvitationLink], or null if the invitation was
   /// already acted on (denied/accepted) or already staged.
@@ -264,23 +282,43 @@ class InvitationService {
     String? vaultName,
     String? ownerName,
   }) async {
-    // 1. Check if already denied (kv table).
-    if (await _isInviteCodeDenied(inviteCode)) {
-      Log.debug('Invitation $inviteCode was previously denied, skipping');
-      return null;
-    }
+    try {
+      // 1. Check if already denied (kv table).
+      if (await _isInviteCodeDenied(inviteCode)) {
+        Log.debug('Invitation $inviteCode was previously denied, skipping');
+        return null;
+      }
 
-    // 2. Check if already accepted (invitations table, status=redeemed).
-    final existing = await _loadInvitation(inviteCode);
-    if (existing != null && existing.status == InvitationStatus.redeemed) {
-      Log.debug('Invitation $inviteCode already redeemed, skipping');
-      return null;
+      // 2. Check if already accepted (invitations table, status=redeemed).
+      final existing = await _loadInvitation(inviteCode);
+      if (existing != null && existing.status == InvitationStatus.redeemed) {
+        Log.debug('Invitation $inviteCode already redeemed, skipping');
+        return null;
+      }
+    } catch (e) {
+      final keyPair = await _loginService.getStoredNostrKey();
+      if (keyPair != null) rethrow;
+
+      Log.info(
+        'stageReceivedInvitation: DB not available ($e), staging in memory only',
+      );
     }
 
     // 3. Check if already staged this session.
-    if (_pendingReceivedInvitations.containsKey(inviteCode)) {
+    if (_pendingReceivedInvitation?.inviteCode == inviteCode) {
       Log.debug('Invitation $inviteCode already staged, skipping');
-      return _pendingReceivedInvitations[inviteCode];
+      return _pendingReceivedInvitation;
+    }
+
+    final previouslyStaged = _pendingReceivedInvitation;
+    if (previouslyStaged != null) {
+      // Only one invitation is staged at a time — staging this one discards
+      // whatever was previously staged and not yet acted on. Log which one,
+      // since this is otherwise a silent loss of in-memory state.
+      Log.warning(
+        'Replacing staged invitation ${previouslyStaged.inviteCode} '
+        '(vault ${previouslyStaged.vaultId}) with $inviteCode; the previous one is now lost',
+      );
     }
 
     // Build the invitation link object (no DB writes).
@@ -296,8 +334,8 @@ class InvitationService {
     final pendingInvitation = invitation.updateStatus(InvitationStatus.pending);
     validateInvitationLink(pendingInvitation);
 
-    // Store in memory only.
-    _pendingReceivedInvitations[inviteCode] = pendingInvitation;
+    // Store in memory only. Replaces any previously staged invitation.
+    _pendingReceivedInvitation = pendingInvitation;
     _notifyInvitationsChanged();
 
     Log.info(
@@ -338,7 +376,29 @@ class InvitationService {
   /// Public getter so the invitation acceptance screen can read a staged
   /// invitation directly without going through the DB-backed provider.
   InvitationLink? getPendingInvitation(String inviteCode) {
-    return _pendingReceivedInvitations[inviteCode];
+    final invitation = _pendingReceivedInvitation;
+    return invitation?.inviteCode == inviteCode ? invitation : null;
+  }
+
+  /// Returns the currently staged (not yet acted on) invitation link, if any.
+  ///
+  /// Used by the post-account-create/login routing hook to pick up an
+  /// invitation that was staged during onboarding (when the user was not
+  /// logged in).
+  InvitationLink? getStagedInvitation() => _pendingReceivedInvitation;
+
+  /// Returns true if there is a staged invitation waiting to be acted on.
+  bool get hasStagedInvitations => _pendingReceivedInvitation != null;
+
+  /// Removes and returns the staged invitation if its code matches
+  /// [inviteCode], otherwise leaves it in place and returns null.
+  InvitationLink? _takeStagedInvitation(String inviteCode) {
+    if (_pendingReceivedInvitation?.inviteCode == inviteCode) {
+      final invitation = _pendingReceivedInvitation;
+      _pendingReceivedInvitation = null;
+      return invitation;
+    }
+    return null;
   }
 
   /// Processes invitation redemption when invitee accepts
@@ -368,8 +428,7 @@ class InvitationService {
     }
 
     // Look up in-memory first, fall back to DB.
-    final invitation =
-        _pendingReceivedInvitations.remove(inviteCode) ?? await _loadInvitation(inviteCode);
+    final invitation = _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }
@@ -522,8 +581,7 @@ class InvitationService {
     }
 
     // Look up in-memory first, fall back to DB.
-    final invitation =
-        _pendingReceivedInvitations.remove(inviteCode) ?? await _loadInvitation(inviteCode);
+    final invitation = _takeStagedInvitation(inviteCode) ?? await _loadInvitation(inviteCode);
     if (invitation == null) {
       throw InvitationNotFoundException(inviteCode);
     }

@@ -4,6 +4,7 @@ import '../models/invitation_link.dart';
 import '../models/invitation_status.dart';
 import '../models/invitation_exceptions.dart';
 import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../providers/invitation_provider.dart';
 import '../providers/key_provider.dart';
 import '../utils/snackbar_helper.dart';
@@ -13,6 +14,7 @@ import '../widgets/name_label.dart';
 import '../widgets/row_button.dart';
 import '../widgets/row_button_stack.dart';
 import 'vault_detail_screen.dart';
+import 'vault_list_screen.dart';
 
 /// Screen for accepting or denying an invitation link.
 ///
@@ -47,6 +49,15 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
   /// Resolve the effective invite code from either the direct object or the
   /// fallback parameter.
   String get _effectiveInviteCode => widget.invitation?.inviteCode ?? widget.inviteCode!;
+
+  @override
+  void initState() {
+    super.initState();
+    Log.info(
+      '[onboarding] InvitationAcceptanceScreen: shown, '
+      'inviteCode=$_effectiveInviteCode, hasDirectInvitation=${widget.invitation != null}',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -446,8 +457,18 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
       );
 
       if (mounted) {
-        // Remove the invitation screen and navigate to vault detail
-        Navigator.pushReplacement(
+        // Replace the entire stack with vault list -> vault detail, so the
+        // user lands on the vault they just joined but can navigate back to
+        // the vault list (and isn't trapped with no way out, nor dropped
+        // straight onto the list without seeing the vault they joined).
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VaultListScreen(),
+          ),
+          (route) => false,
+        );
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VaultDetailScreen(vaultId: vaultId),
@@ -539,10 +560,22 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         // Refresh the invitation data
         ref.invalidate(invitationByCodeProvider(_effectiveInviteCode));
 
-        // Navigate back after a short delay
+        // Navigate back after a short delay. This screen is reached via
+        // pushAndRemoveUntil during onboarding (see
+        // routeToVaultListOrStagedInvitation), so there's nothing to pop
+        // back to — fall back to the vault list in that case instead of
+        // leaving an empty navigator stack (blank screen).
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            Navigator.pop(context);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const VaultListScreen()),
+                (route) => false,
+              );
+            }
           }
         });
       }

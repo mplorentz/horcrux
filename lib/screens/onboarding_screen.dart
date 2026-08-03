@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/logger.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_scaffold.dart';
 import 'how_it_works_screen.dart';
 
 /// Onboarding screen shown when user is not logged in
-class OnboardingScreen extends ConsumerWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Log.info('[onboarding] OnboardingScreen: shown');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return HorcruxScaffold(
       body: SafeArea(
         bottom: false, // Exclude bottom safe area, let RowButton handle it
