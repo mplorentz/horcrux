@@ -235,6 +235,15 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _relays.clear();
           _relays.addAll(existingConfig.relays);
           _instructionsController.text = existingConfig.instructions ?? '';
+
+          // Normalize threshold into valid range for the current steward count.
+          // If the DB has threshold 1 with 2+ stewards (e.g. from before the
+          // 2sxc constraint), bump it to 2 so the UI and save use the correct
+          // value — not just the rendered slider clamp.
+          if (_threshold == 1 && _stewards.length >= 2) {
+            _threshold = 2;
+          }
+
           _isLoading = false;
           _hasUnsavedChanges = false;
           _isEditingExistingPlan = true; // We're editing an existing plan
@@ -1482,6 +1491,16 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
+
+    // Normalize threshold into the valid range for the current steward count
+    // so the persisted config is always consistent (threshold 1 is only valid
+    // for a single steward; with 2+ stewards the minimum is 2).
+    if (_threshold == 1 && _stewards.length >= 2) {
+      _threshold = 2;
+    }
+    if (_threshold > _stewards.length) {
+      _threshold = _stewards.length;
+    }
 
     // Warn about threshold-1 — any single steward is a single point of failure
     final shouldContinue = await _confirmProceedWithThresholdOne();
