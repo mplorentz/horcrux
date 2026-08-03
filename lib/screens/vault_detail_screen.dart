@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../models/key_holder_removal_reason.dart';
+import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -95,10 +96,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.archive_outlined,
                       size: 80,
-                      color: Theme.of(context).colorScheme.error,
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -112,7 +112,7 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                     Text(
                       reasonText,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.error,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                     const SizedBox(height: 32),
@@ -137,7 +137,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Widget _buildVaultDetail(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  Widget _buildVaultDetail(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     final currentPubkeyAsync = ref.watch(currentPublicKeyProvider);
 
     return PopScope(
@@ -257,7 +261,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
                               VaultStatusBanner(vault: vault),
                               // Steward List (extends to edges)
                               Container(
-                                color: Theme.of(context).colorScheme.surfaceContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                                 child: StewardList(vaultId: vault.id),
                               ),
                             ],
@@ -281,7 +287,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showDeleteDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -302,7 +312,9 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
               // Notify all stewards before deleting the vault.
               if (vault.backupConfig != null) {
                 final config = vault.backupConfig!;
-                final invitationSendingService = ref.read(invitationSendingServiceProvider);
+                final invitationSendingService = ref.read(
+                  invitationSendingServiceProvider,
+                );
                 for (final steward in config.stewards) {
                   if (steward.pubkey != null && config.relays.isNotEmpty) {
                     await invitationSendingService.sendKeyHolderRemovalEvent(
@@ -328,7 +340,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  void _showRedistributeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) {
+  void _showRedistributeDialog(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) {
     if (vault.backupConfig == null) {
       context.showHorcruxSnackBar(
         'Recovery plan not found',
@@ -396,7 +412,11 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     );
   }
 
-  Future<void> _redistributeKeys(BuildContext context, WidgetRef ref, VaultDetail vault) async {
+  Future<void> _redistributeKeys(
+    BuildContext context,
+    WidgetRef ref,
+    VaultDetail vault,
+  ) async {
     if (!context.mounted) return;
 
     // Show loading indicator on root navigator (so it persists even if context becomes unmounted)
@@ -418,6 +438,20 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
     try {
       final backupService = ref.read(backupServiceProvider);
       final config = vault.backupConfig;
+
+      // Guard: single-steward plans can't distribute keys
+      if (config != null &&
+          config.stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
+        navigatorKey.currentState?.pop();
+        if (context.mounted) {
+          context.showHorcruxSnackBar(
+            'You need at least 2 stewards to distribute keys. Invite another steward first.',
+            kind: HorcruxSnackKind.warning,
+          );
+        }
+        return;
+      }
+
       if (config != null && config.hasBeenDistributed) {
         await backupService.redistributeKeys(vaultId: vault.id);
       } else {

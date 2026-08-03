@@ -156,9 +156,9 @@ class VaultDetailButtonStack extends ConsumerWidget {
                         backupConfig.hasBeenDistributed) {
                       buttons.add(
                         RowButtonConfig(
-                          onPressed: () => _showTravelModeDialog(context, ref, vault),
-                          icon: Icons.luggage,
-                          text: 'Travel Mode',
+                          onPressed: () => _showSealVaultDialog(context, ref, vault),
+                          icon: Icons.lock,
+                          text: 'Seal Vault',
                         ),
                       );
                     }
@@ -377,20 +377,21 @@ class VaultDetailButtonStack extends ConsumerWidget {
     }
   }
 
-  /// Confirm enabling Travel Mode: erase the local copy of the vault contents
+  /// Confirm sealing the vault: erase the local copy of the vault contents
   /// while keeping the recovery plan intact, so the owner can restore them
   /// later via their stewards.
-  Future<void> _showTravelModeDialog(BuildContext context, WidgetRef ref, VaultDetail vault) async {
+  Future<void> _showSealVaultDialog(BuildContext context, WidgetRef ref, VaultDetail vault) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Enable Travel Mode?'),
+        title: const Text('Seal Vault?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Travel Mode wipes the vault contents from this device, so even if this device is compromised your vault will be safe.',
+              'Sealing this vault wipes its contents from this device. You '
+              "won't be able to view or edit them here until you recover the vault.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -411,7 +412,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "You'll need to initiate recovery and wait for stewards to approve before you can view this vault's contents again.",
+                      "To edit this vault again you'll need to import or recreate the contents.",
                       style: TextStyle(color: Colors.orange),
                     ),
                   ),
@@ -428,7 +429,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Enable Travel Mode'),
+            child: const Text('Seal Vault'),
           ),
         ],
       ),
@@ -441,7 +442,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
 
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Travel Mode enabled.',
+            'Vault sealed.',
             kind: HorcruxSnackKind.success,
           );
 
@@ -450,7 +451,7 @@ class VaultDetailButtonStack extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           context.showHorcruxSnackBar(
-            'Failed to enable Travel Mode: $e',
+            'Failed to seal vault: $e',
             kind: HorcruxSnackKind.error,
           );
         }

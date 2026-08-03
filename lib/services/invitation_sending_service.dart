@@ -171,7 +171,6 @@ class InvitationSendingService {
         recipientPubkey: ownerPubkey,
         relays: relayUrls,
         tags: [
-          ['d', 'share_error_${vaultId}_$shareIndex'],
           ['vault_id', vaultId],
           ['error', error],
         ],
@@ -193,6 +192,7 @@ class InvitationSendingService {
   /// Returns event ID, or null if publishing fails.
   Future<String?> sendInvitationInvalidEvent({
     required String inviteCode,
+    required String vaultId,
     required String inviteePubkey, // Hex format
     required List<String> relayUrls,
     required String reason,
@@ -210,6 +210,7 @@ class InvitationSendingService {
         relays: relayUrls,
         tags: [
           ['invite_code', inviteCode],
+          ['vault_id', vaultId],
           ['reason', reason],
         ],
       );

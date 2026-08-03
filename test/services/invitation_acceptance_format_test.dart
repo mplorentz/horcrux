@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -146,16 +148,8 @@ void main() {
           (invocation) async => invocation.positionalArguments[0] as String,
         );
 
-        // Create and save the invitation using InvitationService
-        await invitationService.createReceivedInvitation(
-          inviteCode: inviteCode,
-          vaultId: 'test-vault-id',
-          ownerPubkey: ownerPubkey,
-          relayUrls: relayUrls,
-          vaultName: 'Test Vault',
-        );
-
-        // Create a vault so backup config can be created
+        // Create a vault so backup config can be created (must exist before
+        // invitation row due to FK constraint).
         final testVault = Vault(
           id: 'test-vault-id',
           name: 'Test Vault',
@@ -163,6 +157,26 @@ void main() {
           ownerPubkey: ownerPubkey,
         );
         await realRepository.addVault(testVault);
+
+        // Create and save the invitation to DB for the event-processing test.
+        // Use a properly serialized InvitationLink payload.
+        final nowStr = DateTime.now().toIso8601String();
+        await testDb.into(testDb.invitations).insertOnConflictUpdate(
+              InvitationsCompanion.insert(
+                code: inviteCode,
+                vaultId: 'test-vault-id',
+                payload: jsonEncode({
+                  'inviteCode': inviteCode,
+                  'vaultId': 'test-vault-id',
+                  'vaultName': 'Test Vault',
+                  'ownerPubkey': ownerPubkey,
+                  'relayUrls': relayUrls,
+                  'createdAt': nowStr,
+                  'status': 'pending',
+                }),
+                createdAt: DateTime.now().millisecondsSinceEpoch,
+              ),
+            );
 
         // Act: Call processInvitationAcceptanceEvent with the tag-based event
         await invitationService.processInvitationAcceptanceEvent(event: mockEvent);
@@ -250,16 +264,7 @@ void main() {
       // Use a valid Base64URL invite code
       const inviteCode = 'dGVzdF9iYXNlNjRfY29kZQ';
 
-      // In the new canonical format, the invitee pubkey comes from event.pubKey.
-      // Create a received invitation first.
-      await invitationService.createReceivedInvitation(
-        inviteCode: inviteCode,
-        vaultId: 'test-vault-id',
-        ownerPubkey: ownerPubkey,
-        relayUrls: ['ws://localhost:10547'],
-        vaultName: 'Test Vault',
-      );
-
+      // Create vault first (FK constraint for invitations).
       final testVault = Vault(
         id: 'test-vault-id',
         name: 'Test Vault',
@@ -267,6 +272,26 @@ void main() {
         ownerPubkey: ownerPubkey,
       );
       await realRepository.addVault(testVault);
+
+      // Persist the invitation to DB for the event-processing test.
+      // Use a properly serialized InvitationLink payload.
+      final nowStr = DateTime.now().toIso8601String();
+      await testDb.into(testDb.invitations).insertOnConflictUpdate(
+            InvitationsCompanion.insert(
+              code: inviteCode,
+              vaultId: 'test-vault-id',
+              payload: jsonEncode({
+                'inviteCode': inviteCode,
+                'vaultId': 'test-vault-id',
+                'vaultName': 'Test Vault',
+                'ownerPubkey': ownerPubkey,
+                'relayUrls': ['ws://localhost:10547'],
+                'createdAt': nowStr,
+                'status': 'pending',
+              }),
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
 
       // Create event where event.pubKey doesn't match expected invitee
       final mockEvent = Nip01Event(
