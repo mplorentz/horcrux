@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/key_provider.dart';
@@ -144,7 +145,7 @@ class VaultStatusBanner extends ConsumerWidget {
     // threshold-1 plan CAN reach isReady=true (hasBeenDistributed &&
     // acknowledgedStewardsCount >= threshold), but still can't distribute
     // to additional stewards.
-    if (backupConfig.stewards.length < 2) {
+    if (backupConfig.stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
       return _buildBanner(
         context,
         const _StatusData(

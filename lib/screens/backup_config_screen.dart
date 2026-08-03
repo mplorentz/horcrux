@@ -1514,7 +1514,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (updatedConfig != null &&
           updatedConfig.canDistribute &&
-          updatedConfig.stewards.length >= 2 &&
+          updatedConfig.stewards.length >=
+              VaultBackupConstraints.minStewardsForDistribution &&
           (configChanged || pushPreferenceChanged)) {
         try {
           if (configChanged) {

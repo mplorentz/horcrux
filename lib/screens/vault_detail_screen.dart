@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../models/key_holder_removal_reason.dart';
+import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
@@ -439,7 +440,8 @@ class _VaultDetailScreenState extends ConsumerState<VaultDetailScreen> {
       final config = vault.backupConfig;
 
       // Guard: single-steward plans can't distribute keys
-      if (config != null && config.stewards.length < 2) {
+      if (config != null &&
+          config.stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
         navigatorKey.currentState?.pop();
         if (context.mounted) {
           context.showHorcruxSnackBar(

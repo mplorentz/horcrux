@@ -583,7 +583,8 @@ class BackupService {
 
       if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
         // Check if there are at least 2 stewards (Shamir requires numParts >= 2)
-        if (backupConfig.stewards.length < 2) {
+        if (backupConfig.stewards.length <
+            VaultBackupConstraints.minStewardsForDistribution) {
           Log.info(
             'Skipping auto-distribution: need at least 2 stewards (have ${backupConfig.stewards.length})',
           );

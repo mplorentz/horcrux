@@ -18,6 +18,13 @@ class VaultBackupConstraints {
 
   /// Default total keys value for new backups
   static const int defaultTotalKeys = 3;
+
+  /// Minimum number of stewards required to distribute keys.
+  ///
+  /// Shamir's Secret Sharing requires at least 2 shares (numParts >= 2), so a
+  /// plan with fewer than this many stewards cannot have its keys distributed
+  /// (see `SecretScheme`).
+  static const int minStewardsForDistribution = 2;
 }
 
 /// Shared data model for a vault entry on the current device.
