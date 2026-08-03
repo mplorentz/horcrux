@@ -38,6 +38,17 @@ void main() {
 
   const nsec = 'nsec1test0000000000000000000000000000000000000000000000000000000001';
 
+  setUp(() {
+    // The ConsentScreen that _skip()/_continue() push is above the testApp's
+    // DefaultAssetBundle, so it loads its ToS from the global rootBundle, which
+    // caches the load Future. That Future is created inside one test's
+    // fake-async zone; awaiting the cached Future from the next test's zone
+    // never completes, leaving ConsentScreen stuck on its CircularProgress
+    // spinner — whose endless animation makes pumpAndSettle() time out.
+    // Clearing the cache makes each test load the ToS fresh in its own zone.
+    rootBundle.clear();
+  });
+
   Widget testApp({
     required MockHorcruxApiService mockApiService,
     required bool skipOffersKeyBackup,
@@ -114,7 +125,10 @@ void main() {
     // Use pump() instead of pumpAndSettle() because VaultListScreen may have
     // infinite animations (timers, periodic refresh from vaultDetailListProvider).
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    // Accepting with no nextScreen shows a success snackbar with a 2s
+    // auto-dismiss timer before popping back to _continue(). Advance past that
+    // timer so it isn't left pending when the widget tree is disposed.
+    await tester.pump(const Duration(seconds: 3));
 
     // After acceptance, ConsentScreen pops, _continue() resumes, and
     // routeToVaultListOrStagedInvitation pushes VaultListScreen.
