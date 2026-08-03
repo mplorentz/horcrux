@@ -5,6 +5,7 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../screens/vault_explainer_screen.dart';
+import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/onboarding_navigation.dart';
 import '../utils/snackbar_helper.dart';
@@ -26,6 +27,16 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
   void initState() {
     super.initState();
     Log.info('[onboarding] AccountCreatedScreen: shown');
+    // Check for staged invitation after first frame. Invitation-flow users
+    // should skip the key-backup offer entirely.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final invitationService = ref.read(invitationServiceProvider);
+      if (invitationService.hasStagedInvitations) {
+        Log.debug('[onboarding] AccountCreatedScreen: staged invitation found, skipping key-backup offer');
+        routeToVaultListOrStagedInvitation(context: context, ref: ref);
+      }
+    });
   }
 
   String _getRedactedNsec() {
