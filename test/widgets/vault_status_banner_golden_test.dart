@@ -516,6 +516,55 @@ void main() {
         await harness.dispose();
       });
 
+      testGoldens('needs more stewards - single steward plan', (tester) async {
+        final singleSteward = createTestSteward(
+          pubkey: stewardPubkey,
+          name: 'Bob',
+          status: StewardStatus.awaitingKey,
+        );
+        final config = createTestBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 1,
+          totalKeys: 1,
+          stewards: [singleSteward],
+        );
+
+        final vault = createTestVault(
+          id: 'test-vault',
+          ownerPubkey: ownerPubkey,
+          backupConfig: config,
+        );
+
+        final harness = await pumpGoldenWidget(
+          tester,
+          VaultStatusBanner(vault: vault),
+          overrides: [
+            currentPublicKeyProvider.overrideWith(
+              (ref) => Future.value(ownerPubkey),
+            ),
+            recoveryStatusProvider('test-vault').overrideWith(
+              (ref) => const AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: false,
+                  canRecover: false,
+                  activeRecoveryRequest: null,
+                  isInitiator: false,
+                ),
+              ),
+            ),
+          ],
+          surfaceSize: const Size(375, 150),
+          useScaffold: true,
+        );
+
+        await screenMatchesGolden(
+          tester,
+          'vault_status_banner_owner_needs_more_stewards',
+        );
+
+        await harness.dispose();
+      });
+
       testGoldens('recovery in progress', (tester) async {
         final recoveryRequest = createTestRecoveryRequest(
           vaultId: 'test-vault',
