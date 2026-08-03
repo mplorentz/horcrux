@@ -70,6 +70,38 @@ class RecoveryRulesWidget extends StatelessWidget {
                   onThresholdChanged(value.round());
                 },
               ),
+              // Tick labels showing the value at each tick position
+              if (stewardCount - _minThreshold > 0)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(
+                      stewardCount - _minThreshold + 1,
+                      (i) => Text(
+                        '${_minThreshold + i}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                // Single position (min == max) — show the fixed value
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        '$_minThreshold',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(
                 'With your current plan $stewardCount key${stewardCount == 1 ? '' : 's'} will be generated and $threshold steward${threshold == 1 ? '' : 's'} will need to agree to unlock the vault.',
                 style: Theme.of(context).textTheme.bodySmall,
