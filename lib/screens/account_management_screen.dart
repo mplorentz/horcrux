@@ -14,6 +14,7 @@ import '../widgets/row_button_stack.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import 'consent_screen.dart';
 import 'delete_account_screen.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
@@ -337,6 +338,36 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                             ],
                           ),
                         ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Terms of Service & Privacy Policy link
+            InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ConsentScreen(viewOnly: true),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 20,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Terms of Service & Privacy Policy',
+                      style: textTheme.bodyMedium?.copyWith(
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                   ],
