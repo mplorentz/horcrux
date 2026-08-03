@@ -129,8 +129,15 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         // Update threshold if needed for new plans
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
           _threshold = _calculateDefaultThreshold(_stewards.length);
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
+        } else {
+          // Auto-bump threshold 1 to 2 when a second steward is added,
+          // since threshold 1 cannot be distributed with 2+ stewards.
+          if (_threshold == 1 && _stewards.length >= 2) {
+            _threshold = 2;
+          }
+          if (_threshold > _stewards.length) {
+            _threshold = _stewards.length;
+          }
         }
         _hasUnsavedChanges = true;
       });
@@ -811,10 +818,15 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         setState(() {
           _stewards.add(stewardWithContact);
           _invitationLinksByInviteeName[inviteeName] = result.invitation;
-          // Apply default threshold logic for new plans (only if not manually changed)
+            // Apply default threshold logic for new plans (only if not manually changed)
           if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
             _threshold = _calculateDefaultThreshold(_stewards.length);
           } else {
+            // Auto-bump threshold 1 to 2 when a second steward is added,
+            // since threshold 1 cannot be distributed with 2+ stewards.
+            if (_threshold == 1 && _stewards.length >= 2) {
+              _threshold = 2;
+            }
             // Ensure threshold doesn't exceed the number of stewards when editing
             if (_threshold > _stewards.length) {
               _threshold = _stewards.length;
@@ -868,6 +880,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
           _threshold = _calculateDefaultThreshold(_stewards.length);
         } else {
+          // Auto-bump threshold 1 to 2 when a second steward is added,
+          // since threshold 1 cannot be distributed with 2+ stewards.
+          if (_threshold == 1 && _stewards.length >= 2) {
+            _threshold = 2;
+          }
           // Ensure threshold doesn't exceed the number of stewards when editing
           if (_threshold > _stewards.length) {
             _threshold = _stewards.length;

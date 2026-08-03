@@ -21,6 +21,11 @@ class RecoveryRulesWidget extends StatelessWidget {
     required this.onAlertStewardsWithPushChanged,
   });
 
+  /// Minimum threshold for the slider.
+  /// When there are 2+ stewards, threshold must be at least 2 (Shamir
+  /// requires it for distribution). Single-steward plans can use 1.
+  int get _minThreshold => stewardCount >= 2 ? 2 : VaultBackupConstraints.minThreshold;
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -53,13 +58,13 @@ class RecoveryRulesWidget extends StatelessWidget {
               ),
               Slider(
                 value: threshold.toDouble().clamp(
-                      VaultBackupConstraints.minThreshold.toDouble(),
+                      _minThreshold.toDouble(),
                       stewardCount.toDouble(),
                     ),
-                min: VaultBackupConstraints.minThreshold.toDouble(),
+                min: _minThreshold.toDouble(),
                 max: stewardCount.toDouble(),
-                divisions: stewardCount - VaultBackupConstraints.minThreshold > 0
-                    ? stewardCount - VaultBackupConstraints.minThreshold
+                divisions: stewardCount - _minThreshold > 0
+                    ? stewardCount - _minThreshold
                     : null,
                 onChanged: (value) {
                   onThresholdChanged(value.round());
