@@ -1446,20 +1446,28 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Save when no stewards are configured. Persists the push notification
-  /// preference, deletes the backup config if one exists, and navigates back.
+  /// Save when no stewards are configured. Persists a zero-steward backup
+  /// config (preserving relays and instructions) and the push notification
+  /// preference, then navigates back.
   Future<void> _handleSkip() async {
     if (!mounted) return;
     try {
       final repository = ref.read(vaultRepositoryProvider);
       await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
 
-      // If a backup config existed (stewards were removed), delete it so the
-      // empty state is persisted. Otherwise the stale config reloads on re-entry.
+      // Persist a zero-steward config that carries the current relays and
+      // instructions, so custom relays aren't lost on last-steward removal.
       final existingConfig = await repository.getBackupConfig(widget.vaultId);
       if (existingConfig != null) {
         final backupService = ref.read(backupServiceProvider);
-        await backupService.deleteBackupConfig(widget.vaultId);
+        await backupService.saveBackupConfig(
+          vaultId: widget.vaultId,
+          threshold: 0,
+          totalKeys: 0,
+          stewards: const [],
+          relays: _relays,
+          instructions: _instructionsController.text.trim(),
+        );
       }
     } catch (e) {
       if (mounted) {
