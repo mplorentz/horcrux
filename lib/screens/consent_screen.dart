@@ -113,28 +113,21 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     try {
       final api = ref.read(horcruxApiServiceProvider);
       await api.acceptTermsOfService(tos.version);
-
-      if (!mounted) return;
-
-      setState(() => _viewOnlyAccepted = true);
-
-      // Brief delay so the user sees the "Accepted" state, then pop back.
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
     } catch (e, st) {
-      Log.error('ConsentScreen: auto-accept failed', e, st);
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Could not accept Terms of Service. '
-              'Please check your internet connection and try again.';
-        });
-        context.showHorcruxSnackBar(
-          'Failed to accept Terms of Service: $e',
-          kind: HorcruxSnackKind.error,
-        );
-      }
+      // POST /tos/accept failures are silently ignored so the user can
+      // proceed offline. The acceptance will be re-attempted on next
+      // launch via needsConsentAcceptance().
+      Log.error('ConsentScreen: POST /tos/accept failed (silently ignored)', e, st);
+    }
+
+    if (!mounted) return;
+
+    setState(() => _viewOnlyAccepted = true);
+
+    // Brief delay so the user sees the "Accepted" state, then pop back.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -146,31 +139,27 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     try {
       final api = ref.read(horcruxApiServiceProvider);
       await api.acceptTermsOfService(_tos!.version);
-
-      if (!mounted) return;
-
-      final next = widget.nextScreen;
-      if (next != null) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => next),
-          (route) => false,
-        );
-      } else {
-        context.showHorcruxSnackBar(
-          'Terms & Privacy accepted',
-          kind: HorcruxSnackKind.success,
-        );
-        Navigator.of(context).pop();
-      }
     } catch (e, st) {
-      Log.error('ConsentScreen: failed to accept ToS', e, st);
-      if (mounted) {
-        context.showHorcruxSnackBar(
-          'Failed to accept Terms of Service: $e',
-          kind: HorcruxSnackKind.error,
-        );
-        setState(() => _isAccepting = false);
-      }
+      // POST /tos/accept failures are silently ignored so the user can
+      // proceed offline. The acceptance will be re-attempted on next
+      // launch via needsConsentAcceptance().
+      Log.error('ConsentScreen: POST /tos/accept failed (silently ignored)', e, st);
+    }
+
+    if (!mounted) return;
+
+    final next = widget.nextScreen;
+    if (next != null) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => next),
+        (route) => false,
+      );
+    } else {
+      context.showHorcruxSnackBar(
+        'Terms & Privacy accepted',
+        kind: HorcruxSnackKind.success,
+      );
+      Navigator.of(context).pop();
     }
   }
 
