@@ -3,6 +3,7 @@ import '../widgets/row_button_stack.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 
 class HorcruxGallery extends StatefulWidget {
   const HorcruxGallery({super.key});
@@ -32,165 +33,168 @@ class _HorcruxGalleryState extends State<HorcruxGallery> {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text('Buttons', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {},
-                    child: const Text('Primary'),
-                  ),
-                  OutlinedButton(
-                    onPressed: () {},
-                    child: const Text('Secondary'),
-                  ),
-                  TextButton(onPressed: () {}, child: const Text('Tertiary')),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.more_horiz),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('Form', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              const Text("Here is some explanatory body text for a field."),
-              const SizedBox(height: 8),
-              const TextField(
-                decoration: InputDecoration(labelText: 'Vault name'),
-              ),
-              const SizedBox(height: 12),
-              const Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(labelText: 'Username'),
+          body: KeyboardDismissWrapper(
+            child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text('Buttons', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {},
+                      child: const Text('Primary'),
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      obscureText: true,
-                      decoration: InputDecoration(labelText: 'Password'),
+                    OutlinedButton(
+                      onPressed: () {},
+                      child: const Text('Secondary'),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Switch(
-                    value: _switchValue,
-                    onChanged: (value) {
-                      setState(() {
-                        _switchValue = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('Remember me'),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _sliderValue,
-                      min: 0,
-                      max: 100,
-                      divisions: 10,
-                      label: _sliderValue.round().toString(),
+                    TextButton(onPressed: () {}, child: const Text('Tertiary')),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.more_horiz),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Form', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                const Text("Here is some explanatory body text for a field."),
+                const SizedBox(height: 8),
+                const TextField(
+                  decoration: InputDecoration(labelText: 'Vault name'),
+                ),
+                const SizedBox(height: 12),
+                const Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(labelText: 'Username'),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        obscureText: true,
+                        decoration: InputDecoration(labelText: 'Password'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Switch(
+                      value: _switchValue,
                       onChanged: (value) {
                         setState(() {
-                          _sliderValue = value;
+                          _switchValue = value;
                         });
                       },
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 50,
-                    child: Text(
-                      _sliderValue.round().toString(),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.right,
+                    const SizedBox(width: 8),
+                    const Text('Remember me'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: _sliderValue,
+                        min: 0,
+                        max: 100,
+                        divisions: 10,
+                        label: _sliderValue.round().toString(),
+                        onChanged: (value) {
+                          setState(() {
+                            _sliderValue = value;
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('List', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              ...ListTile.divideTiles(
-                context: context,
-                tiles: [
-                  ListTile(
-                    leading: _icon(context),
-                    title: const Text('test vault'),
-                    subtitle: const Text('Owner: You'),
-                    trailing: const Icon(Icons.chevron_right),
-                  ),
-                  ListTile(
-                    leading: _icon(context),
-                    title: const Text('new vault'),
-                    subtitle: const Text('Owner: You'),
-                    trailing: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('Toasts', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      context.showHorcruxSnackBar(
-                        'Shares sync when stewards are online.',
-                        kind: HorcruxSnackKind.info,
-                      );
-                    },
-                    child: const Text('Info'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.showHorcruxSnackBar(
-                        'Saved!',
-                        kind: HorcruxSnackKind.success,
-                      );
-                    },
-                    child: const Text('Success'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.showHorcruxSnackBar(
-                        'Review steward confirmations before continuing.',
-                        kind: HorcruxSnackKind.warning,
-                      );
-                    },
-                    child: const Text('Warning'),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: cs.error),
-                    onPressed: () {
-                      context.showHorcruxSnackBar(
-                        'Something went wrong',
-                        kind: HorcruxSnackKind.error,
-                      );
-                    },
-                    child: const Text('Error'),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 50,
+                      child: Text(
+                        _sliderValue.round().toString(),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('List', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                ...ListTile.divideTiles(
+                  context: context,
+                  tiles: [
+                    ListTile(
+                      leading: _icon(context),
+                      title: const Text('test vault'),
+                      subtitle: const Text('Owner: You'),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                    ListTile(
+                      leading: _icon(context),
+                      title: const Text('new vault'),
+                      subtitle: const Text('Owner: You'),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Toasts', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        context.showHorcruxSnackBar(
+                          'Shares sync when stewards are online.',
+                          kind: HorcruxSnackKind.info,
+                        );
+                      },
+                      child: const Text('Info'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.showHorcruxSnackBar(
+                          'Saved!',
+                          kind: HorcruxSnackKind.success,
+                        );
+                      },
+                      child: const Text('Success'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.showHorcruxSnackBar(
+                          'Review steward confirmations before continuing.',
+                          kind: HorcruxSnackKind.warning,
+                        );
+                      },
+                      child: const Text('Warning'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: cs.error),
+                      onPressed: () {
+                        context.showHorcruxSnackBar(
+                          'Something went wrong',
+                          kind: HorcruxSnackKind.error,
+                        );
+                      },
+                      child: const Text('Error'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           bottomNavigationBar: SafeArea(
             bottom: false, // RowButton wants to extend to bottom

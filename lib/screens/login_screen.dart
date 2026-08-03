@@ -9,6 +9,7 @@ import '../utils/app_initialization.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 import '../screens/login_relay_config_screen.dart';
 
 /// Screen for importing existing Nostr keys
@@ -140,49 +141,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    // Instructions
-                    Text(
-                      'Enter your Nostr key to import your account',
-                      style: textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Supported formats: nsec, hex, or bunker URL',
-                      style: textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 24),
-                    // Text field
-                    TextField(
-                      controller: _controller,
-                      onChanged: _onInputChanged,
-                      enabled: !_isLoading,
-                      decoration: InputDecoration(
-                        hintText: 'Enter nsec, hex private key, or bunker URL',
-                        errorText: _errorText,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+              child: KeyboardDismissWrapper(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      // Instructions
+                      Text(
+                        'Enter your Nostr key to import your account',
+                        style: textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Supported formats: nsec, hex, or bunker URL',
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 24),
+                      // Text field
+                      TextField(
+                        controller: _controller,
+                        onChanged: _onInputChanged,
+                        enabled: !_isLoading,
+                        decoration: InputDecoration(
+                          hintText: 'Enter nsec, hex private key, or bunker URL',
+                          errorText: _errorText,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        maxLines: 3,
+                        minLines: 1,
+                      ),
+                      const SizedBox(height: 8),
+                      // Helper text
+                      Text(
+                        'Your key will be stored securely on this device',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
-                      maxLines: 3,
-                      minLines: 1,
-                    ),
-                    const SizedBox(height: 8),
-                    // Helper text
-                    Text(
-                      'Your key will be stored securely on this device',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

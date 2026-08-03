@@ -14,6 +14,7 @@ import '../widgets/row_button_stack.dart';
 import '../utils/snackbar_helper.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 import 'delete_account_screen.dart';
 
 /// Account management screen for viewing Nostr ID and managing account
@@ -204,24 +205,84 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    // Nostr ID section
-                    Text(
-                      'Nostr ID',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+              child: KeyboardDismissWrapper(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      // Nostr ID section
+                      Text(
+                        'Nostr ID',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    publicKeyBech32Async.when(
-                      loading: () => const CircularProgressIndicator(),
-                      error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
-                      data: (npub) => Container(
+                      const SizedBox(height: 8),
+                      publicKeyBech32Async.when(
+                        loading: () => const CircularProgressIndicator(),
+                        error: (err, _) => Text('Error: $err', style: textTheme.bodySmall),
+                        data: (npub) => Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainer,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color:
+                                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      npub ?? 'Not available',
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        fontFamily: 'monospace',
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.copy,
+                                  size: 20,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                onPressed: npub != null
+                                    ? () => _copyToClipboard(
+                                          context,
+                                          npub,
+                                          'Nostr ID',
+                                        )
+                                    : null,
+                                tooltip: 'Copy Nostr ID',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Private Key section
+                      Text(
+                        'Private Key',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainer,
@@ -231,115 +292,59 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
                             width: 1,
                           ),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    npub ?? 'Not available',
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: TextEditingController(
+                                      text: _nsec,
+                                    ),
+                                    readOnly: true,
+                                    obscureText: _obscureNsec,
                                     style: textTheme.bodyMedium?.copyWith(
                                       fontFamily: 'monospace',
                                       fontSize: 12,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: Icon(
-                                Icons.copy,
-                                size: 20,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                              onPressed: npub != null
-                                  ? () => _copyToClipboard(
-                                        context,
-                                        npub,
-                                        'Nostr ID',
-                                      )
-                                  : null,
-                              tooltip: 'Copy Nostr ID',
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: Icon(
+                                    _obscureNsec ? Icons.visibility : Icons.visibility_off,
+                                    size: 20,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureNsec = !_obscureNsec;
+                                    });
+                                  },
+                                  tooltip: _obscureNsec ? 'Show private key' : 'Hide private key',
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.copy,
+                                    size: 20,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  onPressed: _nsec != null ? _copyNsecWithWarning : null,
+                                  tooltip: 'Copy private key',
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Private Key section
-                    Text(
-                      'Private Key',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: TextEditingController(
-                                    text: _nsec,
-                                  ),
-                                  readOnly: true,
-                                  obscureText: _obscureNsec,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: Icon(
-                                  _obscureNsec ? Icons.visibility : Icons.visibility_off,
-                                  size: 20,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureNsec = !_obscureNsec;
-                                  });
-                                },
-                                tooltip: _obscureNsec ? 'Show private key' : 'Hide private key',
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.copy,
-                                  size: 20,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                                onPressed: _nsec != null ? _copyNsecWithWarning : null,
-                                tooltip: 'Copy private key',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
