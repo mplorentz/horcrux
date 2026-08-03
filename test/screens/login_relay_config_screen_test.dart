@@ -97,6 +97,9 @@ void main() {
     // After accepting, ImportSuccessScreen should be shown
     expect(find.byType(ImportSuccessScreen), findsOneWidget);
     expect(find.byType(VaultListScreen), findsNothing);
+
+    // ConsentScreen must have actually submitted terms acceptance.
+    verify(mockApiService.acceptTermsOfService(1)).called(1);
   });
 
   testWidgets('Skip without key backup shows ConsentScreen then VaultListScreen', (tester) async {
@@ -134,5 +137,8 @@ void main() {
     // routeToVaultListOrStagedInvitation pushes VaultListScreen.
     expect(find.byType(VaultListScreen), findsOneWidget);
     expect(find.byType(ImportSuccessScreen), findsNothing);
+
+    // ConsentScreen must have actually submitted terms acceptance.
+    verify(mockApiService.acceptTermsOfService(1)).called(1);
   });
 }
