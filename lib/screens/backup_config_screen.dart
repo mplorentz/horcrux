@@ -606,6 +606,71 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     );
   }
 
+  /// Shows a warning dialog when the threshold is 1, explaining the risk
+  /// and asking the user to confirm. Returns true if the user wants to
+  /// continue with the save (dialog was dismissed with 'Continue Anyway').
+  /// Returns false if the user chose to cancel (dialog was dismissed with
+  /// the cancel button, e.g. 'Add More Stewards' or 'Raise Threshold').
+  /// Returns true immediately if the threshold is not 1.
+  Future<bool> _confirmProceedWithThresholdOne() async {
+    if (_threshold != 1) return true;
+
+    final isSingleSteward = _stewards.length == 1;
+    final isOwnerSteward = isSingleSteward && _stewards.first.isOwner;
+
+    String title;
+    String message;
+    String detailMessage;
+    String cancelButton;
+
+    if (isSingleSteward) {
+      title = 'Single Steward Backup';
+      message = isOwnerSteward
+          ? "You're setting up a 1-of-1 backup with only yourself as the steward."
+          : "You're setting up a 1-of-1 backup with only one steward.";
+      detailMessage = isOwnerSteward
+          ? "Since you are the only steward, if you lose access to this device you won't be able to recover this vault. You also won't be able to distribute keys until you add at least one more steward."
+          : "If that steward's key is lost or compromised, recovery will be impossible. You also won't be able to distribute keys until you add at least one more steward.";
+      cancelButton = 'Add More Stewards';
+    } else {
+      title = 'Threshold of 1';
+      message = 'With a threshold of 1, any single steward can unlock this vault on their own.';
+      detailMessage = 'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
+      cancelButton = 'Raise Threshold';
+    }
+
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(detailMessage),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(cancelButton),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue Anyway'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldContinue == true;
+  }
+
   bool _canCreateBackup() {
     return _stewards.isNotEmpty && _relays.isNotEmpty;
   }
@@ -1402,62 +1467,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     if (!_canCreateBackup()) return;
 
     // Warn about threshold-1 — any single steward is a single point of failure
-    if (_threshold == 1) {
-      final isSingleSteward = _stewards.length == 1;
-      final isOwnerSteward = isSingleSteward && _stewards.first.isOwner;
-
-      String title;
-      String message;
-      String detailMessage;
-      String cancelButton;
-
-      if (isSingleSteward) {
-        title = 'Single Steward Backup';
-        message = isOwnerSteward
-            ? "You're setting up a 1-of-1 backup with only yourself as the steward."
-            : "You're setting up a 1-of-1 backup with only one steward.";
-        detailMessage = isOwnerSteward
-            ? "Since you are the only steward, if you lose access to this device you won't be able to recover this vault. You also won't be able to distribute keys until you add at least one more steward."
-            : "If that steward's key is lost or compromised, recovery will be impossible. You also won't be able to distribute keys until you add at least one more steward.";
-        cancelButton = 'Add More Stewards';
-      } else {
-        title = 'Threshold of 1';
-        message = 'With a threshold of 1, any single steward can unlock this vault on their own.';
-        detailMessage = 'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
-        cancelButton = 'Raise Threshold';
-      }
-
-      final shouldContinue = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(detailMessage),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(cancelButton),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Continue Anyway'),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldContinue != true || !mounted) return;
-    }
+    final shouldContinue = await _confirmProceedWithThresholdOne();
+    if (!shouldContinue || !mounted) return;
 
     try {
       final backupService = ref.read(backupServiceProvider);
