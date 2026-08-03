@@ -18,12 +18,13 @@ mkdir -p "$STORE"
 
 shopt -s nullglob
 rm -f "$STORE"/{00,01,02,03}_*_iphone_6_9in.png \
+      "$STORE"/{00,01,02,03}_*_iphone_6_7in.png \
       "$STORE"/{00,01,02,03}_*_ipad_13in.png
 
 for golden in "$GOLDENS"/{00,01,02,03}_*.png; do
   name="$(basename "$golden")"
   case "$name" in
-    *_iphone_6_9in.png | *_ipad_13in.png)
+    *_iphone_6_9in.png | *_iphone_6_7in.png | *_ipad_13in.png)
       cp "$golden" "$STORE/$name"
       echo "→ $name"
       ;;

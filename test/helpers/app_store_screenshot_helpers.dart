@@ -36,6 +36,16 @@ const appStoreIphone69In = AppStoreFormFactor(
   physicalWidth: 1320,
 );
 
+/// iPhone 6.5"/6.7" — 1284×2778 px (428×926 logical @ 3×). Legacy App Store
+/// Connect screenshot slot still required alongside 6.9" (e.g. iPhone 12-15
+/// Pro Max).
+const appStoreIphone67In = AppStoreFormFactor(
+  storeFolderName: 'iphone_6_7in',
+  logicalWidth: 428,
+  logicalHeight: 926,
+  physicalWidth: 1284,
+);
+
 /// iPad 13" — 2064×2752 px (1032×1376 logical @ 2×). Apple's required
 /// minimum iPad screenshot size (e.g. 13" iPad Pro).
 const appStoreIpad13In = AppStoreFormFactor(
@@ -47,6 +57,7 @@ const appStoreIpad13In = AppStoreFormFactor(
 
 const appStoreFormFactors = [
   appStoreIphone69In,
+  appStoreIphone67In,
   appStoreIpad13In,
 ];
 
