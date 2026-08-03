@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ndk/shared/nips/nip01/helpers.dart';
 import '../models/steward.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 
 /// Mode for adding a steward
 enum AddStewardMode {
@@ -135,8 +136,10 @@ class _AddStewardScreenState extends ConsumerState<AddStewardScreen> {
             ),
             // Form content
             Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+              child: KeyboardDismissWrapper(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.all(16),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -284,6 +287,7 @@ class _AddStewardScreenState extends ConsumerState<AddStewardScreen> {
                   ),
                 ),
               ),
+            ),
             ),
           ],
         ),

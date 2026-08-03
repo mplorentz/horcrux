@@ -13,6 +13,7 @@ import '../services/publish_service.dart';
 import '../services/relay_scan_service.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 import '../widgets/row_button_stack.dart';
 
 enum _DeleteState { confirming, broadcasting, success, failure }
@@ -138,8 +139,10 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       child: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: KeyboardDismissWrapper(
+              child: ListView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
               children: [
                 Text(
                   'Danger! Deleting your account is irreversible. '
@@ -167,6 +170,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   ),
                 ),
               ],
+              ),
             ),
           ),
           ValueListenableBuilder<TextEditingValue>(

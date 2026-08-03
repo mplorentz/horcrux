@@ -21,6 +21,7 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 import 'vault_list_screen.dart';
 import 'add_steward_screen.dart';
 
@@ -318,8 +319,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 behavior: const ScrollBehavior().copyWith(scrollbars: false),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
-                  child: SingleChildScrollView(
-                    child: Column(
+                  child: KeyboardDismissWrapper(
+                    child: SingleChildScrollView(
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Recovery Plan Overview

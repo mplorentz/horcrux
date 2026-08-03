@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/feedback_service.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../widgets/keyboard_dismiss_wrapper.dart';
 import '../utils/snackbar_helper.dart';
 
 /// Provider for the shared [FeedbackService] instance.
@@ -90,8 +91,10 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
     return HorcruxScaffold(
       appBar: HorcruxAppBar(title: widget.title),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: KeyboardDismissWrapper(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
@@ -187,6 +190,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
