@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/invitation_link.dart';
+import '../providers/key_provider.dart';
+import '../screens/invitation_acceptance_screen.dart';
 import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/validators.dart';
@@ -18,6 +21,10 @@ import '../utils/snackbar_helper.dart';
 final deepLinkServiceProvider = Provider<DeepLinkService>((ref) {
   final service = DeepLinkService(
     getInvitationService: () => ref.read(invitationServiceProvider),
+    getIsLoggedIn: () async {
+      final isLoggedIn = await ref.read(isLoggedInProvider.future);
+      return isLoggedIn;
+    },
   );
   Log.debug('[onboarding] deepLinkServiceProvider: created DeepLinkService(${service.hashCode})');
   ref.onDispose(() => service.dispose());
@@ -44,12 +51,16 @@ typedef InvitationLinkData = ({
 /// account yet.
 class DeepLinkService {
   final InvitationService Function() _getInvitationService;
+  final Future<bool> Function() _getIsLoggedIn;
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   GlobalKey<NavigatorState>? _navigatorKey;
 
-  DeepLinkService({required InvitationService Function() getInvitationService})
-      : _getInvitationService = getInvitationService;
+  DeepLinkService({
+    required InvitationService Function() getInvitationService,
+    required Future<bool> Function() getIsLoggedIn,
+  })  : _getInvitationService = getInvitationService,
+        _getIsLoggedIn = getIsLoggedIn;
 
   /// Sets the navigator key for navigation
   void setNavigatorKey(GlobalKey<NavigatorState> navigatorKey) {
@@ -175,7 +186,16 @@ class DeepLinkService {
       }
 
       Log.info('Deep link processed; invitation staged in memory');
-      _showSuccessToUser('Invitation saved!');
+
+      // If the user is logged in (running app, past onboarding), navigate
+      // directly to the acceptance screen. During onboarding, keep the
+      // stage + toast behavior (the user doesn't have an account yet).
+      final isLoggedIn = await _getIsLoggedIn();
+      if (isLoggedIn) {
+        _navigateToAcceptance(invitation);
+      } else {
+        _showSuccessToUser('Invitation saved!');
+      }
     } on InvalidInvitationLinkException catch (e) {
       // Log only the reason, not `e` itself — InvalidInvitationLinkException
       // embeds the full source URI (invite code, owner pubkey, etc.) in its
@@ -207,6 +227,21 @@ class DeepLinkService {
         overlay: overlay,
       );
     }
+  }
+
+  /// Navigates directly to the InvitationAcceptanceScreen with the staged
+  /// invitation. Used when the user is already logged in (running app).
+  void _navigateToAcceptance(InvitationLink invitation) {
+    final navigator = _navigatorKey?.currentState;
+    if (navigator == null) {
+      Log.warning('DeepLinkService: no navigator available for navigation');
+      return;
+    }
+    navigator.push(
+      MaterialPageRoute(
+        builder: (context) => InvitationAcceptanceScreen(invitation: invitation),
+      ),
+    );
   }
 
   /// Shows a success message to the user via a toast.
