@@ -597,6 +597,6 @@ Rules:
 - If a gate genuinely can't run in your environment (e.g. goldens need macOS),
   say so explicitly in the bead handoff comment — do NOT silently skip it.
 - CI also checks the drift schema version bump on schema changes — if you
-  touched `lib/database/`, run `scripts/check-drift-schema-version-bump.sh`
+  touched `lib/database/`, run `scripts/check-drift-schema-version-bump.sh main`
   or manually verify the version file.
 <!-- END CODER QUALITY GATES -->
