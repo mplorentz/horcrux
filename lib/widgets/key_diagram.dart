@@ -103,7 +103,8 @@ class _KeyDiagramState extends State<KeyDiagram> with TickerProviderStateMixin {
       _prevStewardCount = oldWidget.stewards.length;
       _prevThreshold = oldWidget.threshold;
       _prevChangeCounter = oldWidget.changeCounter;
-      _transitionController.forward(from: 0.0);
+      // No transition animation: the diagram updates instantly when the
+      // steward count or threshold changes (bead horcrux_app-bpeo).
     }
 
     if (!widget.showRecoveryDemo) {
