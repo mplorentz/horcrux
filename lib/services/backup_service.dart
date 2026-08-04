@@ -114,9 +114,9 @@ class BackupService {
     }
 
     // Validate inputs
-    if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+    if (threshold < BackupConfigExtension.minimumThreshold(totalKeys) || threshold > totalKeys) {
       throw ArgumentError(
-        'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
+        'Threshold must be >= ${BackupConfigExtension.minimumThreshold(totalKeys)} and <= totalKeys',
       );
     }
     if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
@@ -193,9 +193,9 @@ class BackupService {
   }) async {
     try {
       // Validate inputs
-      if (threshold < VaultBackupConstraints.minThreshold) {
+      if (threshold < BackupConfigExtension.minimumThreshold(totalShards)) {
         throw ArgumentError(
-          'Threshold must be at least ${VaultBackupConstraints.minThreshold}',
+          'Threshold must be at least ${BackupConfigExtension.minimumThreshold(totalShards)}',
         );
       }
       if (threshold > totalShards) {

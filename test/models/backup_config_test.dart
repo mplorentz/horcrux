@@ -256,7 +256,23 @@ void main() {
           expect(BackupConfigExtension.normalizeThreshold(1, 0), equals(1));
         });
 
-        test('clamps threshold to 0 when 0 stewards with threshold > 1', () {
+        test('bumps threshold 0 to 1 when steward count is 1 (clamp below minimum)', () {
+          expect(BackupConfigExtension.normalizeThreshold(0, 1), equals(1));
+        });
+
+        test('bumps threshold 0 to 2 when steward count is 2 (clamp below minimum)', () {
+          expect(BackupConfigExtension.normalizeThreshold(0, 2), equals(2));
+        });
+
+        test('bumps threshold 0 to 2 when steward count is 3 (clamp below minimum)', () {
+          expect(BackupConfigExtension.normalizeThreshold(0, 3), equals(2));
+        });
+
+        test('bumps threshold 1 to 2 when steward count is 2 (auto-bump)', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 2), equals(2));
+        });
+
+        test('does not clamp threshold 3 when 0 stewards (no minimum floor)', () {
           expect(BackupConfigExtension.normalizeThreshold(3, 0), equals(3));
         });
 
@@ -388,6 +404,93 @@ void main() {
           final normalized = BackupConfigExtension.normalizeThreshold(1, 2);
           expect(normalized, equals(2));
         });
+      });
+    });
+
+    group('isValid threshold enforcement (horcrux_app-2sxc)', () {
+      BackupConfig makeConfig(int threshold, int stewardCount) {
+        final stewards = List.generate(stewardCount, (i) => createSteward(
+          pubkey: '${'${i + 1}'.padLeft(64, '0')}',
+          name: 'Steward $i',
+        ));
+        return BackupConfig(
+          vaultId: 'v1',
+          threshold: threshold,
+          stewards: stewards,
+          relays: const ['wss://relay.example.com'],
+          createdAt: DateTime.now(),
+          distributionVersion: 0,
+        );
+      }
+
+      test('isValid rejects threshold 1 with 2 stewards', () {
+        expect(makeConfig(1, 2).isValid, isFalse);
+      });
+
+      test('isValid rejects threshold 1 with 5 stewards', () {
+        expect(makeConfig(1, 5).isValid, isFalse);
+      });
+
+      test('isValid accepts threshold 2 with 2 stewards', () {
+        expect(makeConfig(2, 2).isValid, isTrue);
+      });
+
+      test('isValid accepts threshold 3 with 5 stewards', () {
+        expect(makeConfig(3, 5).isValid, isTrue);
+      });
+
+      test('isValid accepts threshold 1 with 1 steward', () {
+        expect(makeConfig(1, 1).isValid, isTrue);
+      });
+
+      test('isValid accepts threshold 1 with 0 stewards', () {
+        expect(makeConfig(1, 0).isValid, isTrue);
+      });
+
+      test('isValid rejects threshold 0 with 1 steward', () {
+        expect(makeConfig(0, 1).isValid, isFalse);
+      });
+
+      test('isValid rejects threshold 0 with 2 stewards', () {
+        expect(makeConfig(0, 2).isValid, isFalse);
+      });
+    });
+
+    group('createBackupConfig threshold enforcement (horcrux_app-2sxc)', () {
+      final stewards2 = [
+        createSteward(pubkey: 'a${'0' * 63}', name: 'A'),
+        createSteward(pubkey: 'b${'0' * 63}', name: 'B'),
+      ];
+
+      test('rejects threshold 1 with 2 stewards', () {
+        expect(
+          () => createBackupConfig(
+            vaultId: 'v1', threshold: 1, totalKeys: 2,
+            stewards: stewards2, relays: ['wss://relay.example.com'],
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('accepts threshold 2 with 2 stewards', () {
+        expect(
+          () => createBackupConfig(
+            vaultId: 'v1', threshold: 2, totalKeys: 2,
+            stewards: stewards2, relays: ['wss://relay.example.com'],
+          ),
+          returnsNormally,
+        );
+      });
+
+      test('accepts threshold 1 with 1 steward', () {
+        final oneSteward = [createSteward(pubkey: 'a${'0' * 63}', name: 'A')];
+        expect(
+          () => createBackupConfig(
+            vaultId: 'v1', threshold: 1, totalKeys: 1,
+            stewards: oneSteward, relays: ['wss://relay.example.com'],
+          ),
+          returnsNormally,
+        );
       });
     });
 

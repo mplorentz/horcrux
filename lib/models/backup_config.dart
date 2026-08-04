@@ -77,9 +77,9 @@ BackupConfig createBackupConfig({
     );
   }
 
-  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+  if (threshold < BackupConfigExtension.minimumThreshold(totalKeys) || threshold > totalKeys) {
     throw ArgumentError(
-      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
+      'Threshold must be >= ${BackupConfigExtension.minimumThreshold(totalKeys)} and <= totalKeys',
     );
   }
   if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
@@ -142,7 +142,7 @@ extension BackupConfigExtension on BackupConfig {
         return relays.isNotEmpty;
       }
 
-      if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+      if (threshold < minimumThreshold(totalKeys) || threshold > totalKeys) {
         return false;
       }
       if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
@@ -258,16 +258,15 @@ extension BackupConfigExtension on BackupConfig {
 
   /// Normalize [threshold] into the valid range for [stewardCount] stewards.
   ///
-  /// Threshold 1 is only valid with fewer than 2 stewards (single-steward
-  /// plans). With 2+ stewards, threshold is bumped to 2 because Shamir's
-  /// Secret Sharing requires at least 2 shares for distribution.
-  ///
-  /// Threshold is also clamped to never exceed [stewardCount], but only when
-  /// [stewardCount] > 0 (an empty plan with 0 stewards keeps threshold 1 as
-  /// a placeholder until stewards are added).
+  /// Clamps to [minimumThreshold] so values below the floor are bumped up
+  /// (e.g. threshold 0 with 1 steward becomes 1; threshold 0 with 2+ stewards
+  /// becomes 2). Also clamps to never exceed [stewardCount], but only when
+  /// [stewardCount] > 0 (an empty plan with 0 stewards keeps the caller's
+  /// value as a placeholder until stewards are added).
   static int normalizeThreshold(int threshold, int stewardCount) {
-    if (threshold == 1 && stewardCount >= 2) {
-      return 2;
+    final min = minimumThreshold(stewardCount);
+    if (threshold < min) {
+      return min;
     }
     if (stewardCount > 0 && threshold > stewardCount) {
       return stewardCount;
