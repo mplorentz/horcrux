@@ -100,7 +100,6 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
 
                           // Slider controls
                           _buildSliderControls(context),
@@ -197,8 +196,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
             style: TextStyle(fontWeight: FontWeight.bold, color: primaryText),
           ),
           const TextSpan(
-            text: ' — how many keys are needed to open the vault. Horcrux guides you '
-                'through the process.',
+            text: ' - how many keys are needed to open the vault. Interactive illustration below:',
           ),
         ],
       ),

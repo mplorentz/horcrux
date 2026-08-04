@@ -95,6 +95,24 @@ class BackupService {
     required List<String> relays,
     String? instructions,
   }) async {
+    // Empty-steward config: skip validation, preserve relays.
+    if (stewards.isEmpty) {
+      if (relays.isEmpty) {
+        throw ArgumentError('At least one relay must be provided');
+      }
+      final config = createBackupConfig(
+        vaultId: vaultId,
+        threshold: 0,
+        totalKeys: 0,
+        stewards: stewards,
+        relays: relays,
+        instructions: instructions,
+      );
+      await _repository.updateBackupConfig(vaultId, config);
+      Log.info('Created empty-steward backup configuration for vault $vaultId');
+      return config;
+    }
+
     // Validate inputs
     if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
       throw ArgumentError(
@@ -383,7 +401,7 @@ class BackupService {
   /// Check if backup is ready (all required stewards have acknowledged)
   Future<bool> isBackupReady(String vaultId) async {
     final config = await _repository.getBackupConfig(vaultId);
-    if (config == null) return false;
+    if (config == null || config.stewards.isEmpty) return false;
 
     return config.acknowledgedStewardsCount >= config.threshold;
   }
@@ -582,6 +600,15 @@ class BackupService {
       final vaultDetail = await _vaultDetailRepository.getVaultDetail(vaultId);
 
       if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
+        // Check if there are at least 2 stewards (Shamir requires numParts >= 2)
+        if (backupConfig.stewards.length <
+            VaultBackupConstraints.minStewardsForDistribution) {
+          Log.info(
+            'Skipping auto-distribution: need at least 2 stewards (have ${backupConfig.stewards.length})',
+          );
+          return;
+        }
+
         // Check if all stewards now have pubkeys (can distribute)
         if (backupConfig.canDistribute) {
           // Check if all stewards with pubkeys are awaitingKey or awaitingNewKey (ready for distribution)

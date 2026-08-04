@@ -58,6 +58,7 @@ class HorcruxAppBar extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       actions: actions,
       centerTitle: centerTitle,
+      titleSpacing: resolvedLeading == null ? 16 : 8,
       backgroundColor: backgroundColor,
       foregroundColor: foregroundColor,
       bottom: bottom,
