@@ -21,7 +21,6 @@ import '../widgets/row_button_stack.dart';
 import '../widgets/recovery_rules_widget.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/keyboard_dismiss_wrapper.dart';
 import 'vault_list_screen.dart';
 import 'add_steward_screen.dart';
 
@@ -307,6 +306,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (dialogResult == 'save') {
           await _saveBackup();
         } else if (dialogResult == 'discard') {
+          await _restoreInitialConfig();
+          if (!context.mounted) return;
           await _popWithOwnerPushPrompt();
         }
       },
@@ -319,180 +320,228 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 behavior: const ScrollBehavior().copyWith(scrollbars: false),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
-                  child: KeyboardDismissWrapper(
-                    child: SingleChildScrollView(
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Recovery Plan Overview
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-                            child: Text(
-                              'Your recovery plan details how your vault can be opened and by whom.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Recovery Plan Overview
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                          child: Text(
+                            'Your recovery plan details how your vault can be opened and by whom.',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
+                        ),
 
-                          // Stewards Section
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Stewards',
-                                      style: Theme.of(context).textTheme.headlineSmall),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Stewards are trusted contacts who will help you recover access. Each steward receives one key to your vault.',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                        // Stewards Section
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Stewards', style: Theme.of(context).textTheme.headlineSmall),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Stewards are trusted contacts who will help you recover access. Each steward receives one key to your vault.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Self-steward toggle
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
                                   ),
-                                  const SizedBox(height: 16),
-
-                                  // Self-steward toggle
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.surface,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withValues(alpha: 0.3),
-                                        width: 1,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.badge,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
-                                    ),
-                                    padding:
-                                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.badge,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Include yourself?',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(fontWeight: FontWeight.w500),
-                                              ),
-                                              Text(
-                                                'You\'ll receive a key like your stewards, allowing you to participate in recovery.',
-                                                style:
-                                                    Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                          color: Theme.of(
-                                                            context,
-                                                          )
-                                                              .colorScheme
-                                                              .onSurface
-                                                              .withValues(alpha: 0.7),
-                                                        ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Switch(
-                                          key: const ValueKey('self_steward_switch'),
-                                          value: _includeSelfAsSteward,
-                                          onChanged: _handleSelfStewardToggle,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  // Stewards List
-                                  if (_stewards.isEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 24.0),
-                                      child: Center(
+                                      const SizedBox(width: 12),
+                                      Expanded(
                                         child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Icon(
-                                              Icons.people_outline,
-                                              size: 48,
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface.withValues(alpha: 0.5),
-                                            ),
-                                            const SizedBox(height: 16),
                                             Text(
-                                              'No stewards yet',
-                                              style: Theme.of(context).textTheme.titleMedium,
+                                              'Include yourself?',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(fontWeight: FontWeight.w500),
                                             ),
-                                            const SizedBox(height: 8),
                                             Text(
-                                              'Add your first steward to get started',
-                                              style:
-                                                  Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(alpha: 0.7),
-                                                      ),
-                                              textAlign: TextAlign.center,
+                                              'You\'ll receive a key like your stewards, allowing you to participate in recovery.',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                                                  ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    )
-                                  else
-                                    Column(
-                                      children: [
-                                        for (int i = 0; i < _stewards.length; i++) ...[
-                                          _buildStewardListItem(_stewards[i]),
-                                          if (i < _stewards.length - 1) const Divider(height: 1),
-                                        ],
-                                      ],
-                                    ),
+                                      Switch(
+                                        key: const ValueKey('self_steward_switch'),
+                                        value: _includeSelfAsSteward,
+                                        onChanged: _handleSelfStewardToggle,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
 
-                                  // Add Steward Button
-                                  const SizedBox(height: 16),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _showAddStewardDialog,
-                                      icon: const Icon(Icons.person_add),
-                                      label: Text(
-                                        _stewards.isEmpty ? 'Add Steward' : 'Add Another Steward',
+                                // Stewards List
+                                if (_stewards.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.people_outline,
+                                            size: 48,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface.withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No stewards yet',
+                                            style: Theme.of(context).textTheme.titleMedium,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Add your first steward to get started',
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.7),
+                                                ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      for (int i = 0; i < _stewards.length; i++) ...[
+                                        _buildStewardListItem(_stewards[i]),
+                                        if (i < _stewards.length - 1) const Divider(height: 1),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ),
+
+                                // Add Steward Button
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _showAddStewardDialog,
+                                    icon: const Icon(Icons.person_add),
+                                    label: Text(
+                                      _stewards.isEmpty ? 'Add Steward' : 'Add Another Steward',
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                        const SizedBox(height: 16),
 
-                          // Recovery Rules Section
-                          RecoveryRulesWidget(
-                            threshold: _threshold,
-                            stewardCount: _stewards.length,
-                            onThresholdChanged: (newThreshold) {
-                              setState(() {
-                                _threshold = newThreshold;
-                                _thresholdManuallyChanged = true; // Mark as manually changed
-                                _hasUnsavedChanges = true;
-                              });
-                            },
-                            alertStewardsWithPush: _alertStewardsWithPush,
-                            onAlertStewardsWithPushChanged: (v) {
-                              setState(() {
-                                _alertStewardsWithPush = v;
-                                _hasUnsavedChanges = true;
-                              });
-                            },
+                        // Recovery Rules Section
+                        RecoveryRulesWidget(
+                          threshold: _threshold,
+                          stewardCount: _stewards.length,
+                          onThresholdChanged: (newThreshold) {
+                            setState(() {
+                              _threshold = newThreshold;
+                              _thresholdManuallyChanged = true; // Mark as manually changed
+                              _hasUnsavedChanges = true;
+                            });
+                          },
+                          alertStewardsWithPush: _alertStewardsWithPush,
+                          onAlertStewardsWithPushChanged: (v) {
+                            setState(() {
+                              _alertStewardsWithPush = v;
+                              _hasUnsavedChanges = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Instructions Section
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Recovery Instructions',
+                                  style: Theme.of(context).textTheme.headlineSmall,
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  key: const ValueKey('recovery_instructions_field'),
+                                  controller: _instructionsController,
+                                  decoration: const InputDecoration(
+                                    hintText:
+                                        'Write recovery instructions for stewards e.g. under what circumstances they should help you recover access?',
+                                    border: OutlineInputBorder(),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  maxLines: null,
+                                  minLines: 3,
+                                  onChanged: (_) {
+                                    setState(() {
+                                      _hasUnsavedChanges = true;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                        const SizedBox(height: 16),
 
-                          // Instructions Section
+                        // Advanced Configuration Toggle
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedSettings = !_showAdvancedSettings;
+                            });
+                          },
+                          icon: Icon(
+                            _showAdvancedSettings ? Icons.expand_more : Icons.chevron_right,
+                          ),
+                          label: Text(
+                            _showAdvancedSettings
+                                ? 'Hide Advanced Configuration'
+                                : 'Show Advanced Configuration',
+                          ),
+                        ),
+
+                        // Relay Configuration (Advanced)
+                        if (_showAdvancedSettings) ...[
+                          const SizedBox(height: 8),
                           Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -500,95 +549,40 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Recovery Instructions',
+                                    'Relay Servers',
                                     style: Theme.of(context).textTheme.headlineSmall,
                                   ),
                                   const SizedBox(height: 16),
-                                  TextField(
-                                    key: const ValueKey('recovery_instructions_field'),
-                                    controller: _instructionsController,
-                                    decoration: const InputDecoration(
-                                      hintText:
-                                          'Write recovery instructions for stewards e.g. under what circumstances they should help you recover access?',
-                                      border: OutlineInputBorder(),
-                                      alignLabelWithHint: true,
+                                  ..._relays.map(
+                                    (relay) => ListTile(
+                                      leading: const Icon(Icons.cloud),
+                                      title: Text(relay),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.remove_circle),
+                                        onPressed: () {
+                                          if (_relays.length > 1) {
+                                            setState(() {
+                                              _relays.remove(relay);
+                                              _hasUnsavedChanges = true;
+                                            });
+                                          }
+                                        },
+                                      ),
                                     ),
-                                    maxLines: null,
-                                    minLines: 3,
-                                    onChanged: (_) {
-                                      setState(() {
-                                        _hasUnsavedChanges = true;
-                                      });
-                                    },
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed: _addRelay,
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Add Relay'),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-
-                          // Advanced Configuration Toggle
-                          TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _showAdvancedSettings = !_showAdvancedSettings;
-                              });
-                            },
-                            icon: Icon(
-                              _showAdvancedSettings ? Icons.expand_more : Icons.chevron_right,
-                            ),
-                            label: Text(
-                              _showAdvancedSettings
-                                  ? 'Hide Advanced Configuration'
-                                  : 'Show Advanced Configuration',
-                            ),
-                          ),
-
-                          // Relay Configuration (Advanced)
-                          if (_showAdvancedSettings) ...[
-                            const SizedBox(height: 8),
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Relay Servers',
-                                      style: Theme.of(context).textTheme.headlineSmall,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ..._relays.map(
-                                      (relay) => ListTile(
-                                        leading: const Icon(Icons.cloud),
-                                        title: Text(relay),
-                                        trailing: IconButton(
-                                          icon: const Icon(Icons.remove_circle),
-                                          onPressed: () {
-                                            if (_relays.length > 1) {
-                                              setState(() {
-                                                _relays.remove(relay);
-                                                _hasUnsavedChanges = true;
-                                              });
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    ElevatedButton.icon(
-                                      onPressed: _addRelay,
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Add Relay'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 16), // Bottom padding inside scroll view
                         ],
-                      ),
+
+                        const SizedBox(height: 16), // Bottom padding inside scroll view
+                      ],
                     ),
                   ),
                 ),
@@ -612,6 +606,71 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         ),
       ),
     );
+  }
+
+  /// Shows a warning dialog when the threshold is 1, explaining the risk
+  /// and asking the user to confirm. Returns true if the user wants to
+  /// continue with the save (dialog was dismissed with 'Continue Anyway').
+  /// Returns false if the user chose to cancel (dialog was dismissed with
+  /// the cancel button, e.g. 'Add More Stewards' or 'Raise Threshold').
+  /// Returns true immediately if the threshold is not 1.
+  Future<bool> _confirmProceedWithThresholdOne() async {
+    if (_threshold != 1) return true;
+
+    final isSingleSteward = _stewards.length == 1;
+    final isOwnerSteward = isSingleSteward && _stewards.first.isOwner;
+
+    String title;
+    String message;
+    String detailMessage;
+    String cancelButton;
+
+    if (isSingleSteward) {
+      title = 'Single Steward Backup';
+      message = isOwnerSteward
+          ? "You're setting up a 1-of-1 backup with only yourself as the steward."
+          : "You're setting up a 1-of-1 backup with only one steward.";
+      detailMessage = isOwnerSteward
+          ? "Since you are the only steward, if you lose access to this device you won't be able to recover this vault. You also won't be able to distribute keys until you add at least one more steward."
+          : "If that steward's key is lost or compromised, recovery will be impossible. You also won't be able to distribute keys until you add at least one more steward.";
+      cancelButton = 'Add More Stewards';
+    } else {
+      title = 'Threshold of 1';
+      message = 'With a threshold of 1, any single steward can unlock this vault on their own.';
+      detailMessage = 'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
+      cancelButton = 'Raise Threshold';
+    }
+
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(detailMessage),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(cancelButton),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue Anyway'),
+          ),
+        ],
+      ),
+    );
+
+    return shouldContinue == true;
   }
 
   bool _canCreateBackup() {
@@ -1188,9 +1247,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     }
 
-    // If steward has accepted (has pubkey), send removal event
-    await _sendRemovalEventsForStewards([steward]);
-
+    // Remove from local state immediately so the UI updates without waiting
+    // for the network call to send the removal event. If the relay is slow
+    // or unreachable, the user shouldn't be stuck waiting.
     setState(() {
       _stewards.removeWhere((s) => s.id == steward.id);
       if (steward.name != null) {
@@ -1211,6 +1270,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       _hasUnsavedChanges = true;
     });
+
+    // If steward has accepted (has pubkey), send removal event (fire-and-forget
+    // — the network call should not block the UI update).
+    unawaited(_sendRemovalEventsForStewards([steward]));
   }
 
   Future<void> _regenerateInvitationLink(Steward steward, InvitationLink oldInvitation) async {
@@ -1387,13 +1450,29 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Save when no stewards are configured. Persists the push notification
-  /// preference and navigates back without writing a backup config.
+  /// Save when no stewards are configured. Persists a zero-steward backup
+  /// config (preserving relays and instructions) and the push notification
+  /// preference, then navigates back.
   Future<void> _handleSkip() async {
     if (!mounted) return;
     try {
       final repository = ref.read(vaultRepositoryProvider);
       await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
+
+      // Persist a zero-steward config that carries the current relays and
+      // instructions, so custom relays aren't lost on last-steward removal.
+      final existingConfig = await repository.getBackupConfig(widget.vaultId);
+      if (existingConfig != null) {
+        final backupService = ref.read(backupServiceProvider);
+        await backupService.saveBackupConfig(
+          vaultId: widget.vaultId,
+          threshold: 0,
+          totalKeys: 0,
+          stewards: const [],
+          relays: _relays,
+          instructions: _instructionsController.text.trim(),
+        );
+      }
     } catch (e) {
       if (mounted) {
         context.showHorcruxSnackBar(
@@ -1409,44 +1488,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
 
-    // T022: Warn about 1-of-1 owner-only backup
-    final onlyOwnerSteward = _stewards.length == 1 && _stewards.first.isOwner && _threshold == 1;
-    if (onlyOwnerSteward) {
-      final shouldContinue = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Single Owner Backup'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'You\'re setting up a 1-of-1 backup with only yourself as the steward.',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'This means if you lose access to your device, you won\'t be able to recover this vault.',
-              ),
-              SizedBox(height: 12),
-              Text('Consider adding additional stewards for better security.'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Add More Stewards'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Continue Anyway'),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldContinue != true || !mounted) return;
-    }
+    // Warn about threshold-1 — any single steward is a single point of failure
+    final shouldContinue = await _confirmProceedWithThresholdOne();
+    if (!shouldContinue || !mounted) return;
 
     try {
       final backupService = ref.read(backupServiceProvider);
@@ -1503,6 +1547,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (updatedConfig != null &&
           updatedConfig.canDistribute &&
+          updatedConfig.stewards.length >=
+              VaultBackupConstraints.minStewardsForDistribution &&
           (configChanged || pushPreferenceChanged)) {
         try {
           if (configChanged) {

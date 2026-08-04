@@ -13,7 +13,6 @@ import '../utils/onboarding_navigation.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/keyboard_dismiss_wrapper.dart';
 import '../screens/consent_screen.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
@@ -262,31 +261,28 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
       child: Column(
         children: [
           Expanded(
-            child: KeyboardDismissWrapper(
-              child: ListView(
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-                children: [
-                  Text(
-                    "Do you have existing Horcrux vaults we should restore? We'll scan these relays for vaults backed up to this key. "
-                    'The official Horcrux relay is added already.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              children: [
+                Text(
+                  "Do you have existing Horcrux vaults we should restore? We'll scan these relays for vaults backed up to this key. "
+                  'The official Horcrux relay is added already.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ..._relays.map(
+                  (relay) => _RelayRow(
+                    relay: relay,
+                    onDelete: () => _removeRelay(relay),
                   ),
-                  const SizedBox(height: 24),
-                  ..._relays.map(
-                    (relay) => _RelayRow(
-                      relay: relay,
-                      onDelete: () => _removeRelay(relay),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _addRelay,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Relay'),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _addRelay,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Relay'),
+                ),
+              ],
             ),
           ),
           RowButtonStack(

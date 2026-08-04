@@ -13,7 +13,6 @@ import '../utils/snackbar_helper.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
-import '../widgets/keyboard_dismiss_wrapper.dart';
 import '../widgets/row_button_stack.dart';
 
 enum _ScanState { editing, scanning, results }
@@ -276,33 +275,30 @@ class _RelayManagementScreenState extends ConsumerState<RelayManagementScreen> {
       child: Column(
         children: [
           Expanded(
-            child: KeyboardDismissWrapper(
-              child: ListView(
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-                children: [
-                  Text(
-                    'Horcrux scans these relays to listen for vault updates and recovery '
-                    'requests. You can manually enter additional relays to scan here.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              children: [
+                Text(
+                  'Horcrux scans these relays to listen for vault updates and recovery '
+                  'requests. You can manually enter additional relays to scan here.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ..._relays.map(
+                  (relay) => _RelayRow(
+                    relay: relay,
+                    onDelete: ref.read(vaultDetailListProvider).hasValue
+                        ? () => _removeRelay(relay)
+                        : null,
                   ),
-                  const SizedBox(height: 24),
-                  ..._relays.map(
-                    (relay) => _RelayRow(
-                      relay: relay,
-                      onDelete: ref.read(vaultDetailListProvider).hasValue
-                          ? () => _removeRelay(relay)
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _addRelay,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Relay'),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _addRelay,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Relay'),
+                ),
+              ],
             ),
           ),
           RowButtonStack(
