@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/backup_config.dart';
-import '../models/vault.dart';
 import 'push_privacy_learn_more_text.dart';
 
 /// Widget for configuring recovery rules (threshold) and per-vault push

@@ -28,8 +28,7 @@ import 'package:mockito/mockito.dart' as _i1;
 /// See the documentation for Mockito's code generation for more information.
 class MockDeepLinkService extends _i1.Mock implements _i2.DeepLinkService {
   @override
-  void setNavigatorKey(_i3.GlobalKey<_i3.NavigatorState>? navigatorKey) =>
-      super.noSuchMethod(
+  void setNavigatorKey(_i3.GlobalKey<_i3.NavigatorState>? navigatorKey) => super.noSuchMethod(
         Invocation.method(
           #setNavigatorKey,
           [navigatorKey],
