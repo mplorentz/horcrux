@@ -143,10 +143,16 @@ cd /workspace
     echo 'Building Flutter app (incremental)...' >> /tmp/flutter_run.log
     flutter build linux --debug >> /tmp/flutter_run.log 2>&1 || { echo 'Build failed!' >> /tmp/flutter_run.log; exit 1; }
     
-    # Ensure bundle directory exists with executable
-    BUNDLE_DIR="build/linux/arm64/debug/bundle"
-    INTERMEDIATE_DIR="build/linux/arm64/debug/intermediates_do_not_run"
-    BUILD_DIR="build/linux/arm64/debug"
+    # Ensure bundle directory exists with executable.
+    # Flutter's linux build dir is arch-specific: x64 on x86_64, arm64 on aarch64.
+    case "$(uname -m)" in
+        x86_64)        FLUTTER_ARCH=x64 ;;
+        aarch64|arm64) FLUTTER_ARCH=arm64 ;;
+        *) echo "ERROR: unsupported arch: $(uname -m)" >> /tmp/flutter_run.log; exit 1 ;;
+    esac
+    BUNDLE_DIR="build/linux/$FLUTTER_ARCH/debug/bundle"
+    INTERMEDIATE_DIR="build/linux/$FLUTTER_ARCH/debug/intermediates_do_not_run"
+    BUILD_DIR="build/linux/$FLUTTER_ARCH/debug"
     
     # Run cmake install to create bundle with correct prefix
     echo 'Running cmake install to create bundle...' >> /tmp/flutter_run.log
