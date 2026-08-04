@@ -85,6 +85,12 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     _loadTermsOfService();
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadTermsOfService() async {
     setState(() {
       _isLoading = true;
