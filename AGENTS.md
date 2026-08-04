@@ -557,3 +557,46 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+<!-- START CODER QUALITY GATES -->
+## Coder Quality Gates (run before committing/pushing)
+
+The coder agent MUST run these before handing off a bead. They mirror what
+CI enforces (see `.github/workflows/test.yml`). Run them in order:
+
+```bash
+# 1. Regenerate code (mocks, drift, etc.) — CI fails if generated files are stale
+flutter pub run build_runner build --delete-conflicting-outputs
+dart format .
+
+# 2. Lint
+flutter analyze
+
+# 3. Unit tests (excludes golden + drift-schema which run separately)
+flutter test --exclude-tags=golden,drift-schema
+
+# 4. Drift schema parity (re-dump and diff against committed drift_schemas/)
+flutter test test/database/schema_parity_test.dart
+# NOTE: if you changed the schema, bump schemaVersion in
+# lib/database/app_database.dart then re-dump:
+#   dart run drift_dev schema dump lib/database/app_database.dart drift_schemas/
+# (CI enforces version bump via scripts/check-drift-schema-version-bump.sh)
+
+# 5. Golden tests — ONLY run if you changed UI; requires a display/rasterizer
+flutter test --tags=golden
+# If goldens fail because the UI intentionally changed:
+#   flutter test test/screens --update-goldens   (then commit the PNGs)
+# Golden reference images can only be regenerated on macOS/CI (no rasterizer
+# on Linux). If you changed UI on Linux, state in your handoff comment that
+# goldens need regeneration on CI/macOS.
+```
+
+Rules:
+- Run ALL gates before handoff, not just the ones that pass.
+- If a gate fails, fix it before pushing. Never push red CI.
+- If a gate genuinely can't run in your environment (e.g. goldens need macOS),
+  say so explicitly in the bead handoff comment — do NOT silently skip it.
+- CI also checks the drift schema version bump on schema changes — if you
+  touched `lib/database/`, run `scripts/check-drift-schema-version-bump.sh`
+  or manually verify the version file.
+<!-- END CODER QUALITY GATES -->
