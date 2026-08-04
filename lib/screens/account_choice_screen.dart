@@ -76,12 +76,12 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                   if (hasStagedInvitation) {
                     // Invitation flow: skip the key-backup offer, go through
                     // consent then to invitation acceptance or vault list.
-                    await navigator.push(
+                    final accepted = await navigator.push<bool>(
                       MaterialPageRoute(
                         builder: (context) => const ConsentScreen(),
                       ),
                     );
-                    if (context.mounted) {
+                    if (accepted == true && context.mounted) {
                       routeToVaultListOrStagedInvitation(context: context, ref: ref);
                     }
                   } else {
