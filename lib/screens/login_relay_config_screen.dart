@@ -9,12 +9,13 @@ import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
 import '../services/logger.dart';
 import '../utils/invite_code_utils.dart';
+import '../utils/onboarding_navigation.dart';
 import '../utils/validators.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
+import '../screens/consent_screen.dart';
 import '../widgets/row_button_stack.dart';
 import 'import_success_screen.dart';
-import 'vault_list_screen.dart';
 
 enum _ScanState { editing, scanning, results }
 
@@ -26,8 +27,9 @@ class LoginRelayConfigScreen extends ConsumerStatefulWidget {
   final String nsec;
 
   /// When true (login import), Skip opens [ImportSuccessScreen] to offer
-  /// backing up the key. When false (database reset), Skip goes straight to
-  /// [VaultListScreen] like Continue.
+  /// backing up the key. When false (database reset), Skip routes to the vault
+  /// list or the staged invitation acceptance screen via
+  /// [routeToVaultListOrStagedInvitation].
   final bool skipOffersKeyBackup;
 
   const LoginRelayConfigScreen({
@@ -62,6 +64,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   @override
   void initState() {
     super.initState();
+    Log.info('[onboarding] LoginRelayConfigScreen: shown');
     _relays = [
       RelayConfiguration(
         id: 'horcrux-default',
@@ -193,19 +196,29 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     });
   }
 
-  /// After a successful scan the user goes straight to the vault list.
-  void _continue() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const VaultListScreen()),
-      (route) => false,
+  /// After a successful scan the user goes to the consent screen, then the
+  /// vault list or invitation acceptance screen.
+  Future<void> _continue() async {
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ConsentScreen()),
     );
+
+    if (accepted == true && mounted) {
+      routeToVaultListOrStagedInvitation(context: context, ref: ref);
+    }
   }
 
-  /// Skip the scan. Login import offers key backup; reset goes to vault list.
+  /// Skip the scan. Login import offers key backup; reset goes to vault list
+  /// or to the invitation acceptance screen if a staged invitation exists.
+  /// Both paths route through the consent screen first.
   void _skip() {
     if (widget.skipOffersKeyBackup) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => ImportSuccessScreen(nsec: widget.nsec)),
+        MaterialPageRoute(
+          builder: (_) => ConsentScreen(
+            nextScreen: ImportSuccessScreen(nsec: widget.nsec),
+          ),
+        ),
         (route) => false,
       );
     } else {

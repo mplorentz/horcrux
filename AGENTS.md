@@ -8,7 +8,7 @@ Horcrux is a Flutter app for backup and recovery of sensitive data using Shamir'
 
 **Key Technologies:**
 
-- Flutter 3.35.0 with Dart SDK ^3.5.3
+- Flutter with Dart SDK ^3.5.3 (tested on 3.41.9 in CI via Docker — see `.cursor/Dockerfile`)
 - Nostr protocol via `ndk` package for decentralized communication
 - Riverpod for state management and dependency injection
 - Shamir's Secret Sharing via `ntcdcrypto` package
@@ -265,7 +265,7 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 
 **Shamir Constraints**: Min threshold 1, max total keys 10 (see `VaultBackupConstraints`).
 
-**Deep Links**: Invitation links use format `horcrux://join/{inviteCode}`. Handle via `DeepLinkService` with validation.
+**Deep Links**: Invitation links are generated (`InvitationLink.toUrl()`) as `https://horcruxbackup.com/invite/{inviteCode}?vault=...&owner=...&relays=...`; the `horcrux://` custom scheme is also accepted for the same `/invite/{code}` path. Handle via `DeepLinkService` with validation.
 
 ## Important Cursor Rules (from .cursorrules)
 
@@ -302,11 +302,122 @@ Log.debug('Debugging info');
 
 **License**: MIT
 
+<!-- START TESTER PLAYBOOK: Flutter + Marionette -->
+<!-- The tester agent (tester/RainyWaterfall) reads this section from AGENTS.md
+     to learn how to test the Horcrux Flutter app. See tester/PROMPT.md 'Product
+     Playbooks' for how the tester discovers this section. -->
+
+## Tester Playbook: Flutter + Marionette
+
+This playbook describes how to run and interact with the Horcrux Flutter app
+for behavioral testing. The tester agent reads this section from the repo's
+`AGENTS.md` to know which tools to use and how to set up the environment.
+
+### Testing Environment
+
+**Use Docker, not native Xvfb.** Each container gets its own D-Bus session +
+gnome-keyring, so Nostr keypairs don't collide between instances. Native Xvfb
+shares the keyring across instances — unworkable for multi-instance testing
+(invitations, shard distribution, recovery).
+
+**Dockerfile:** `.cursor/Dockerfile` — Flutter 3.41.9, gcc-12, all required
+system libraries (libssl-dev, libsqlite3-dev, etc.) pre-installed.
+
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/run-app-in-docker.sh` | Build, start, and run the app in a single Docker container with live log streaming. VNC on port 5900 (password: `horcrux`). |
+| `scripts/get-vm-uri.sh` | Extract the Marionette VM Service WebSocket URI from the running container. |
+| `scripts/hot-reload-docker.sh` | Trigger hot reload via SIGUSR1 to the Flutter process in the container. |
+| `scripts/run-two-instances.sh` | Launch two containers (owner + steward) for end-to-end backup/recovery testing. |
+| `scripts/setup-x11.sh` | Source-able script: starts Xvfb, D-Bus, gnome-keyring, and notification-daemon inside a container. |
+
+### Quick Start (Single Instance)
+
+```bash
+# Build and run the app in Docker (Press Ctrl+C to stop)
+./scripts/run-app-in-docker.sh
+
+# In another terminal, get the Marionette WebSocket URI
+./scripts/get-vm-uri.sh
+# → ws://localhost:8182/XXXXXXXXXXXXXX/ws
+
+# Connect via Marionette MCP and start testing
+```
+
+### Quick Start (Two Instances: Owner + Steward)
+
+```bash
+# Launch both containers
+./scripts/run-two-instances.sh
+
+# Get VM service URIs (runs in background, ~2-3 min to start)
+docker exec horcrux-owner grep 'ws://' /tmp/flutter_run.log
+docker exec horcrux-steward grep 'ws://' /tmp/flutter_run.log
+
+# Connect Marionette to each URI to interact with each app
+# (connect/disconnect between instances to switch)
+
+# Cleanup
+docker compose -f .cursor/docker-compose.two-instance.yml down -v
+```
+
+### Marionette MCP Interaction
+
+Marionette MCP (`marionette_mcp`) is available as a Dart global activation
+(`~/.pub-cache/bin/marionette_mcp`). It connects to the Flutter app via the
+Dart VM service WebSocket.
+
+**Connect:**
+```text
+marionette_connect(uri: "ws://localhost:8182/TOKEN/ws")
+```
+
+**Available RPCs:**
+- `interactiveElements` — list all tappable/enterable elements with bounds
+- `tap(key: ..., type: ..., x: ..., y: ...)` — tap by key, type, or coordinates
+- `enterText(key: ..., type: ..., input: ...)` — enter text (param is `input`, not `text`)
+- `scrollTo` — scroll to an element
+- `getLogs` — retrieve app logs
+- `takeScreenshots` — capture screenshots
+
+**Key quirks:**
+- Tap-by-key does **not** match visible text — it matches widget `Key` properties
+- Most Horcrux buttons don't have keys; use x/y coordinates from `interactiveElements` bounds instead
+- Fields **with** keys: `vault_name_field`, `owner_name_field`, `vault_content_field`, `self_steward_switch`, `alert_stewards_push_switch` — these work with key-based operations
+- `enterText` uses `input` (not `text`) as the parameter name
+- The `--no-dds` flag and socat proxy (port 8182) avoid the DDS proxy layer that breaks extension RPC calls
+
+### Container Reference
+
+- **Container name:** `horcrux-cursor-agent` (single instance)
+- **Container names:** `horcrux-owner`, `horcrux-steward` (two instances)
+- **VNC:** port 5900, password `horcrux`
+- **Marionette proxy:** port 8182 (socat forwards to VM service port 8181)
+- **Logs:** `docker exec horcrux-cursor-agent tail -f /tmp/flutter_run.log`
+- **Hot reload:** `./scripts/hot-reload-docker.sh`
+
+### Common Pitfalls
+
+| Pitfall | Explanation |
+|---|---|
+| **Bridge networking broken** | Must use `--network=host` on this host. Docker build also needs `--network=host`. |
+| **Deep links don't work in Docker** | Use the 'npub' advanced option to add stewards instead of invitation links. |
+| **Push notifications fail** | Expected in Docker (no push service). 403 errors are harmless. |
+| **gnome-keyring must be unlocked** | `setup-x11.sh` handles this. If the app crashes at startup, check keyring. |
+| **gcc-12, not gcc-13** | `linux/CMakeLists.txt` pins gcc-12/g++-12. The system may have gcc-13 installed but it won't work. |
+| **libssl-dev required** | Without it, `sqlcipher_flutter_libs` CMake fails with 'Could NOT find OpenSSL'. |
+| **libsqlite3-dev required** | Without it, drift in-memory tests fail (`libsqlite3.so` not found). |
+| **Golden tests skip on Linux** | Golden screenshot tests are macOS-only. Always use `--exclude-tags=golden`. |
+
+<!-- END TESTER PLAYBOOK -->
+
 ## Cursor Cloud specific instructions
 
 ### Environment overview
 
-Flutter 3.35.0 is installed at `/opt/flutter` and available on PATH alongside `$HOME/.pub-cache/bin`. Node.js 20 is installed for Nostrbook MCP. All Linux desktop system dependencies (GTK3, libsecret, gnome-keyring, Xvfb, x11vnc, etc.) are pre-installed. The project does **not** use `fvm` in the cloud environment — use `flutter` and `dart` directly (no `fvm` prefix).
+Flutter is installed at `/opt/flutter` and available on PATH alongside `$HOME/.pub-cache/bin`. Node.js 20 is installed for Nostrbook MCP. All Linux desktop system dependencies (GTK3, libsecret, gnome-keyring, Xvfb, x11vnc, etc.) are pre-installed. The project does **not** use `fvm` in the cloud environment — use `flutter` and `dart` directly (no `fvm` prefix).
 
 ### Running the app natively (not Docker)
 

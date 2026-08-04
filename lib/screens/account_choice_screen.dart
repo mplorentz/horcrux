@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/key_provider.dart';
+import '../services/invitation_service.dart';
+import '../services/logger.dart';
 import '../utils/app_initialization.dart';
+import '../utils/onboarding_navigation.dart';
 import '../screens/account_created_screen.dart';
+import '../screens/consent_screen.dart';
 import '../screens/login_screen.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -16,6 +20,13 @@ class AccountChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final hasStaged = ref.read(invitationServiceProvider).hasStagedInvitations;
+    Log.info('[onboarding] AccountChoiceScreen: shown, hasStagedInvitations=$hasStaged');
+  }
+
   @override
   Widget build(BuildContext context) {
     return HorcruxScaffold(
@@ -44,17 +55,45 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                 onTap: () async {
                   final navigator = Navigator.of(context);
 
+                  Log.debug('[onboarding] AccountChoiceScreen: Create Account tapped');
                   final loginService = ref.read(loginServiceProvider);
                   final keyPair = await loginService.generateAndStoreNostrKey();
 
                   // Initialize services and refresh key providers
-                  await initializeAppAndRefreshKeys(ref);
-
-                  navigator.push(
-                    MaterialPageRoute(
-                      builder: (context) => AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
-                    ),
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: calling initializeAppAndRefreshKeys '
+                    '(this reinitializes deep link handling)',
                   );
+                  await initializeAppAndRefreshKeys(ref);
+                  Log.debug(
+                    '[onboarding] AccountChoiceScreen: initializeAppAndRefreshKeys done, '
+                    'hasStagedInvitations=${ref.read(invitationServiceProvider).hasStagedInvitations}',
+                  );
+
+                  final hasStagedInvitation =
+                      ref.read(invitationServiceProvider).hasStagedInvitations;
+
+                  if (hasStagedInvitation) {
+                    // Invitation flow: skip the key-backup offer, go through
+                    // consent then to invitation acceptance or vault list.
+                    final accepted = await navigator.push<bool>(
+                      MaterialPageRoute(
+                        builder: (context) => const ConsentScreen(),
+                      ),
+                    );
+                    if (accepted == true && context.mounted) {
+                      routeToVaultListOrStagedInvitation(context: context, ref: ref);
+                    }
+                  } else {
+                    navigator.push(
+                      MaterialPageRoute(
+                        builder: (context) => ConsentScreen(
+                          nextScreen:
+                              AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 16),

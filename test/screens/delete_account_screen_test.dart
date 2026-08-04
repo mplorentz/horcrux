@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/models/relay_configuration.dart';
 import 'package:horcrux/screens/delete_account_screen.dart';
 import 'package:horcrux/services/account_deletion_service.dart';
+import 'package:horcrux/services/deep_link_service.dart';
 import 'package:horcrux/services/publish_service.dart';
 import 'package:horcrux/services/relay_scan_service.dart';
 import 'package:horcrux/widgets/row_button_stack.dart';
@@ -18,6 +19,7 @@ import 'delete_account_screen_test.mocks.dart';
 @GenerateNiceMocks([
   MockSpec<AccountDeletionService>(),
   MockSpec<RelayScanService>(),
+  MockSpec<DeepLinkService>(),
 ])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -29,12 +31,18 @@ void main() {
 
   late MockAccountDeletionService accountDeletionService;
   late MockRelayScanService relayScanService;
+  late MockDeepLinkService deepLinkService;
 
   setUp(() {
     accountDeletionService = MockAccountDeletionService();
     relayScanService = MockRelayScanService();
+    deepLinkService = MockDeepLinkService();
     when(relayScanService.getRelayConfigurations(enabledOnly: true))
         .thenAnswer((_) async => relays);
+    // Deletion success re-initializes deep link handling (see
+    // initializePreLoginDeepLinking); stub it out so the test doesn't touch
+    // the real app_links platform channel, which never resolves here.
+    when(deepLinkService.initializeDeepLinking()).thenAnswer((_) async {});
   });
 
   Widget buildApp() {
@@ -42,6 +50,7 @@ void main() {
       overrides: [
         accountDeletionServiceProvider.overrideWithValue(accountDeletionService),
         relayScanServiceProvider.overrideWithValue(relayScanService),
+        deepLinkServiceProvider.overrideWithValue(deepLinkService),
       ],
       child: MaterialApp(
         theme: horcrux3Dark,
@@ -221,6 +230,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Account deletion requested'), findsOneWidget);
+
+    // Regression guard (horcrux_app-gqvi): the invalidated
+    // deepLinkServiceProvider has no navigator key and no live listener
+    // until something restarts it — without initializePreLoginDeepLinking,
+    // an invitation link tapped in the onboarding session that follows
+    // account deletion is silently dropped.
+    verify(deepLinkService.setNavigatorKey(any)).called(1);
+    verify(deepLinkService.initializeDeepLinking()).called(1);
   });
 
   testWidgets('failed deletion shows failure state with retry', (tester) async {

@@ -422,4 +422,96 @@ void main() {
       },
     );
   });
+
+  // T030: Redistribute guard for single-steward plan
+  group('Redistribute guard', () {
+    testWidgets(
+      'shows friendly snackbar for single-steward plan instead of redistributing',
+      (tester) async {
+        final ownerSteward = createOwnerSteward(pubkey: testPubkey);
+        final backupConfig = createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 1,
+          totalKeys: 1,
+          stewards: [ownerSteward],
+          relays: ['wss://relay.example.com'],
+        );
+
+        final vaultDetail = OwnedVaultDetail(
+          id: 'test-vault',
+          name: 'Test Vault',
+          ownerPubkey: testPubkey,
+          ownerName: null,
+          threshold: 1,
+          totalShares: 1,
+          stewards: const [],
+          recoveryRequests: const [],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: backupConfig,
+          content: 'ciphertext',
+          selfHeldShare: null,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            vaultDetailProvider(vaultDetail.id)
+                .overrideWith((ref) => Stream.value(vaultDetail)),
+            currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
+            recoveryStatusProvider.overrideWith(
+              (ref, vaultId) => const AsyncValue.data(
+                RecoveryStatus(
+                  hasActiveRecovery: false,
+                  canRecover: false,
+                  activeRecoveryRequest: null,
+                  isInitiator: false,
+                ),
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Open the three-dot menu
+        await tester.tap(find.byType(PopupMenuButton<String>));
+        await tester.pumpAndSettle();
+
+        // Tap 'Redistribute Keys'
+        await tester.tap(find.text('Redistribute Keys'));
+        await tester.pumpAndSettle();
+
+        // Confirmation dialog should appear
+        expect(find.text('Distribute Keys?'), findsOneWidget);
+
+        // Tap 'Distribute' in the confirmation dialog.
+        // The loading dialog contains a CircularProgressIndicator (infinite
+        // animation), so use pump() with a fixed duration instead of pumpAndSettle().
+        await tester.tap(find.text('Distribute'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Should show the friendly snackbar, not a Shamir error
+        expect(
+          find.text(
+            'You need at least 2 stewards to distribute keys. Invite another steward first.',
+          ),
+          findsOneWidget,
+        );
+
+        // Flush any pending snackbar timers
+        await tester.pump(const Duration(seconds: 5));
+        container.dispose();
+      },
+    );
+  });
 }

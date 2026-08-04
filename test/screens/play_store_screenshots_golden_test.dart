@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
+import 'package:horcrux/screens/onboarding_screen.dart';
 import 'package:horcrux/screens/recovery_status_screen.dart';
 import 'package:horcrux/screens/vault_detail_screen.dart';
 import 'package:horcrux/screens/vault_list_screen.dart';
@@ -14,6 +15,20 @@ void main() {
 
   group('Play Store screenshot goldens', () {
     for (final formFactor in playStoreFormFactors) {
+      testGoldens('00 onboarding — ${formFactor.storeFolderName}', (tester) async {
+        final harness = await pumpPlayStoreGoldenWidget(
+          tester,
+          const OnboardingScreen(),
+          formFactor: formFactor,
+        );
+        addTearDown(() => harness.dispose());
+
+        await screenMatchesGolden(
+          tester,
+          playStoreGoldenName(formFactor, '00_onboarding'),
+        );
+      });
+
       testGoldens('01 vault list — ${formFactor.storeFolderName}', (tester) async {
         final harness = await pumpPlayStoreGoldenWidget(
           tester,

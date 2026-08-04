@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/vault.dart';
 import '../models/vault_detail.dart';
 import '../models/backup_config.dart';
 import '../providers/key_provider.dart';
+import '../screens/backup_config_screen.dart';
 import '../screens/recovery_status_screen.dart';
 
 /// Status variant enum for internal use
@@ -11,6 +13,7 @@ enum _StatusVariant {
   almostReady,
   waitingOnStewards,
   noPlan,
+  needsMoreStewards,
   keysNotDistributed,
   planNeedsAttention,
   stewardWaitingKey,
@@ -122,7 +125,7 @@ class VaultStatusBanner extends ConsumerWidget {
     final backupConfig = vault.backupConfig;
 
     // No recovery plan
-    if (backupConfig == null) {
+    if (backupConfig == null || backupConfig.stewards.isEmpty) {
       return _buildBanner(
         context,
         const _StatusData(
@@ -134,6 +137,35 @@ class VaultStatusBanner extends ConsumerWidget {
         ),
         true,
         false,
+      );
+    }
+
+    // Single-steward plan — can't distribute until more stewards are added.
+    // This check must be OUTSIDE the !isReady block because a 1-steward
+    // threshold-1 plan CAN reach isReady=true (hasBeenDistributed &&
+    // acknowledgedStewardsCount >= threshold), but still can't distribute
+    // to additional stewards.
+    if (backupConfig.stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
+      return _buildBanner(
+        context,
+        const _StatusData(
+          headline: 'Invite more stewards',
+          subtext:
+              'At least 2 stewards are required to distribute keys. Add another steward in your recovery plan.',
+          icon: Icons.group_add,
+          accentColor: Color(0xFF7A4A2F), // Umber
+          variant: _StatusVariant.needsMoreStewards,
+        ),
+        true,
+        false,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BackupConfigScreen(vaultId: vault.id),
+            ),
+          );
+        },
       );
     }
 

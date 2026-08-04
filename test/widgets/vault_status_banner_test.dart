@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/recovery_request.dart';
 import 'package:horcrux/models/share.dart';
+import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/key_provider.dart';
 import 'package:horcrux/providers/recovery_provider.dart';
@@ -275,4 +277,97 @@ void main() {
       container.dispose();
     },
   );
+
+  // T030: Single-steward plan shows 'Invite more stewards' banner
+  group('Invite more stewards banner', () {
+    testWidgets('shows needs-more-stewards headline for single-steward plan', (tester) async {
+      final ownerSteward = createOwnerSteward(pubkey: me);
+      final backupConfig = createBackupConfig(
+        vaultId: 'vault-1',
+        threshold: 1,
+        totalKeys: 1,
+        stewards: [ownerSteward],
+        relays: ['wss://relay.example.com'],
+      );
+
+      final vault = OwnedVaultDetail(
+        id: 'vault-1',
+        name: 'Test Vault',
+        ownerPubkey: me,
+        ownerName: null,
+        threshold: 1,
+        totalShares: 1,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: true,
+        createdAt: DateTime(2024, 1, 1),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        content: 'plaintext',
+        selfHeldShare: null,
+      );
+
+      final container = ProviderContainer(
+        overrides: [currentPublicKeyProvider.overrideWith((ref) async => me)],
+      );
+
+      await pumpBanner(tester, container, vault);
+
+      expect(find.text('Invite more stewards'), findsOneWidget);
+      expect(
+        find.text(
+          'At least 2 stewards are required to distribute keys. Add another steward in your recovery plan.',
+        ),
+        findsOneWidget,
+      );
+      // Should NOT show 'Keys not distributed'
+      expect(find.text('Keys not distributed'), findsNothing);
+
+      container.dispose();
+    });
+
+    testWidgets('shows keys-not-distributed for two-steward undistributed plan', (tester) async {
+      final ownerSteward = createOwnerSteward(pubkey: me);
+      final otherSteward = createSteward(pubkey: 'b' * 64, name: 'Bob');
+      final backupConfig = createBackupConfig(
+        vaultId: 'vault-1',
+        threshold: 2,
+        totalKeys: 2,
+        stewards: [ownerSteward, otherSteward],
+        relays: ['wss://relay.example.com'],
+      );
+
+      final vault = OwnedVaultDetail(
+        id: 'vault-1',
+        name: 'Test Vault',
+        ownerPubkey: me,
+        ownerName: null,
+        threshold: 2,
+        totalShares: 2,
+        stewards: const [],
+        recoveryRequests: const [],
+        pushEnabled: true,
+        createdAt: DateTime(2024, 1, 1),
+        archivedAt: null,
+        archivedReason: null,
+        backupConfig: backupConfig,
+        content: 'plaintext',
+        selfHeldShare: null,
+      );
+
+      final container = ProviderContainer(
+        overrides: [currentPublicKeyProvider.overrideWith((ref) async => me)],
+      );
+
+      await pumpBanner(tester, container, vault);
+
+      // Two-steward plan should still show 'Keys not distributed'
+      expect(find.text('Keys not distributed'), findsOneWidget);
+      // Should NOT show 'Invite more stewards'
+      expect(find.text('Invite more stewards'), findsNothing);
+
+      container.dispose();
+    });
+  });
 }
