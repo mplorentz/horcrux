@@ -456,41 +456,31 @@ void main() {
       });
     });
 
-    group('createBackupConfig threshold enforcement (horcrux_app-2sxc)', () {
+    group('createBackupConfig threshold validation (constructor is permissive)', () {
+      // createBackupConfig only enforces VaultBackupConstraints.minThreshold (1),
+      // not minimumThreshold(totalKeys). The stricter enforcement is in isValid,
+      // saveBackupConfig, and generateShamirShares.
       final stewards2 = [
         createSteward(pubkey: 'a${'0' * 63}', name: 'A'),
         createSteward(pubkey: 'b${'0' * 63}', name: 'B'),
       ];
 
-      test('rejects threshold 1 with 2 stewards', () {
+      test('accepts threshold 1 with 2 stewards (constructor permissive)', () {
         expect(
           () => createBackupConfig(
             vaultId: 'v1', threshold: 1, totalKeys: 2,
             stewards: stewards2, relays: ['wss://relay.example.com'],
           ),
-          throwsArgumentError,
-        );
-      });
-
-      test('accepts threshold 2 with 2 stewards', () {
-        expect(
-          () => createBackupConfig(
-            vaultId: 'v1', threshold: 2, totalKeys: 2,
-            stewards: stewards2, relays: ['wss://relay.example.com'],
-          ),
           returnsNormally,
         );
       });
 
-      test('accepts threshold 1 with 1 steward', () {
-        final oneSteward = [createSteward(pubkey: 'a${'0' * 63}', name: 'A')];
-        expect(
-          () => createBackupConfig(
-            vaultId: 'v1', threshold: 1, totalKeys: 1,
-            stewards: oneSteward, relays: ['wss://relay.example.com'],
-          ),
-          returnsNormally,
+      test('isValid still rejects threshold 1 with 2 stewards', () {
+        final config = createBackupConfig(
+          vaultId: 'v1', threshold: 1, totalKeys: 2,
+          stewards: stewards2, relays: ['wss://relay.example.com'],
         );
+        expect(config.isValid, isFalse);
       });
     });
 

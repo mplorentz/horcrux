@@ -77,9 +77,9 @@ BackupConfig createBackupConfig({
     );
   }
 
-  if (threshold < BackupConfigExtension.minimumThreshold(totalKeys) || threshold > totalKeys) {
+  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
     throw ArgumentError(
-      'Threshold must be >= ${BackupConfigExtension.minimumThreshold(totalKeys)} and <= totalKeys',
+      'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
     );
   }
   if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
