@@ -130,14 +130,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
           _threshold = _calculateDefaultThreshold(_stewards.length);
         } else {
-          // Auto-bump threshold 1 to 2 when a second steward is added,
-          // since threshold 1 cannot be distributed with 2+ stewards.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
-          if (_threshold > _stewards.length) {
-            _threshold = _stewards.length;
-          }
+          _normalizeThresholdToStewardCount();
         }
         _hasUnsavedChanges = true;
       });
@@ -204,6 +197,19 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
+  /// Normalize the threshold to a valid value for the current steward count:
+  /// bump threshold-1 up to 2 when there are 2+ stewards (threshold 1 cannot
+  /// be distributed with 2+ stewards), and clamp it so it never exceeds the
+  /// number of stewards.
+  void _normalizeThresholdToStewardCount() {
+    if (_threshold == 1 && _stewards.length >= 2) {
+      _threshold = 2;
+    }
+    if (_threshold > _stewards.length) {
+      _threshold = _stewards.length;
+    }
+  }
+
   /// Calculate default threshold based on steward count for new plans
   int _calculateDefaultThreshold(int stewardCount) {
     if (stewardCount == 0) {
@@ -236,13 +242,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _relays.addAll(existingConfig.relays);
           _instructionsController.text = existingConfig.instructions ?? '';
 
-          // Normalize threshold into valid range for the current steward count.
-          // If the DB has threshold 1 with 2+ stewards (e.g. from before the
-          // 2sxc constraint), bump it to 2 so the UI and save use the correct
-          // value — not just the rendered slider clamp.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
+          // Normalize threshold into a valid range for the current steward
+          // count so the UI and save use the correct value — not just the
+          // rendered slider clamp.
+          _normalizeThresholdToStewardCount();
 
           _isLoading = false;
           _hasUnsavedChanges = false;
@@ -831,15 +834,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
             _threshold = _calculateDefaultThreshold(_stewards.length);
           } else {
-            // Auto-bump threshold 1 to 2 when a second steward is added,
-            // since threshold 1 cannot be distributed with 2+ stewards.
-            if (_threshold == 1 && _stewards.length >= 2) {
-              _threshold = 2;
-            }
-            // Ensure threshold doesn't exceed the number of stewards when editing
-            if (_threshold > _stewards.length) {
-              _threshold = _stewards.length;
-            }
+            _normalizeThresholdToStewardCount();
           }
           _hasUnsavedChanges = true;
         });
@@ -889,15 +884,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
           _threshold = _calculateDefaultThreshold(_stewards.length);
         } else {
-          // Auto-bump threshold 1 to 2 when a second steward is added,
-          // since threshold 1 cannot be distributed with 2+ stewards.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
-          // Ensure threshold doesn't exceed the number of stewards when editing
-          if (_threshold > _stewards.length) {
-            _threshold = _stewards.length;
-          }
+          _normalizeThresholdToStewardCount();
         }
         _hasUnsavedChanges = true;
       });
@@ -1491,16 +1478,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
   Future<void> _saveBackup() async {
     if (!_canCreateBackup()) return;
-
-    // Normalize threshold into the valid range for the current steward count
-    // so the persisted config is always consistent (threshold 1 is only valid
-    // for a single steward; with 2+ stewards the minimum is 2).
-    if (_threshold == 1 && _stewards.length >= 2) {
-      _threshold = 2;
-    }
-    if (_threshold > _stewards.length) {
-      _threshold = _stewards.length;
-    }
 
     // Warn about threshold-1 — any single steward is a single point of failure
     final shouldContinue = await _confirmProceedWithThresholdOne();
