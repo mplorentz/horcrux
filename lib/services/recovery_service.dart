@@ -313,7 +313,7 @@ class RecoveryService {
     if (isPractice) {
       // Practice recovery: use backup config
       final backupConfig = vault.backupConfig;
-      if (backupConfig == null) {
+      if (backupConfig == null || backupConfig.stewards.isEmpty) {
         throw StateError('No recovery plan configured for this vault');
       }
 

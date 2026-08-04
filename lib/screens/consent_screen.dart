@@ -160,7 +160,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           'Terms & Privacy accepted',
           kind: HorcruxSnackKind.success,
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e, st) {
       Log.error('ConsentScreen: failed to accept ToS', e, st);
@@ -303,7 +303,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         RowButton(
           onPressed: _agreed ? _handleAccept : null,
           icon: Icons.check,
-          text: 'Agree & Continue',
+          text: 'Continue',
           addBottomSafeArea: true,
         ),
       ],

@@ -125,7 +125,7 @@ class VaultStatusBanner extends ConsumerWidget {
     final backupConfig = vault.backupConfig;
 
     // No recovery plan
-    if (backupConfig == null) {
+    if (backupConfig == null || backupConfig.stewards.isEmpty) {
       return _buildBanner(
         context,
         const _StatusData(

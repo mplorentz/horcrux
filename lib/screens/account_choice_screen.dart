@@ -4,7 +4,9 @@ import '../providers/key_provider.dart';
 import '../services/invitation_service.dart';
 import '../services/logger.dart';
 import '../utils/app_initialization.dart';
+import '../utils/onboarding_navigation.dart';
 import '../screens/account_created_screen.dart';
+import '../screens/consent_screen.dart';
 import '../screens/login_screen.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -68,11 +70,30 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                     'hasStagedInvitations=${ref.read(invitationServiceProvider).hasStagedInvitations}',
                   );
 
-                  navigator.push(
-                    MaterialPageRoute(
-                      builder: (context) => AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
-                    ),
-                  );
+                  final hasStagedInvitation =
+                      ref.read(invitationServiceProvider).hasStagedInvitations;
+
+                  if (hasStagedInvitation) {
+                    // Invitation flow: skip the key-backup offer, go through
+                    // consent then to invitation acceptance or vault list.
+                    final accepted = await navigator.push<bool>(
+                      MaterialPageRoute(
+                        builder: (context) => const ConsentScreen(),
+                      ),
+                    );
+                    if (accepted == true && context.mounted) {
+                      routeToVaultListOrStagedInvitation(context: context, ref: ref);
+                    }
+                  } else {
+                    navigator.push(
+                      MaterialPageRoute(
+                        builder: (context) => ConsentScreen(
+                          nextScreen:
+                              AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 16),

@@ -5,6 +5,7 @@ import 'package:horcrux/screens/recovery_status_screen.dart';
 import 'package:horcrux/screens/vault_detail_screen.dart';
 import 'package:horcrux/screens/vault_list_screen.dart';
 
+import '../helpers/app_store_screenshot_helpers.dart';
 import '../helpers/golden_test_helpers.dart';
 import '../helpers/play_store_screenshot_fixtures.dart';
 
@@ -13,10 +14,10 @@ void main() {
 
   tearDown(resetPlayStoreViewConfiguration);
 
-  group('Play Store screenshot goldens', () {
-    for (final formFactor in playStoreFormFactors) {
+  group('App Store screenshot goldens', () {
+    for (final formFactor in appStoreFormFactors) {
       testGoldens('00 onboarding — ${formFactor.storeFolderName}', (tester) async {
-        final harness = await pumpPlayStoreGoldenWidget(
+        final harness = await pumpAppStoreGoldenWidget(
           tester,
           const OnboardingScreen(),
           formFactor: formFactor,
@@ -25,12 +26,12 @@ void main() {
 
         await screenMatchesGolden(
           tester,
-          playStoreGoldenName(formFactor, '00_onboarding'),
+          appStoreGoldenName(formFactor, '00_onboarding'),
         );
       });
 
       testGoldens('01 vault list — ${formFactor.storeFolderName}', (tester) async {
-        final harness = await pumpPlayStoreGoldenWidget(
+        final harness = await pumpAppStoreGoldenWidget(
           tester,
           const VaultListScreen(),
           formFactor: formFactor,
@@ -40,14 +41,14 @@ void main() {
 
         await screenMatchesGolden(
           tester,
-          playStoreGoldenName(formFactor, '01_vault_list'),
+          appStoreGoldenName(formFactor, '01_vault_list'),
         );
       });
 
       testGoldens(
         '02 vault detail steward — ${formFactor.storeFolderName}',
         (tester) async {
-          final harness = await pumpPlayStoreGoldenWidget(
+          final harness = await pumpAppStoreGoldenWidget(
             tester,
             playStorePushedScreen(
               const VaultDetailScreen(
@@ -61,7 +62,7 @@ void main() {
 
           await screenMatchesGolden(
             tester,
-            playStoreGoldenName(formFactor, '02_vault_detail_steward'),
+            appStoreGoldenName(formFactor, '02_vault_detail_steward'),
           );
         },
       );
@@ -69,7 +70,7 @@ void main() {
       testGoldens(
         '03 manage recovery — ${formFactor.storeFolderName}',
         (tester) async {
-          final harness = await pumpPlayStoreGoldenWidget(
+          final harness = await pumpAppStoreGoldenWidget(
             tester,
             playStorePushedScreen(
               const RecoveryStatusScreen(
@@ -83,7 +84,7 @@ void main() {
 
           await screenMatchesGolden(
             tester,
-            playStoreGoldenName(formFactor, '03_manage_recovery'),
+            appStoreGoldenName(formFactor, '03_manage_recovery'),
           );
         },
       );
