@@ -28,7 +28,8 @@ import 'package:mockito/mockito.dart' as _i1;
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
 
-class _FakeAccountDeletionResult_0 extends _i1.SmartFake implements _i2.AccountDeletionResult {
+class _FakeAccountDeletionResult_0 extends _i1.SmartFake
+    implements _i2.AccountDeletionResult {
   _FakeAccountDeletionResult_0(
     Object parent,
     Invocation parentInvocation,
@@ -48,7 +49,8 @@ class _FakeNdkService_1 extends _i1.SmartFake implements _i3.NdkService {
         );
 }
 
-class _FakeScanningStatus_2 extends _i1.SmartFake implements _i4.ScanningStatus {
+class _FakeScanningStatus_2 extends _i1.SmartFake
+    implements _i4.ScanningStatus {
   _FakeScanningStatus_2(
     Object parent,
     Invocation parentInvocation,
@@ -61,7 +63,8 @@ class _FakeScanningStatus_2 extends _i1.SmartFake implements _i4.ScanningStatus 
 /// A class which mocks [AccountDeletionService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAccountDeletionService extends _i1.Mock implements _i2.AccountDeletionService {
+class MockAccountDeletionService extends _i1.Mock
+    implements _i2.AccountDeletionService {
   @override
   _i5.Future<_i2.AccountDeletionResult> deleteAccount({
     String? reason,
@@ -76,7 +79,8 @@ class MockAccountDeletionService extends _i1.Mock implements _i2.AccountDeletion
             #onRelayStatusUpdate: onRelayStatusUpdate,
           },
         ),
-        returnValue: _i5.Future<_i2.AccountDeletionResult>.value(_FakeAccountDeletionResult_0(
+        returnValue: _i5.Future<_i2.AccountDeletionResult>.value(
+            _FakeAccountDeletionResult_0(
           this,
           Invocation.method(
             #deleteAccount,
@@ -87,8 +91,8 @@ class MockAccountDeletionService extends _i1.Mock implements _i2.AccountDeletion
             },
           ),
         )),
-        returnValueForMissingStub:
-            _i5.Future<_i2.AccountDeletionResult>.value(_FakeAccountDeletionResult_0(
+        returnValueForMissingStub: _i5.Future<_i2.AccountDeletionResult>.value(
+            _FakeAccountDeletionResult_0(
           this,
           Invocation.method(
             #deleteAccount,
@@ -139,20 +143,24 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<List<_i7.RelayConfiguration>> getRelayConfigurations({bool? enabledOnly}) =>
+  _i5.Future<List<_i7.RelayConfiguration>> getRelayConfigurations(
+          {bool? enabledOnly}) =>
       (super.noSuchMethod(
         Invocation.method(
           #getRelayConfigurations,
           [],
           {#enabledOnly: enabledOnly},
         ),
-        returnValue: _i5.Future<List<_i7.RelayConfiguration>>.value(<_i7.RelayConfiguration>[]),
+        returnValue: _i5.Future<List<_i7.RelayConfiguration>>.value(
+            <_i7.RelayConfiguration>[]),
         returnValueForMissingStub:
-            _i5.Future<List<_i7.RelayConfiguration>>.value(<_i7.RelayConfiguration>[]),
+            _i5.Future<List<_i7.RelayConfiguration>>.value(
+                <_i7.RelayConfiguration>[]),
       ) as _i5.Future<List<_i7.RelayConfiguration>>);
 
   @override
-  _i5.Future<_i7.RelayConfiguration?> getRelayConfiguration(String? relayId) => (super.noSuchMethod(
+  _i5.Future<_i7.RelayConfiguration?> getRelayConfiguration(String? relayId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #getRelayConfiguration,
           [relayId],
@@ -162,7 +170,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<_i7.RelayConfiguration?>);
 
   @override
-  _i5.Future<void> addRelayConfiguration(_i7.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i5.Future<void> addRelayConfiguration(_i7.RelayConfiguration? relay) =>
+      (super.noSuchMethod(
         Invocation.method(
           #addRelayConfiguration,
           [relay],
@@ -172,7 +181,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> updateRelayConfiguration(_i7.RelayConfiguration? relay) => (super.noSuchMethod(
+  _i5.Future<void> updateRelayConfiguration(_i7.RelayConfiguration? relay) =>
+      (super.noSuchMethod(
         Invocation.method(
           #updateRelayConfiguration,
           [relay],
@@ -182,7 +192,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> removeRelayConfiguration(String? relayId) => (super.noSuchMethod(
+  _i5.Future<void> removeRelayConfiguration(String? relayId) =>
+      (super.noSuchMethod(
         Invocation.method(
           #removeRelayConfiguration,
           [relayId],
@@ -192,7 +203,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> startRelayScanning({Duration? scanInterval}) => (super.noSuchMethod(
+  _i5.Future<void> startRelayScanning({Duration? scanInterval}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #startRelayScanning,
           [],
@@ -235,7 +247,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
             [],
           ),
         )),
-        returnValueForMissingStub: _i5.Future<_i4.ScanningStatus>.value(_FakeScanningStatus_2(
+        returnValueForMissingStub:
+            _i5.Future<_i4.ScanningStatus>.value(_FakeScanningStatus_2(
           this,
           Invocation.method(
             #getScanningStatus,
@@ -275,7 +288,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> syncRelaysFromUrls(List<String>? relayUrls) => (super.noSuchMethod(
+  _i5.Future<void> syncRelaysFromUrls(List<String>? relayUrls) =>
+      (super.noSuchMethod(
         Invocation.method(
           #syncRelaysFromUrls,
           [relayUrls],
@@ -300,7 +314,8 @@ class MockRelayScanService extends _i1.Mock implements _i4.RelayScanService {
 /// See the documentation for Mockito's code generation for more information.
 class MockDeepLinkService extends _i1.Mock implements _i8.DeepLinkService {
   @override
-  void setNavigatorKey(_i9.GlobalKey<_i9.NavigatorState>? navigatorKey) => super.noSuchMethod(
+  void setNavigatorKey(_i9.GlobalKey<_i9.NavigatorState>? navigatorKey) =>
+      super.noSuchMethod(
         Invocation.method(
           #setNavigatorKey,
           [navigatorKey],

@@ -198,19 +198,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
   }
 
   /// Load existing recovery plan if one exists
-    if (stewardCount == 0) {
-      return VaultBackupConstraints.minThreshold;
-    } else if (stewardCount == 1) {
-      return 1;
-    } else if (stewardCount == 2) {
-      return 2;
-    } else {
-      // For 3+ stewards, default to n-1
-      return stewardCount - 1;
-    }
-  }
-
-  /// Load existing recovery plan if one exists
   Future<void> _loadExistingConfig() async {
     try {
       final repository = ref.read(vaultRepositoryProvider);
