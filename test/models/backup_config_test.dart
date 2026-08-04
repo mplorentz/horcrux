@@ -410,7 +410,7 @@ void main() {
     group('isValid threshold enforcement (horcrux_app-2sxc)', () {
       BackupConfig makeConfig(int threshold, int stewardCount) {
         final stewards = List.generate(stewardCount, (i) => createSteward(
-          pubkey: '${'${i + 1}'.padLeft(64, '0')}',
+          pubkey: '${i + 1}'.padLeft(64, '0'),
           name: 'Steward $i',
         ));
         return BackupConfig(
