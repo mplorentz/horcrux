@@ -1146,9 +1146,7 @@ class InvitationService {
 
       // If the existing config was empty (zero stewards), reset threshold to 1.
       // This mirrors the screen's _calculateDefaultThreshold for a single steward.
-      final effectiveThreshold = backupConfig.stewards.isEmpty
-          ? 1
-          : backupConfig.threshold;
+      final effectiveThreshold = backupConfig.stewards.isEmpty ? 1 : backupConfig.threshold;
       final configWithUpdatedThreshold = effectiveThreshold != backupConfig.threshold
           ? backupConfig.copyWith(threshold: effectiveThreshold)
           : backupConfig;

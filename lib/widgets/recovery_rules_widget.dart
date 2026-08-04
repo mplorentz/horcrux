@@ -63,9 +63,7 @@ class RecoveryRulesWidget extends StatelessWidget {
                     ),
                 min: _minThreshold.toDouble(),
                 max: stewardCount.toDouble(),
-                divisions: stewardCount - _minThreshold > 0
-                    ? stewardCount - _minThreshold
-                    : null,
+                divisions: stewardCount - _minThreshold > 0 ? stewardCount - _minThreshold : null,
                 onChanged: (value) {
                   onThresholdChanged(value.round());
                 },

@@ -623,12 +623,14 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       message = isOwnerSteward
           ? "You're setting up a 1-of-1 backup with only yourself as the steward."
           : "You're setting up a 1-of-1 backup with only one steward.";
-      detailMessage = "You won't be able to back up the vault until you add at least one more steward.";
+      detailMessage =
+          "You won't be able to back up the vault until you add at least one more steward.";
       cancelButton = 'Add More Stewards';
     } else {
       title = 'Threshold of 1';
       message = 'With a threshold of 1, any single steward can unlock this vault on their own.';
-      detailMessage = 'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
+      detailMessage =
+          'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
       cancelButton = 'Raise Threshold';
     }
 
@@ -1537,8 +1539,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (updatedConfig != null &&
           updatedConfig.canDistribute &&
-          updatedConfig.stewards.length >=
-              VaultBackupConstraints.minStewardsForDistribution &&
+          updatedConfig.stewards.length >= VaultBackupConstraints.minStewardsForDistribution &&
           (configChanged || pushPreferenceChanged)) {
         try {
           if (configChanged) {
