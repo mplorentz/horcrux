@@ -24,6 +24,56 @@ final horcruxApiServiceProvider = Provider<HorcruxApiService>((ref) {
   return service;
 });
 
+/// The account record stored on horcrux-api, keyed by the user's npub.
+///
+/// This is the system of record for PII (email) and consent preferences
+/// (analytics opt-in, mailing list). It is deliberately NOT published to
+/// public Nostr.
+class Account {
+  /// The user's public key as a 32-byte hex string (the `npub_hex` field).
+  final String npubHex;
+
+  /// Contact email, or `null` if the user hasn't provided one.
+  final String? email;
+
+  /// Whether the user opted in to analytics collection. Defaults to `false`.
+  final bool analyticsOptIn;
+
+  /// Whether the user subscribed to the product-updates mailing list.
+  final bool mailingList;
+
+  /// The last Terms of Service version the user accepted, or `null`.
+  final int? tosVersion;
+
+  /// When the Terms of Service were last accepted, or `null`.
+  final DateTime? tosAcceptedAt;
+
+  const Account({
+    required this.npubHex,
+    this.email,
+    this.analyticsOptIn = false,
+    this.mailingList = false,
+    this.tosVersion,
+    this.tosAcceptedAt,
+  });
+
+  /// Parses an account record from the horcrux-api JSON response shape.
+  ///
+  /// See [HorcruxApiService] class docs for the wire format.
+  factory Account.fromJson(Map<String, dynamic> json) {
+    return Account(
+      npubHex: json['npub_hex'] as String? ?? '',
+      email: json['email'] as String?,
+      analyticsOptIn: json['analytics_opt_in'] as bool? ?? false,
+      mailingList: json['mailing_list'] as bool? ?? false,
+      tosVersion: json['tos_version'] as int?,
+      tosAcceptedAt: json['tos_accepted_at'] != null
+          ? DateTime.tryParse(json['tos_accepted_at'] as String)
+          : null,
+    );
+  }
+}
+
 /// Structured error raised when the horcrux-api returns a non-2xx response
 /// (or the transport layer fails).
 class HorcruxApiException implements Exception {
@@ -48,15 +98,17 @@ class HorcruxApiException implements Exception {
 
 /// Client for the operator-run horcrux-api service.
 ///
-/// Handles all authenticated (NIP-98) and unauthenticated requests to the
-/// horcrux-api server. Currently provides ToS endpoints; will be extended
-/// with account (email, analytics opt-in) endpoints in subsequent beads.
+/// Handles authenticated (NIP-98) requests to the horcrux-api server,
+/// covering the ToS acceptance and account (email, analytics opt-in,
+/// mailing-list) endpoints.
 ///
 /// ## Endpoints
 ///
 /// | Method | Path | Auth | Description |
 /// |--------|------|------|-------------|
 /// | POST | `/tos/accept` | NIP-98 | Record acceptance of a ToS version |
+/// | PUT | `/account` | NIP-98 | Upsert email, analytics opt-in, mailing-list |
+/// | GET | `/account` | NIP-98 | Read the signer's own account record |
 ///
 /// The ToS/Privacy Policy text itself is bundled with the app (see
 /// [TermsOfService]) rather than fetched from the server, so onboarding
@@ -98,6 +150,111 @@ class HorcruxApiService {
         _database = database,
         _httpClient = httpClient ?? http.Client(),
         _ownsHttpClient = httpClient == null;
+
+  // ---------------------------------------------------------------------------
+  // Account endpoints
+  // ---------------------------------------------------------------------------
+
+  /// Reads the current user's account record from the horcrux-api server.
+  ///
+  /// Requires NIP-98 auth. The caller must have a Nostr key pair loaded.
+  /// Returns the [Account] parsed from the server response. Throws
+  /// [HorcruxApiException] on failure.
+  Future<Account> getAccount() async {
+    final keyPair = await _loginService.getStoredNostrKey();
+    if (keyPair == null) {
+      throw const HorcruxApiException(
+        statusCode: 0,
+        message: 'No Nostr key available; cannot authenticate with horcrux-api',
+      );
+    }
+
+    final base = await getBaseUrl();
+    final url = Uri.parse('$base/account');
+
+    final authHeader = Nip98Auth.buildAuthorizationHeader(
+      keyPair: keyPair,
+      method: 'GET',
+      url: url,
+    );
+
+    final response = await _httpClient
+        .get(url, headers: {'Authorization': authHeader})
+        .timeout(_requestTimeout);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final account = Account.fromJson(json);
+      Log.info('HorcruxApiService: fetched account for npub ${account.npubHex}');
+      return account;
+    }
+
+    throw HorcruxApiException(
+      statusCode: response.statusCode,
+      message: 'Failed to fetch account: HTTP ${response.statusCode}',
+    );
+  }
+
+  /// Upserts the current user's account preferences on the horcrux-api server.
+  ///
+  /// Requires NIP-98 auth. The caller must have a Nostr key pair loaded.
+  ///
+  /// - [email]: contact email, or `null` to clear it.
+  /// - [analyticsOptIn]: whether the user opted in to analytics (required).
+  /// - [mailingList]: whether the user subscribed to product updates
+  ///   (defaults to `false`).
+  ///
+  /// Returns silently on success. Throws [HorcruxApiException] on failure.
+  Future<void> updateAccount({
+    String? email,
+    required bool analyticsOptIn,
+    bool mailingList = false,
+  }) async {
+    final keyPair = await _loginService.getStoredNostrKey();
+    if (keyPair == null) {
+      throw const HorcruxApiException(
+        statusCode: 0,
+        message: 'No Nostr key available; cannot authenticate with horcrux-api',
+      );
+    }
+
+    final base = await getBaseUrl();
+    final url = Uri.parse('$base/account');
+    final body = utf8.encode(jsonEncode(<String, dynamic>{
+      'email': email,
+      'analytics_opt_in': analyticsOptIn,
+      'mailing_list': mailingList,
+    }));
+
+    final authHeader = Nip98Auth.buildAuthorizationHeader(
+      keyPair: keyPair,
+      method: 'PUT',
+      url: url,
+      body: body,
+    );
+
+    final response = await _httpClient
+        .put(
+          url,
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+          body: body,
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      Log.info(
+          'HorcruxApiService: account updated (analytics=$analyticsOptIn, mailingList=$mailingList)');
+      return;
+    }
+
+    throw HorcruxApiException(
+      statusCode: response.statusCode,
+      message: 'Failed to update account: HTTP ${response.statusCode}',
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // ToS endpoints

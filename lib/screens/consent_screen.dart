@@ -6,6 +6,7 @@ import '../models/terms_of_service.dart';
 import '../services/horcrux_api_service.dart';
 import '../services/logger.dart';
 import '../utils/snackbar_helper.dart';
+import '../widgets/consent_form_fields.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
 import '../widgets/row_button.dart';
@@ -13,17 +14,24 @@ import '../widgets/row_button.dart';
 /// Onboarding consent screen for Terms of Service and Privacy Policy.
 ///
 /// This is the first child of the combined onboarding consent screen (epic
-/// [horcrux_app-mqh1]). Future beads will layer analytics opt-in (qa7n) and
-/// email/mailing-list fields (qiec) onto this screen.
+/// [horcrux_app-mqh1]). It layers the analytics opt-in (qa7n) and
+/// email/mailing-list fields (qiec) onto the ToS + Privacy screen.
 ///
 /// The screen:
 /// 1. Loads the bundled ToS + Privacy Policy text and version from local
 ///    assets (see [TermsOfService.loadBundled]) — no network required.
-/// 2. Renders the text as Markdown (scrollable).
-/// 3. Requires the user to tap "I agree to the Terms & Privacy Policy"
+/// 2. Renders the analytics + email + mailing-list form fields (see
+///    [ConsentFormFields]) ABOVE the legal text.
+/// 3. Renders the legal text as Markdown (scrollable).
+/// 4. Requires the user to tap "I agree to the Terms & Privacy Policy"
 ///    checkbox before proceeding.
-/// 4. On acceptance: `POST /tos/accept` with the current version, then
-///    either navigates to [nextScreen] (if provided) or pops back.
+/// 5. On acceptance: `POST /tos/accept` with the current version AND
+///    `PUT /account` with the analytics/email/mailing-list preferences,
+///    then either navigates to [nextScreen] (if provided) or pops back.
+///
+/// The ToS "I agree" checkbox gates the Continue button only. The analytics
+/// and email fields are independent and are submitted with whatever the user
+/// entered regardless of the checkbox.
 ///
 /// ## View-only mode ([viewOnly])
 ///
@@ -65,6 +73,11 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
   bool _agreed = false;
   bool _viewOnlyAccepted = false;
   bool _viewOnlyAutoAcceptStarted = false;
+
+  // Independent consent preferences (submit regardless of ToS checkbox).
+  bool _analyticsOptIn = false;
+  final TextEditingController _emailController = TextEditingController();
+  bool _mailingList = false;
 
   @override
   void initState() {
@@ -149,6 +162,13 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
       if (!mounted) return;
 
+      // Push account preferences (analytics, email, mailing-list). This is
+      // independent of ToS acceptance and MUST NOT block onboarding on a
+      // transient API failure — the ToS acceptance is the gating consent.
+      await _saveAccountPreferences(api);
+
+      if (!mounted) return;
+
       final next = widget.nextScreen;
       if (next != null) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -170,6 +190,30 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           kind: HorcruxSnackKind.error,
         );
         setState(() => _isAccepting = false);
+      }
+    }
+  }
+
+  /// Saves the analytics/email/mailing-list preferences via `PUT /account`.
+  ///
+  /// Failures are surfaced as a non-blocking warning but never prevent the
+  /// user from proceeding (the ToS acceptance is the gating consent).
+  Future<void> _saveAccountPreferences(HorcruxApiService api) async {
+    final email = _emailController.text.trim();
+    try {
+      await api.updateAccount(
+        email: email.isEmpty ? null : email,
+        analyticsOptIn: _analyticsOptIn,
+        mailingList: _mailingList && email.isNotEmpty,
+      );
+    } catch (e, st) {
+      Log.error('ConsentScreen: failed to save account preferences', e, st);
+      if (mounted) {
+        context.showHorcruxSnackBar(
+          "We couldn't save your contact preferences — you can update them "
+          'later in Settings.',
+          kind: HorcruxSnackKind.warning,
+        );
       }
     }
   }
@@ -253,6 +297,16 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
+          // Analytics + email + mailing-list fields, rendered ABOVE the
+          // legal text per the locked design.
+          ConsentFormFields(
+            analyticsOptIn: _analyticsOptIn,
+            emailController: _emailController,
+            mailingList: _mailingList,
+            onAnalyticsOptInChanged: (v) => setState(() => _analyticsOptIn = v),
+            onEmailChanged: (_) => setState(() {}),
+            onMailingListChanged: (v) => setState(() => _mailingList = v),
+          ),
           MarkdownBody(
             data: tos.text,
             styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(

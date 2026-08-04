@@ -21,6 +21,17 @@ class MockHorcruxApiService extends Mock implements HorcruxApiService {
       Invocation.method(#acceptTermsOfService, [tosVersion]),
     ) as Future<void>? ?? Future<void>.value();
   }
+
+  @override
+  Future<void> updateAccount({
+    String? email,
+    required bool analyticsOptIn,
+    bool mailingList = false,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#updateAccount, [email, analyticsOptIn, mailingList]),
+    ) as Future<void>? ?? Future<void>.value();
+  }
 }
 
 /// A test asset bundle that returns empty strings for any asset path.
@@ -86,8 +97,8 @@ void main() {
     // ConsentScreen should be shown
     expect(find.byType(ConsentScreen), findsOneWidget);
 
-    // Check the 'I agree' checkbox first (ConsentScreen requires it)
-    await tester.tap(find.byType(Checkbox));
+    // Check the 'I agree' checkbox (ToS checkbox) — tap the label text
+    await tester.tap(find.text('I agree to the Terms of Service & Privacy Policy'));
     await tester.pumpAndSettle();
 
     // Tap 'Continue' to accept terms
@@ -100,6 +111,7 @@ void main() {
 
     // ConsentScreen must have actually submitted terms acceptance.
     verify(mockApiService.acceptTermsOfService(1)).called(1);
+
   });
 
   testWidgets('Skip without key backup shows ConsentScreen then VaultListScreen', (tester) async {
@@ -117,10 +129,8 @@ void main() {
     // Should be at ConsentScreen (from _continue())
     expect(find.byType(ConsentScreen), findsOneWidget);
 
-    // Accept the ToS. Use pump() instead of pumpAndSettle() because the
-    // _continue() method's await Navigator.push() may interact with
-    // pumpAndSettle in unexpected ways.
-    await tester.tap(find.byType(Checkbox));
+    // Accept the ToS by tapping the 'I agree' label text
+    await tester.tap(find.text('I agree to the Terms of Service & Privacy Policy'));
     await tester.pump();
     await tester.pump();
 
@@ -140,5 +150,6 @@ void main() {
 
     // ConsentScreen must have actually submitted terms acceptance.
     verify(mockApiService.acceptTermsOfService(1)).called(1);
+
   });
 }
