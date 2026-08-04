@@ -222,6 +222,175 @@ void main() {
       });
     });
 
+    group('threshold normalization (horcrux_app-2sxc)', () {
+      group('BackupConfigExtension.normalizeThreshold', () {
+        test('returns threshold as-is when already valid (threshold 2, 3 stewards)', () {
+          expect(BackupConfigExtension.normalizeThreshold(2, 3), equals(2));
+        });
+
+        test('returns threshold as-is when threshold 1 with 1 steward', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 1), equals(1));
+        });
+
+        test('returns threshold as-is when threshold 1 with 0 stewards', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 0), equals(1));
+        });
+
+        test('bumps threshold 1 to 2 when steward count is 2 (auto-bump)', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 2), equals(2));
+        });
+
+        test('bumps threshold 1 to 2 when steward count is 3 (auto-bump)', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 3), equals(2));
+        });
+
+        test('bumps threshold 1 to 2 when steward count is 10 (max, auto-bump)', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 10), equals(2));
+        });
+
+        test('clamps threshold to steward count when threshold exceeds it', () {
+          expect(BackupConfigExtension.normalizeThreshold(5, 3), equals(3));
+        });
+
+        test('does not clamp threshold 1 when 0 stewards (placeholder for empty plan)', () {
+          expect(BackupConfigExtension.normalizeThreshold(1, 0), equals(1));
+        });
+
+        test('clamps threshold to 0 when 0 stewards with threshold > 1', () {
+          expect(BackupConfigExtension.normalizeThreshold(3, 0), equals(3));
+        });
+
+        test('clamps threshold to 1 when 1 steward but threshold is 3', () {
+          expect(BackupConfigExtension.normalizeThreshold(3, 1), equals(1));
+        });
+
+        test('auto-bump takes priority over clamp (threshold 1 becomes 2, not 1)', () {
+          // With 2 stewards, threshold 1 normalizes to 2, not clamped to 1
+          expect(BackupConfigExtension.normalizeThreshold(1, 2), equals(2));
+        });
+
+        test('does not bump threshold 2+ when steward count is 2', () {
+          expect(BackupConfigExtension.normalizeThreshold(2, 2), equals(2));
+        });
+
+        test('does not bump threshold 3 when steward count is 5', () {
+          expect(BackupConfigExtension.normalizeThreshold(3, 5), equals(3));
+        });
+
+        test('handles threshold equal to steward count (both 2)', () {
+          expect(BackupConfigExtension.normalizeThreshold(2, 2), equals(2));
+        });
+
+        test('handles threshold equal to steward count (both 5)', () {
+          expect(BackupConfigExtension.normalizeThreshold(5, 5), equals(5));
+        });
+      });
+
+      group('BackupConfigExtension.minimumThreshold', () {
+        test('is 1 when steward count is 0', () {
+          expect(BackupConfigExtension.minimumThreshold(0), equals(1));
+        });
+
+        test('is 1 when steward count is 1', () {
+          expect(BackupConfigExtension.minimumThreshold(1), equals(1));
+        });
+
+        test('is 2 when steward count is 2', () {
+          expect(BackupConfigExtension.minimumThreshold(2), equals(2));
+        });
+
+        test('is 2 when steward count is 3', () {
+          expect(BackupConfigExtension.minimumThreshold(3), equals(2));
+        });
+
+        test('is 2 when steward count is 10', () {
+          expect(BackupConfigExtension.minimumThreshold(10), equals(2));
+        });
+
+        test('minimum threshold never exceeds 2 regardless of steward count', () {
+          expect(BackupConfigExtension.minimumThreshold(100), equals(2));
+        });
+      });
+
+      group('BackupConfigExtension.defaultThreshold', () {
+        test('returns minThreshold (1) when steward count is 0', () {
+          expect(BackupConfigExtension.defaultThreshold(0), equals(1));
+        });
+
+        test('returns 1 when steward count is 1', () {
+          expect(BackupConfigExtension.defaultThreshold(1), equals(1));
+        });
+
+        test('returns 2 when steward count is 2', () {
+          expect(BackupConfigExtension.defaultThreshold(2), equals(2));
+        });
+
+        test('returns n-1 when steward count is 3', () {
+          expect(BackupConfigExtension.defaultThreshold(3), equals(2));
+        });
+
+        test('returns n-1 when steward count is 4', () {
+          expect(BackupConfigExtension.defaultThreshold(4), equals(3));
+        });
+
+        test('returns n-1 when steward count is 5', () {
+          expect(BackupConfigExtension.defaultThreshold(5), equals(4));
+        });
+
+        test('returns n-1 when steward count is 10 (max)', () {
+          expect(BackupConfigExtension.defaultThreshold(10), equals(9));
+        });
+      });
+
+      group('comprehensive: normalizeThreshold covers all onboarding scenarios', () {
+        // Simulates the full flow: new plan with 0 stewards, then add stewards one by one
+        test('new plan flow: 0 stewards → 1 steward → 2 stewards → 3 stewards', () {
+          int threshold = BackupConfigExtension.defaultThreshold(0); // 0 stewards
+          expect(threshold, equals(1));
+
+          threshold = BackupConfigExtension.defaultThreshold(1); // 1 steward
+          expect(threshold, equals(1));
+
+          threshold = BackupConfigExtension.defaultThreshold(2); // 2 stewards
+          expect(threshold, equals(2));
+
+          threshold = BackupConfigExtension.defaultThreshold(3); // 3 stewards
+          expect(threshold, equals(2));
+        });
+
+        // Simulates: existing plan loaded from DB with threshold 1, but 2 stewards
+        test('existing plan loaded from DB: threshold 1 with 2 stewards normalizes to 2', () {
+          final normalized = BackupConfigExtension.normalizeThreshold(1, 2);
+          expect(normalized, equals(2));
+        });
+
+        // Simulates: existing plan loaded from DB with threshold 3, but only 2 stewards remain
+        test('existing plan loaded from DB: threshold 3 with 2 stewards clamps to 2', () {
+          final normalized = BackupConfigExtension.normalizeThreshold(3, 2);
+          expect(normalized, equals(2));
+        });
+
+        // Simulates: save normalization with 2 stewards, threshold 1
+        test('save normalization: threshold 1 with 2 stewards bumps to 2', () {
+          final normalized = BackupConfigExtension.normalizeThreshold(1, 2);
+          expect(normalized, equals(2));
+          expect(BackupConfigExtension.minimumThreshold(2), equals(2));
+        });
+
+        // Simulates: remove steward so only 1 left, threshold should stay valid
+        test('remove steward: 2 stewards → 1, threshold 2 normalizes to 1', () {
+          final normalized = BackupConfigExtension.normalizeThreshold(2, 1);
+          expect(normalized, equals(1));
+        });
+
+        // Simulates: add steward back to 2, threshold 1 should bump to 2
+        test('add steward back: 1 steward → 2, threshold 1 normalizes to 2', () {
+          final normalized = BackupConfigExtension.normalizeThreshold(1, 2);
+          expect(normalized, equals(2));
+        });
+      });
+    });
+
     group('Vault equality with BackupConfig', () {
       test('hydration-shaped Vaults compare equal when backup configs match', () {
         const pubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';

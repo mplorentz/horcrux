@@ -128,16 +128,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _stewards.insert(0, ownerSteward); // Add at beginning
         // Update threshold if needed for new plans
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
+          _threshold = BackupConfigExtension.defaultThreshold(_stewards.length);
         } else {
-          // Auto-bump threshold 1 to 2 when a second steward is added,
-          // since threshold 1 cannot be distributed with 2+ stewards.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
-          if (_threshold > _stewards.length) {
-            _threshold = _stewards.length;
-          }
+          _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
         }
         _hasUnsavedChanges = true;
       });
@@ -193,19 +186,18 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _stewards.removeWhere((s) => s.isOwner);
         // Update threshold if needed
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
+          _threshold = BackupConfigExtension.defaultThreshold(_stewards.length);
         } else if (_stewards.isEmpty) {
           _threshold = VaultBackupConstraints.minThreshold;
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
+        } else {
+          _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
         }
         _hasUnsavedChanges = true;
       });
     }
   }
 
-  /// Calculate default threshold based on steward count for new plans
-  int _calculateDefaultThreshold(int stewardCount) {
+  /// Load existing recovery plan if one exists
     if (stewardCount == 0) {
       return VaultBackupConstraints.minThreshold;
     } else if (stewardCount == 1) {
@@ -240,9 +232,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           // If the DB has threshold 1 with 2+ stewards (e.g. from before the
           // 2sxc constraint), bump it to 2 so the UI and save use the correct
           // value — not just the rendered slider clamp.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
+          _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
 
           _isLoading = false;
           _hasUnsavedChanges = false;
@@ -827,19 +817,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         setState(() {
           _stewards.add(stewardWithContact);
           _invitationLinksByInviteeName[inviteeName] = result.invitation;
-            // Apply default threshold logic for new plans (only if not manually changed)
+          // Apply default threshold logic for new plans (only if not manually changed)
           if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-            _threshold = _calculateDefaultThreshold(_stewards.length);
+            _threshold = BackupConfigExtension.defaultThreshold(_stewards.length);
           } else {
-            // Auto-bump threshold 1 to 2 when a second steward is added,
-            // since threshold 1 cannot be distributed with 2+ stewards.
-            if (_threshold == 1 && _stewards.length >= 2) {
-              _threshold = 2;
-            }
-            // Ensure threshold doesn't exceed the number of stewards when editing
-            if (_threshold > _stewards.length) {
-              _threshold = _stewards.length;
-            }
+            _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
           }
           _hasUnsavedChanges = true;
         });
@@ -887,17 +869,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _stewards.add(steward);
         // Apply default threshold logic for new plans (only if not manually changed)
         if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
+          _threshold = BackupConfigExtension.defaultThreshold(_stewards.length);
         } else {
-          // Auto-bump threshold 1 to 2 when a second steward is added,
-          // since threshold 1 cannot be distributed with 2+ stewards.
-          if (_threshold == 1 && _stewards.length >= 2) {
-            _threshold = 2;
-          }
-          // Ensure threshold doesn't exceed the number of stewards when editing
-          if (_threshold > _stewards.length) {
-            _threshold = _stewards.length;
-          }
+          _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
         }
         _hasUnsavedChanges = true;
       });
@@ -1282,13 +1256,13 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       // Apply default threshold logic for new plans when removing stewards (only if not manually changed)
       if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-        _threshold = _calculateDefaultThreshold(_stewards.length);
+        _threshold = BackupConfigExtension.defaultThreshold(_stewards.length);
       } else {
         // Ensure threshold doesn't exceed the number of stewards when editing
         if (_stewards.isEmpty) {
           _threshold = VaultBackupConstraints.minThreshold;
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
+        } else {
+          _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
         }
       }
 
@@ -1495,12 +1469,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     // Normalize threshold into the valid range for the current steward count
     // so the persisted config is always consistent (threshold 1 is only valid
     // for a single steward; with 2+ stewards the minimum is 2).
-    if (_threshold == 1 && _stewards.length >= 2) {
-      _threshold = 2;
-    }
-    if (_threshold > _stewards.length) {
-      _threshold = _stewards.length;
-    }
+    _threshold = BackupConfigExtension.normalizeThreshold(_threshold, _stewards.length);
 
     // Warn about threshold-1 — any single steward is a single point of failure
     final shouldContinue = await _confirmProceedWithThresholdOne();

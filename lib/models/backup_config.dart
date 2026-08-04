@@ -225,6 +225,52 @@ extension BackupConfigExtension on BackupConfig {
     final set2 = Set<String>.from(list2);
     return set1.containsAll(set2) && set2.containsAll(set1);
   }
+
+  /// Normalize [threshold] into the valid range for [stewardCount] stewards.
+  ///
+  /// Threshold 1 is only valid with fewer than 2 stewards (single-steward
+  /// plans). With 2+ stewards, threshold is bumped to 2 because Shamir's
+  /// Secret Sharing requires at least 2 shares for distribution.
+  ///
+  /// Threshold is also clamped to never exceed [stewardCount], but only when
+  /// [stewardCount] > 0 (an empty plan with 0 stewards keeps threshold 1 as
+  /// a placeholder until stewards are added).
+  static int normalizeThreshold(int threshold, int stewardCount) {
+    if (threshold == 1 && stewardCount >= 2) {
+      return 2;
+    }
+    if (stewardCount > 0 && threshold > stewardCount) {
+      return stewardCount;
+    }
+    return threshold;
+  }
+
+  /// Returns the minimum valid threshold for the given [stewardCount].
+  ///
+  /// When there are 2+ stewards, threshold must be at least 2 (distribution
+  /// requires it). Single-steward or empty plans can use 1.
+  static int minimumThreshold(int stewardCount) {
+    return stewardCount >= 2 ? 2 : VaultBackupConstraints.minThreshold;
+  }
+
+  /// Returns the default threshold for a new plan with the given
+  /// [stewardCount].
+  ///
+  /// - 0 stewards: returns [VaultBackupConstraints.minThreshold] (1)
+  /// - 1 steward: returns 1
+  /// - 2 stewards: returns 2
+  /// - 3+ stewards: returns stewardCount - 1 (n-1 for a quorum)
+  static int defaultThreshold(int stewardCount) {
+    if (stewardCount == 0) {
+      return VaultBackupConstraints.minThreshold;
+    } else if (stewardCount == 1) {
+      return 1;
+    } else if (stewardCount == 2) {
+      return 2;
+    } else {
+      return stewardCount - 1;
+    }
+  }
 }
 
 String backupConfigToString(BackupConfig config) {
