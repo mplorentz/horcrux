@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:horcrux/database/app_database.dart';
 import 'package:horcrux/providers/vault_provider.dart';
+import 'package:horcrux/services/invitation_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/logout_service.dart';
 import 'package:horcrux/services/processed_nostr_event_store.dart';
@@ -18,6 +19,7 @@ import 'logout_service_test.mocks.dart';
   MockSpec<RelayScanService>(),
   MockSpec<LoginService>(),
   MockSpec<ProcessedNostrEventStore>(),
+  MockSpec<InvitationService>(),
 ])
 void main() {
   group('LogoutService', () {
@@ -26,6 +28,7 @@ void main() {
     late MockRelayScanService relayScanService;
     late MockLoginService loginService;
     late MockProcessedNostrEventStore processedStore;
+    late MockInvitationService invitationService;
     late AppDatabase appDatabase;
 
     var deletedDbFiles = false;
@@ -41,6 +44,7 @@ void main() {
         loginService: loginService,
         processedNostrEventStore: processedStore,
         appDatabase: appDatabase,
+        invitationService: invitationService,
         deleteDatabaseFiles: () async {
           deletedDbFiles = true;
         },
@@ -72,6 +76,7 @@ void main() {
       relayScanService = MockRelayScanService();
       loginService = MockLoginService();
       processedStore = MockProcessedNostrEventStore();
+      invitationService = MockInvitationService();
       appDatabase = newTestDatabase();
 
       deletedDbFiles = false;
@@ -92,11 +97,12 @@ void main() {
     });
 
     group('logout (preserveIdentity: false)', () {
-      test('clears identity and secure storage, does not delete salt alone', () async {
+      test('clears staged invitation and clears identity and secure storage', () async {
         await buildService().logout();
 
         verifySharedWipeSteps();
         verify(loginService.clearStoredKeys()).called(1);
+        verify(invitationService.clearStagedInvitation()).called(1);
         expect(clearedSecureStorage, isTrue);
         expect(deletedDbKeySalt, isFalse);
       });
@@ -121,6 +127,7 @@ void main() {
           loginService: loginService,
           processedNostrEventStore: processedStore,
           appDatabase: appDatabase,
+          invitationService: invitationService,
           deleteDatabaseFiles: () async {
             deletedDbFiles = true;
           },
@@ -199,6 +206,7 @@ void main() {
           loginService: loginService,
           processedNostrEventStore: processedStore,
           appDatabase: appDatabase,
+          invitationService: invitationService,
           deleteDatabaseFiles: () async {
             deletedDbFiles = true;
           },

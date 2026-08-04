@@ -688,6 +688,50 @@ void main() {
     );
 
     test(
+      'clearStagedInvitation clears the staged invitation after logout',
+      () async {
+        // Arrange: Stage an invitation (simulating a deep link during onboarding)
+        const vaultId = 'test-clear-vault';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteCode = 'test-clear-invite-code-valid-base64url-789';
+
+        final staged = await invitationService.stageReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Clear Vault',
+        );
+
+        expect(staged, isNotNull, reason: 'A fresh invitation should be staged');
+        expect(invitationService.hasStagedInvitations, isTrue,
+            reason: 'hasStagedInvitations should be true after staging');
+        expect(invitationService.getStagedInvitation(), isNotNull,
+            reason: 'getStagedInvitation should return the staged invitation');
+
+        // Act: Clear the staged invitation (simulating logout)
+        invitationService.clearStagedInvitation();
+
+        // Assert: Staged invitation is cleared
+        expect(invitationService.hasStagedInvitations, isFalse,
+            reason: 'hasStagedInvitations should be false after clearing');
+        expect(invitationService.getStagedInvitation(), isNull,
+            reason: 'getStagedInvitation should return null after clearing');
+
+        // Assert: Re-staging works after clearing
+        final reStaged = await invitationService.stageReceivedInvitation(
+          inviteCode: 'test-re-stage-code-valid-base64url-000',
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Re-Stage Vault',
+        );
+        expect(reStaged, isNotNull,
+            reason: 'Should be able to stage a new invitation after clearing');
+      },
+    );
+
+    test(
       'stageReceivedInvitation skips invite codes in the denied set (kv table)',
       () async {
         // Arrange
