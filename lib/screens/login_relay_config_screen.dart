@@ -199,11 +199,11 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   /// After a successful scan the user goes to the consent screen, then the
   /// vault list or invitation acceptance screen.
   Future<void> _continue() async {
-    await Navigator.of(context).push(
+    final accepted = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const ConsentScreen()),
     );
 
-    if (mounted) {
+    if (accepted == true && mounted) {
       routeToVaultListOrStagedInvitation(context: context, ref: ref);
     }
   }

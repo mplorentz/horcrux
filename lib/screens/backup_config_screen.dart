@@ -312,6 +312,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         if (dialogResult == 'save') {
           await _saveBackup();
         } else if (dialogResult == 'discard') {
+          await _restoreInitialConfig();
+          if (!context.mounted) return;
           await _popWithOwnerPushPrompt();
         }
       },
@@ -1245,9 +1247,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       }
     }
 
-    // If steward has accepted (has pubkey), send removal event
-    await _sendRemovalEventsForStewards([steward]);
-
+    // Remove from local state immediately so the UI updates without waiting
+    // for the network call to send the removal event. If the relay is slow
+    // or unreachable, the user shouldn't be stuck waiting.
     setState(() {
       _stewards.removeWhere((s) => s.id == steward.id);
       if (steward.name != null) {
@@ -1268,6 +1270,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       _hasUnsavedChanges = true;
     });
+
+    // If steward has accepted (has pubkey), send removal event (fire-and-forget
+    // — the network call should not block the UI update).
+    unawaited(_sendRemovalEventsForStewards([steward]));
   }
 
   Future<void> _regenerateInvitationLink(Steward steward, InvitationLink oldInvitation) async {
@@ -1444,13 +1450,29 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Save when no stewards are configured. Persists the push notification
-  /// preference and navigates back without writing a backup config.
+  /// Save when no stewards are configured. Persists a zero-steward backup
+  /// config (preserving relays and instructions) and the push notification
+  /// preference, then navigates back.
   Future<void> _handleSkip() async {
     if (!mounted) return;
     try {
       final repository = ref.read(vaultRepositoryProvider);
       await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
+
+      // Persist a zero-steward config that carries the current relays and
+      // instructions, so custom relays aren't lost on last-steward removal.
+      final existingConfig = await repository.getBackupConfig(widget.vaultId);
+      if (existingConfig != null) {
+        final backupService = ref.read(backupServiceProvider);
+        await backupService.saveBackupConfig(
+          vaultId: widget.vaultId,
+          threshold: 0,
+          totalKeys: 0,
+          stewards: const [],
+          relays: _relays,
+          instructions: _instructionsController.text.trim(),
+        );
+      }
     } catch (e) {
       if (mounted) {
         context.showHorcruxSnackBar(

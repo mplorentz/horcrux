@@ -55,6 +55,28 @@ BackupConfig createBackupConfig({
   required List<String> relays,
   String? instructions,
 }) {
+  if (stewards.isEmpty) {
+    // Empty-steward config: preserve relays/instructions, zero threshold.
+    // This is a valid state for "no stewards configured yet".
+    if (relays.isEmpty) {
+      throw ArgumentError('At least one relay must be provided');
+    }
+    for (final relay in relays) {
+      if (!_isValidRelayUrl(relay)) {
+        throw ArgumentError('Invalid relay URL: $relay');
+      }
+    }
+    return BackupConfig(
+      vaultId: vaultId,
+      threshold: 0,
+      stewards: stewards,
+      relays: relays,
+      instructions: instructions,
+      createdAt: DateTime.now(),
+      distributionVersion: 0,
+    );
+  }
+
   if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
     throw ArgumentError(
       'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
@@ -115,6 +137,11 @@ Steward? getOwnerSteward(BackupConfig config) {
 extension BackupConfigExtension on BackupConfig {
   bool get isValid {
     try {
+      // Empty-steward config is valid (relays must be non-empty).
+      if (stewards.isEmpty) {
+        return relays.isNotEmpty;
+      }
+
       if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
         return false;
       }
@@ -156,10 +183,12 @@ extension BackupConfigExtension on BackupConfig {
   /// distribution and threshold is met. Replaces the old `status == active`
   /// check (status is no longer persisted).
   bool get isReady {
+    if (stewards.isEmpty) return false;
     return hasBeenDistributed && acknowledgedStewardsCount >= threshold;
   }
 
   bool get canDistribute {
+    if (stewards.isEmpty) return false;
     return stewards.every((h) => h.pubkey != null);
   }
 
@@ -176,6 +205,7 @@ extension BackupConfigExtension on BackupConfig {
   /// when publish succeeds ([Steward.giftWrapEventId]); redistribution resets
   /// it so a missing id means send is still pending.
   bool get needsRedistribution {
+    if (stewards.isEmpty) return false;
     if (!hasBeenDistributed) return true;
     return stewards.any((s) {
       if (s.pubkey == null) return false;
