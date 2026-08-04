@@ -90,8 +90,8 @@ void main() {
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
 
-    // Tap 'Agree & Continue' to accept terms
-    await tester.tap(find.text('Agree & Continue'));
+    // Tap 'Continue' to accept terms
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // After accepting, ImportSuccessScreen should be shown
@@ -124,7 +124,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.text('Agree & Continue'));
+    await tester.tap(find.text('Continue'));
     // Use pump() instead of pumpAndSettle() because VaultListScreen may have
     // infinite animations (timers, periodic refresh from vaultDetailListProvider).
     await tester.pump();
