@@ -370,7 +370,7 @@ Marionette MCP (`marionette_mcp`) is available as a Dart global activation
 Dart VM service WebSocket.
 
 **Connect:**
-```
+```text
 marionette_connect(uri: "ws://localhost:8182/TOKEN/ws")
 ```
 
