@@ -88,8 +88,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                     navigator.push(
                       MaterialPageRoute(
                         builder: (context) => ConsentScreen(
-                          nextScreen:
-                              AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                          nextScreen: AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
                         ),
                       ),
                     );

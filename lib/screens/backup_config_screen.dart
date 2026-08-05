@@ -208,7 +208,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         _initialBackupConfig = existingConfig.copyWith();
         final loadedThreshold = existingConfig.threshold;
         final normalized = VaultBackupConstraints.normalizeThreshold(
-          loadedThreshold, existingConfig.stewards.length);
+            loadedThreshold, existingConfig.stewards.length);
         final suggested =
             VaultBackupConstraints.recommendedThreshold(existingConfig.stewards.length);
         setState(() {
