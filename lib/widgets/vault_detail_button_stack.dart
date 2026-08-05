@@ -248,8 +248,18 @@ class VaultDetailButtonStack extends ConsumerWidget {
                 final ownerHasOwnedContent = vault is OwnedVaultDetail;
                 final isOwnerSteward =
                     isVaultOwner && vault is StewardedVaultDetail && vault.latestShare != null;
+                // Owner without a self-steward shard who sealed the vault can
+                // still initiate real recovery — the request is built from the
+                // backup plan instead of a held shard.
+                final canInitiateRecoveryWithoutShard =
+                    isVaultOwner &&
+                    vault is StewardedVaultDetail &&
+                    vault.latestShare == null &&
+                    (vault.backupConfig?.isValidForDistribution == true);
                 final showInitiateRealRecovery =
-                    isOwnerSteward && !hasMyInFlightRecovery && !ownerHasOwnedContent;
+                    (isOwnerSteward || canInitiateRecoveryWithoutShard) &&
+                    !hasMyInFlightRecovery &&
+                    !ownerHasOwnedContent;
 
                 if (showInitiateRealRecovery) {
                   buttons.add(

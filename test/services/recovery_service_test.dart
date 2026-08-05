@@ -996,6 +996,150 @@ void main() {
     );
   });
 
+  group('initiateAndSendRecovery - owner without self-steward shard', () {
+    late String testOwnerPubkey;
+    late LoginService loginService;
+    late VaultRepository repository;
+    late BackupService backupService;
+    late NdkService ndkService;
+    late RecoveryService recoveryService;
+    late AppDatabase testDb;
+    const testVaultId = 'vault-non-self-steward';
+    const testKeyHolder1 = 'fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321';
+    const testKeyHolder2 = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdef1234';
+
+    setUp(() async {
+      secureStorageMock.clear();
+      loginService = LoginService();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+
+      final keyPair = await loginService.generateAndStoreNostrKey();
+      testOwnerPubkey = keyPair.publicKey;
+
+      testDb = newTestDatabase();
+      repository = VaultRepository(loginService, db: testDb);
+
+      final mockBackupService = MockBackupService();
+      final mockNdkService = MockNdkService();
+      when(mockNdkService.getCurrentPubkey()).thenAnswer((_) async => testOwnerPubkey);
+      when(
+        mockNdkService.publishEncryptedEventToMultiple(
+          content: anyNamed('content'),
+          kind: anyNamed('kind'),
+          recipientPubkeys: anyNamed('recipientPubkeys'),
+          relays: anyNamed('relays'),
+          tags: anyNamed('tags'),
+          customPubkey: anyNamed('customPubkey'),
+          vaultId: anyNamed('vaultId'),
+        ),
+      ).thenAnswer((_) async => <Nip01Event?>[]);
+
+      final mockHorcruxNotificationService = MockHorcruxNotificationService();
+      when(
+        mockHorcruxNotificationService.tryPushForEvent(
+          event: anyNamed('event'),
+          kind: anyNamed('kind'),
+          vault: anyNamed('vault'),
+          relayHints: anyNamed('relayHints'),
+          recoveryApproved: anyNamed('recoveryApproved'),
+        ),
+      ).thenAnswer((_) async {});
+
+      backupService = mockBackupService;
+      ndkService = mockNdkService;
+      recoveryService = RecoveryService(
+        repository,
+        backupService,
+        ndkService,
+        ProcessedNostrEventStore(),
+        MockLocalNotificationService(),
+        mockHorcruxNotificationService,
+        testDb,
+      );
+      await recoveryService.clearAll();
+      await repository.clearAll();
+
+      // Create a vault with a valid backup config (≥2 holdingKey stewards,
+      // threshold ≥2) — the owner has NO shares (no self-steward).
+      final testVault = Vault(
+        id: testVaultId,
+        name: 'Test Vault',
+        createdAt: DateTime.now(),
+        ownerPubkey: testOwnerPubkey,
+      );
+      await repository.addVault(testVault);
+
+      final relayPlan = createBackupConfig(
+        vaultId: testVaultId,
+        threshold: 2,
+        totalKeys: 2,
+        stewards: [
+          createSteward(pubkey: testKeyHolder1).copyWith(status: StewardStatus.holdingKey),
+          createSteward(pubkey: testKeyHolder2).copyWith(status: StewardStatus.holdingKey),
+        ],
+        relays: ['wss://relay.example.com'],
+      );
+      await repository.updateBackupConfig(testVaultId, relayPlan);
+    });
+
+    tearDown(() async {
+      await repository.clearAll();
+      await loginService.clearStoredKeys();
+      LoginService.resetCache();
+      await testDb.close();
+    });
+
+    test('owner without self-steward shard can initiate recovery from backup config', () async {
+      // Verify no shares exist (owner is not a self-steward)
+      final shares = await repository.getSharesForVault(testVaultId);
+      expect(shares, isEmpty, reason: 'Owner should have no shares');
+
+      // Act: initiate real recovery
+      final request = await recoveryService.initiateAndSendRecovery(
+        testVaultId,
+        isPractice: false,
+      );
+
+      // Assert: recovery request was created with data from backup config
+      expect(request, isNotNull);
+      expect(request.vaultId, testVaultId);
+      expect(request.initiatorPubkey, testOwnerPubkey);
+      expect(request.isPractice, isFalse);
+      expect(request.stewardPubkeys, containsAll([testKeyHolder1, testKeyHolder2]));
+      expect(request.threshold, 2);
+    });
+
+    test('owner with shares still uses the existing share-based path', () async {
+      // Add a share (simulating self-steward owner)
+      await repository.addShareToVault(
+        testVaultId,
+        Share(
+          payload: 'test-share',
+          threshold: 2,
+          totalShares: 2,
+          shareIndex: 0,
+          creatorPubkey: testOwnerPubkey,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          relayUrls: ['wss://relay.example.com'],
+        ),
+      );
+
+      final shares = await repository.getSharesForVault(testVaultId);
+      expect(shares, isNotEmpty, reason: 'Owner should have a share');
+
+      // Act: initiate real recovery
+      final request = await recoveryService.initiateAndSendRecovery(
+        testVaultId,
+        isPractice: false,
+      );
+
+      // Assert: recovery request was created
+      expect(request, isNotNull);
+      expect(request.vaultId, testVaultId);
+    });
+  });
+
   group('processRecoveryResponse dedup', () {
     late String testCreatorPubkey;
     late LoginService loginService;
