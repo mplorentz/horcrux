@@ -340,49 +340,79 @@ class RecoveryService {
     } else {
       // Real recovery: use held share data from the database.
       final shares = await repository.getSharesForVault(vaultId);
-      if (shares.isEmpty) {
-        throw StateError(
-          'Cannot recover: you don\'t have a key to this vault.',
-        );
-      }
 
-      final selectedShard = latestShare(shares)!;
+      // Owner without self-steward shard: derive from backupConfig (mirror
+      // the practice path), since they hold no local share to recover from.
+      if (shares.isEmpty && vault.isVaultOwner(initiatorPubkey)) {
+        final backupConfig = vault.backupConfig;
+        if (backupConfig == null || backupConfig.stewards.isEmpty) {
+          throw StateError('No recovery plan configured for this vault');
+        }
 
-      Log.debug(
-        'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
-      );
+        stewardPubkeys = backupConfig.stewards
+            .where(
+              (s) => s.pubkey != null && s.status == StewardStatus.holdingKey,
+            )
+            .map((s) => s.pubkey!)
+            .toList();
 
-      final backupConfig = vault.backupConfig;
-      if (backupConfig == null) {
-        throw StateError(
-          'No steward metadata available for recovery. '
-          'Please refresh share metadata from a recent distribution.',
-        );
-      }
+        if (stewardPubkeys.isEmpty) {
+          throw StateError(
+            'No stewards available for recovery. Make sure stewards have received and confirmed their keys.',
+          );
+        }
 
-      // Use normalized stewards from the DB-backed backup config.
-      stewardPubkeys = backupConfig.stewards
-          .where((s) => s.pubkey != null && s.status != StewardStatus.invited)
-          .map((s) => s.pubkey!)
-          .toSet()
-          .toList();
-
-      if (stewardPubkeys.isEmpty) {
-        throw StateError('No stewards available for recovery');
-      }
-
-      threshold = backupConfig.threshold;
-
-      // Use normalized relay configuration first; fall back to legacy shard
-      // relay hints for older vault rows.
-      if (backupConfig.relays.isNotEmpty) {
+        threshold = backupConfig.threshold;
         relayUrls = backupConfig.relays;
-      } else if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
-        relayUrls = selectedShard.relayUrls!;
+
+        if (relayUrls.isEmpty) {
+          throw StateError('No relays configured in recovery plan');
+        }
       } else {
-        throw StateError(
-          'No relays configured for recovery. Please configure relays in the recovery plan.',
+        if (shares.isEmpty) {
+          throw StateError(
+            'Cannot recover: you don\'t have a key to this vault.',
+          );
+        }
+
+        final selectedShard = latestShare(shares)!;
+
+        Log.debug(
+          'Selected shard with distributionVersion ${selectedShard.distributionVersion} for recovery',
         );
+
+        final backupConfig = vault.backupConfig;
+        if (backupConfig == null) {
+          throw StateError(
+            'No steward metadata available for recovery. '
+            'Please refresh share metadata from a recent distribution.',
+          );
+        }
+
+        // Use normalized stewards from the DB-backed backup config.
+        stewardPubkeys = backupConfig.stewards
+            .where((s) => s.pubkey != null && s.status != StewardStatus.invited)
+            .map((s) => s.pubkey!)
+            .toSet()
+            .toList();
+
+        if (stewardPubkeys.isEmpty) {
+          throw StateError('No stewards available for recovery');
+        }
+
+        threshold = backupConfig.threshold;
+
+        // Use normalized relay configuration first; fall back to legacy shard
+        // relay hints for older vault rows.
+        if (backupConfig.relays.isNotEmpty) {
+          relayUrls = backupConfig.relays;
+        } else if (selectedShard.relayUrls != null && selectedShard.relayUrls!.isNotEmpty) {
+          relayUrls = selectedShard.relayUrls!;
+        } else {
+          throw StateError(
+            'No relays configured for recovery. Please configure relays in the recovery plan.',
+          );
+        }
       }
     }
 
