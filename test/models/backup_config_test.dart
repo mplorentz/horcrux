@@ -485,57 +485,6 @@ void main() {
       });
     });
 
-    group('isValid threshold enforcement (backward compat)', () {
-      BackupConfig makeConfig(int threshold, int stewardCount) {
-        final stewards = List.generate(
-            stewardCount,
-            (i) => createSteward(
-                  pubkey: '${i + 1}'.padLeft(64, '0'),
-                  name: 'Steward $i',
-                ));
-        return BackupConfig(
-          vaultId: 'v1',
-          threshold: threshold,
-          stewards: stewards,
-          relays: const ['wss://relay.example.com'],
-          createdAt: DateTime.now(),
-          distributionVersion: 0,
-        );
-      }
-
-      test('isValid rejects threshold 1 with 2 stewards', () {
-        expect(makeConfig(1, 2).isValid, isFalse);
-      });
-
-      test('isValid rejects threshold 1 with 5 stewards', () {
-        expect(makeConfig(1, 5).isValid, isFalse);
-      });
-
-      test('isValid accepts threshold 2 with 2 stewards', () {
-        expect(makeConfig(2, 2).isValid, isTrue);
-      });
-
-      test('isValid accepts threshold 3 with 5 stewards', () {
-        expect(makeConfig(3, 5).isValid, isTrue);
-      });
-
-      test('isValid accepts threshold 1 with 1 steward', () {
-        expect(makeConfig(1, 1).isValid, isTrue);
-      });
-
-      test('isValid accepts threshold 1 with 0 stewards', () {
-        expect(makeConfig(1, 0).isValid, isTrue);
-      });
-
-      test('isValid rejects threshold 0 with 1 steward', () {
-        expect(makeConfig(0, 1).isValid, isFalse);
-      });
-
-      test('isValid rejects threshold 0 with 2 stewards', () {
-        expect(makeConfig(0, 2).isValid, isFalse);
-      });
-    });
-
     group('createBackupConfig threshold validation (constructor is permissive)', () {
       // createBackupConfig only enforces VaultBackupConstraints.minThreshold (1),
       // not minThresholdForDisplay(totalKeys). The stricter enforcement is in
@@ -566,7 +515,7 @@ void main() {
           stewards: stewards2,
           relays: ['wss://relay.example.com'],
         );
-        expect(config.isValid, isFalse);
+        expect(config.isValidForDistribution, isFalse);
       });
     });
 

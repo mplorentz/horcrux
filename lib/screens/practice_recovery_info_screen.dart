@@ -89,7 +89,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
       );
     }
 
-    if (!backupConfig.isValid) {
+    if (!backupConfig.isValidForDistribution) {
       return _buildNotReadyMessage(
         context,
         'Recovery Plan Invalid',
