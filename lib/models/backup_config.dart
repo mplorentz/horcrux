@@ -171,6 +171,25 @@ extension BackupConfigExtension on BackupConfig {
     }
   }
 
+  /// Whether this config can actually have its keys distributed.
+  ///
+  /// Distribution requires a real Shamir split: at least
+  /// [VaultBackupConstraints.minStewardsForDistribution] stewards and a
+  /// threshold of at least 2. A structurally valid plan with fewer stewards
+  /// is still a legitimate thing to *save* — it is simply not finished yet.
+  ///
+  /// This is the predicate for "is the plan complete", distinct from
+  /// [isValid], which only asks whether the config is internally consistent.
+  bool get isValidForDistribution {
+    if (stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
+      return false;
+    }
+    if (threshold < VaultBackupConstraints.minStewardsForDistribution) {
+      return false;
+    }
+    return isValid;
+  }
+
   int get activeStewardsCount {
     return stewards.where((h) => h.isActive).length;
   }
