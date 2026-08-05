@@ -181,7 +181,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Calculate default threshold based on steward count for new plans
   /// Mutate stewards via [mutate], then re-derive _threshold.
   ///
   /// When the user has not manually touched the threshold slider, picks the
@@ -208,10 +207,12 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       if (existingConfig != null && mounted) {
         _initialBackupConfig = existingConfig.copyWith();
         final loadedThreshold = existingConfig.threshold;
+        final normalized = VaultBackupConstraints.normalizeThreshold(
+          loadedThreshold, existingConfig.stewards.length);
         final suggested =
             VaultBackupConstraints.recommendedThreshold(existingConfig.stewards.length);
         setState(() {
-          _threshold = loadedThreshold;
+          _threshold = normalized;
           _stewards.clear();
           _stewards.addAll(existingConfig.stewards);
           _relays.clear();

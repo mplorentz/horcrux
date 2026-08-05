@@ -1144,7 +1144,9 @@ class InvitationService {
       final newSteward = createSteward(pubkey: pubkey, name: name);
       final stewardsWithNew = [...backupConfig.stewards, newSteward];
 
-      final configWithUpdatedThreshold = backupConfig;
+      final configWithUpdatedThreshold = backupConfig.copyWith(
+        threshold: VaultBackupConstraints.normalizeThreshold(
+          backupConfig.threshold, stewardsWithNew.length));
 
       // Update existing stewards who are holdingKey to awaitingNewKey
       final updatedConfig = _incrementDistributionVersionForNewSteward(
