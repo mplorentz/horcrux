@@ -60,6 +60,10 @@ void main() {
         mockBackupService,
         testDb,
       );
+
+      // Reset static _pendingReceivedInvitation between tests to avoid
+      // order-dependence from stale state leaking across test cases.
+      invitationService.clearStagedInvitation();
     });
 
     tearDown(() async {
@@ -642,6 +646,10 @@ void main() {
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
       when(mockLoginService.decryptText(any))
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+
+      // Reset static _pendingReceivedInvitation between tests to avoid
+      // order-dependence from stale state leaking across test cases.
+      invitationService.clearStagedInvitation();
     });
 
     tearDown(() async {
@@ -710,13 +718,21 @@ void main() {
             reason: 'getStagedInvitation should return the staged invitation');
 
         // Act: Clear the staged invitation (simulating logout)
+        final notifications = <void>[];
+        final sub = invitationService.invitationsChangedStream.listen(notifications.add);
         invitationService.clearStagedInvitation();
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
 
         // Assert: Staged invitation is cleared
         expect(invitationService.hasStagedInvitations, isFalse,
             reason: 'hasStagedInvitations should be false after clearing');
         expect(invitationService.getStagedInvitation(), isNull,
             reason: 'getStagedInvitation should return null after clearing');
+
+        // Assert: listeners were notified so mounted UI doesn't stay stale
+        expect(notifications, isNotEmpty,
+            reason: 'clearStagedInvitation should notify invitationsChangedStream');
 
         // Assert: Re-staging works after clearing
         final reStaged = await invitationService.stageReceivedInvitation(

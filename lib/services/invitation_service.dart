@@ -396,6 +396,7 @@ class InvitationService {
   /// re-surfacing after the next login.
   void clearStagedInvitation() {
     _pendingReceivedInvitation = null;
+    _notifyInvitationsChanged();
   }
 
   /// Removes and returns the staged invitation if its code matches

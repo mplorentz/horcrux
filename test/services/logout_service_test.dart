@@ -66,6 +66,9 @@ void main() {
       verify(recoveryService.clearAll()).called(1);
       verify(relayScanService.clearAll()).called(1);
       verify(processedStore.clearAll()).called(1);
+      // Both the logout and resetDatabase paths go through _wipeLocalState,
+      // which always clears the staged invitation.
+      verify(invitationService.clearStagedInvitation()).called(1);
       expect(deletedDbFiles, isTrue);
       expect(clearedSharedPreferences, isTrue);
     }
@@ -102,7 +105,6 @@ void main() {
 
         verifySharedWipeSteps();
         verify(loginService.clearStoredKeys()).called(1);
-        verify(invitationService.clearStagedInvitation()).called(1);
         expect(clearedSecureStorage, isTrue);
         expect(deletedDbKeySalt, isFalse);
       });
