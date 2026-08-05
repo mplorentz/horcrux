@@ -24,7 +24,7 @@ class RecoveryRulesWidget extends StatelessWidget {
   /// Minimum threshold for the slider.
   /// When there are 2+ stewards, threshold must be at least 2 (Shamir
   /// requires it for distribution). Single-steward plans can use 1.
-  int get _minThreshold => BackupConfigExtension.minimumThreshold(stewardCount);
+  int get _minThreshold => BackupConfigExtension.minThresholdForDisplay(stewardCount);
 
   @override
   Widget build(BuildContext context) {

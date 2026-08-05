@@ -302,29 +302,35 @@ void main() {
         });
       });
 
-      group('BackupConfigExtension.minimumThreshold', () {
+      group('BackupConfigExtension.minThresholdForDisplay', () {
         test('is 1 when steward count is 0', () {
-          expect(BackupConfigExtension.minimumThreshold(0), equals(1));
+          expect(BackupConfigExtension.minThresholdForDisplay(0), equals(1));
         });
 
         test('is 1 when steward count is 1', () {
-          expect(BackupConfigExtension.minimumThreshold(1), equals(1));
+          expect(BackupConfigExtension.minThresholdForDisplay(1), equals(1));
         });
 
         test('is 2 when steward count is 2', () {
-          expect(BackupConfigExtension.minimumThreshold(2), equals(2));
+          expect(BackupConfigExtension.minThresholdForDisplay(2), equals(2));
         });
 
         test('is 2 when steward count is 3', () {
-          expect(BackupConfigExtension.minimumThreshold(3), equals(2));
+          expect(BackupConfigExtension.minThresholdForDisplay(3), equals(2));
         });
 
         test('is 2 when steward count is 10', () {
-          expect(BackupConfigExtension.minimumThreshold(10), equals(2));
+          expect(BackupConfigExtension.minThresholdForDisplay(10), equals(2));
         });
 
-        test('minimum threshold never exceeds 2 regardless of steward count', () {
-          expect(BackupConfigExtension.minimumThreshold(100), equals(2));
+        test('min threshold for display never exceeds 2 regardless of steward count', () {
+          expect(BackupConfigExtension.minThresholdForDisplay(100), equals(2));
+        });
+      });
+
+      group('BackupConfigExtension.distributionMinThreshold', () {
+        test('is always 2', () {
+          expect(BackupConfigExtension.distributionMinThreshold, equals(2));
         });
       });
 
@@ -390,7 +396,7 @@ void main() {
         test('save normalization: threshold 1 with 2 stewards bumps to 2', () {
           final normalized = BackupConfigExtension.normalizeThreshold(1, 2);
           expect(normalized, equals(2));
-          expect(BackupConfigExtension.minimumThreshold(2), equals(2));
+          expect(BackupConfigExtension.minThresholdForDisplay(2), equals(2));
         });
 
         // Simulates: remove steward so only 1 left, threshold should stay valid
@@ -407,12 +413,86 @@ void main() {
       });
     });
 
-    group('isValid threshold enforcement (horcrux_app-2sxc)', () {
+    group('isValidForSave / isValidForDistribution (horcrux_app-2sxc)', () {
       BackupConfig makeConfig(int threshold, int stewardCount) {
-        final stewards = List.generate(stewardCount, (i) => createSteward(
-          pubkey: '${i + 1}'.padLeft(64, '0'),
-          name: 'Steward $i',
-        ));
+        final stewards = List.generate(
+            stewardCount,
+            (i) => createSteward(
+                  pubkey: '${i + 1}'.padLeft(64, '0'),
+                  name: 'Steward $i',
+                ));
+        return BackupConfig(
+          vaultId: 'v1',
+          threshold: threshold,
+          stewards: stewards,
+          relays: const ['wss://relay.example.com'],
+          createdAt: DateTime.now(),
+          distributionVersion: 0,
+        );
+      }
+
+      test('isValidForSave accepts threshold 1 with 2 stewards (structural, no distribution check)',
+          () {
+        expect(makeConfig(1, 2).isValidForSave, isTrue);
+      });
+
+      test('isValidForSave accepts threshold 1 with 1 steward', () {
+        expect(makeConfig(1, 1).isValidForSave, isTrue);
+      });
+
+      test('isValidForSave accepts threshold 2 with 2 stewards', () {
+        expect(makeConfig(2, 2).isValidForSave, isTrue);
+      });
+
+      test('isValidForSave rejects threshold 0 with 1 steward', () {
+        expect(makeConfig(0, 1).isValidForSave, isFalse);
+      });
+
+      test('isValidForSave rejects threshold 0 with 2 stewards', () {
+        expect(makeConfig(0, 2).isValidForSave, isFalse);
+      });
+
+      test('isValidForSave accepts empty config (no stewards)', () {
+        expect(makeConfig(1, 0).isValidForSave, isTrue);
+      });
+
+      test('isValidForDistribution rejects threshold 1 with 2 stewards', () {
+        expect(makeConfig(1, 2).isValidForDistribution, isFalse);
+      });
+
+      test('isValidForDistribution rejects threshold 1 with 5 stewards', () {
+        expect(makeConfig(1, 5).isValidForDistribution, isFalse);
+      });
+
+      test('isValidForDistribution accepts threshold 2 with 2 stewards', () {
+        expect(makeConfig(2, 2).isValidForDistribution, isTrue);
+      });
+
+      test('isValidForDistribution accepts threshold 3 with 5 stewards', () {
+        expect(makeConfig(3, 5).isValidForDistribution, isTrue);
+      });
+
+      test('isValidForDistribution rejects threshold 1 with 1 steward (needs 2+ stewards)', () {
+        expect(makeConfig(1, 1).isValidForDistribution, isFalse);
+      });
+
+      test('isValidForDistribution rejects empty config (no stewards)', () {
+        expect(makeConfig(1, 0).isValidForDistribution, isFalse);
+      });
+
+      test('isValidForDistribution rejects threshold 0 with 2 stewards', () {
+        expect(makeConfig(0, 2).isValidForDistribution, isFalse);
+      });
+    });
+
+    group('isValid threshold enforcement (backward compat)', () {
+      BackupConfig makeConfig(int threshold, int stewardCount) {
+        final stewards = List.generate(
+            stewardCount,
+            (i) => createSteward(
+                  pubkey: '${i + 1}'.padLeft(64, '0'),
+                  name: 'Steward $i',
+                ));
         return BackupConfig(
           vaultId: 'v1',
           threshold: threshold,
@@ -458,8 +538,8 @@ void main() {
 
     group('createBackupConfig threshold validation (constructor is permissive)', () {
       // createBackupConfig only enforces VaultBackupConstraints.minThreshold (1),
-      // not minimumThreshold(totalKeys). The stricter enforcement is in isValid,
-      // saveBackupConfig, and generateShamirShares.
+      // not minThresholdForDisplay(totalKeys). The stricter enforcement is in
+      // isValidForDistribution, saveBackupConfig, and generateShamirShares.
       final stewards2 = [
         createSteward(pubkey: 'a${'0' * 63}', name: 'A'),
         createSteward(pubkey: 'b${'0' * 63}', name: 'B'),
@@ -468,8 +548,11 @@ void main() {
       test('accepts threshold 1 with 2 stewards (constructor permissive)', () {
         expect(
           () => createBackupConfig(
-            vaultId: 'v1', threshold: 1, totalKeys: 2,
-            stewards: stewards2, relays: ['wss://relay.example.com'],
+            vaultId: 'v1',
+            threshold: 1,
+            totalKeys: 2,
+            stewards: stewards2,
+            relays: ['wss://relay.example.com'],
           ),
           returnsNormally,
         );
@@ -477,8 +560,11 @@ void main() {
 
       test('isValid still rejects threshold 1 with 2 stewards', () {
         final config = createBackupConfig(
-          vaultId: 'v1', threshold: 1, totalKeys: 2,
-          stewards: stewards2, relays: ['wss://relay.example.com'],
+          vaultId: 'v1',
+          threshold: 1,
+          totalKeys: 2,
+          stewards: stewards2,
+          relays: ['wss://relay.example.com'],
         );
         expect(config.isValid, isFalse);
       });

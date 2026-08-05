@@ -135,6 +135,68 @@ Steward? getOwnerSteward(BackupConfig config) {
 }
 
 extension BackupConfigExtension on BackupConfig {
+  /// Minimum threshold for a valid Shamir's distribution.
+  ///
+  /// Shamir's Secret Sharing requires at least 2 shares, so any distribution
+  /// must have threshold >= 2. This is a hard cryptographic constraint,
+  /// distinct from the UI display minimum (see [minThresholdForDisplay]) and
+  /// the DB storage constraint (no minimum).
+  static const int distributionMinThreshold = 2;
+
+  /// Structural validity: checks relays, stewards, and threshold are
+  /// internally consistent, but does NOT enforce the distribution minimum of
+  /// 2. A 2-steward plan with threshold 1 is valid for save — use
+  /// [isValidForDistribution] to check distribution readiness.
+  bool get isValidForSave {
+    try {
+      // Empty-steward config is valid (relays must be non-empty).
+      if (stewards.isEmpty) {
+        return relays.isNotEmpty;
+      }
+
+      if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+        return false;
+      }
+      if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
+        return false;
+      }
+      if (relays.isEmpty) return false;
+
+      final ids = stewards.map((h) => h.id).toSet();
+      if (ids.length != stewards.length) return false;
+
+      final stewardsWithPubkeys = stewards.where((h) => h.pubkey != null).toList();
+      final npubs = stewardsWithPubkeys.map((h) => h.npub).where((n) => n != null).toSet();
+      if (npubs.length != stewardsWithPubkeys.length) {
+        return false;
+      }
+
+      for (final relay in relays) {
+        if (!_isValidRelayUrl(relay)) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Full validity for Shamir's distribution: [isValidForSave] plus the
+  /// requirement of at least 2 stewards and threshold >= 2.
+  bool get isValidForDistribution {
+    if (stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
+      return false;
+    }
+    if (threshold < distributionMinThreshold) {
+      return false;
+    }
+    return isValidForSave;
+  }
+
+  /// Combined validity check — kept for backward compatibility.
+  /// Prefer [isValidForSave] or [isValidForDistribution] for new code.
   bool get isValid {
     try {
       // Empty-steward config is valid (relays must be non-empty).
@@ -142,7 +204,7 @@ extension BackupConfigExtension on BackupConfig {
         return relays.isNotEmpty;
       }
 
-      if (threshold < minimumThreshold(totalKeys) || threshold > totalKeys) {
+      if (threshold < minThresholdForDisplay(totalKeys) || threshold > totalKeys) {
         return false;
       }
       if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
@@ -258,13 +320,13 @@ extension BackupConfigExtension on BackupConfig {
 
   /// Normalize [threshold] into the valid range for [stewardCount] stewards.
   ///
-  /// Clamps to [minimumThreshold] so values below the floor are bumped up
-  /// (e.g. threshold 0 with 1 steward becomes 1; threshold 0 with 2+ stewards
-  /// becomes 2). Also clamps to never exceed [stewardCount], but only when
-  /// [stewardCount] > 0 (an empty plan with 0 stewards keeps the caller's
+  /// Clamps to [minThresholdForDisplay] so values below the floor are bumped
+  /// up (e.g. threshold 0 with 1 steward becomes 1; threshold 0 with 2+
+  /// stewards becomes 2). Also clamps to never exceed [stewardCount], but only
+  /// when [stewardCount] > 0 (an empty plan with 0 stewards keeps the caller's
   /// value as a placeholder until stewards are added).
   static int normalizeThreshold(int threshold, int stewardCount) {
-    final min = minimumThreshold(stewardCount);
+    final min = minThresholdForDisplay(stewardCount);
     if (threshold < min) {
       return min;
     }
@@ -274,13 +336,22 @@ extension BackupConfigExtension on BackupConfig {
     return threshold;
   }
 
+  /// Minimum threshold to show in the recovery plan UI slider.
+  ///
+  /// When there are 2+ stewards, the slider's minimum is 2 (distribution
+  /// requires it). With fewer stewards the UI allows 1 (owner-only backup).
+  ///
+  /// This is the **UI display** concern — distinct from the distribution
+  /// minimum ([distributionMinThreshold]) and the DB storage constraint (no
+  /// minimum).
+  static int minThresholdForDisplay(int stewardCount) {
+    return stewardCount >= 2 ? distributionMinThreshold : VaultBackupConstraints.minThreshold;
+  }
+
   /// Returns the minimum valid threshold for the given [stewardCount].
   ///
   /// When there are 2+ stewards, threshold must be at least 2 (distribution
   /// requires it). Single-steward or empty plans can use 1.
-  static int minimumThreshold(int stewardCount) {
-    return stewardCount >= 2 ? 2 : VaultBackupConstraints.minThreshold;
-  }
 
   /// Returns the default threshold for a new plan with the given
   /// [stewardCount].
