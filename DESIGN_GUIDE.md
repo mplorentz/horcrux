@@ -59,8 +59,8 @@ labelMedium:    Fira Sans, weight 600
 - **Font**: Archivo
 - **Alignment**: Left (not centered)
 - **Height**: 100pt toolbar
-- **Title Spacing**: 32pt
-- **Leading Width**: 32pt
+- **Title Spacing**: 16pt (no-back screens; title left edge aligns with body content at 16pt)
+- **Leading Width**: 32pt (reserved for the back-button chevron on pushed screens)
 
 ---
 
