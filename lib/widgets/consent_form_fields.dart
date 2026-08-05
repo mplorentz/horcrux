@@ -100,17 +100,13 @@ class ConsentFormFields extends StatelessWidget {
                   height: 24,
                   child: Checkbox(
                     value: hasEmail ? mailingList : false,
-                    onChanged: hasEmail
-                        ? (v) => onMailingListChanged(v ?? false)
-                        : null,
+                    onChanged: hasEmail ? (v) => onMailingListChanged(v ?? false) : null,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: hasEmail
-                        ? () => onMailingListChanged(!mailingList)
-                        : null,
+                    onTap: hasEmail ? () => onMailingListChanged(!mailingList) : null,
                     child: Text(
                       'Also subscribe me to product updates',
                       style: textTheme.bodyMedium?.copyWith(

@@ -37,8 +37,7 @@ class BackupConfig with _$BackupConfig {
 
   const BackupConfig._();
 
-  /// Number of configured stewards (replaces the dropped `totalKeys` field —
-  /// it duplicated `stewards.length`).
+  /// Number of configured stewards.
   int get totalKeys => stewards.length;
 
   /// True once any distribution has been authored. Replaces
@@ -55,39 +54,21 @@ BackupConfig createBackupConfig({
   required List<String> relays,
   String? instructions,
 }) {
-  if (stewards.isEmpty) {
-    // Empty-steward config: preserve relays/instructions, zero threshold.
-    // This is a valid state for "no stewards configured yet".
-    if (relays.isEmpty) {
-      throw ArgumentError('At least one relay must be provided');
-    }
-    for (final relay in relays) {
-      if (!_isValidRelayUrl(relay)) {
-        throw ArgumentError('Invalid relay URL: $relay');
-      }
-    }
-    return BackupConfig(
-      vaultId: vaultId,
-      threshold: 0,
-      stewards: stewards,
-      relays: relays,
-      instructions: instructions,
-      createdAt: DateTime.now(),
-      distributionVersion: 0,
-    );
-  }
-
-  if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
+  // Threshold must be >= 1 and <= max(1, totalKeys). A 0-steward plan
+  // carries its recommended threshold (>= 1), inert — no crypto-facing code
+  // reads it without first passing isValidForDistribution.
+  final maxThreshold = totalKeys < 1 ? 1 : totalKeys;
+  if (threshold < VaultBackupConstraints.minThreshold || threshold > maxThreshold) {
     throw ArgumentError(
       'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
     );
   }
-  if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
+  if (totalKeys < 0 || totalKeys > VaultBackupConstraints.maxTotalKeys) {
     throw ArgumentError(
-      'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
+      'TotalKeys must be between 0 and ${VaultBackupConstraints.maxTotalKeys}',
     );
   }
-  if (stewards.length != totalKeys) {
+  if (stewards.isNotEmpty && stewards.length != totalKeys) {
     throw ArgumentError('Stewards length must equal totalKeys');
   }
   if (relays.isEmpty) {
@@ -135,20 +116,15 @@ Steward? getOwnerSteward(BackupConfig config) {
 }
 
 extension BackupConfigExtension on BackupConfig {
-  bool get isValid {
+  /// Structural validity: relays are valid, ids are unique, and threshold
+  /// is in [1, max(1, n)]. A 0-steward plan with valid relays is valid.
+  bool get isValidForSave {
     try {
-      // Empty-steward config is valid (relays must be non-empty).
-      if (stewards.isEmpty) {
-        return relays.isNotEmpty;
-      }
-
-      if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
-        return false;
-      }
-      if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
-        return false;
-      }
       if (relays.isEmpty) return false;
+      if (threshold < VaultBackupConstraints.minThreshold) return false;
+
+      // When there are stewards, threshold must not exceed stewards count.
+      if (stewards.isNotEmpty && threshold > totalKeys) return false;
 
       final ids = stewards.map((h) => h.id).toSet();
       if (ids.length != stewards.length) return false;
@@ -177,9 +153,6 @@ extension BackupConfigExtension on BackupConfig {
   /// [VaultBackupConstraints.minStewardsForDistribution] stewards and a
   /// threshold of at least 2. A structurally valid plan with fewer stewards
   /// is still a legitimate thing to *save* — it is simply not finished yet.
-  ///
-  /// This is the predicate for "is the plan complete", distinct from
-  /// [isValid], which only asks whether the config is internally consistent.
   bool get isValidForDistribution {
     if (stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
       return false;
@@ -187,7 +160,7 @@ extension BackupConfigExtension on BackupConfig {
     if (threshold < VaultBackupConstraints.minStewardsForDistribution) {
       return false;
     }
-    return isValid;
+    return isValidForSave;
   }
 
   int get activeStewardsCount {
