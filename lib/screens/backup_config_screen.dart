@@ -630,9 +630,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       message = isOwnerSteward
           ? "You're setting up a 1-of-1 backup with only yourself as the steward."
           : "You're setting up a 1-of-1 backup with only one steward.";
-      detailMessage = isOwnerSteward
-          ? "Since you are the only steward, if you lose access to this device you won't be able to recover this vault. You also won't be able to distribute keys until you add at least one more steward."
-          : "If that steward's key is lost or compromised, recovery will be impossible. You also won't be able to distribute keys until you add at least one more steward.";
+      detailMessage =
+          "You won't be able to back up the vault until you add at least one more steward.";
       cancelButton = 'Add More Stewards';
     } else {
       title = 'Threshold of 1';
