@@ -162,6 +162,59 @@ void main() {
       });
     });
 
+    group('isValidForDistribution', () {
+      const hexA = 'a0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+      const hexB = 'b0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
+
+      BackupConfig config({required int threshold, required List<Steward> stewards}) {
+        return BackupConfig(
+          vaultId: 'vault-1',
+          threshold: threshold,
+          stewards: stewards,
+          relays: const ['wss://relay.example.com'],
+          createdAt: DateTime(2024, 1, 1),
+          distributionVersion: 0,
+        );
+      }
+
+      test('is false with no stewards', () {
+        final c = config(threshold: 2, stewards: const []);
+        // Still savable — it carries relays — but nothing to distribute to.
+        expect(c.isValid, isTrue);
+        expect(c.isValidForDistribution, isFalse);
+      });
+
+      test('is false with a single steward', () {
+        final c = config(threshold: 1, stewards: [createSteward(pubkey: hexA)]);
+        expect(c.isValid, isTrue);
+        expect(c.isValidForDistribution, isFalse);
+      });
+
+      test('is false with two stewards but threshold 1', () {
+        final c = config(
+          threshold: 1,
+          stewards: [createSteward(pubkey: hexA), createSteward(pubkey: hexB)],
+        );
+        expect(c.isValidForDistribution, isFalse);
+      });
+
+      test('is true with two stewards and threshold 2', () {
+        final c = config(
+          threshold: 2,
+          stewards: [createSteward(pubkey: hexA), createSteward(pubkey: hexB)],
+        );
+        expect(c.isValidForDistribution, isTrue);
+      });
+
+      test('is false when structurally invalid even with enough stewards', () {
+        final c = config(
+          threshold: 2,
+          stewards: [createSteward(pubkey: hexA), createSteward(pubkey: hexB)],
+        ).copyWith(relays: const []);
+        expect(c.isValidForDistribution, isFalse);
+      });
+    });
+
     group('BackupConfig equality', () {
       test('two instances with same fields are equal and have same hashCode', () {
         const pubkey = 'd0a1ffb8761b974cec4a3be8cbcb2e96a7090dcf465ffeac839aa4ca20c9a59e';
