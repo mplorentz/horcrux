@@ -106,6 +106,153 @@ void main() {
     });
   });
 
+  group('getAccount', () {
+    test('sends GET /account with NIP-98 auth and parses response', () async {
+      final mockClient = MockClient((request) async {
+        capturedRequests.add(request);
+        return http.Response.bytes(
+          utf8.encode(jsonEncode(<String, dynamic>{
+            'npub_hex': 'aabbccdd',
+            'email': 'user@example.com',
+            'analytics_opt_in': true,
+            'mailing_list': false,
+            'tos_version': 1,
+            'tos_accepted_at': '2026-07-29T12:00:00Z',
+          })),
+          200,
+        );
+      });
+
+      final service = createService(mockClient);
+      final account = await service.getAccount();
+
+      expect(capturedRequests, hasLength(1));
+      final req = capturedRequests.first;
+      expect(req.url.path, '/account');
+      expect(req.method, 'GET');
+
+      final auth = req.headers['authorization'];
+      expect(auth, isNotNull);
+      expect(auth!.startsWith('Nostr '), isTrue);
+
+      expect(account.npubHex, 'aabbccdd');
+      expect(account.email, 'user@example.com');
+      expect(account.analyticsOptIn, isTrue);
+      expect(account.mailingList, isFalse);
+      expect(account.tosVersion, 1);
+      expect(account.tosAcceptedAt, isNotNull);
+    });
+
+    test('parses null email and defaults when fields are absent', () async {
+      final mockClient = MockClient((_) async {
+        return http.Response.bytes(
+          utf8.encode(jsonEncode(<String, dynamic>{
+            'npub_hex': 'aabbccdd',
+            'email': null,
+          })),
+          200,
+        );
+      });
+
+      final service = createService(mockClient);
+      final account = await service.getAccount();
+
+      expect(account.email, isNull);
+      expect(account.analyticsOptIn, isFalse);
+      expect(account.mailingList, isFalse);
+      expect(account.tosVersion, isNull);
+    });
+
+    test('throws on non-2xx response', () async {
+      final mockClient = MockClient((_) async {
+        return http.Response('{"error":"unauthorized"}', 401);
+      });
+
+      final service = createService(mockClient);
+      expect(
+        () => service.getAccount(),
+        throwsA(predicate<HorcruxApiException>((e) => e.isUnauthorized)),
+      );
+    });
+
+    test('throws when no Nostr key is available', () async {
+      when(loginService.getStoredNostrKey()).thenAnswer((_) async => null);
+
+      final mockClient = MockClient((_) async {
+        return http.Response('{}', 200);
+      });
+
+      final service = createService(mockClient);
+      expect(
+        () => service.getAccount(),
+        throwsA(
+          predicate<HorcruxApiException>((e) => e.isTransport),
+        ),
+      );
+    });
+  });
+
+  group('updateAccount', () {
+    test('sends PUT /account with NIP-98 auth and full body', () async {
+      final mockClient = MockClient((request) async {
+        capturedRequests.add(request);
+        return http.Response.bytes(utf8.encode('{}'), 200);
+      });
+
+      final service = createService(mockClient);
+      await service.updateAccount(
+        email: 'user@example.com',
+        analyticsOptIn: true,
+        mailingList: true,
+      );
+
+      expect(capturedRequests, hasLength(1));
+      final req = capturedRequests.first;
+      expect(req.url.path, '/account');
+      expect(req.method, 'PUT');
+
+      final auth = req.headers['authorization'];
+      expect(auth, isNotNull);
+      expect(auth!.startsWith('Nostr '), isTrue);
+
+      if (req is http.Request) {
+        final body = jsonDecode(utf8.decode(req.bodyBytes)) as Map<String, dynamic>;
+        expect(body['email'], 'user@example.com');
+        expect(body['analytics_opt_in'], isTrue);
+        expect(body['mailing_list'], isTrue);
+      }
+    });
+
+    test('sends null email and defaults mailing_list to false', () async {
+      final mockClient = MockClient((request) async {
+        capturedRequests.add(request);
+        return http.Response.bytes(utf8.encode('{}'), 200);
+      });
+
+      final service = createService(mockClient);
+      await service.updateAccount(analyticsOptIn: false);
+
+      final req = capturedRequests.first;
+      if (req is http.Request) {
+        final body = jsonDecode(utf8.decode(req.bodyBytes)) as Map<String, dynamic>;
+        expect(body['email'], isNull);
+        expect(body['mailing_list'], isFalse);
+      }
+    });
+
+    test('throws on non-2xx response', () async {
+      final mockClient = MockClient((_) async {
+        return http.Response('{"error":"unprocessable"}', 422);
+      });
+
+      final service = createService(mockClient);
+      expect(
+        () => service.updateAccount(analyticsOptIn: true),
+        throwsA(predicate<HorcruxApiException>((e) => e.isUnprocessable)),
+      );
+    });
+  });
+
   group('needsConsentAcceptance', () {
     // The ToS version check is now purely local (bundled kCurrentTosVersion
     // vs. the last accepted version in the DB) — no network call, so these
