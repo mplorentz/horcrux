@@ -33,13 +33,6 @@ import '../widgets/row_button.dart';
 /// and email fields are independent and are submitted with whatever the user
 /// entered regardless of the checkbox.
 ///
-/// ## View-only mode ([viewOnly])
-///
-/// When opened from Settings > Account > Terms & Privacy, the screen shows
-/// the terms without a checkbox or approve button. It auto-accepts silently
-/// on load (forced accept) and pops back to the previous screen. The back
-/// button is hidden -- the user cannot dismiss without accepting.
-///
 /// ## Re-prompt
 ///
 /// When the served version is greater than the last locally-accepted version,
@@ -54,12 +47,7 @@ class ConsentScreen extends ConsumerStatefulWidget {
   /// `pushAndRemoveUntil`).
   final Widget? nextScreen;
 
-  /// When `true`, renders as a view-only screen with no checkbox or approve
-  /// button. The terms are auto-accepted silently on load. Used from
-  /// Settings > Account > Terms & Privacy.
-  final bool viewOnly;
-
-  const ConsentScreen({super.key, this.nextScreen, this.viewOnly = false});
+  const ConsentScreen({super.key, this.nextScreen});
 
   @override
   ConsumerState<ConsentScreen> createState() => _ConsentScreenState();
@@ -71,8 +59,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
   bool _isLoading = true;
   bool _isAccepting = false;
   bool _agreed = false;
-  bool _viewOnlyAccepted = false;
-  bool _viewOnlyAutoAcceptStarted = false;
 
   // Independent consent preferences (submit regardless of ToS checkbox).
   bool _analyticsOptIn = false;
@@ -103,8 +89,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _viewOnlyAutoAcceptStarted = false;
-      _viewOnlyAccepted = false;
     });
 
     try {
@@ -116,10 +100,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           _tos = tos;
           _isLoading = false;
         });
-        // In view-only mode, auto-accept after loading.
-        if (widget.viewOnly) {
-          _autoAcceptTerms(tos);
-        }
       }
     } catch (e, st) {
       Log.error('ConsentScreen: failed to load ToS', e, st);
@@ -128,39 +108,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           _errorMessage = 'Could not load Terms of Service.';
           _isLoading = false;
         });
-      }
-    }
-  }
-
-  /// Auto-accepts the current terms silently (view-only mode).
-  Future<void> _autoAcceptTerms(TermsOfService tos) async {
-    if (_viewOnlyAutoAcceptStarted) return;
-    _viewOnlyAutoAcceptStarted = true;
-
-    try {
-      final api = ref.read(horcruxApiServiceProvider);
-      await api.acceptTermsOfService(tos.version);
-
-      if (!mounted) return;
-
-      setState(() => _viewOnlyAccepted = true);
-
-      // Brief delay so the user sees the "Accepted" state, then pop back.
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e, st) {
-      Log.error('ConsentScreen: auto-accept failed', e, st);
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Could not accept Terms of Service. '
-              'Please check your internet connection and try again.';
-        });
-        context.showHorcruxSnackBar(
-          'Failed to accept Terms of Service: $e',
-          kind: HorcruxSnackKind.error,
-        );
       }
     }
   }
@@ -240,7 +187,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     return HorcruxScaffold(
       appBar: HorcruxAppBar(
         title: 'Consent',
-        automaticallyImplyLeading: widget.viewOnly ? false : widget.nextScreen == null,
+        automaticallyImplyLeading: widget.nextScreen == null,
       ),
       body: SafeArea(
         bottom: false,
@@ -249,10 +196,8 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
             Expanded(
               child: _buildBody(theme, textTheme),
             ),
-            // View-only mode: show "Accepted" indicator after auto-accept.
-            if (widget.viewOnly && _viewOnlyAccepted) _buildViewOnlyAccepted(theme, textTheme),
-            // Onboarding mode: show checkbox + continue button.
-            if (!widget.viewOnly && _tos != null && !_isAccepting) _buildFooter(theme, textTheme),
+            // Show checkbox + continue button once the terms are loaded.
+            if (_tos != null && !_isAccepting) _buildFooter(theme, textTheme),
             if (_isAccepting) _buildAcceptingIndicator(theme),
           ],
         ),
@@ -313,17 +258,14 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           const SizedBox(height: 8),
           // Analytics + email + mailing-list fields, rendered ABOVE the
           // legal text per the locked design.
-          // Hidden in view-only mode — those screens auto-accept silently
-          // and never write preferences.
-          if (!widget.viewOnly)
-            ConsentFormFields(
-              analyticsOptIn: _analyticsOptIn,
-              emailController: _emailController,
-              mailingList: _mailingList,
-              onAnalyticsOptInChanged: (v) => setState(() => _analyticsOptIn = v),
-              onEmailChanged: (_) => setState(() {}),
-              onMailingListChanged: (v) => setState(() => _mailingList = v),
-            ),
+          ConsentFormFields(
+            analyticsOptIn: _analyticsOptIn,
+            emailController: _emailController,
+            mailingList: _mailingList,
+            onAnalyticsOptInChanged: (v) => setState(() => _analyticsOptIn = v),
+            onEmailChanged: (_) => setState(() {}),
+            onMailingListChanged: (v) => setState(() => _mailingList = v),
+          ),
           MarkdownBody(
             data: tos.text,
             styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
@@ -394,29 +336,6 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           ),
           SizedBox(width: 12),
           Text('Recording acceptance...'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildViewOnlyAccepted(ThemeData theme, TextTheme textTheme) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 20,
-            color: theme.colorScheme.onSurface,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Terms accepted',
-            style: textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ],
       ),
     );

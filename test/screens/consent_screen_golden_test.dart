@@ -8,7 +8,7 @@ import '../helpers/golden_test_helpers.dart';
 
 /// Mock that satisfies the [HorcruxApiService] interface for golden tests.
 /// No methods are called during initial render of the onboarding consent
-/// screen — the API is only read on Continue or in view-only mode.
+/// screen — the API is only read on Continue.
 class MockApiForGolden extends Mock implements HorcruxApiService {
   @override
   Future<void> acceptTermsOfService(int tosVersion) {
@@ -38,42 +38,6 @@ void main() {
       );
 
       await screenMatchesGolden(tester, 'consent_screen_onboarding');
-
-      await harness.dispose();
-    });
-
-    testGoldens('consent screen - view-only mode', (tester) async {
-      final mockApi = MockApiForGolden();
-
-      final harness = await pumpGoldenWidget(
-        tester,
-        const ConsentScreen(viewOnly: true),
-        overrides: [horcruxApiServiceProvider.overrideWithValue(mockApi)],
-        surfaceSize: const Size(375, 812), // iPhone X size
-        waitForSettle: false, // Don't pumpAndSettle — we need controlled pumps
-      );
-
-      // Pump once to flush the initial build.
-      await tester.pump();
-
-      // Pump a short duration to flush the async ToS load + auto-accept
-      // (mock returns immediately). The auto-accept sets _viewOnlyAccepted = true
-      // and then waits 600ms before popping. By pumping only 100ms, we capture
-      // the screen WITH the "Terms accepted" banner visible, before the pop.
-      await tester.pump(const Duration(milliseconds: 100));
-
-      // Capture the golden — the ConsentScreen is still on the route with
-      // the "Terms accepted" indicator visible.
-      await expectLater(
-        find.byType(ConsentScreen),
-        matchesGoldenFile('goldens/consent_screen_view_only.png'),
-        skip: GoldenToolkit.configuration.skipGoldenAssertion(),
-      );
-
-      // Flush the auto-accept's 600ms pop timer so the test doesn't end with
-      // a pending timer (would trigger the "Timer is still pending" assertion).
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pump();
 
       await harness.dispose();
     });
