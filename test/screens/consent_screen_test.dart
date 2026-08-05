@@ -7,8 +7,6 @@ import 'package:horcrux/screens/consent_screen.dart';
 import 'package:horcrux/services/horcrux_api_service.dart';
 import 'package:horcrux/widgets/theme.dart';
 
-
-
 /// Mock that tracks whether updateAccount was called and what args were used.
 class TrackedMockHorcruxApiService extends Mock implements HorcruxApiService {
   bool updateAccountCalled = false;
@@ -19,8 +17,9 @@ class TrackedMockHorcruxApiService extends Mock implements HorcruxApiService {
   @override
   Future<void> acceptTermsOfService(int tosVersion) {
     return super.noSuchMethod(
-      Invocation.method(#acceptTermsOfService, [tosVersion]),
-    ) as Future<void>? ?? Future<void>.value();
+          Invocation.method(#acceptTermsOfService, [tosVersion]),
+        ) as Future<void>? ??
+        Future<void>.value();
   }
 
   @override
@@ -186,7 +185,15 @@ void main() {
       final mockApiService = ThrowingMock();
       when(mockApiService.acceptTermsOfService(1)).thenAnswer((_) async => Future.value());
 
-      await pumpConsentScreen(tester: tester, mockApiService: mockApiService);
+      // A distinct destination so we can assert navigation occurred even
+      // though the account write fails.
+      const nextScreen = Scaffold(body: Text('Post-consent destination'));
+
+      await pumpConsentScreen(
+        tester: tester,
+        mockApiService: mockApiService,
+        nextScreen: nextScreen,
+      );
 
       // Accept ToS
       await tester.tap(find.text('I agree to the Terms of Service & Privacy Policy'));
@@ -194,12 +201,20 @@ void main() {
 
       // Tap Continue — updateAccount fails but navigation should proceed
       await tester.tap(find.text('Continue'));
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+
+      // Navigation proceeded despite the failed account write.
+      expect(find.text('Post-consent destination'), findsOneWidget);
 
       // Verify ToS was accepted
       verify(mockApiService.acceptTermsOfService(1)).called(1);
       // Verify updateAccount was attempted
       expect(mockApiService.updateAccountCalled, isTrue);
+
+      // Flush any warning snackbar timer (from the non-blocking account
+      // write failure) so the test doesn't end with a pending timer.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
     });
   });
 }

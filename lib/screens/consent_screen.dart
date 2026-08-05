@@ -168,13 +168,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
       if (!mounted) return;
 
-      // Push account preferences (analytics, email, mailing-list). This is
-      // independent of ToS acceptance and MUST NOT block onboarding on a
-      // transient API failure — the ToS acceptance is the gating consent.
-      await _saveAccountPreferences(api);
-
-      if (!mounted) return;
-
+      // Navigate immediately — ToS acceptance is the gating consent.
+      // Account preferences (analytics, email, mailing-list) are saved
+      // fire-and-forget after navigation so a transient API outage never
+      // blocks onboarding. Failures are caught internally and logged.
       final next = widget.nextScreen;
       if (next != null) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -188,6 +185,9 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         );
         Navigator.of(context).pop(true);
       }
+
+      // Fire-and-forget account preferences save (non-blocking).
+      _saveAccountPreferences(api);
     } catch (e, st) {
       Log.error('ConsentScreen: failed to accept ToS', e, st);
       if (mounted) {
@@ -305,14 +305,17 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           const SizedBox(height: 8),
           // Analytics + email + mailing-list fields, rendered ABOVE the
           // legal text per the locked design.
-          ConsentFormFields(
-            analyticsOptIn: _analyticsOptIn,
-            emailController: _emailController,
-            mailingList: _mailingList,
-            onAnalyticsOptInChanged: (v) => setState(() => _analyticsOptIn = v),
-            onEmailChanged: (_) => setState(() {}),
-            onMailingListChanged: (v) => setState(() => _mailingList = v),
-          ),
+          // Hidden in view-only mode — those screens auto-accept silently
+          // and never write preferences.
+          if (!widget.viewOnly)
+            ConsentFormFields(
+              analyticsOptIn: _analyticsOptIn,
+              emailController: _emailController,
+              mailingList: _mailingList,
+              onAnalyticsOptInChanged: (v) => setState(() => _analyticsOptIn = v),
+              onEmailChanged: (_) => setState(() {}),
+              onMailingListChanged: (v) => setState(() => _mailingList = v),
+            ),
           MarkdownBody(
             data: tos.text,
             styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(

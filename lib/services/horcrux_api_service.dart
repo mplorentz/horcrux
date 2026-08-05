@@ -178,14 +178,15 @@ class HorcruxApiService {
       url: url,
     );
 
-    final response = await _httpClient
-        .get(url, headers: {'Authorization': authHeader})
-        .timeout(_requestTimeout);
+    final response =
+        await _httpClient.get(url, headers: {'Authorization': authHeader}).timeout(_requestTimeout);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final account = Account.fromJson(json);
-      Log.info('HorcruxApiService: fetched account for npub ${account.npubHex}');
+      // Deliberately don't log the npub: hex is for internal use, and the
+      // bech32 conversion isn't worth an ndk import for an unused endpoint.
+      Log.info('HorcruxApiService: fetched account record');
       return account;
     }
 
