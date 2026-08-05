@@ -192,6 +192,12 @@ extension BackupConfigExtension on BackupConfig {
     return stewards.every((h) => h.pubkey != null);
   }
 
+  /// Backup is ready for distribution when all stewards have pubkeys and
+  /// there are enough stewards for Shamir's Secret Sharing (at least 2).
+  bool get isValidForDistribution {
+    return canDistribute && stewards.length >= VaultBackupConstraints.minStewardsForDistribution;
+  }
+
   int get pendingInvitationsCount {
     return stewards.where((h) => h.status == StewardStatus.invited && h.pubkey == null).length;
   }

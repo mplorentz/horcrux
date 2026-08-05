@@ -18,8 +18,9 @@ class MockHorcruxApiService extends Mock implements HorcruxApiService {
   @override
   Future<void> acceptTermsOfService(int tosVersion) {
     return super.noSuchMethod(
-      Invocation.method(#acceptTermsOfService, [tosVersion]),
-    ) as Future<void>? ?? Future<void>.value();
+          Invocation.method(#acceptTermsOfService, [tosVersion]),
+        ) as Future<void>? ??
+        Future<void>.value();
   }
 }
 

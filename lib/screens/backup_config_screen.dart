@@ -289,11 +289,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 onPressed: () => Navigator.pop(context, 'cancel'),
                 child: const Text('Cancel'),
               ),
-              if (_canCreateBackup())
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, 'save'),
-                  child: const Text('Save'),
-                ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'save'),
+                child: const Text('Save'),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, 'discard'),
                 child: const Text('Discard'),
@@ -592,14 +591,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
             RowButtonStack(
               buttons: [
                 RowButtonConfig(onPressed: _handleCancel, icon: Icons.close, text: 'Cancel'),
-                if (_stewards.isEmpty)
-                  RowButtonConfig(onPressed: _handleSkip, icon: Icons.save, text: 'Save')
-                else
-                  RowButtonConfig(
-                    onPressed: !_isCreating ? _saveBackup : null,
-                    icon: _isCreating ? Icons.hourglass_empty : Icons.save,
-                    text: _isCreating ? 'Saving...' : 'Save',
-                  ),
+                RowButtonConfig(
+                  onPressed: !_isCreating ? _saveBackup : null,
+                  icon: _isCreating ? Icons.hourglass_empty : Icons.save,
+                  text: _isCreating ? 'Saving...' : 'Save',
+                ),
               ],
             ),
           ],
@@ -637,7 +633,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     } else {
       title = 'Threshold of 1';
       message = 'With a threshold of 1, any single steward can unlock this vault on their own.';
-      detailMessage = 'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
+      detailMessage =
+          'This defeats the purpose of multi-party security — one compromised steward means the vault is compromised. Consider raising the threshold.';
       cancelButton = 'Raise Threshold';
     }
 
@@ -671,10 +668,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     );
 
     return shouldContinue == true;
-  }
-
-  bool _canCreateBackup() {
-    return _stewards.isNotEmpty && _relays.isNotEmpty;
   }
 
   /// Runs the owner push opt-in nudge (a no-op when the user is not the
@@ -1427,11 +1420,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
                 onPressed: () => Navigator.pop(context, 'discard'),
                 child: const Text('Discard'),
               ),
-              if (_canCreateBackup())
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, 'save'),
-                  child: const Text('Save'),
-                ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'save'),
+                child: const Text('Save'),
+              ),
             ],
           ),
         );
@@ -1450,44 +1442,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     }
   }
 
-  /// Save when no stewards are configured. Persists a zero-steward backup
-  /// config (preserving relays and instructions) and the push notification
-  /// preference, then navigates back.
-  Future<void> _handleSkip() async {
-    if (!mounted) return;
-    try {
-      final repository = ref.read(vaultRepositoryProvider);
-      await repository.setPushEnabled(widget.vaultId, _alertStewardsWithPush);
-
-      // Persist a zero-steward config that carries the current relays and
-      // instructions, so custom relays aren't lost on last-steward removal.
-      final existingConfig = await repository.getBackupConfig(widget.vaultId);
-      if (existingConfig != null) {
-        final backupService = ref.read(backupServiceProvider);
-        await backupService.saveBackupConfig(
-          vaultId: widget.vaultId,
-          threshold: 0,
-          totalKeys: 0,
-          stewards: const [],
-          relays: _relays,
-          instructions: _instructionsController.text.trim(),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        context.showHorcruxSnackBar(
-          'Failed to update push notification preference: $e',
-          kind: HorcruxSnackKind.error,
-        );
-      }
-      return;
-    }
-    await _popWithOwnerPushPrompt(widget.vaultId);
-  }
-
   Future<void> _saveBackup() async {
-    if (!_canCreateBackup()) return;
-
     // Warn about threshold-1 — any single steward is a single point of failure
     final shouldContinue = await _confirmProceedWithThresholdOne();
     if (!shouldContinue || !mounted) return;
@@ -1546,9 +1501,7 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       final pushPreferenceChanged = pushBeforeSave != _alertStewardsWithPush;
 
       if (updatedConfig != null &&
-          updatedConfig.canDistribute &&
-          updatedConfig.stewards.length >=
-              VaultBackupConstraints.minStewardsForDistribution &&
+          updatedConfig.isValidForDistribution &&
           (configChanged || pushPreferenceChanged)) {
         try {
           if (configChanged) {
