@@ -79,10 +79,18 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _mailingList = false;
 
+  /// Guards [didChangeDependencies] so the ToS load runs only once.
+  bool _loadStarted = false;
+
   @override
-  void initState() {
-    super.initState();
-    _loadTermsOfService();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadStarted) {
+      _loadStarted = true;
+      // Load here (not initState) so `DefaultAssetBundle.of(context)` is a
+      // valid inherited-widget lookup.
+      _loadTermsOfService();
+    }
   }
 
   @override

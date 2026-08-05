@@ -70,6 +70,11 @@ void main() {
         skip: GoldenToolkit.configuration.skipGoldenAssertion(),
       );
 
+      // Flush the auto-accept's 600ms pop timer so the test doesn't end with
+      // a pending timer (would trigger the "Timer is still pending" assertion).
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump();
+
       await harness.dispose();
     });
 
