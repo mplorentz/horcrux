@@ -95,43 +95,8 @@ class BackupService {
     required List<String> relays,
     String? instructions,
   }) async {
-    // Empty-steward config: skip validation, preserve relays.
-    if (stewards.isEmpty) {
-      if (relays.isEmpty) {
-        throw ArgumentError('At least one relay must be provided');
-      }
-      final config = createBackupConfig(
-        vaultId: vaultId,
-        threshold: 0,
-        totalKeys: 0,
-        stewards: stewards,
-        relays: relays,
-        instructions: instructions,
-      );
-      await _repository.updateBackupConfig(vaultId, config);
-      Log.info('Created empty-steward backup configuration for vault $vaultId');
-      return config;
-    }
-
-    // Validate inputs
-    if (threshold < VaultBackupConstraints.minThreshold || threshold > totalKeys) {
-      throw ArgumentError(
-        'Threshold must be >= ${VaultBackupConstraints.minThreshold} and <= totalKeys',
-      );
-    }
-    if (totalKeys < threshold || totalKeys > VaultBackupConstraints.maxTotalKeys) {
-      throw ArgumentError(
-        'TotalKeys must be >= threshold and <= ${VaultBackupConstraints.maxTotalKeys}',
-      );
-    }
-    if (stewards.length != totalKeys) {
-      throw ArgumentError('Stewards length must equal totalKeys');
-    }
-    if (relays.isEmpty) {
-      throw ArgumentError('At least one relay must be provided');
-    }
-
-    // Create backup configuration
+    // createBackupConfig performs all validation (including the empty-steward
+    // case, which stores a non-zero threshold) and returns the config.
     final config = createBackupConfig(
       vaultId: vaultId,
       threshold: threshold,
@@ -601,8 +566,7 @@ class BackupService {
 
       if (backupConfig != null && vaultDetail is OwnedVaultDetail) {
         // Check if there are at least 2 stewards (Shamir requires numParts >= 2)
-        if (backupConfig.stewards.length <
-            VaultBackupConstraints.minStewardsForDistribution) {
+        if (backupConfig.stewards.length < VaultBackupConstraints.minStewardsForDistribution) {
           Log.info(
             'Skipping auto-distribution: need at least 2 stewards (have ${backupConfig.stewards.length})',
           );

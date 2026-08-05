@@ -180,13 +180,13 @@ void main() {
       test('is false with no stewards', () {
         final c = config(threshold: 2, stewards: const []);
         // Still savable — it carries relays — but nothing to distribute to.
-        expect(c.isValid, isTrue);
+        expect(c.isValidForSave, isTrue);
         expect(c.isValidForDistribution, isFalse);
       });
 
       test('is false with a single steward', () {
         final c = config(threshold: 1, stewards: [createSteward(pubkey: hexA)]);
-        expect(c.isValid, isTrue);
+        expect(c.isValidForSave, isTrue);
         expect(c.isValidForDistribution, isFalse);
       });
 

@@ -51,16 +51,18 @@ class RecoveryRulesWidget extends StatelessWidget {
                 'Keys Needed to Unlock: $threshold',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              // The screen normalizes _threshold on every steward mutation, so
+              // the value passed here is already in [minThresholdForDisplay(n), n].
+              // Using it directly (rather than clamping) surfaces any drift as a
+              // visible slider/text mismatch instead of a silent inconsistency.
               Slider(
-                value: threshold.toDouble().clamp(
-                      VaultBackupConstraints.minThreshold.toDouble(),
-                      stewardCount.toDouble(),
-                    ),
-                min: VaultBackupConstraints.minThreshold.toDouble(),
+                value: threshold.toDouble(),
+                min: VaultBackupConstraints.minThresholdForDisplay(stewardCount).toDouble(),
                 max: stewardCount.toDouble(),
-                divisions: stewardCount - VaultBackupConstraints.minThreshold > 0
-                    ? stewardCount - VaultBackupConstraints.minThreshold
-                    : null,
+                divisions:
+                    stewardCount - VaultBackupConstraints.minThresholdForDisplay(stewardCount) > 0
+                        ? stewardCount - VaultBackupConstraints.minThresholdForDisplay(stewardCount)
+                        : null,
                 onChanged: (value) {
                   onThresholdChanged(value.round());
                 },
