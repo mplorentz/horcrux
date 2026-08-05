@@ -50,14 +50,25 @@ void main() {
         const ConsentScreen(viewOnly: true),
         overrides: [horcruxApiServiceProvider.overrideWithValue(mockApi)],
         surfaceSize: const Size(375, 812), // iPhone X size
+        waitForSettle: false, // Don't pumpAndSettle — we need controlled pumps
       );
 
-      // View-only mode auto-accepts silently on load, then pops back.
-      // The golden captures the transient state before auto-accept completes.
-      // This is acceptable because the rendering is identical to the loading
-      // state (no ConsentFormFields, no footer, just the ToS text).
-      // The view-only screen is simple enough that a unit test covers it.
-      await screenMatchesGolden(tester, 'consent_screen_view_only');
+      // Pump once to flush the initial build.
+      await tester.pump();
+
+      // Pump a short duration to flush the async ToS load + auto-accept
+      // (mock returns immediately). The auto-accept sets _viewOnlyAccepted = true
+      // and then waits 600ms before popping. By pumping only 100ms, we capture
+      // the screen WITH the "Terms accepted" banner visible, before the pop.
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Capture the golden — the ConsentScreen is still on the route with
+      // the "Terms accepted" indicator visible.
+      await expectLater(
+        find.byType(ConsentScreen),
+        matchesGoldenFile('goldens/consent_screen_view_only.png'),
+        skip: GoldenToolkit.configuration.skipGoldenAssertion(),
+      );
 
       await harness.dispose();
     });
