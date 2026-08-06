@@ -34,7 +34,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>29</string>
+	<string>33</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -64,6 +64,6 @@
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<false/>
 </dict>
 </plist>
