@@ -75,10 +75,7 @@ void main() {
         const deviceBPubkey = TestHexPubkeys.bob; // First steward (holdingKey)
         const deviceCPubkey = TestHexPubkeys.charlie; // New steward being added
 
-        final deviceBSteward = createSteward(
-          pubkey: deviceBPubkey,
-          name: 'Device B',
-        ).copyWith(
+        final deviceBSteward = createSteward(pubkey: deviceBPubkey, name: 'Device B').copyWith(
           status: StewardStatus.holdingKey,
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
@@ -96,14 +93,20 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
+        final backupConfigWithVersion = initialBackupConfig.copyWith(
+          distributionVersion: 1,
+        );
 
         // Mock repository to return the initial backup config
-        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
-        when(mockLoginService.encryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockLoginService.decryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => deviceAPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
 
         // Create a vault first (required for backup config)
         final testVault = Vault(
@@ -115,7 +118,10 @@ void main() {
         await realRepository.addVault(testVault);
 
         // Store the initial backup config in the repository
-        await realRepository.updateBackupConfig(vaultId, backupConfigWithVersion);
+        await realRepository.updateBackupConfig(
+          vaultId,
+          backupConfigWithVersion,
+        );
 
         // Create an invitation for Device C
         await invitationService.generateInvitationLink(
@@ -125,11 +131,15 @@ void main() {
         );
 
         // Get the generated invitation
-        final invitations = await invitationService.getPendingInvitations(vaultId);
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
         final invitation = invitations.first;
 
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
 
         // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
@@ -144,7 +154,9 @@ void main() {
         );
 
         // Act: Process invitation acceptance (which adds Device C as a new steward)
-        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
+        await invitationService.processInvitationAcceptanceEvent(
+          event: acceptanceEvent,
+        );
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
@@ -154,9 +166,13 @@ void main() {
         expect(updatedConfig!.distributionVersion, equals(2));
 
         // Verify Device B's status was updated to awaitingNewKey
-        final deviceBInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceBPubkey);
-        expect(deviceBInUpdatedConfig.status, equals(StewardStatus.awaitingNewKey));
+        final deviceBInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceBPubkey,
+        );
+        expect(
+          deviceBInUpdatedConfig.status,
+          equals(StewardStatus.awaitingNewKey),
+        );
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
@@ -164,9 +180,13 @@ void main() {
         expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was added with awaitingKey status
-        final deviceCInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceCPubkey);
-        expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
+        final deviceCInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceCPubkey,
+        );
+        expect(
+          deviceCInUpdatedConfig.status,
+          equals(StewardStatus.awaitingKey),
+        );
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
 
         expect(updatedConfig.needsRedistribution, isTrue);
@@ -188,10 +208,7 @@ void main() {
 
         const inviteCode = 'test-invite-code-123';
 
-        final deviceBSteward = createSteward(
-          pubkey: deviceBPubkey,
-          name: 'Device B',
-        ).copyWith(
+        final deviceBSteward = createSteward(pubkey: deviceBPubkey, name: 'Device B').copyWith(
           status: StewardStatus.holdingKey,
           acknowledgedAt: DateTime.now().subtract(const Duration(days: 1)),
           acknowledgmentEventId: 'old-confirmation-id',
@@ -214,14 +231,20 @@ void main() {
         );
 
         // Set distribution version to 1
-        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
+        final backupConfigWithVersion = initialBackupConfig.copyWith(
+          distributionVersion: 1,
+        );
 
         // Mock repository to return the initial backup config
-        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
-        when(mockLoginService.encryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockLoginService.decryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => deviceAPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
 
         // Create a vault first (required for backup config)
         final testVault = Vault(
@@ -233,7 +256,10 @@ void main() {
         await realRepository.addVault(testVault);
 
         // Store the initial backup config in the repository
-        await realRepository.updateBackupConfig(vaultId, backupConfigWithVersion);
+        await realRepository.updateBackupConfig(
+          vaultId,
+          backupConfigWithVersion,
+        );
 
         // Create an invitation for Device C with the invite code
         await invitationService.generateInvitationLink(
@@ -243,12 +269,16 @@ void main() {
         );
 
         // Get the generated invitation and update it to use our test invite code
-        final invitations = await invitationService.getPendingInvitations(vaultId);
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
         final generatedInvitation = invitations.first;
         // We'll use the generated invite code instead
 
         // Mock the backup service to not trigger distribution (we're testing the config update logic)
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
 
         // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
@@ -263,7 +293,9 @@ void main() {
         );
 
         // Act: Device C accepts the invitation
-        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
+        await invitationService.processInvitationAcceptanceEvent(
+          event: acceptanceEvent,
+        );
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
@@ -273,9 +305,13 @@ void main() {
         expect(updatedConfig!.distributionVersion, equals(2));
 
         // Verify Device B's status was updated to awaitingNewKey
-        final deviceBInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceBPubkey);
-        expect(deviceBInUpdatedConfig.status, equals(StewardStatus.awaitingNewKey));
+        final deviceBInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceBPubkey,
+        );
+        expect(
+          deviceBInUpdatedConfig.status,
+          equals(StewardStatus.awaitingNewKey),
+        );
         expect(deviceBInUpdatedConfig.acknowledgedAt, isNull);
         expect(deviceBInUpdatedConfig.acknowledgmentEventId, isNull);
         expect(deviceBInUpdatedConfig.acknowledgedDistributionVersion, isNull);
@@ -283,9 +319,13 @@ void main() {
         expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Verify Device C was updated from invited to awaitingKey
-        final deviceCInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceCPubkey);
-        expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
+        final deviceCInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceCPubkey,
+        );
+        expect(
+          deviceCInUpdatedConfig.status,
+          equals(StewardStatus.awaitingKey),
+        );
         expect(deviceCInUpdatedConfig.name, equals('Device C'));
         // Note: inviteCode is preserved but we use the generated one, not the hardcoded test one
         expect(deviceCInUpdatedConfig.inviteCode, isNotNull);
@@ -309,10 +349,7 @@ void main() {
         final deviceDPubkey = 'd' * 64; // awaitingKey (should NOT be updated)
         const deviceCPubkey = TestHexPubkeys.charlie; // New steward being added
 
-        final deviceBSteward = createSteward(
-          pubkey: deviceBPubkey,
-          name: 'Device B',
-        ).copyWith(
+        final deviceBSteward = createSteward(pubkey: deviceBPubkey, name: 'Device B').copyWith(
           status: StewardStatus.holdingKey,
           giftWrapEventId: 'stale-wrap-id',
           keyShare: 'stale-share',
@@ -321,9 +358,7 @@ void main() {
         final deviceDSteward = createSteward(
           pubkey: deviceDPubkey,
           name: 'Device D',
-        ).copyWith(
-          status: StewardStatus.awaitingKey,
-        );
+        ).copyWith(status: StewardStatus.awaitingKey);
 
         final deviceESteward = createInvitedSteward(
           name: 'Device E',
@@ -338,13 +373,19 @@ void main() {
           relays: ['wss://relay.example.com'],
         );
 
-        final backupConfigWithVersion = initialBackupConfig.copyWith(distributionVersion: 1);
+        final backupConfigWithVersion = initialBackupConfig.copyWith(
+          distributionVersion: 1,
+        );
 
-        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => deviceAPubkey);
-        when(mockLoginService.encryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockLoginService.decryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => deviceAPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
 
         // Create a vault first (required for backup config)
         final testVault = Vault(
@@ -355,7 +396,10 @@ void main() {
         );
         await realRepository.addVault(testVault);
 
-        await realRepository.updateBackupConfig(vaultId, backupConfigWithVersion);
+        await realRepository.updateBackupConfig(
+          vaultId,
+          backupConfigWithVersion,
+        );
 
         // Create an invitation for Device C
         await invitationService.generateInvitationLink(
@@ -364,10 +408,14 @@ void main() {
           relayUrls: ['wss://relay.example.com'],
         );
 
-        final invitations = await invitationService.getPendingInvitations(vaultId);
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
         final invitation = invitations.first;
 
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
 
         // Create invitation acceptance event in canonical tag-based format
         final acceptanceEvent = Nip01Event(
@@ -382,34 +430,49 @@ void main() {
         );
 
         // Act: Add Device C as a new steward
-        await invitationService.processInvitationAcceptanceEvent(event: acceptanceEvent);
+        await invitationService.processInvitationAcceptanceEvent(
+          event: acceptanceEvent,
+        );
 
         // Assert: Verify the backup config was updated correctly
         final updatedConfig = await realRepository.getBackupConfig(vaultId);
         expect(updatedConfig, isNotNull);
 
         // Device B (holdingKey) should be updated to awaitingNewKey
-        final deviceBInUpdatedConfig =
-            updatedConfig!.stewards.firstWhere((s) => s.pubkey == deviceBPubkey);
-        expect(deviceBInUpdatedConfig.status, equals(StewardStatus.awaitingNewKey));
+        final deviceBInUpdatedConfig = updatedConfig!.stewards.firstWhere(
+          (s) => s.pubkey == deviceBPubkey,
+        );
+        expect(
+          deviceBInUpdatedConfig.status,
+          equals(StewardStatus.awaitingNewKey),
+        );
         expect(deviceBInUpdatedConfig.giftWrapEventId, isNull);
         expect(deviceBInUpdatedConfig.keyShare, isNull);
 
         // Device D (awaitingKey) should remain unchanged
-        final deviceDInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceDPubkey);
-        expect(deviceDInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
+        final deviceDInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceDPubkey,
+        );
+        expect(
+          deviceDInUpdatedConfig.status,
+          equals(StewardStatus.awaitingKey),
+        );
 
         // Device E (invited) should remain unchanged
-        final deviceEInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.inviteCode == 'invite-e');
+        final deviceEInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.inviteCode == 'invite-e',
+        );
         expect(deviceEInUpdatedConfig.status, equals(StewardStatus.invited));
         expect(deviceEInUpdatedConfig.pubkey, isNull);
 
         // Device C should be added
-        final deviceCInUpdatedConfig =
-            updatedConfig.stewards.firstWhere((s) => s.pubkey == deviceCPubkey);
-        expect(deviceCInUpdatedConfig.status, equals(StewardStatus.awaitingKey));
+        final deviceCInUpdatedConfig = updatedConfig.stewards.firstWhere(
+          (s) => s.pubkey == deviceCPubkey,
+        );
+        expect(
+          deviceCInUpdatedConfig.status,
+          equals(StewardStatus.awaitingKey),
+        );
       },
     );
 
@@ -422,21 +485,29 @@ void main() {
         const deviceBPubkey = TestHexPubkeys.bob; // First to redeem
         const deviceCPubkey = TestHexPubkeys.charlie; // Second to redeem
 
-        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => ownerPubkey);
-        when(mockLoginService.encryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockLoginService.decryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
 
         // Stub sendInvitationInvalidEvent to succeed
-        when(mockInvitationSendingService.sendInvitationInvalidEvent(
-          inviteCode: anyNamed('inviteCode'),
-          vaultId: anyNamed('vaultId'),
-          inviteePubkey: anyNamed('inviteePubkey'),
-          relayUrls: anyNamed('relayUrls'),
-          reason: anyNamed('reason'),
-        )).thenAnswer((_) async => 'invalid-event-id');
+        when(
+          mockInvitationSendingService.sendInvitationInvalidEvent(
+            inviteCode: anyNamed('inviteCode'),
+            vaultId: anyNamed('vaultId'),
+            inviteePubkey: anyNamed('inviteePubkey'),
+            relayUrls: anyNamed('relayUrls'),
+            reason: anyNamed('reason'),
+          ),
+        ).thenAnswer((_) async => 'invalid-event-id');
 
         // Create vault
         final testVault = Vault(
@@ -467,7 +538,9 @@ void main() {
           inviteeName: 'New User',
           relayUrls: ['wss://relay.example.com'],
         );
-        final invitations = await invitationService.getPendingInvitations(vaultId);
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
         final invitation = invitations.first;
         final inviteCode = invitation.inviteCode;
 
@@ -482,12 +555,17 @@ void main() {
           createdAt: secondsSinceEpoch(),
           content: '',
         );
-        await invitationService.processInvitationAcceptanceEvent(event: firstEvent);
+        await invitationService.processInvitationAcceptanceEvent(
+          event: firstEvent,
+        );
 
         // Verify first acceptance stored the redeemed pubkey
         final invitationsAfterFirst = await invitationService.getPendingInvitations(vaultId);
-        expect(invitationsAfterFirst, isEmpty,
-            reason: 'Invitation should not be in pending after first redemption');
+        expect(
+          invitationsAfterFirst,
+          isEmpty,
+          reason: 'Invitation should not be in pending after first redemption',
+        );
 
         // Device C tries to accept the same invitation (canonical tag-based format)
         final secondEvent = Nip01Event(
@@ -502,28 +580,40 @@ void main() {
         );
 
         // Act: Second acceptance should be silently rejected (no exception)
-        await invitationService.processInvitationAcceptanceEvent(event: secondEvent);
+        await invitationService.processInvitationAcceptanceEvent(
+          event: secondEvent,
+        );
 
         // Assert: The invitation was not overwritten — redeemedBy is still Device B
-        final storedInvitation = await invitationService.lookupInvitationByCode(inviteCode);
+        final storedInvitation = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
         expect(storedInvitation, isNotNull);
-        expect(storedInvitation!.redeemedBy, equals(deviceBPubkey),
-            reason: 'Invitation should still be redeemed by Device B, not overwritten');
+        expect(
+          storedInvitation!.redeemedBy,
+          equals(deviceBPubkey),
+          reason: 'Invitation should still be redeemed by Device B, not overwritten',
+        );
 
         // Assert: sendInvitationInvalidEvent was called for Device C with correct parameters
-        verify(mockInvitationSendingService.sendInvitationInvalidEvent(
-          inviteCode: inviteCode,
-          vaultId: anyNamed('vaultId'),
-          inviteePubkey: deviceCPubkey,
-          relayUrls: anyNamed('relayUrls'),
-          reason: anyNamed('reason'),
-        )).called(1);
+        verify(
+          mockInvitationSendingService.sendInvitationInvalidEvent(
+            inviteCode: inviteCode,
+            vaultId: anyNamed('vaultId'),
+            inviteePubkey: deviceCPubkey,
+            relayUrls: anyNamed('relayUrls'),
+            reason: anyNamed('reason'),
+          ),
+        ).called(1);
 
         // Assert: Device C was NOT added to the backup config
         final config = await realRepository.getBackupConfig(vaultId);
         expect(config, isNotNull);
-        expect(config!.stewards.any((s) => s.pubkey == deviceCPubkey), isFalse,
-            reason: 'Device C should not be in the backup config');
+        expect(
+          config!.stewards.any((s) => s.pubkey == deviceCPubkey),
+          isFalse,
+          reason: 'Device C should not be in the backup config',
+        );
       },
     );
 
@@ -535,12 +625,18 @@ void main() {
         const redeemedPubkey = TestHexPubkeys.bob;
         const attackerPubkey = TestHexPubkeys.charlie;
 
-        when(mockLoginService.getCurrentPublicKey()).thenAnswer((_) async => ownerPubkey);
-        when(mockLoginService.encryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockLoginService.decryptText(any))
-            .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-        when(mockBackupService.distributeKeysIfNecessary(any)).thenAnswer((_) async {});
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
 
         await realRepository.addVault(
           Vault(
@@ -572,7 +668,10 @@ void main() {
           inviteeName: 'Invited Device',
           relayUrls: ['wss://relay.example.com'],
         );
-        final invitation = (await invitationService.getPendingInvitations(vaultId)).first;
+        final invitation = (await invitationService.getPendingInvitations(
+          vaultId,
+        ))
+            .first;
         final inviteCode = invitation.inviteCode;
 
         await invitationService.processInvitationAcceptanceEvent(
@@ -601,10 +700,238 @@ void main() {
           ),
         );
 
-        final storedInvitation = await invitationService.lookupInvitationByCode(inviteCode);
+        final storedInvitation = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
         expect(storedInvitation, isNotNull);
         expect(storedInvitation!.status, InvitationStatus.redeemed);
         expect(storedInvitation.redeemedBy, redeemedPubkey);
+      },
+    );
+    test(
+      'Invitation acceptance from an invalidated invitation is rejected',
+      () async {
+        // Arrange: Create a vault with an invalidated invitation
+        const vaultId = 'vault-invalidated-invite';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteePubkey = TestHexPubkeys.bob;
+
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
+
+        // Create vault
+        final testVault = Vault(
+          id: vaultId,
+          name: 'Invalidated Invite Vault',
+          createdAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+        );
+        await realRepository.addVault(testVault);
+
+        await realRepository.updateBackupConfig(
+          vaultId,
+          createBackupConfig(
+            vaultId: vaultId,
+            threshold: 2,
+            totalKeys: 2,
+            stewards: [
+              createInvitedSteward(
+                name: 'Device B',
+                inviteCode: 'temp-invite-code',
+              ),
+              createSteward(pubkey: ownerPubkey, name: 'Owner'),
+            ],
+            relays: ['wss://relay.example.com'],
+          ),
+        );
+
+        // Generate and then invalidate the invitation
+        await invitationService.generateInvitationLink(
+          vaultId: vaultId,
+          inviteeName: 'Device B',
+          relayUrls: ['wss://relay.example.com'],
+        );
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
+        final invitation = invitations.first;
+        final inviteCode = invitation.inviteCode;
+
+        // Invalidate the invitation (simulates owner removing steward before acceptance)
+        await invitationService.invalidateInvitation(
+          inviteCode: inviteCode,
+          reason: 'Steward removed from recovery plan',
+        );
+
+        // Verify invitation is now invalidated before attempting to accept
+        final invalidated = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
+        expect(invalidated, isNotNull);
+        expect(invalidated!.status, InvitationStatus.invalidated);
+
+        // Now the (removed) steward tries to accept the invitation
+        final acceptanceEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
+          pubKey: inviteePubkey,
+          tags: [
+            ['invite_code', inviteCode],
+            ['vault_id', vaultId],
+          ],
+          createdAt: secondsSinceEpoch(),
+          content: '',
+        );
+
+        // Act: Process the acceptance event
+        await invitationService.processInvitationAcceptanceEvent(
+          event: acceptanceEvent,
+        );
+
+        // Assert: The invitation status remains invalidated (not overwritten to redeemed)
+        final stored = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
+        expect(stored, isNotNull);
+        expect(
+          stored!.status,
+          InvitationStatus.invalidated,
+          reason: 'Invalidated invitation should not be changed to redeemed',
+        );
+        expect(
+          stored.redeemedBy,
+          isNull,
+          reason: 'Invalidated invitation should not have a redeemedBy',
+        );
+
+        // Assert: The steward was NOT added to the backup config
+        final config = await realRepository.getBackupConfig(vaultId);
+        expect(config, isNotNull);
+        expect(
+          config!.stewards.any((s) => s.pubkey == inviteePubkey),
+          isFalse,
+          reason: 'Steward should not be added to backup config from invalidated invitation',
+        );
+
+        // Assert: The invited steward slot still has no pubkey
+        final invitedStewards = config.stewards.where(
+          (s) => s.inviteCode == inviteCode && s.pubkey == null,
+        );
+        expect(
+          invitedStewards,
+          isNotEmpty,
+          reason: 'Invited steward slot should still exist without a pubkey',
+        );
+      },
+    );
+
+    test(
+      'Pending invitation acceptance still works (sanity — invalidated guard does not break happy path)',
+      () async {
+        // Arrange: Create a vault with a pending (non-invalidated) invitation
+        const vaultId = 'vault-happy-path';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteePubkey = TestHexPubkeys.bob;
+
+        when(
+          mockLoginService.getCurrentPublicKey(),
+        ).thenAnswer((_) async => ownerPubkey);
+        when(mockLoginService.encryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(mockLoginService.decryptText(any)).thenAnswer(
+          (invocation) async => invocation.positionalArguments[0] as String,
+        );
+        when(
+          mockBackupService.distributeKeysIfNecessary(any),
+        ).thenAnswer((_) async {});
+
+        // Create vault
+        final testVault = Vault(
+          id: vaultId,
+          name: 'Happy Path Vault',
+          createdAt: DateTime.now(),
+          ownerPubkey: ownerPubkey,
+        );
+        await realRepository.addVault(testVault);
+
+        await realRepository.updateBackupConfig(
+          vaultId,
+          createBackupConfig(
+            vaultId: vaultId,
+            threshold: 2,
+            totalKeys: 2,
+            stewards: [
+              createInvitedSteward(
+                name: 'Device B',
+                inviteCode: 'temp-invite-code',
+              ),
+              createSteward(pubkey: ownerPubkey, name: 'Owner'),
+            ],
+            relays: ['wss://relay.example.com'],
+          ),
+        );
+
+        // Generate a pending invitation
+        await invitationService.generateInvitationLink(
+          vaultId: vaultId,
+          inviteeName: 'Device B',
+          relayUrls: ['wss://relay.example.com'],
+        );
+        final invitations = await invitationService.getPendingInvitations(
+          vaultId,
+        );
+        final invitation = invitations.first;
+        final inviteCode = invitation.inviteCode;
+
+        // Verify it's pending
+        expect(invitation.status, InvitationStatus.pending);
+
+        // Now the steward accepts
+        final acceptanceEvent = Nip01Event(
+          kind: NostrKind.invitationAcceptance.value,
+          pubKey: inviteePubkey,
+          tags: [
+            ['invite_code', inviteCode],
+            ['vault_id', vaultId],
+          ],
+          createdAt: secondsSinceEpoch(),
+          content: '',
+        );
+
+        // Act: Process the acceptance event
+        await invitationService.processInvitationAcceptanceEvent(
+          event: acceptanceEvent,
+        );
+
+        // Assert: The invitation status was updated to redeemed
+        final stored = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
+        expect(stored, isNotNull);
+        expect(
+          stored!.status,
+          InvitationStatus.redeemed,
+          reason: 'Pending invitation should be redeemed on acceptance',
+        );
+
+        // Assert: The steward WAS added to the backup config
+        final config = await realRepository.getBackupConfig(vaultId);
+        expect(config, isNotNull);
+        expect(
+          config!.stewards.any((s) => s.pubkey == inviteePubkey),
+          isTrue,
+          reason: 'Steward should be added to backup config from pending invitation',
+        );
       },
     );
   });
@@ -638,10 +965,12 @@ void main() {
         testDb,
       );
 
-      when(mockLoginService.encryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
-      when(mockLoginService.decryptText(any))
-          .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+      when(mockLoginService.encryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
+      when(mockLoginService.decryptText(any)).thenAnswer(
+        (invocation) async => invocation.positionalArguments[0] as String,
+      );
     });
 
     tearDown(() async {
@@ -666,24 +995,41 @@ void main() {
         );
 
         // Assert: staged link is returned
-        expect(staged, isNotNull, reason: 'A fresh invitation should be staged');
+        expect(
+          staged,
+          isNotNull,
+          reason: 'A fresh invitation should be staged',
+        );
         expect(staged!.inviteCode, inviteCode);
 
         // Assert: No vault row was created
         final vault = await realRepository.getVault(vaultId);
-        expect(vault, isNull, reason: 'No vault row should exist — nothing written to DB');
+        expect(
+          vault,
+          isNull,
+          reason: 'No vault row should exist — nothing written to DB',
+        );
 
         // Assert: No invitation row was created
-        final invitation = await invitationService.lookupInvitationByCode(inviteCode);
-        expect(invitation, isNull,
-            reason: 'No invitation row should exist — nothing written to DB');
+        final invitation = await invitationService.lookupInvitationByCode(
+          inviteCode,
+        );
+        expect(
+          invitation,
+          isNull,
+          reason: 'No invitation row should exist — nothing written to DB',
+        );
 
         // Act: Simulate dismissing (back button) — nothing to clean up
         // No-op: the staged entry is abandoned in memory
 
         // Verify still no vault after dismiss
         final vaultAfterDismiss = await realRepository.getVault(vaultId);
-        expect(vaultAfterDismiss, isNull, reason: 'No vault should ever have been created');
+        expect(
+          vaultAfterDismiss,
+          isNull,
+          reason: 'No vault should ever have been created',
+        );
       },
     );
 
@@ -709,7 +1055,11 @@ void main() {
         );
 
         // Assert: Returns null (no re-prompt)
-        expect(staged, isNull, reason: 'Denied invitation should not be re-staged');
+        expect(
+          staged,
+          isNull,
+          reason: 'Denied invitation should not be re-staged',
+        );
       },
     );
   });
