@@ -372,11 +372,9 @@ class DeepLinkService {
       return (
         inviteCode: inviteCode,
         vaultId: vaultId,
-        vaultName:
-            vaultName != null && vaultName.isNotEmpty ? Uri.decodeComponent(vaultName) : null,
+        vaultName: vaultName != null && vaultName.isNotEmpty ? vaultName : null,
         ownerPubkey: ownerPubkey,
-        ownerName:
-            ownerName != null && ownerName.isNotEmpty ? Uri.decodeComponent(ownerName) : null,
+        ownerName: ownerName != null && ownerName.isNotEmpty ? ownerName : null,
         relayUrls: relayUrls,
       );
     } on InvalidInvitationLinkException {
