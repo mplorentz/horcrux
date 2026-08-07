@@ -48,7 +48,8 @@ final invitationServiceProvider = Provider<InvitationService>((ref) {
   // Properly clean up when the provider is disposed
   ref.onDispose(() {
     Log.debug(
-        '[onboarding] invitationServiceProvider: disposing InvitationService(${service.hashCode})');
+      '[onboarding] invitationServiceProvider: disposing InvitationService(${service.hashCode})',
+    );
     service.dispose();
   });
 
@@ -531,9 +532,14 @@ class InvitationService {
         );
       }
 
-      Log.info('Invitation acceptance event published successfully: $acceptanceEventId');
+      Log.info(
+        'Invitation acceptance event published successfully: $acceptanceEventId',
+      );
     } catch (e) {
-      Log.error('Error sending invitation acceptance event for invitation $inviteCode', e);
+      Log.error(
+        'Error sending invitation acceptance event for invitation $inviteCode',
+        e,
+      );
       // Re-throw so the UI can handle it appropriately
       // The invitation is already marked as redeemed, but acceptance event failed
       throw Exception(
@@ -570,9 +576,7 @@ class InvitationService {
   /// Updates invitation status to denied.
   /// Sends denial event via InvitationSendingService.
   /// Invalidates invitation code.
-  Future<void> denyInvitation({
-    required String inviteCode,
-  }) async {
+  Future<void> denyInvitation({required String inviteCode}) async {
     // Validate invite code format first
     if (!isValidInviteCodeFormat(inviteCode)) {
       throw ArgumentError(
@@ -763,7 +767,9 @@ class InvitationService {
   /// Updates invitation status to redeemed.
   /// Adds invitee to backup config if not already present.
   /// Updates steward status to "awaiting key".
-  Future<void> processInvitationAcceptanceEvent({required Nip01Event event}) async {
+  Future<void> processInvitationAcceptanceEvent({
+    required Nip01Event event,
+  }) async {
     // Validate event kind
     if (event.kind != NostrKind.invitationAcceptance.value) {
       throw ArgumentError(
@@ -774,13 +780,17 @@ class InvitationService {
     // Get current user's pubkey to verify we're the owner
     final ownerPubkey = await _loginService.getCurrentPublicKey();
     if (ownerPubkey == null) {
-      throw Exception('No key pair available. Cannot process invitation acceptance event.');
+      throw Exception(
+        'No key pair available. Cannot process invitation acceptance event.',
+      );
     }
 
     // New canonical format: read invite_code and vault_id from tags, invitee from event.pubKey
     final inviteCode = _extractTagValue(event.tags, 'invite_code');
     if (inviteCode == null) {
-      throw ArgumentError('Missing invite_code tag in invitation acceptance event');
+      throw ArgumentError(
+        'Missing invite_code tag in invitation acceptance event',
+      );
     }
 
     // Invitee pubkey comes from the event author (the person who accepted)
@@ -811,7 +821,18 @@ class InvitationService {
         );
         return;
       }
-      Log.warning('Invitation acceptance event received for unknown invitation: $inviteCode');
+      Log.warning(
+        'Invitation acceptance event received for unknown invitation: $inviteCode',
+      );
+      return;
+    }
+
+    // Reject acceptance if the invitation has been invalidated by the owner.
+    if (invitation.status == InvitationStatus.invalidated) {
+      Log.warning(
+        'Invitation $inviteCode has been invalidated. '
+        'Rejecting acceptance from $inviteePubkey',
+      );
       return;
     }
 
@@ -875,9 +896,7 @@ class InvitationService {
             final newStatus =
                 hasAcknowledgment ? StewardStatus.holdingKey : StewardStatus.awaitingKey;
             final updatedStewards = List<Steward>.from(backupConfig.stewards);
-            updatedStewards[stewardIndex] = steward.copyWith(
-              status: newStatus,
-            );
+            updatedStewards[stewardIndex] = steward.copyWith(status: newStatus);
             final updatedConfig = backupConfig.copyWith(
               stewards: updatedStewards,
             );
@@ -892,7 +911,9 @@ class InvitationService {
         }
       }
     } catch (e) {
-      Log.warning('Error updating steward status after invitation acceptance: $e');
+      Log.warning(
+        'Error updating steward status after invitation acceptance: $e',
+      );
       // Don't fail invitation acceptance processing if status update fails
     }
 
@@ -1146,9 +1167,7 @@ class InvitationService {
 
       // If the existing config was empty (zero stewards), reset threshold to 1.
       // This mirrors the screen's _calculateDefaultThreshold for a single steward.
-      final effectiveThreshold = backupConfig.stewards.isEmpty
-          ? 1
-          : backupConfig.threshold;
+      final effectiveThreshold = backupConfig.stewards.isEmpty ? 1 : backupConfig.threshold;
       final configWithUpdatedThreshold = effectiveThreshold != backupConfig.threshold
           ? backupConfig.copyWith(threshold: effectiveThreshold)
           : backupConfig;
