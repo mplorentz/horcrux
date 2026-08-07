@@ -116,5 +116,37 @@ void main() {
       expect(data!.ownerName, isNull);
       expect(data.vaultName, 'My Vault');
     });
+
+    test('parses a relay URL with a non-ASCII (IDN/punycode) host', () {
+      // A relay URL like wss://münchen.example.com is percent-encoded as
+      // wss://m%C3%BCnchen.example.com by toUrl(). queryParameters decodes
+      // this to the literal ü, so the parse must NOT call
+      // Uri.decodeComponent a second time (which would throw for code > 127).
+      final url = Uri.parse(
+        'https://horcruxbackup.com/invite/akEzcK5XMprOCTYy5ikiv6ZMeSHXnToekiSPd8DpJVU'
+        '?vault=vaultId'
+        '&name=My%20Vault'
+        '&owner=$ownerPubkey'
+        '&relays=wss%3A%2F%2Fm%C3%BCnchen.example.com',
+      );
+
+      final data = makeService().parseInvitationLink(url);
+
+      expect(data, isNotNull);
+      expect(data!.relayUrls, hasLength(1));
+      expect(data.relayUrls.first, 'wss://münchen.example.com');
+    });
+
+    test('parses multiple relay URLs with non-ASCII characters', () {
+      final url = Uri.parse(
+        'https://horcruxbackup.com/invite/akEzcK5XMprOCTYy5ikiv6ZMeSHXnToekiSPd8DpJVU'
+        '?vault=vaultId'
+        '&name=My%20Vault'
+        '&owner=$ownerPubkey'
+        '&relays=wss%3A%2F%2Frelay1.example.com%2Cwss%3A%2F%2Fm%C3%BCnchen.example.com',
+      );
+
+      expect(() => makeService().parseInvitationLink(url), returnsNormally);
+    });
   });
 }
