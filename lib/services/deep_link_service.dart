@@ -263,10 +263,12 @@ class DeepLinkService {
 
   /// Parses invitation link URL and extracts parameters
   ///
-  /// Handles both Universal Links (`https://horcruxbackup.com/invite/{code}`)
-  /// and custom URL scheme (`horcrux://horcruxbackup.com/invite/{code}`)
-  /// formats — the only formats [InvitationLink.toUrl] generates.
-  /// Extracts invite code from path.
+  /// Handles both new query-param format (`/invite/?code={code}`)
+  /// and legacy path format (`/invite/{code}`) for backwards compatibility.
+  /// Supports both Universal Links (`https://horcruxbackup.com/...`)
+  /// and custom URL scheme (`horcrux://horcruxbackup.com/...`).
+  /// Extracts invite code from either the `code` query param (new) or
+  /// the path segment (legacy).
   /// Extracts owner pubkey and relay URLs from query params.
   /// Returns parsed data or throws InvalidInvitationLinkException if invalid.
   InvitationLinkData? parseInvitationLink(Uri uri) {
@@ -289,16 +291,22 @@ class DeepLinkService {
         );
       }
 
-      // Extract invite code from path: /invite/{code}
+      // Resolve invite code: prefer query param `code` (new format),
+      // fall back to path segment /invite/{code} (legacy format).
       final pathSegments = uri.pathSegments;
-      if (pathSegments.length != 2 || pathSegments[0] != 'invite') {
+      final codeParam = uri.queryParameters['code'];
+      String inviteCode;
+      if (codeParam != null && codeParam.isNotEmpty) {
+        inviteCode = codeParam;
+      } else if (pathSegments.length == 2 && pathSegments[0] == 'invite') {
+        inviteCode = pathSegments[1];
+      } else {
         throw InvalidInvitationLinkException(
           uri.toString(),
-          'Invalid path format: ${uri.path}. Expected format: /invite/{code}',
+          'Invalid path/query format: ${uri.path}. '
+          'Expected /invite/?code=<code> or /invite/<code>',
         );
       }
-
-      final inviteCode = pathSegments[1];
       if (!isValidInviteCode(inviteCode)) {
         throw InvalidInvitationLinkException(
           uri.toString(),

@@ -72,12 +72,13 @@ extension InvitationLinkExtension on InvitationLink {
 
   /// Generates an invitation URL from this InvitationLink
   ///
-  /// Format: https://horcruxbackup.com/invite/{inviteCode}?vault={vaultId}&name={vaultName}&owner={ownerPubkey}&ownerName={ownerName}&relays={relayUrls}
+  /// Format: https://horcruxbackup.com/invite/?code={inviteCode}&vault={vaultId}&name={vaultName}&owner={ownerPubkey}&ownerName={ownerName}&relays={relayUrls}
   /// Relay URLs are comma-separated and URL-encoded.
   String toUrl() {
-    final baseUrl = 'https://horcruxbackup.com/invite/$inviteCode';
+    const baseUrl = 'https://horcruxbackup.com/invite/';
     final params = <String>[];
 
+    params.add('code=${Uri.encodeComponent(inviteCode)}');
     params.add('vault=${Uri.encodeComponent(vaultId)}');
     params.add('name=${Uri.encodeComponent(vaultName)}');
     params.add('owner=${Uri.encodeComponent(ownerPubkey)}');
