@@ -659,16 +659,15 @@ class MockShareDistributionService extends _i1.Mock implements _i16.ShareDistrib
       ) as _i8.Future<void>);
 
   @override
-  _i8.Future<void> processShareConfirmationEvent({required _i4.Nip01Event? event}) =>
+  _i8.Future<bool> processShareConfirmationEvent({required _i4.Nip01Event? event}) =>
       (super.noSuchMethod(
         Invocation.method(
           #processShareConfirmationEvent,
           [],
           {#event: event},
         ),
-        returnValue: _i8.Future<void>.value(),
-        returnValueForMissingStub: _i8.Future<void>.value(),
-      ) as _i8.Future<void>);
+        returnValue: _i8.Future<bool>.value(false),
+      ) as _i8.Future<bool>);
 
   @override
   _i8.Future<void> processShareErrorEvent({required _i4.Nip01Event? event}) => (super.noSuchMethod(

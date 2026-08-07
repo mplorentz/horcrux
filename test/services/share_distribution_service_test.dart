@@ -910,6 +910,116 @@ void main() {
         ).called(1);
       });
 
+      test('skips duplicate confirmation for already-acknowledged steward', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            Steward(
+              id: 'bob-steward-id',
+              pubkey: bobPubHex,
+              name: 'Bob',
+              status: StewardStatus.holdingKey,
+              acknowledgmentEventId: 'existing-ack-event-id',
+              acknowledgedDistributionVersion: 3,
+              acknowledgedAt: DateTime.utc(2026, 7, 30),
+            ),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        // Second confirmation for the same (vault, steward, distributionVersion)
+        await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '3'],
+            ],
+          ),
+        );
+
+        // updateStewardStatus should NOT be called — the steward already
+        // acknowledged this distribution version.
+        verifyNever(
+          mockRepository.updateStewardStatus(
+            vaultId: anyNamed('vaultId'),
+            pubkey: anyNamed('pubkey'),
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: anyNamed('giftWrapEventId'),
+          ),
+        );
+      });
+
+      test('returns true on first confirmation', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            createSteward(pubkey: bobPubHex, name: 'Bob'),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        final result = await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '3'],
+            ],
+          ),
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('returns false on duplicate confirmation', () async {
+        final cfg = createBackupConfig(
+          vaultId: 'vault-confirm',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            Steward(
+              id: 'bob-steward-id',
+              pubkey: bobPubHex,
+              name: 'Bob',
+              status: StewardStatus.holdingKey,
+              acknowledgmentEventId: 'existing-ack-event-id',
+              acknowledgedDistributionVersion: 3,
+              acknowledgedAt: DateTime.utc(2026, 7, 30),
+            ),
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 3);
+        await stubVaultForConfirmation(id: 'vault-confirm', config: cfg);
+
+        final result = await service.processShareConfirmationEvent(
+          event: confirmationEvent(
+            stewardPubkey: bobPubHex,
+            tags: [
+              ['vault_id', 'vault-confirm'],
+              ['share_index', '1'],
+              ['distribution_version', '3'],
+            ],
+          ),
+        );
+
+        expect(result, isFalse);
+      });
+
       test('drops confirmation for future distribution_version', () async {
         final cfg = createBackupConfig(
           vaultId: 'vault-confirm',
