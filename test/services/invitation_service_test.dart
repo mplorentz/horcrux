@@ -60,6 +60,10 @@ void main() {
         mockBackupService,
         testDb,
       );
+
+      // Reset static _pendingReceivedInvitation between tests to avoid
+      // order-dependence from stale state leaking across test cases.
+      invitationService.clearStagedInvitation();
     });
 
     tearDown(() async {
@@ -642,6 +646,10 @@ void main() {
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
       when(mockLoginService.decryptText(any))
           .thenAnswer((invocation) async => invocation.positionalArguments[0] as String);
+
+      // Reset static _pendingReceivedInvitation between tests to avoid
+      // order-dependence from stale state leaking across test cases.
+      invitationService.clearStagedInvitation();
     });
 
     tearDown(() async {
@@ -684,6 +692,58 @@ void main() {
         // Verify still no vault after dismiss
         final vaultAfterDismiss = await realRepository.getVault(vaultId);
         expect(vaultAfterDismiss, isNull, reason: 'No vault should ever have been created');
+      },
+    );
+
+    test(
+      'clearStagedInvitation clears the staged invitation after logout',
+      () async {
+        // Arrange: Stage an invitation (simulating a deep link during onboarding)
+        const vaultId = 'test-clear-vault';
+        const ownerPubkey = TestHexPubkeys.alice;
+        const inviteCode = 'test-clear-invite-code-valid-base64url-789';
+
+        final staged = await invitationService.stageReceivedInvitation(
+          inviteCode: inviteCode,
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Clear Vault',
+        );
+
+        expect(staged, isNotNull, reason: 'A fresh invitation should be staged');
+        expect(invitationService.hasStagedInvitations, isTrue,
+            reason: 'hasStagedInvitations should be true after staging');
+        expect(invitationService.getStagedInvitation(), isNotNull,
+            reason: 'getStagedInvitation should return the staged invitation');
+
+        // Act: Clear the staged invitation (simulating logout)
+        final notifications = <void>[];
+        final sub = invitationService.invitationsChangedStream.listen(notifications.add);
+        invitationService.clearStagedInvitation();
+        await Future<void>.delayed(Duration.zero);
+        await sub.cancel();
+
+        // Assert: Staged invitation is cleared
+        expect(invitationService.hasStagedInvitations, isFalse,
+            reason: 'hasStagedInvitations should be false after clearing');
+        expect(invitationService.getStagedInvitation(), isNull,
+            reason: 'getStagedInvitation should return null after clearing');
+
+        // Assert: listeners were notified so mounted UI doesn't stay stale
+        expect(notifications, isNotEmpty,
+            reason: 'clearStagedInvitation should notify invitationsChangedStream');
+
+        // Assert: Re-staging works after clearing
+        final reStaged = await invitationService.stageReceivedInvitation(
+          inviteCode: 'test-re-stage-code-valid-base64url-000',
+          vaultId: vaultId,
+          ownerPubkey: ownerPubkey,
+          relayUrls: ['wss://relay.example.com'],
+          vaultName: 'Test Re-Stage Vault',
+        );
+        expect(reStaged, isNotNull,
+            reason: 'Should be able to stage a new invitation after clearing');
       },
     );
 

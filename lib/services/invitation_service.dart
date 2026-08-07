@@ -390,6 +390,15 @@ class InvitationService {
   /// Returns true if there is a staged invitation waiting to be acted on.
   bool get hasStagedInvitations => _pendingReceivedInvitation != null;
 
+  /// Clears the currently staged invitation, if any.
+  ///
+  /// Called during logout to prevent a staged-but-unacted invitation from
+  /// re-surfacing after the next login.
+  void clearStagedInvitation() {
+    _pendingReceivedInvitation = null;
+    _notifyInvitationsChanged();
+  }
+
   /// Removes and returns the staged invitation if its code matches
   /// [inviteCode], otherwise leaves it in place and returns null.
   InvitationLink? _takeStagedInvitation(String inviteCode) {
