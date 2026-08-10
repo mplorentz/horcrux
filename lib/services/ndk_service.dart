@@ -155,6 +155,12 @@ class NdkService {
           cache: MemCacheManager(),
           eventVerifier: Bip340EventVerifier(),
           engine: NdkEngine.JIT,
+          // Respond to relay AUTH challenges (NIP-42) as soon as they are
+          // issued on connect. nostr-rs-relay silently drops gated reads
+          // (DMs/gift-wraps) instead of sending CLOSED "auth-required", so
+          // lazy (reactive) auth never fires and no events would arrive on
+          // auth-enabled relays.
+          eagerAuth: true,
         ),
       );
 
