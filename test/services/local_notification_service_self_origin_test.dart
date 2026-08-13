@@ -166,16 +166,18 @@ void main() {
 
     test(
       'shard confirmation from another steward still proceeds past the '
-      'self-origin filter',
+      'self-origin filter when foregrounded',
       () async {
         // Sanity check: with the filter in place, real cross-device
         // confirmations from peers must keep flowing through to the rest
         // of the notification pipeline (vault lookup, text composition,
-        // OS show). We can only observe the first hop here -- the OS-level
-        // `flutter_local_notifications` call is platform-bound and the
-        // service swallows its failure -- but reaching `getVault` proves
-        // the early-return did not fire.
-        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+        // OS show). We must be in foreground because the T3 background
+        // gate suppresses notifications when the app is not visible
+        // (FCM push covers that case).
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
 
         await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(
@@ -190,7 +192,7 @@ void main() {
         expect(
           vaultRepository.getVaultCalls,
           equals(['vault-1']),
-          reason: 'non-self events must reach vault lookup',
+          reason: 'non-self events in foreground must reach vault lookup',
         );
       },
     );
@@ -219,12 +221,17 @@ void main() {
 
     test(
       'no current key (e.g. login not initialized) defaults to "not self" '
-      'so notifications are not silently swallowed',
+      'so notifications are not silently swallowed when foregrounded',
       () async {
         // Login can transiently report no key (cold-start race, secure
         // storage hiccup). The safe default is to keep notifying so a flake
         // in `LoginService` does not look like a notification regression.
-        final service = buildService(currentPubkey: null);
+        // Must be in foreground because the T3 background gate suppresses
+        // notifications when the app is not visible (FCM push covers it).
+        final service = buildService(
+          currentPubkey: null,
+          isForegrounded: () => true,
+        );
 
         await service.notifyShareConfirmationProcessed(
           event: buildShardConfirmation(
@@ -381,6 +388,57 @@ void main() {
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           ),
           share: makeShare(vaultId: 'vault-1'),
+        );
+
+        expect(vaultRepository.getVaultCalls, equals(['vault-1']));
+      },
+    );
+
+    test(
+      'kind-718 from a peer is suppressed when NOT foregrounded '
+      '(T3: FCM push covers background notifications)',
+      () async {
+        // When the app is in background, the FCM push notification already
+        // displays an OS notification. Showing a local notification on top
+        // would duplicate it. Skip the local notification and rely on the
+        // FCM push.
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => false,
+        );
+
+        await service.notifyShareConfirmationProcessed(
+          event: buildShardConfirmation(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: 'vault-1',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'background confirmation must be suppressed (FCM covers it)',
+        );
+      },
+    );
+
+    test(
+      'kind-718 from a peer still reaches vault lookup when foregrounded',
+      () async {
+        // When the app is in foreground, no FCM OS notification clash, so
+        // the local notification pipeline must proceed normally.
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
+
+        await service.notifyShareConfirmationProcessed(
+          event: buildShardConfirmation(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: 'vault-1',
         );
 
         expect(vaultRepository.getVaultCalls, equals(['vault-1']));

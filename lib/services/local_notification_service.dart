@@ -440,6 +440,17 @@ class LocalNotificationService {
       return;
     }
 
+    // When the app is in background, the FCM push notification already displays
+    // an OS notification for the share confirmation. Showing a local notification
+    // on top of it would duplicate. Skip here and rely on the FCM OS notification.
+    if (kind == NostrKind.shareConfirmation && !_isForegrounded()) {
+      Log.debug(
+        'Skipping ${kind.name} notification ${event.id}: app is in background '
+        '(FCM push notification covers this)',
+      );
+      return;
+    }
+
     final vault = await _vaultRepository.getVault(vaultId);
     final text = composeNotificationText(
       kind: kind,
