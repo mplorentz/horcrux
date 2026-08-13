@@ -356,7 +356,10 @@ class ShareDistributionService {
   /// (gift-wrap seal author), not a redundant tag. Confirmations tagged with a
   /// future [distribution_version] are dropped. Status is derived from ack
   /// version vs current distribution version.
-  Future<void> processShareConfirmationEvent({
+  /// Returns `true` when a new acknowledgment was persisted, `false` when
+  /// the confirmation was skipped as a duplicate (steward already acknowledged
+  /// this distribution version).
+  Future<bool> processShareConfirmationEvent({
     required Nip01Event event,
   }) async {
     // Validate event kind
@@ -412,10 +415,32 @@ class ShareDistributionService {
         'Cannot process share confirmation for future distribution v$tagDistributionVersion '
         '(current v$currentDistributionVersion) on vault $vaultId, share $shareIndex',
       );
-      return;
+      return false;
     }
 
     final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
+
+    // Skip if the steward already acknowledged this distribution version.
+    // Dedup keyed on the 1059 gift-wrap id is insufficient because the
+    // steward's confirmed_at tag changes on every call, minting a distinct
+    // inner rumor -> distinct 1059 every time. Without this semantic guard,
+    // duplicate share confirmations for the same (vault, steward, version)
+    // would each fire a redundant notification.
+    if (vaultBefore?.backupConfig != null) {
+      final existingSteward =
+          vaultBefore!.backupConfig!.stewards.where((s) => s.pubkey == keyHolderPubkey).firstOrNull;
+      if (existingSteward != null &&
+          existingSteward.acknowledgmentEventId != null &&
+          existingSteward.acknowledgedDistributionVersion != null &&
+          existingSteward.acknowledgedDistributionVersion! >= acknowledgedDistributionVersion) {
+        Log.info(
+          'Skipping duplicate share confirmation for vault $vaultId, share $shareIndex '
+          'from steward $keyHolderPubkey (already ack\'d v$acknowledgedDistributionVersion)',
+        );
+        return false;
+      }
+    }
+
     await _repository.updateStewardStatus(
       vaultId: vaultId,
       pubkey: keyHolderPubkey,
@@ -432,6 +457,7 @@ class ShareDistributionService {
       'Processed share confirmation event for vault $vaultId, share $shareIndex '
       'from steward $keyHolderPubkey (ack v$acknowledgedDistributionVersion, status $status)',
     );
+    return true;
   }
 
   /// Processes share error event received from steward (kind 719).

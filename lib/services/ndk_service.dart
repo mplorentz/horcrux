@@ -880,14 +880,20 @@ class NdkService {
   }) async {
     Log.info('Processing shard confirmation event: ${event.id}');
     Log.debug('Shard confirmation event tags: ${event.tags}');
-    await _ref.read(shareDistributionServiceProvider).processShareConfirmationEvent(event: event);
-    Log.info('Successfully processed shard confirmation event: ${event.id}');
+    final acknowledged = await _ref
+        .read(shareDistributionServiceProvider)
+        .processShareConfirmationEvent(event: event);
 
-    final vaultId = _firstTagValue(event.tags, 'vault_id');
-    if (vaultId != null && allowLocalNotification) {
-      await _ref
-          .read(localNotificationServiceProvider)
-          .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
+    if (acknowledged) {
+      Log.info('Successfully processed shard confirmation event: ${event.id}');
+      final vaultId = _firstTagValue(event.tags, 'vault_id');
+      if (vaultId != null && allowLocalNotification) {
+        await _ref
+            .read(localNotificationServiceProvider)
+            .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
+      }
+    } else {
+      Log.info('Shard confirmation skipped: ${event.id}');
     }
   }
 
