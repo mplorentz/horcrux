@@ -344,11 +344,11 @@ class DeepLinkService {
       if (relayUrlsParam != null && relayUrlsParam.isNotEmpty) {
         final relayUrlStrings = relayUrlsParam.split(',');
         for (final relayUrlStr in relayUrlStrings) {
-          final decodedUrl = Uri.decodeComponent(relayUrlStr.trim());
-          if (isValidRelayUrl(decodedUrl)) {
-            relayUrls.add(decodedUrl);
+          final relayUrl = relayUrlStr.trim();
+          if (isValidRelayUrl(relayUrl)) {
+            relayUrls.add(relayUrl);
           } else {
-            Log.warning('Invalid relay URL: $decodedUrl');
+            Log.warning('Invalid relay URL: $relayUrl');
           }
         }
       }
@@ -372,11 +372,9 @@ class DeepLinkService {
       return (
         inviteCode: inviteCode,
         vaultId: vaultId,
-        vaultName:
-            vaultName != null && vaultName.isNotEmpty ? Uri.decodeComponent(vaultName) : null,
+        vaultName: vaultName != null && vaultName.isNotEmpty ? vaultName : null,
         ownerPubkey: ownerPubkey,
-        ownerName:
-            ownerName != null && ownerName.isNotEmpty ? Uri.decodeComponent(ownerName) : null,
+        ownerName: ownerName != null && ownerName.isNotEmpty ? ownerName : null,
         relayUrls: relayUrls,
       );
     } on InvalidInvitationLinkException {
