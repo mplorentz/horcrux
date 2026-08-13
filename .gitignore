@@ -97,3 +97,14 @@ test-reports/
 # Broken directories from docker permission issues
 .dart_tool_broken/
 build_broken/
+
+# Fragua runtime artifacts (worktrees, blobs, database — never commit)
+.fragua/runs/
+.fragua/worktrees/
+.fragua/blobs/
+.fragua/fragua.db*
+.fragua/daemon/
+
+# But keep committed project config trackable
+!.fragua/config.yaml
+!.fragua/workflows/
