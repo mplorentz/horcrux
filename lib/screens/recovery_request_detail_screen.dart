@@ -245,9 +245,7 @@ class _RecoveryRequestDetailScreenState extends ConsumerState<RecoveryRequestDet
     // populates VaultDetail.recoveryRequests from the recovery_requests table.
     // TODO(Phase 3): remove this comment once hasActiveRecovery is reliable.
     String? initiatorContactInfo;
-    if (vault != null &&
-        vault.backupConfig != null &&
-        vault.backupConfig!.stewards.isNotEmpty) {
+    if (vault != null && vault.backupConfig != null && vault.backupConfig!.stewards.isNotEmpty) {
       try {
         final steward = vault.backupConfig!.stewards.firstWhere(
           (s) => s.pubkey == request.initiatorPubkey,

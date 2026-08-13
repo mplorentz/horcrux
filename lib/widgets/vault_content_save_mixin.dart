@@ -70,8 +70,7 @@ mixin VaultContentSaveMixin<T extends ConsumerStatefulWidget> on ConsumerState<T
           final updatedConfig = await repository.getBackupConfig(vaultId);
           if (updatedConfig != null &&
               updatedConfig.canDistribute &&
-              updatedConfig.stewards.length >=
-                  VaultBackupConstraints.minStewardsForDistribution) {
+              updatedConfig.stewards.length >= VaultBackupConstraints.minStewardsForDistribution) {
             try {
               await backupService.createAndDistributeBackup(vaultId: vaultId);
               if (mounted) {

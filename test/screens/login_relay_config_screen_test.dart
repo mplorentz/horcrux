@@ -18,8 +18,9 @@ class MockHorcruxApiService extends Mock implements HorcruxApiService {
   @override
   Future<void> acceptTermsOfService(int tosVersion) {
     return super.noSuchMethod(
-      Invocation.method(#acceptTermsOfService, [tosVersion]),
-    ) as Future<void>? ?? Future<void>.value();
+          Invocation.method(#acceptTermsOfService, [tosVersion]),
+        ) as Future<void>? ??
+        Future<void>.value();
   }
 
   @override
@@ -29,8 +30,9 @@ class MockHorcruxApiService extends Mock implements HorcruxApiService {
     bool mailingList = false,
   }) {
     return super.noSuchMethod(
-      Invocation.method(#updateAccount, [email, analyticsOptIn, mailingList]),
-    ) as Future<void>? ?? Future<void>.value();
+          Invocation.method(#updateAccount, [email, analyticsOptIn, mailingList]),
+        ) as Future<void>? ??
+        Future<void>.value();
   }
 }
 
@@ -111,7 +113,6 @@ void main() {
 
     // ConsentScreen must have actually submitted terms acceptance.
     verify(mockApiService.acceptTermsOfService(1)).called(1);
-
   });
 
   testWidgets('Skip without key backup shows ConsentScreen then VaultListScreen', (tester) async {
@@ -150,6 +151,5 @@ void main() {
 
     // ConsentScreen must have actually submitted terms acceptance.
     verify(mockApiService.acceptTermsOfService(1)).called(1);
-
   });
 }
