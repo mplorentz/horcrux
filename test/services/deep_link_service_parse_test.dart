@@ -138,6 +138,10 @@ void main() {
     });
 
     test('parses multiple relay URLs with non-ASCII characters', () {
+      // A comma-separated relay list is percent-encoded by toUrl() as
+      // wss%3A%2F%2Frelay1.example.com%2Cwss%3A%2F%2Fm%C3%BCnchen.example.com.
+      // queryParameters decodes the whole value before the split, so both
+      // relays must be parsed and the non-ASCII (IDN) host preserved.
       final url = Uri.parse(
         'https://horcruxbackup.com/invite/akEzcK5XMprOCTYy5ikiv6ZMeSHXnToekiSPd8DpJVU'
         '?vault=vaultId'
@@ -146,7 +150,14 @@ void main() {
         '&relays=wss%3A%2F%2Frelay1.example.com%2Cwss%3A%2F%2Fm%C3%BCnchen.example.com',
       );
 
-      expect(() => makeService().parseInvitationLink(url), returnsNormally);
+      final data = makeService().parseInvitationLink(url);
+
+      expect(data, isNotNull);
+      expect(data!.relayUrls, hasLength(2));
+      expect(data.relayUrls, [
+        'wss://relay1.example.com',
+        'wss://münchen.example.com',
+      ]);
     });
   });
 }
