@@ -530,11 +530,16 @@ class NdkService {
       if (await _processedEventStore.contains(event.id)) {
         await _processedEventStore.recordLastSeen(relayUrl, event.createdAt);
       }
+      // 🐛 T3 probe: log claimEvent rejection to distinguish relay-sub vs FCM-path dedup
+      Log.info(
+        'Skipping already-claimed/processed event ${event.id} from $relayUrl',
+      );
       return;
     }
 
     try {
-      Log.info('Received subscription Nostr event: ${event.id}');
+      // 🐛 T3 probe: relayUrl distinguishes relay sub (wss://…) from FCM push (push://horcrux-fcm)
+      Log.info('Received subscription Nostr event: ${event.id} (relay=$relayUrl)');
 
       final unwrapResult = await _ndk!.giftWrap.fromGiftWrapWithInfo(
         giftWrap: event,
@@ -888,9 +893,18 @@ class NdkService {
       Log.info('Successfully processed shard confirmation event: ${event.id}');
       final vaultId = _firstTagValue(event.tags, 'vault_id');
       if (vaultId != null && allowLocalNotification) {
+        Log.info(
+          'T3: Showing local notification for shard confirmation ${event.id} '
+          '(vault=$vaultId, allowLocalNotification=$allowLocalNotification)',
+        );
         await _ref
             .read(localNotificationServiceProvider)
             .notifyShareConfirmationProcessed(event: event, vaultId: vaultId);
+      } else {
+        Log.info(
+          'T3: Skipping local notification for shard confirmation ${event.id} '
+          '(vault=$vaultId, allowLocalNotification=$allowLocalNotification)',
+        );
       }
     } else {
       Log.info('Shard confirmation skipped: ${event.id}');
