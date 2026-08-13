@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
+import '../models/backup_config.dart';
 import '../models/nostr_kinds.dart';
 import '../models/recovery_request.dart';
 import '../models/recovery_status.dart';
@@ -17,6 +18,23 @@ import 'ndk_service.dart';
 import 'notification_recency.dart';
 import 'processed_nostr_event_store.dart';
 import 'logger.dart';
+
+/// Steward pubkeys that hold a confirmed key share and can participate in
+/// recovery. Only [StewardStatus.holdingKey] stewards are included — they are
+/// the only ones with a usable share to respond with. This is the single
+/// authoritative filter for both the practice and real recovery paths so the
+/// recovery roster is identical regardless of whether the initiator holds a
+/// shard themselves.
+///
+/// Duplicate pubkeys are de-duplicated with `.toSet()`; stewards without a
+/// pubkey are excluded.
+List<String> recoveryStewardPubkeys(BackupConfig backupConfig) {
+  return backupConfig.stewards
+      .where((s) => s.pubkey != null && s.status == StewardStatus.holdingKey)
+      .map((s) => s.pubkey!)
+      .toSet()
+      .toList();
+}
 
 /// Provider for RecoveryService
 /// This service depends on VaultRepository for recovery operations.
@@ -318,12 +336,7 @@ class RecoveryService {
       }
 
       // Get steward pubkeys from backup config (owners only - stewards cannot practice recovery)
-      stewardPubkeys = backupConfig.stewards
-          .where(
-            (s) => s.pubkey != null && s.status == StewardStatus.holdingKey,
-          )
-          .map((s) => s.pubkey!)
-          .toList();
+      stewardPubkeys = recoveryStewardPubkeys(backupConfig);
 
       if (stewardPubkeys.isEmpty) {
         throw StateError(
@@ -349,12 +362,7 @@ class RecoveryService {
           throw StateError('No recovery plan configured for this vault');
         }
 
-        stewardPubkeys = backupConfig.stewards
-            .where(
-              (s) => s.pubkey != null && s.status == StewardStatus.holdingKey,
-            )
-            .map((s) => s.pubkey!)
-            .toList();
+        stewardPubkeys = recoveryStewardPubkeys(backupConfig);
 
         if (stewardPubkeys.isEmpty) {
           throw StateError(
@@ -389,12 +397,13 @@ class RecoveryService {
           );
         }
 
-        // Use normalized stewards from the DB-backed backup config.
-        stewardPubkeys = backupConfig.stewards
-            .where((s) => s.pubkey != null && s.status != StewardStatus.invited)
-            .map((s) => s.pubkey!)
-            .toSet()
-            .toList();
+        // Use normalized stewards from the DB-backed backup config. Only
+        // holding-key stewards are included — they are the only ones with a
+        // confirmed share that can respond to the recovery request. This is
+        // intentionally aligned with the no-shard owner branch and the
+        // practice path above; awaiting/inactive/error/revoked stewards hold
+        // no usable share and would never be able to contribute.
+        stewardPubkeys = recoveryStewardPubkeys(backupConfig);
 
         if (stewardPubkeys.isEmpty) {
           throw StateError('No stewards available for recovery');
