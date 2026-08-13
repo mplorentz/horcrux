@@ -72,13 +72,34 @@ extension InvitationLinkExtension on InvitationLink {
 
   /// Generates an invitation URL from this InvitationLink
   ///
-  /// Format: https://horcruxbackup.com/invite/?code={inviteCode}&vault={vaultId}&name={vaultName}&owner={ownerPubkey}&ownerName={ownerName}&relays={relayUrls}
+  /// Emits the LEGACY path format
+  /// (`https://horcruxbackup.com/invite/{inviteCode}?...`), not the newer
+  /// query-param format (`/invite/?code=...`), because old app versions only
+  /// parse the code from the path segment. We keep sharing legacy links until
+  /// all users have upgraded; the parser accepts both formats meanwhile.
   /// Relay URLs are comma-separated and URL-encoded.
   String toUrl() {
+    final baseUrl = 'https://horcruxbackup.com/invite/$inviteCode';
+    return '$baseUrl?${_queryParams().join('&')}';
+  }
+
+  /// Generates the newer query-param invitation URL
+  /// (`https://horcruxbackup.com/invite/?code={inviteCode}?...`).
+  ///
+  /// Not used for sharing yet — old app versions cannot parse the code from a
+  /// query param, so [toUrl] keeps emitting the legacy path format until all
+  /// users have upgraded. Once the fleet is on a version that parses both
+  /// formats, switch the share flow to this method and drop the legacy path.
+  String toNewFormatUrl() {
     const baseUrl = 'https://horcruxbackup.com/invite/';
+    final params = <String>['code=${Uri.encodeComponent(inviteCode)}'];
+    return '$baseUrl?${[...params, ..._queryParams()].join('&')}';
+  }
+
+  /// Query params shared by both URL formats (everything except the code).
+  List<String> _queryParams() {
     final params = <String>[];
 
-    params.add('code=${Uri.encodeComponent(inviteCode)}');
     params.add('vault=${Uri.encodeComponent(vaultId)}');
     params.add('name=${Uri.encodeComponent(vaultName)}');
     params.add('owner=${Uri.encodeComponent(ownerPubkey)}');
@@ -92,7 +113,7 @@ extension InvitationLinkExtension on InvitationLink {
       params.add('relays=$encodedRelays');
     }
 
-    return '$baseUrl?${params.join('&')}';
+    return params;
   }
 }
 

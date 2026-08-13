@@ -7,7 +7,7 @@ import '../fixtures/test_keys.dart';
 void main() {
   group('InvitationLink.toUrl', () {
     test(
-      'emits the new query-param format with code= as the first parameter',
+      'emits the legacy path format (code in path, not query param)',
       () {
         final link = createInvitationLink(
           inviteCode: 'dGVzdF9pbnZpdGVfY29kZQ',
@@ -22,9 +22,8 @@ void main() {
 
         expect(
           url,
-          'https://horcruxbackup.com/invite/'
-          '?code=dGVzdF9pbnZpdGVfY29kZQ'
-          '&vault=vault-123'
+          'https://horcruxbackup.com/invite/dGVzdF9pbnZpdGVfY29kZQ'
+          '?vault=vault-123'
           "&name=Ben's%20Super%20Secret%20Things"
           '&owner=${TestHexPubkeys.alice}'
           '&ownerName=Alice'
@@ -45,8 +44,10 @@ void main() {
       final url = link.toUrl();
 
       expect(url, isNot(contains('ownerName=')));
-      expect(url, contains('code=dGVzdF9pbnZpdGVfY29kZQ'));
-      expect(url, startsWith('https://horcruxbackup.com/invite/?code='));
+      expect(url, contains('dGVzdF9pbnZpdGVfY29kZQ'));
+      expect(url, startsWith('https://horcruxbackup.com/invite/'));
+      // Legacy format: code is in the path, not a query param.
+      expect(url, isNot(contains('code=')));
     });
 
     test('omits ownerName when empty (existing behavior preserved)', () {
@@ -85,5 +86,32 @@ void main() {
         ),
       );
     });
+  });
+
+  group('InvitationLink.toNewFormatUrl', () {
+    test(
+      'emits the query-param format with code= as the first parameter',
+      () {
+        final link = createInvitationLink(
+          inviteCode: 'dGVzdF9pbnZpdGVfY29kZQ',
+          vaultId: 'vault-123',
+          vaultName: 'Shared Vault',
+          ownerPubkey: TestHexPubkeys.alice,
+          relayUrls: ['wss://relay.horcruxbackup.com'],
+        );
+
+        final url = link.toNewFormatUrl();
+
+        expect(
+          url,
+          'https://horcruxbackup.com/invite/'
+          '?code=dGVzdF9pbnZpdGVfY29kZQ'
+          '&vault=vault-123'
+          '&name=Shared%20Vault'
+          '&owner=${TestHexPubkeys.alice}'
+          '&relays=wss%3A%2F%2Frelay.horcruxbackup.com',
+        );
+      },
+    );
   });
 }
