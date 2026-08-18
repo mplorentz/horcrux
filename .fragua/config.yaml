@@ -8,3 +8,4 @@ name: horcrux
 
 # Uncomment if the project needs a per-worktree bootstrap command:
 # bootstrap: "bun install --frozen-lockfile"
+tier: owned
