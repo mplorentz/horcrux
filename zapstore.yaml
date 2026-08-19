@@ -1,0 +1,6 @@
+repository: https://github.com/mplorentz/horcrux
+metadata_sources:
+    - github
+    - playstore
+pubkey: npub16zsllwrkrwt5emz2805vhjewj6nsjrw0ge0latyrn2jv5gxf5k0q5l92l7
+website: https://horcruxbackup.com
