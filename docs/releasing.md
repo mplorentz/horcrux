@@ -4,30 +4,39 @@ The release flow uses fastlane. All release notes are read from the `## [Unrelea
 
 ## Flow
 
+- Make some commits
+
+- Set the marketing version
 ```bash
-# 1. Set the marketing version (keeps the existing build number — no bump)
+# Set the marketing version (keeps the existing build number — no bump)
 bundle exec fastlane set_version version:1.0.1
+```
 
-# 2. Bump the build once and ship to all beta channels:
-#    iOS TestFlight, Google Play internal testing, and a GitHub beta pre-release.
+- Tag & upload builds to beta channels
+```bash
+# iOS TestFlight, Google Play internal testing, and a GitHub beta pre-release.
 bundle exec fastlane ship_beta_all
+```
 
-# ... beta testing ...
+- Manually submit builds for beta review through TestFlight and Google Play websites
 
-# 3. Once the build is approved and released to production:
-#    renames [Unreleased] -> [1.0.1] in CHANGELOG.md, commits + pushes,
-#    and creates a production GitHub release tagged v1.0.1.
+- After build passes beta testing, submit builds for production review.
+
+- Once approved, tag production release on Github
+
+- Update changelog:
+
+```
+# renames [Unreleased] -> [1.0.1] in CHANGELOG.md, commits + pushes,
+# and creates a production GitHub release tagged v1.0.1.
 bundle exec fastlane stamp_release
 ```
 
-## Channels
+- Click release buttons in App Store Connect and Google Play
 
-| Channel | How notes are attached |
-|---|---|
-| iOS TestFlight | `changelog:` passed inline to `upload_to_testflight` (links stripped for plain-text rendering) |
-| Google Play (internal) | Written to `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` before upload (Play is file-based only; listing copy untouched) |
-| GitHub beta | Changelog body on the `v<version>-<build>` pre-release |
-| GitHub production | Changelog body on the `v<version>` release (created by `stamp_release`) |
+- Upload to zap store
+
+```zsp publish```
 
 ## Prerequisites
 

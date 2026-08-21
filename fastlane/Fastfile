@@ -216,19 +216,7 @@ platform :ios do
     stamp_changelog(section_identifier: version_number)
     git_commit(message: "Changelog for #{version_number}", path: "CHANGELOG.md")
     push_to_git_remote
-    # Production GitHub release: tag = marketing version (e.g. v1.0.1),
-    # NOT a pre-release. Distinct from the beta tag (v1.0.1-34) created by
-    # android_github_prerelease during ship_beta_all.
-    release = set_github_release(
-      repository_name: github_repo_name,
-      tag_name: "v#{version_number}",
-      name: "Horcrux #{version_number}",
-      description: release_notes,
-      is_prerelease: false,
-      **github_auth_hash
-    )
-    UI.success("✅ Stamped changelog for #{version_number}, pushed, and created production release v#{version_number}")
-    UI.success("🔗 #{release['html_url']}") if release && release["html_url"]
+    UI.success("✅ Stamped changelog for #{version_number}}")
   end
 
   desc "Bump build number only"
