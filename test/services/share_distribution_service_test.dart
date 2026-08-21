@@ -1053,6 +1053,160 @@ void main() {
           throwsA(isA<ArgumentError>()),
         );
       });
+
+      test('drops stale ack when steward already acknowledged a higher version', () async {
+        // Steward Bob already acked at v7 (holding the current key).
+        // A stale v6 ack arrives — must be ignored.
+        const vaultId = 'vault-stale-ack';
+        final bobSteward = createSteward(pubkey: bobPubHex, name: 'Bob').copyWith(
+          acknowledgedDistributionVersion: 7,
+          status: StewardStatus.holdingKey,
+        );
+        final cfg = createBackupConfig(
+          vaultId: vaultId,
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [
+            createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+            bobSteward,
+          ],
+          relays: TestBackupConfigs.simple2of2Relays,
+        ).copyWith(distributionVersion: 7);
+
+        when(mockRepository.getVault(vaultId)).thenAnswer((_) async {
+          return Vault(
+            id: vaultId,
+            name: 'Test',
+            createdAt: DateTime.utc(2024),
+            ownerPubkey: alicePubHex,
+            backupConfig: cfg,
+          );
+        });
+        when(
+          mockRepository.updateStewardStatus(
+            vaultId: anyNamed('vaultId'),
+            pubkey: anyNamed('pubkey'),
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: anyNamed('giftWrapEventId'),
+          ),
+        ).thenAnswer((_) async {});
+
+        final event = confirmationEvent(
+          stewardPubkey: bobPubHex,
+          tags: [
+            ['vault_id', vaultId],
+            ['share_index', '1'],
+            ['distribution_version', '6'],
+          ],
+        );
+
+        await service.processShareConfirmationEvent(event: event);
+
+        // Steward already acked at v7 — stale v6 must NOT overwrite.
+        verifyNever(
+          mockRepository.updateStewardStatus(
+            vaultId: anyNamed('vaultId'),
+            pubkey: anyNamed('pubkey'),
+            status: anyNamed('status'),
+            acknowledgedAt: anyNamed('acknowledgedAt'),
+            acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+            acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+            giftWrapEventId: anyNamed('giftWrapEventId'),
+          ),
+        );
+      });
+
+      test(
+        'REGRESSION: stale ack overwrites newer ack when both arrive before '
+        'repository is updated (race condition)',
+        () async {
+          // Steward Bob has NO acknowledgedDistributionVersion yet.
+          // Two events arrive in quick succession: v7 first, then v6.
+          // getVault returns the initial state for both reads (the mock
+          // isn't updated between calls), so the stale guard sees null for
+          // both — neither is caught, and the v6 write overwrites the v7
+          // write.
+          const vaultId = 'vault-race-stale';
+          final bobSteward = createSteward(pubkey: bobPubHex, name: 'Bob')
+              .copyWith(acknowledgedDistributionVersion: null);
+          final cfg = createBackupConfig(
+            vaultId: vaultId,
+            threshold: 2,
+            totalKeys: 2,
+            stewards: [
+              createOwnerSteward(pubkey: alicePubHex, name: 'Alice'),
+              bobSteward,
+            ],
+            relays: TestBackupConfigs.simple2of2Relays,
+          ).copyWith(distributionVersion: 7);
+
+          when(mockRepository.getVault(vaultId)).thenAnswer((_) async {
+            return Vault(
+              id: vaultId,
+              name: 'Test',
+              createdAt: DateTime.utc(2024),
+              ownerPubkey: alicePubHex,
+              backupConfig: cfg,
+            );
+          });
+          when(
+            mockRepository.updateStewardStatus(
+              vaultId: anyNamed('vaultId'),
+              pubkey: anyNamed('pubkey'),
+              status: anyNamed('status'),
+              acknowledgedAt: anyNamed('acknowledgedAt'),
+              acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+              acknowledgedDistributionVersion: anyNamed('acknowledgedDistributionVersion'),
+              giftWrapEventId: anyNamed('giftWrapEventId'),
+            ),
+          ).thenAnswer((_) async {});
+
+          // Process v7 first.
+          await service.processShareConfirmationEvent(
+            event: confirmationEvent(
+              stewardPubkey: bobPubHex,
+              tags: [
+                ['vault_id', vaultId],
+                ['share_index', '1'],
+                ['distribution_version', '7'],
+              ],
+            ),
+          );
+
+          // Process v6 next — getVault still returns the same initial vault
+          // (Bob with null acknowledgedDistributionVersion), so the stale
+          // guard DOES NOT catch 6 < 7.
+          await service.processShareConfirmationEvent(
+            event: confirmationEvent(
+              stewardPubkey: bobPubHex,
+              tags: [
+                ['vault_id', vaultId],
+                ['share_index', '1'],
+                ['distribution_version', '6'],
+              ],
+            ),
+          );
+
+          // The stale v6 should have been dropped — it MUST NOT overwrite
+          // the v7 write.  Because the mock returns the same initial state
+          // for both getVault calls, the guard lets v6 through and this
+          // assertion FAILS, proving the race condition.
+          verifyNever(
+            mockRepository.updateStewardStatus(
+              vaultId: vaultId,
+              pubkey: bobPubHex,
+              acknowledgedDistributionVersion: 6,
+              status: anyNamed('status'),
+              acknowledgedAt: anyNamed('acknowledgedAt'),
+              acknowledgmentEventId: anyNamed('acknowledgmentEventId'),
+              giftWrapEventId: anyNamed('giftWrapEventId'),
+            ),
+          );
+        },
+      );
     });
 
     group('processShareErrorEvent', () {
