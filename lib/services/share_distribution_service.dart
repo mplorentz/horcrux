@@ -39,6 +39,13 @@ class ShareDistributionService {
   final NdkService _ndkService;
   final HorcruxNotificationService _notificationService;
 
+  /// Tracks the maximum distribution version acknowledged per steward (vault:pubkey)
+  /// within this service instance. Used as an in-memory monotonic guard to
+  /// prevent concurrent ack races where two events arrive before the repository
+  /// is updated — the pre-read stale guard cannot catch this case because both
+  /// events read the same initial vault state.
+  final Map<String, int> _maxAckedVersionPerSteward = {};
+
   ShareDistributionService(
     this._repository,
     this._loginService,
@@ -413,6 +420,40 @@ class ShareDistributionService {
         '(current v$currentDistributionVersion) on vault $vaultId, share $shareIndex',
       );
       return;
+    }
+
+    // Drop stale acks: if the steward has already acknowledged a higher version,
+    // ignore the incoming lower-version ack to avoid downgrading.
+    if (tagDistributionVersion != null && config != null) {
+      for (final steward in config.stewards) {
+        if (steward.pubkey == keyHolderPubkey &&
+            steward.acknowledgedDistributionVersion != null &&
+            tagDistributionVersion < steward.acknowledgedDistributionVersion!) {
+          Log.info(
+            'Ignoring stale share confirmation for vault $vaultId, share $shareIndex '
+            'from steward $keyHolderPubkey: incoming v$tagDistributionVersion '
+            'is older than already-acked v${steward.acknowledgedDistributionVersion}',
+          );
+          return;
+        }
+      }
+    }
+
+    // In-memory monotonic guard: tracks max acked version per steward to
+    // prevent the concurrent-ack race where the pre-read guard above misses
+    // because both events read the same initial vault state.
+    if (tagDistributionVersion != null) {
+      final trackerKey = '$vaultId:$keyHolderPubkey';
+      final maxAcked = _maxAckedVersionPerSteward[trackerKey];
+      if (maxAcked != null && tagDistributionVersion < maxAcked) {
+        Log.info(
+          'Ignoring stale share confirmation for vault $vaultId, share $shareIndex '
+          'from steward $keyHolderPubkey: incoming v$tagDistributionVersion '
+          'is older than in-memory max v$maxAcked',
+        );
+        return;
+      }
+      _maxAckedVersionPerSteward[trackerKey] = tagDistributionVersion;
     }
 
     final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
