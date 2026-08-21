@@ -108,3 +108,6 @@ build_broken/
 # But keep committed project config trackable
 !.fragua/config.yaml
 !.fragua/workflows/
+
+# Generated Play Store changelog files (written by android_beta from CHANGELOG.md)
+android/store/metadata/*/changelogs/*.txt
