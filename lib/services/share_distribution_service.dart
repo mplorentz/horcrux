@@ -415,6 +415,23 @@ class ShareDistributionService {
       return;
     }
 
+    // Drop stale acks: if the steward has already acknowledged a higher version,
+    // ignore the incoming lower-version ack to avoid downgrading.
+    if (tagDistributionVersion != null && config != null) {
+      for (final s in config.stewards) {
+        if (s.pubkey == keyHolderPubkey &&
+            s.acknowledgedDistributionVersion != null &&
+            tagDistributionVersion < s.acknowledgedDistributionVersion!) {
+          Log.info(
+            'Ignoring stale share confirmation for vault $vaultId, share $shareIndex '
+            'from steward $keyHolderPubkey: incoming v$tagDistributionVersion '
+            'is older than already-acked v${s.acknowledgedDistributionVersion}',
+          );
+          return;
+        }
+      }
+    }
+
     final acknowledgedDistributionVersion = tagDistributionVersion ?? currentDistributionVersion;
     await _repository.updateStewardStatus(
       vaultId: vaultId,
