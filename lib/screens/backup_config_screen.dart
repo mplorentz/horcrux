@@ -1410,7 +1410,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         // Navigate to vault list screen
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const VaultListScreen()),
+            MaterialPageRoute(
+                settings: const RouteSettings(name: 'VaultListScreen'),
+                builder: (context) => const VaultListScreen()),
             (route) => false,
           );
         }

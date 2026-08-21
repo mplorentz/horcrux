@@ -267,6 +267,21 @@ final Provider<ServiceB> serviceBProvider = Provider<ServiceB>((ref) {
 
 **Deep Links**: Invitation links are generated (`InvitationLink.toUrl()`) as `https://horcruxbackup.com/invite/{inviteCode}?vault=...&owner=...&relays=...`; the `horcrux://` custom scheme is also accepted for the same `/invite/{code}` path. Handle via `DeepLinkService` with validation.
 
+### Analytics PII Rules
+
+**NO PII IN ANALYTICS EVENTS.** The `AnalyticsService` chokepoint enforces this by convention, not by hard-coded filtering:
+
+- **Never** send raw vault ids — always use `AnalyticsService.vaultHash(vaultId)` (sha256 truncated to 16 hex chars).
+- **Never** send raw npubs, usernames, email addresses, or any personally identifying information.
+- **Never** send vault contents, shard data, or encrypted blobs.
+- Only send property values that are hashes, booleans, counts, or enums.
+- The event name must be a static string literal — never interpolated from user input.
+- All PostHog calls must go through `AnalyticsService` — no direct `Posthog().capture()` calls outside it.
+- Debug builds (`kDebugMode`) opt out entirely. No PostHog SDK init, no network calls, no footprint.
+- See `docs/analytics.md` for the full event schema and checklist.
+
+**Exceptions**: The only PII-like data sent is the npub in `identify()` (PostHog user identity, required for funnel analysis). This is a structured SDK call, not an event property. The npub is public key material (published on Nostr relays) — it identifies actions, not a real name.
+
 ## Important Cursor Rules (from .cursorrules)
 
 **Service/Repository Pattern**: Only create repositories for complex data access (caching, streams, 100+ lines). Use service-only pattern for simple CRUD.

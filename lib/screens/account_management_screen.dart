@@ -347,7 +347,9 @@ class _AccountManagementScreenState extends ConsumerState<AccountManagementScree
               buttons: [
                 RowButtonConfig(
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
+                    MaterialPageRoute(
+                        settings: const RouteSettings(name: 'DeleteAccountScreen'),
+                        builder: (_) => const DeleteAccountScreen()),
                   ),
                   icon: Icons.delete_forever,
                   text: 'Delete Account',

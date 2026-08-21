@@ -78,6 +78,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                     // consent then to invitation acceptance or vault list.
                     final accepted = await navigator.push<bool>(
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'ConsentScreen'),
                         builder: (context) => const ConsentScreen(),
                       ),
                     );
@@ -87,9 +88,9 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                   } else {
                     navigator.push(
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'ConsentScreen'),
                         builder: (context) => ConsentScreen(
-                          nextScreen:
-                              AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
+                          nextScreen: AccountCreatedScreen(nsec: keyPair.privateKeyBech32!),
                         ),
                       ),
                     );
@@ -107,6 +108,7 @@ class _AccountChoiceScreenState extends ConsumerState<AccountChoiceScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'LoginScreen'),
                       builder: (context) => const LoginScreen(),
                     ),
                   );

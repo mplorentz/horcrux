@@ -75,6 +75,7 @@ class _OnboardingRecoveryScreenState extends State<OnboardingRecoveryScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'FeedbackScreen'),
                         builder: (context) => const FeedbackScreen(
                           title: 'Contact Support',
                         ),
@@ -89,6 +90,7 @@ class _OnboardingRecoveryScreenState extends State<OnboardingRecoveryScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'LoginScreen'),
                         builder: (context) => const LoginScreen(),
                       ),
                     );

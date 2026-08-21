@@ -45,6 +45,7 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'AccountManagementScreen'),
                   builder: (context) => const AccountManagementScreen(),
                 ),
               );
@@ -67,6 +68,7 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'RelayManagementScreen'),
                   builder: (context) => const RelayManagementScreen(),
                 ),
               );
@@ -94,6 +96,7 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'PushNotificationSettingsScreen'),
                   builder: (context) => const PushNotificationSettingsScreen(),
                 ),
               );
@@ -134,6 +137,7 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'FeedbackScreen'),
                   builder: (context) => const FeedbackScreen(),
                 ),
               );

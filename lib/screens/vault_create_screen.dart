@@ -105,6 +105,7 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
     final result = await Navigator.push<String>(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'BackupConfigScreen'),
         builder: (context) => BackupConfigScreen(
           vaultId: vaultId,
           isOnboarding: widget.isOnboarding,
@@ -117,7 +118,9 @@ class _VaultCreateScreenState extends ConsumerState<VaultCreateScreen> with Vaul
     if (widget.isOnboarding) {
       // After onboarding flow completes, take the user to the vault list
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const VaultListScreen()),
+        MaterialPageRoute(
+            settings: const RouteSettings(name: 'VaultListScreen'),
+            builder: (context) => const VaultListScreen()),
         (route) => false,
       );
       context.showHorcruxSnackBar(

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
+
+import '../services/analytics_service.dart';
 
 /// A full-width button with an icon and text in a row layout
 class RowButton extends StatelessWidget {
@@ -14,6 +17,13 @@ class RowButton extends StatelessWidget {
   final bool
       addBottomSafeArea; // Pads past the bottom system inset (iOS home indicator, Android nav/gesture bar)
 
+  /// Optional analytics event name to capture when the button is pressed.
+  /// When set, fires [AnalyticsService.capture] before the [onPressed] callback.
+  final String? analyticsEvent;
+
+  /// Optional properties for the analytics event.
+  final Map<String, Object>? analyticsProperties;
+
   const RowButton({
     super.key,
     required this.onPressed,
@@ -25,6 +35,8 @@ class RowButton extends StatelessWidget {
     this.textStyle,
     this.padding = const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
     this.addBottomSafeArea = false, // Default to false, set to true for bottom buttons
+    this.analyticsEvent,
+    this.analyticsProperties,
   });
 
   @override
@@ -64,6 +76,18 @@ class RowButton extends StatelessWidget {
       _ => 0.0,
     };
 
+    // Wire the analytics service for tap events.
+    // Use a closure so we don't force the widget to be a ConsumerWidget.
+    void fireAnalytics() {
+      if (analyticsEvent == null) return;
+      try {
+        final analytics = ProviderScope.containerOf(context).read(analyticsServiceProvider);
+        analytics.capture(analyticsEvent!, properties: analyticsProperties);
+      } catch (_) {
+        // Analytics unavailable — proceed without analytics.
+      }
+    }
+
     final effectivePadding = padding != null
         ? padding!.copyWith(bottom: padding!.bottom + bottomSafeArea)
         : EdgeInsets.only(
@@ -74,7 +98,10 @@ class RowButton extends StatelessWidget {
           );
 
     return InkWell(
-      onTap: onPressed,
+      onTap: () {
+        fireAnalytics();
+        onPressed?.call();
+      },
       child: Opacity(
         opacity: isDisabled ? 0.6 : 1.0,
         child: Container(

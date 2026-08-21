@@ -200,7 +200,9 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
   /// vault list or invitation acceptance screen.
   Future<void> _continue() async {
     final accepted = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const ConsentScreen()),
+      MaterialPageRoute(
+          settings: const RouteSettings(name: 'ConsentScreen'),
+          builder: (_) => const ConsentScreen()),
     );
 
     if (accepted == true && mounted) {
@@ -215,6 +217,7 @@ class _LoginRelayConfigScreenState extends ConsumerState<LoginRelayConfigScreen>
     if (widget.skipOffersKeyBackup) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
+          settings: const RouteSettings(name: 'ConsentScreen'),
           builder: (_) => ConsentScreen(
             nextScreen: ImportSuccessScreen(nsec: widget.nsec),
           ),

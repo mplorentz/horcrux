@@ -113,6 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'LoginRelayConfigScreen'),
             builder: (context) => LoginRelayConfigScreen(nsec: privateKey),
           ),
         );

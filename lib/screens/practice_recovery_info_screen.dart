@@ -191,6 +191,8 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
         ),
         // Start Practice Recovery button
         RowButton(
+          analyticsEvent: 'recovery_initiated',
+          analyticsProperties: const {'is_practice': true},
           onPressed: () => _startPracticeRecovery(context, ref, vault),
           icon: Icons.restore,
           text: 'Start Practice Recovery',
@@ -365,6 +367,7 @@ class PracticeRecoveryInfoScreen extends ConsumerWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
+              settings: const RouteSettings(name: 'RecoveryStatusScreen'),
               builder: (context) => RecoveryStatusScreen(recoveryRequestId: recoveryRequest.id),
             ),
           );

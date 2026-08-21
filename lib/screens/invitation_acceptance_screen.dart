@@ -464,6 +464,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'VaultListScreen'),
             builder: (context) => const VaultListScreen(),
           ),
           (route) => false,
@@ -471,6 +472,7 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
         Navigator.push(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'VaultDetailScreen'),
             builder: (context) => VaultDetailScreen(vaultId: vaultId),
           ),
         );
@@ -572,7 +574,9 @@ class _InvitationAcceptanceScreenState extends ConsumerState<InvitationAcceptanc
             } else {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const VaultListScreen()),
+                MaterialPageRoute(
+                    settings: const RouteSettings(name: 'VaultListScreen'),
+                    builder: (context) => const VaultListScreen()),
                 (route) => false,
               );
             }
