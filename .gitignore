@@ -110,4 +110,4 @@ build_broken/
 !.fragua/workflows/
 
 # Generated Play Store changelog files (written by android_beta from CHANGELOG.md)
-fastlane/metadata/android/*/changelogs/*.txt
+android/store/metadata/*/changelogs/*.txt

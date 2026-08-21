@@ -330,6 +330,16 @@ def strip_markdown_links(text)
   text.gsub(/\[([^\]]*)\]\([^)]*\)/, '\1')
 end
 
+# Read the text under `## [Unreleased]` in CHANGELOG.md (at repo root) up to
+# the next `## ` heading. Returns "" if the section is missing or empty.
+def read_changelog
+  changelog_path = File.expand_path("../CHANGELOG.md", __dir__)
+  UI.user_error!("CHANGELOG.md not found at #{changelog_path}") unless File.exist?(changelog_path)
+  content = File.read(changelog_path)
+  m = content.match(/^## \[Unreleased\]\s*\n(.*?)(?=^## )/m)
+  m ? m[1].strip : ""
+end
+
 # Reads the `## [Unreleased]` section of CHANGELOG.md with markdown links
 # stripped, for attachment to the TestFlight build as release notes.
 def cleaned_changelog
@@ -412,7 +422,7 @@ platform :android do
     # live listing copy is never touched, and let skip_upload_changelogs
     # default to false so this file is picked up.
     version_code = read_pubspec_version_code
-    changelog_dir = File.expand_path("../metadata/android/en-US/changelogs", __dir__)
+    changelog_dir = File.expand_path("../android/store/metadata/en-US/changelogs", __dir__)
     FileUtils.mkdir_p(changelog_dir)
     changelog_file = File.join(changelog_dir, "#{version_code}.txt")
     File.write(changelog_file, cleaned_changelog)
@@ -420,12 +430,14 @@ platform :android do
 
     # Upload to Google Play Console Internal Testing track
     aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
+    metadata_path = File.expand_path("../android/store/metadata", __dir__)
     upload_to_play_store(
       package_name: "com.singleoriginsoftware.horcrux",
       json_key: json_key_path,
       track: "internal",
       aab: aab_path,
       release_status: "draft",
+      metadata_path: metadata_path,
       skip_upload_metadata: true,
       skip_upload_images: true,
       skip_upload_screenshots: true
