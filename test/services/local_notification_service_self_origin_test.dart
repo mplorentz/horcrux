@@ -12,6 +12,7 @@ import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/services/local_notification_service.dart';
 import 'package:horcrux/services/login_service.dart';
 import 'package:horcrux/services/recovery_service.dart';
+import 'package:horcrux/services/ndk_service.dart' show RecoveryResponseEvent;
 
 import '../fixtures/test_keys.dart';
 
@@ -265,14 +266,16 @@ void main() {
   group('LocalNotificationService invitation acceptance', () {
     test(
       'invitation acceptance from another steward proceeds past '
-      'self-origin filter and reaches vault lookup',
+      'self-origin filter and reaches vault lookup when foregrounded',
       () async {
-        final service = buildService(currentPubkey: TestHexPubkeys.alice);
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
 
         await service.notifyInvitationAcceptanceProcessed(
           event: buildInvitationAcceptance(
             senderPubkey: TestHexPubkeys.bob,
-            // Use "now" so the recency gate doesn't filter the event out.
             createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
           ),
           vaultId: 'vault-1',
@@ -281,7 +284,32 @@ void main() {
         expect(
           vaultRepository.getVaultCalls,
           equals(['vault-1']),
-          reason: 'non-self invitation acceptance must reach vault lookup',
+          reason: 'non-self invitation acceptance in foreground must reach vault lookup',
+        );
+      },
+    );
+
+    test(
+      'invitation acceptance from a peer is suppressed when NOT foregrounded '
+      '(FCM covers background notifications)',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => false,
+        );
+
+        await service.notifyInvitationAcceptanceProcessed(
+          event: buildInvitationAcceptance(
+            senderPubkey: TestHexPubkeys.bob,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+          vaultId: 'vault-1',
+        );
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'background invitation acceptance must be suppressed (FCM covers it)',
         );
       },
     );
@@ -355,8 +383,8 @@ void main() {
 
   group('LocalNotificationService foreground shard suppression (horcrux_app-tur)', () {
     test(
-      'kind-713 from a peer is suppressed when isForegrounded is true '
-      '(before vault lookup)',
+      'kind-713 from a peer reaches vault lookup when isForegrounded is true '
+      '(no duplicated FCM in foreground)',
       () async {
         final service = buildService(
           currentPubkey: TestHexPubkeys.alice,
@@ -371,11 +399,12 @@ void main() {
           share: makeShare(vaultId: 'vault-1'),
         );
 
-        expect(vaultRepository.getVaultCalls, isEmpty);
+        expect(vaultRepository.getVaultCalls, equals(['vault-1']));
       },
     );
     test(
-      'kind-713 from a peer still reaches vault lookup when not foregrounded',
+      'kind-713 from a peer is suppressed when NOT foregrounded '
+      '(FCM covers background notifications)',
       () async {
         final service = buildService(
           currentPubkey: TestHexPubkeys.alice,
@@ -390,7 +419,7 @@ void main() {
           share: makeShare(vaultId: 'vault-1'),
         );
 
-        expect(vaultRepository.getVaultCalls, equals(['vault-1']));
+        expect(vaultRepository.getVaultCalls, isEmpty);
       },
     );
 
@@ -442,6 +471,106 @@ void main() {
         );
 
         expect(vaultRepository.getVaultCalls, equals(['vault-1']));
+      },
+    );
+  });
+
+  group('LocalNotificationService recovery request background suppression', () {
+    // Borrow RecoversRequest from the production code's naming.
+    RecoveryRequest makeRecentRecoveryRequest({String vaultId = 'vault-1'}) {
+      return RecoveryRequest(
+        id: 'req-1',
+        vaultId: vaultId,
+        initiatorPubkey: TestHexPubkeys.bob,
+        requestedAt: DateTime.now().subtract(const Duration(seconds: 30)),
+        status: RecoveryRequestStatus.pending,
+        threshold: 2,
+      );
+    }
+
+    test(
+      'recovery request reaches vault lookup when foregrounded',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
+
+        await service.notifyRecoveryRequestProcessed(makeRecentRecoveryRequest());
+
+        expect(
+          vaultRepository.getVaultCalls,
+          equals(['vault-1']),
+          reason: 'foreground recovery request must reach vault lookup',
+        );
+      },
+    );
+
+    test(
+      'recovery request is suppressed when NOT foregrounded '
+      '(FCM covers background notifications)',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => false,
+        );
+
+        await service.notifyRecoveryRequestProcessed(makeRecentRecoveryRequest());
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'background recovery request must be suppressed (FCM covers it)',
+        );
+      },
+    );
+  });
+
+  group('LocalNotificationService recovery response background suppression', () {
+    RecoveryResponseEvent makeRecentRecoveryResponse({bool approved = true}) {
+      return RecoveryResponseEvent(
+        recoveryRequestId: 'req-1',
+        vaultId: 'vault-1',
+        senderPubkey: TestHexPubkeys.bob,
+        approved: approved,
+        createdAt: DateTime.now().subtract(const Duration(seconds: 30)),
+      );
+    }
+
+    test(
+      'recovery response reaches vault lookup when foregrounded',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => true,
+        );
+
+        await service.notifyRecoveryResponseProcessed(makeRecentRecoveryResponse());
+
+        expect(
+          vaultRepository.getVaultCalls,
+          equals(['vault-1']),
+          reason: 'foreground recovery response must reach vault lookup',
+        );
+      },
+    );
+
+    test(
+      'recovery response is suppressed when NOT foregrounded '
+      '(FCM covers background notifications)',
+      () async {
+        final service = buildService(
+          currentPubkey: TestHexPubkeys.alice,
+          isForegrounded: () => false,
+        );
+
+        await service.notifyRecoveryResponseProcessed(makeRecentRecoveryResponse());
+
+        expect(
+          vaultRepository.getVaultCalls,
+          isEmpty,
+          reason: 'background recovery response must be suppressed (FCM covers it)',
+        );
       },
     );
   });

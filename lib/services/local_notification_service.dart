@@ -25,8 +25,11 @@ import 'recovery_service.dart' show RecoveryService, recoveryServiceProvider;
 
 /// True when the app is in [AppLifecycleState.resumed] (foreground).
 ///
-/// Used by [LocalNotificationService] to suppress informational shard
-/// notifications (kind 713) while the user already has the app open.
+/// Used by [LocalNotificationService] to suppress local notifications when
+/// the app is backgrounded — an FCM push notification already displays an OS
+/// notification, so a local notification would duplicate. Foreground
+/// behavior is unchanged (FCM is suppressed in foreground, so the local
+/// notification fires there).
 /// [WidgetsBinding.instance.lifecycleState] may be null during early startup;
 /// that is treated as not resumed so notifications are not dropped.
 bool _defaultLocalNotificationIsForegrounded() {
@@ -338,6 +341,18 @@ class LocalNotificationService {
     Log.info(
       'Showing notification for recovery request: ${request.id}',
     );
+
+    // When the app is in background, the FCM push notification already
+    // displays an OS notification. Skip the local notification to avoid
+    // duplicates.
+    if (!_isForegrounded()) {
+      Log.debug(
+        'Skipping recovery request notification ${request.id}: '
+        'app is in background (FCM push notification covers this)',
+      );
+      return;
+    }
+
     final vault = await _vaultRepository.getVault(request.vaultId);
     final text = composeNotificationText(
       kind: NostrKind.recoveryRequest,
@@ -382,6 +397,17 @@ class LocalNotificationService {
       label: 'invitationAcceptance',
       id: event.id,
     )) {
+      return;
+    }
+
+    // When the app is in background, the FCM push notification already
+    // displays an OS notification. Skip the local notification to avoid
+    // duplicates.
+    if (!_isForegrounded()) {
+      Log.debug(
+        'Skipping invitation acceptance notification ${event.id}: '
+        'app is in background (FCM push notification covers this)',
+      );
       return;
     }
 
@@ -433,17 +459,11 @@ class LocalNotificationService {
       return;
     }
 
-    if (kind == NostrKind.shareData && _isForegrounded()) {
-      Log.debug(
-        'Skipping ${kind.name} notification ${event.id}: app is in foreground',
-      );
-      return;
-    }
-
-    // When the app is in background, the FCM push notification already displays
-    // an OS notification for the share confirmation. Showing a local notification
-    // on top of it would duplicate. Skip here and rely on the FCM OS notification.
-    if (kind == NostrKind.shareConfirmation && !_isForegrounded()) {
+    // When the app is in background, the FCM push notification already
+    // displays an OS notification. Showing a local notification on top
+    // of it would duplicate. Skip here and rely on the FCM OS
+    // notification.
+    if (!_isForegrounded()) {
       Log.debug(
         'Skipping ${kind.name} notification ${event.id}: app is in background '
         '(FCM push notification covers this)',
@@ -472,6 +492,18 @@ class LocalNotificationService {
     Log.info(
       'Showing notification for recovery response ($status): ${response.recoveryRequestId}',
     );
+
+    // When the app is in background, the FCM push notification already
+    // displays an OS notification. Skip the local notification to avoid
+    // duplicates.
+    if (!_isForegrounded()) {
+      Log.debug(
+        'Skipping recovery response notification ${response.recoveryRequestId}: '
+        'app is in background (FCM push notification covers this)',
+      );
+      return;
+    }
+
     final vault = await _vaultRepository.getVault(response.vaultId);
     final text = composeNotificationText(
       kind: NostrKind.recoveryResponse,
