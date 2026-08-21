@@ -8,6 +8,7 @@ require 'dotenv'
 # (~60s) aborts large APK uploads mid-stream. Raise the read/write timeouts so
 # multi-megabyte assets finish on slower connections.
 require 'excon'
+require 'fileutils'
 Excon.defaults[:write_timeout] = 600
 Excon.defaults[:read_timeout] = 600
 
@@ -79,19 +80,37 @@ private_lane :ios_increment_build_sync_pubspec do
   UI.success("✅ Updated pubspec.yaml version to #{new_version}")
 end
 
-desc "Set marketing version on iOS, bump build once, sync pubspec (Flutter/Android versionCode + versionName)"
+desc "Set marketing version on iOS and sync pubspec (keeps the existing build number)"
+desc "Does NOT bump the build — ship_beta_all bumps it once per build."
 desc "Usage: fastlane set_version version:0.8.0 — or VERSION=0.8.0"
 lane :set_version do |options|
   new_version = (options[:version] || ENV["VERSION"]).to_s.strip
   UI.user_error!("Provide version: X.Y.Z — e.g. fastlane set_version version:0.8.0") if new_version.empty?
 
+  # Read the current build number from pubspec (source of truth) and keep it
+  # — no bump. ship_beta_all bumps once per shipped build.
+  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+  pubspec_content = File.read(pubspec_path)
+  m = pubspec_content.match(/^version:\s*[^+]+\+(\d+)\s*$/)
+  UI.user_error!("Could not parse version+build from pubspec.yaml") unless m
+  current_build = m[1].to_i
+
   increment_version_number(
     version_number: new_version,
     xcodeproj: "ios/Runner.xcodeproj"
   )
+  # Sync the (unchanged) build number into Xcode so the project matches pubspec.
+  increment_build_number(
+    build_number: current_build.to_s,
+    xcodeproj: "ios/Runner.xcodeproj"
+  )
 
-  ios_increment_build_sync_pubspec
-  UI.success("✅ set_version complete — iOS + pubspec (Android) aligned")
+  new_version_string = "#{new_version}+#{current_build}"
+  pubspec_content.gsub!(/^version: .*$/, "version: #{new_version_string}")
+  File.write(pubspec_path, pubspec_content)
+
+  UI.success("✅ Marketing version set to #{new_version} (build #{current_build} unchanged)")
+  UI.success("✅ Updated pubspec.yaml version to #{new_version_string}")
 end
 
 desc "Bump build once (iOS CFBundleVersion + pubspec; Android uses pubspec), then ship everywhere"
@@ -166,11 +185,14 @@ platform :ios do
     
     ipa_file = ipa_files.first
     
-    # Upload to TestFlight
+    # Upload to TestFlight. The changelog is read automatically from the
+    # `## [Unreleased]` section of CHANGELOG.md (markdown links stripped,
+    # since TestFlight renders release notes as plain text).
     api_key_obj = get_api_key
     upload_to_testflight(
       ipa: ipa_file,
       api_key: api_key_obj,
+      changelog: cleaned_changelog,
       skip_waiting_for_build_processing: true,
       skip_submission: true,
       distribute_external: false,
@@ -179,6 +201,34 @@ platform :ios do
     )
     
     UI.success("✅ iOS beta uploaded to TestFlight")
+  end
+
+  desc "Stamp the Unreleased changelog into a versioned section, commit, push,"
+  desc "and tag the released commit as a production GitHub release (non-pre-release)."
+  desc "Run AFTER a build has been approved and released to production."
+  desc "Reads the iOS marketing version (e.g. 1.0.1). Usage: bundle exec fastlane stamp_release"
+  desc "Needs: GITHUB_REPOSITORY + GITHUB_TOKEN (or GH_TOKEN)"
+  lane :stamp_release do
+    version_number = get_version_number(xcodeproj: "ios/Runner.xcodeproj")
+    # Capture the Unreleased release notes BEFORE stamping moves them into
+    # a versioned section (read_changelog reads [Unreleased]).
+    release_notes = cleaned_changelog
+    stamp_changelog(section_identifier: version_number)
+    git_commit(message: "Changelog for #{version_number}", path: "CHANGELOG.md")
+    push_to_git_remote
+    # Production GitHub release: tag = marketing version (e.g. v1.0.1),
+    # NOT a pre-release. Distinct from the beta tag (v1.0.1-34) created by
+    # android_github_prerelease during ship_beta_all.
+    release = set_github_release(
+      repository_name: github_repo_name,
+      tag_name: "v#{version_number}",
+      name: "Horcrux #{version_number}",
+      description: release_notes,
+      is_prerelease: false,
+      **github_auth_hash
+    )
+    UI.success("✅ Stamped changelog for #{version_number}, pushed, and created production release v#{version_number}")
+    UI.success("🔗 #{release['html_url']}") if release && release["html_url"]
   end
 
   desc "Bump build number only"
@@ -282,6 +332,53 @@ platform :ios do
   end
 end
 
+# Helper functions
+
+# Strip markdown links of the form [text](url), keeping the link text.
+# TestFlight / App Store Connect render release notes as plain text, so
+# markdown links don't work — we keep the descriptive text (and the issue
+# number) and drop the URL.
+def strip_markdown_links(text)
+  text.gsub(/\[([^\]]*)\]\([^)]*\)/, '\1')
+end
+
+# Reads the `## [Unreleased]` section of CHANGELOG.md with markdown links
+# stripped, for attachment to the TestFlight build as release notes.
+def cleaned_changelog
+  changelog = read_changelog
+  strip_markdown_links(changelog)
+end
+
+# Read the integer versionCode (the part after `+` in pubspec.yaml).
+# Play Store changelog filenames must match this value exactly.
+def read_pubspec_version_code
+  pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+  pubspec_content = File.read(pubspec_path)
+  m = pubspec_content.match(/^version:\s*[^+]+\+(\d+)\s*$/)
+  UI.user_error!("Could not parse versionCode from pubspec.yaml") unless m
+  m[1].to_i
+end
+
+# Resolve the GitHub repository (owner/repo) from the environment. Raises
+# if unset or not exactly owner/repo. Used by both the beta pre-release
+# (android_github_prerelease) and the production release (stamp_release).
+def github_repo_name
+  repository_name = (ENV["GITHUB_REPOSITORY"] || ENV["GITHUB_REPO"]).to_s.strip
+  UI.user_error!("Set GITHUB_REPOSITORY to owner/repo (no URL)") if repository_name.empty?
+  UI.user_error!("Use owner/repo only, not a full GitHub URL") if repository_name.include?("github.com")
+  repo_parts = repository_name.split("/")
+  UI.user_error!("GITHUB_REPOSITORY must be exactly owner/repo") unless repo_parts.length == 2 && repo_parts.none?(&:empty?)
+  repository_name
+end
+
+# Resolve GitHub auth kwargs for set_github_release from the environment.
+# GitHub Actions' GITHUB_TOKEN uses Bearer auth; a PAT uses api_token.
+def github_auth_hash
+  token = (ENV["GITHUB_TOKEN"] || ENV["GH_TOKEN"]).to_s.strip
+  UI.user_error!("Set GITHUB_TOKEN or GH_TOKEN (contents:write / repo scope)") if token.empty?
+  ENV["GITHUB_ACTIONS"] == "true" ? { api_bearer: token } : { api_token: token }
+end
+
 platform :android do
   desc "Build Android APK for distribution outside Google Play"
   lane :build_apk do
@@ -319,7 +416,20 @@ platform :android do
     
     # Build Android App Bundle
     sh("cd .. && flutter build appbundle --release")
-    
+
+    # Write the Unreleased changelog to the Play Store changelogs directory
+    # before upload. Play's "What's new" notes are file-based only (no inline
+    # string param like TestFlight): the filename MUST match the integer
+    # versionCode of the AAB. We keep skip_upload_metadata: true so the
+    # live listing copy is never touched, and let skip_upload_changelogs
+    # default to false so this file is picked up.
+    version_code = read_pubspec_version_code
+    changelog_dir = File.expand_path("../metadata/android/en-US/changelogs", __dir__)
+    FileUtils.mkdir_p(changelog_dir)
+    changelog_file = File.join(changelog_dir, "#{version_code}.txt")
+    File.write(changelog_file, cleaned_changelog)
+    UI.message("📝 Wrote Play changelog for versionCode #{version_code} -> #{changelog_file}")
+
     # Upload to Google Play Console Internal Testing track
     aab_path = File.expand_path("../build/app/outputs/bundle/release/app-release.aab", __dir__)
     upload_to_play_store(
@@ -332,7 +442,7 @@ platform :android do
       skip_upload_images: true,
       skip_upload_screenshots: true
     )
-    
+
     UI.success("✅ Android beta uploaded to Google Play Console Internal Testing")
   end
 
@@ -349,37 +459,26 @@ platform :android do
       UI.user_error!("APK not found at #{apk_path}. Build first or run without SKIP_BUILD.")
     end
 
-    repository_name = (ENV["GITHUB_REPOSITORY"] || ENV["GITHUB_REPO"]).to_s.strip
-    UI.user_error!("Set GITHUB_REPOSITORY to owner/repo (no URL)") if repository_name.empty?
-    UI.user_error!("Use owner/repo only, not a full GitHub URL") if repository_name.include?("github.com")
-
-    repo_parts = repository_name.split("/")
-    UI.user_error!("GITHUB_REPOSITORY must be exactly owner/repo") unless repo_parts.length == 2 && repo_parts.none?(&:empty?)
-
-    token = (ENV["GITHUB_TOKEN"] || ENV["GH_TOKEN"]).to_s.strip
-    UI.user_error!("Set GITHUB_TOKEN or GH_TOKEN (contents:write / repo scope)") if token.empty?
-
-    # GitHub Actions GITHUB_TOKEN expects Bearer auth; PAT uses api_token path in fastlane.
-    github_auth = ENV["GITHUB_ACTIONS"] == "true" ? { api_bearer: token } : { api_token: token }
-
     version_string = read_pubspec_version_string
     tag = (ENV["GITHUB_PRERELEASE_TAG"] || "").strip
     tag = "v#{version_string.tr('+', '-')}" if tag.empty?
 
     release_name = (ENV["GITHUB_RELEASE_NAME"] || "").strip
-    release_name = "Horcrux #{version_string} (pre-release)" if release_name.empty?
+    release_name = "Horcrux #{version_string} (beta)" if release_name.empty?
 
+    # Default to the Unreleased changelog as the release notes; override
+    # with GITHUB_RELEASE_BODY for a custom body.
     release_body = (ENV["GITHUB_RELEASE_BODY"] || "").strip
-    release_body = "Android APK pre-release for #{version_string}." if release_body.empty?
+    release_body = cleaned_changelog if release_body.empty?
 
     release = set_github_release(
-      repository_name: repository_name,
+      repository_name: github_repo_name,
       tag_name: tag,
       name: release_name,
       description: release_body,
       is_prerelease: true,
       upload_assets: [apk_path],
-      **github_auth
+      **github_auth_hash
     )
 
     if release.nil?
