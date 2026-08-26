@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-26
+
 ### Release Notes
 
 - Fixed: duplicate notifications when app is running in the background. [#304](https://github.com/mplorentz/horcrux/pull/304)
