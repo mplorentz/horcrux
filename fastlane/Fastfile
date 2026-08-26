@@ -347,6 +347,29 @@ def cleaned_changelog
   strip_markdown_links(changelog)
 end
 
+# Stamp the `## [Unreleased]` section into a versioned section, e.g.
+# `## [1.0.1] - 2026-08-26`, then reset Unreleased to an empty section above
+# it. Keeps [Keep a Changelog](https://keepachangelog.com/) conventions.
+# The version_id is used verbatim in the heading (e.g. "1.0.1").
+def stamp_changelog(section_identifier:)
+  changelog_path = File.expand_path("../CHANGELOG.md", __dir__)
+  UI.user_error!("CHANGELOG.md not found at #{changelog_path}") unless File.exist?(changelog_path)
+  content = File.read(changelog_path)
+
+  stanza = content.match(/^## \[Unreleased\]\s*\n(.*?)(?=^## )/m)
+  UI.user_error!("Could not find an '## [Unreleased]' section in CHANGELOG.md") unless stanza
+
+  body = stanza[1].strip
+  UI.user_error!("The Unreleased section is empty; nothing to stamp") if body.empty?
+
+  date = Time.now.strftime("%Y-%m-%d")
+  versioned = "## [#{section_identifier}] - #{date}\n\n#{body}"
+
+  content = content.sub(/^## \[Unreleased\]\s*\n.*?(?=^## )/m, "## [Unreleased]\n\n#{versioned}\n\n")
+  File.write(changelog_path, content)
+  UI.message("✅ Stamped #{section_identifier} into CHANGELOG.md")
+end
+
 # Read the integer versionCode (the part after `+` in pubspec.yaml).
 # Play Store changelog filenames must match this value exactly.
 def read_pubspec_version_code
