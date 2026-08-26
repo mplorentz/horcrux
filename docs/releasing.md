@@ -34,9 +34,13 @@ bundle exec fastlane stamp_release
 
 - Click release buttons in App Store Connect and Google Play
 
+- Update github release to latest: https://github.com/mplorentz/horcrux/releases/
+
 - Upload to zap store
 
 ```zsp publish```
+
+- Optional: share on Nostr
 
 ## Prerequisites
 
