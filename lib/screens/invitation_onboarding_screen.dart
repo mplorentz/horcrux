@@ -82,6 +82,7 @@ class _InvitationOnboardingScreenState extends ConsumerState<InvitationOnboardin
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'AccountChoiceScreen'),
         builder: (context) => const AccountChoiceScreen(),
       ),
     );

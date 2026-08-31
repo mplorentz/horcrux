@@ -62,6 +62,7 @@ class _StartScreenState extends State<StartScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'AccountChoiceScreen'),
                       builder: (context) => const AccountChoiceScreen(),
                     ),
                   );
@@ -78,6 +79,7 @@ class _StartScreenState extends State<StartScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'InvitationOnboardingScreen'),
                       builder: (context) => const InvitationOnboardingScreen(),
                     ),
                   );
@@ -93,6 +95,7 @@ class _StartScreenState extends State<StartScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'OnboardingRecoveryScreen'),
                       builder: (context) => const OnboardingRecoveryScreen(),
                     ),
                   );
@@ -108,6 +111,7 @@ class _StartScreenState extends State<StartScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'AccountChoiceScreen'),
                       builder: (context) => const AccountChoiceScreen(),
                     ),
                   );

@@ -82,6 +82,7 @@ class ImportSuccessScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'VaultExplainerScreen'),
                         builder: (context) => VaultExplainerScreen(
                           initialContent: nsec,
                           initialName: 'Nostr Key Backup',
@@ -98,6 +99,7 @@ class ImportSuccessScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
+                        settings: const RouteSettings(name: 'VaultListScreen'),
                         builder: (context) => const VaultListScreen(),
                       ),
                       (route) => false,

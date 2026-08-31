@@ -130,7 +130,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       final next = widget.nextScreen;
       if (next != null) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => next),
+          MaterialPageRoute(
+            settings: RouteSettings(name: next.runtimeType.toString()),
+            builder: (_) => next,
+          ),
           (route) => false,
         );
       } else {

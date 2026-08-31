@@ -60,6 +60,21 @@ class AppStateDao extends DatabaseAccessor<AppDatabase> with _$AppStateDaoMixin 
     return setString(key: key, value: value.toString());
   }
 
+  /// Analytics consent cache keys.
+  static const String analyticsOptInKey = 'analytics_opt_in';
+  static const String accountRefreshedAtKey = 'account_refreshed_at';
+
+  /// Convenience getter/setter for analytics opt-in.
+  Future<bool?> getAnalyticsOptIn() => getBool(analyticsOptInKey);
+
+  Future<void> setAnalyticsOptIn(bool value) => setBool(key: analyticsOptInKey, value: value);
+
+  /// Convenience getter/setter for account refresh timestamp.
+  Future<int?> getAccountRefreshedAt() => getInt(accountRefreshedAtKey);
+
+  Future<void> setAccountRefreshedAt(int epochMs) =>
+      setInt(key: accountRefreshedAtKey, value: epochMs);
+
   Future<List<String>> viewedNotificationIds() async {
     final rows = await (select(viewedNotifications)
           ..orderBy([(t) => OrderingTerm.asc(t.notificationId)]))

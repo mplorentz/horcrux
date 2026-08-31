@@ -57,6 +57,7 @@ class _AccountCreatedScreenState extends ConsumerState<AccountCreatedScreen> {
       if (mounted) {
         await Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
+            settings: const RouteSettings(name: 'VaultExplainerScreen'),
             builder: (context) => VaultExplainerScreen(
               initialContent: widget.nsec,
               initialName: 'Nostr Key Backup',

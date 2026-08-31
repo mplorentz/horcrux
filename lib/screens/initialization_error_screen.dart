@@ -31,6 +31,7 @@ class InitializationErrorScreen extends StatelessWidget {
   void _openFeedback(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
+        settings: const RouteSettings(name: 'FeedbackScreen'),
         builder: (context) => FeedbackScreen(
           title: 'Contact Support',
           initialMessage: 'App failed to initialize:\n\n$error',

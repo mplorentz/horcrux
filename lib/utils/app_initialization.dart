@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app_navigator.dart';
 import '../database/app_database_provider.dart';
 import '../providers/key_provider.dart';
+import '../services/analytics_service.dart';
+import '../services/horcrux_api_service.dart';
 import '../services/logger.dart';
 import '../services/ndk_service.dart';
 import '../services/relay_scan_service.dart';
@@ -78,6 +82,12 @@ Future<void> initializeAppServices(
   final relayScanService = ref.read(relayScanServiceProvider);
   await relayScanService.initialize();
 
+  // Initialize analytics: read cached opt-in, init PostHog if opted in,
+  // then fire-and-forget GET /account to refresh consent.
+  final analyticsService = ref.read(analyticsServiceProvider);
+  await analyticsService.setup();
+  unawaited(_refreshAnalyticsConsent(ref, analyticsService));
+
   // Sweep any vault plaintext that survived a previous run (e.g. crash, force-
   // quit, or share recipient that read-and-released after our cleanup window).
   await ref.read(vaultExportServiceProvider).clearExportDirectory();
@@ -119,4 +129,27 @@ Future<void> initializeAppAndRefreshKeys(WidgetRef ref) async {
   ref.invalidate(currentPublicKeyBech32Provider);
   ref.invalidate(isLoggedInProvider);
   ref.invalidate(appDatabaseProvider);
+}
+
+/// Fire-and-forget refresh of the analytics consent from the horcrux-api.
+///
+/// Mirrors the ToS re-prompt pattern in [main.dart]'s
+/// [_maybePromptForUpdatedTerms]: non-blocking, never prevents the app from
+/// loading. If the fetched opt-in differs from the cached value, syncs the
+/// analytics state (init or tear down PostHog for the current session).
+Future<void> _refreshAnalyticsConsent(WidgetRef ref, AnalyticsService analyticsService) async {
+  try {
+    final api = ref.read(horcruxApiServiceProvider);
+    final account = await api.getAccount();
+
+    // Update the local kv cache with the fresh value.
+    final dao = ref.read(appDatabaseProvider).appStateDao;
+    await dao.setAnalyticsOptIn(account.analyticsOptIn);
+    await dao.setAccountRefreshedAt(DateTime.now().millisecondsSinceEpoch);
+
+    // If the refreshed value differs from what we initialized with, sync.
+    await analyticsService.syncOptIn(account.analyticsOptIn);
+  } catch (e, st) {
+    Log.warning('[Analytics] Consent refresh failed (server unreachable?)', e, st);
+  }
 }

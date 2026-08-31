@@ -139,6 +139,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      settings: const RouteSettings(name: 'AccountChoiceScreen'),
                       builder: (context) => const AccountChoiceScreen(),
                     ),
                   );
@@ -147,6 +148,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'StartScreen'),
                     builder: (context) => const StartScreen(),
                   ),
                 );

@@ -25,6 +25,7 @@ import 'screens/vault_list_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/initialization_error_screen.dart';
 import 'screens/login_relay_config_screen.dart';
+import 'services/analytics_service.dart';
 import 'utils/app_initialization.dart';
 import 'widgets/theme.dart';
 
@@ -122,6 +123,13 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
   String? _initError;
   ProviderSubscription<AsyncValue<bool>>? _loginStateSubscription;
 
+  /// Whether this is the very first app launch (cold start).
+  /// Used to distinguish cold-start `app_opened` from background resume.
+  bool _isColdStart = true;
+
+  /// Navigator observer for screen-view analytics.
+  final RouteAnalyticsObserver _routeAnalyticsObserver = RouteAnalyticsObserver();
+
   @override
   void initState() {
     super.initState();
@@ -135,6 +143,12 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     // macOS/desktop often never reaches [paused]; persist cursors on inactive/hidden/detached too.
     switch (state) {
       case AppLifecycleState.resumed:
+        if (_isColdStart) {
+          _isColdStart = false;
+          _fireAppOpened(source: 'cold');
+        } else {
+          _fireAppOpened(source: 'background');
+        }
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
@@ -148,6 +162,17 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
     // recipient — wiping the file then drops the share mid-flight.
     if (state == AppLifecycleState.detached) {
       unawaited(_sweepVaultExports());
+    }
+  }
+
+  /// Fires the `app_opened` analytics event.
+  void _fireAppOpened({required String source}) {
+    try {
+      final analytics = ref.read(analyticsServiceProvider);
+      analytics.capture('app_opened', properties: {'source': source});
+    } catch (e) {
+      // Analytics service may not be available yet during early init.
+      Log.debug('[Analytics] app_opened skipped: $e');
     }
   }
 
@@ -202,6 +227,11 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
         // User is logged in - initialize services
         await initializeAppServices(ref);
 
+        // Wire the route analytics observer with the analytics service.
+        _routeAnalyticsObserver.init(
+          ref.read(analyticsServiceProvider),
+        );
+
         // Check for ToS version bump (re-prompt). Fire-and-forget so the
         // app loads immediately; the consent screen is pushed on top.
         unawaited(_maybePromptForUpdatedTerms(ref));
@@ -211,6 +241,12 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
         // immediately instead of only being picked up once
         // initializeAppAndRefreshKeys runs later (after Create Account).
         await initializePreLoginDeepLinking(ref);
+
+        // Wire the route analytics observer even during onboarding.
+        // Screen views are no-ops until the user opts in.
+        _routeAnalyticsObserver.init(
+          ref.read(analyticsServiceProvider),
+        );
       }
       // If no key exists, we'll show onboarding screen
 
@@ -307,6 +343,7 @@ class _HorcruxAppState extends ConsumerState<HorcruxApp> with WidgetsBindingObse
 
     return MaterialApp(
       navigatorKey: navigatorKey,
+      navigatorObservers: [_routeAnalyticsObserver],
       title: 'Horcrux',
       theme: horcrux3Dark,
       debugShowCheckedModeBanner: false,

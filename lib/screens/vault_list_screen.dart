@@ -39,7 +39,9 @@ class VaultListScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                MaterialPageRoute(
+                    settings: const RouteSettings(name: 'SettingsScreen'),
+                    builder: (context) => const SettingsScreen()),
               );
             },
             tooltip: 'Settings',
@@ -140,11 +142,13 @@ class VaultListScreen extends ConsumerWidget {
           ),
           // Create vault button at bottom
           RowButton(
+            analyticsEvent: 'vault_created',
             onPressed: () async {
               // Show vault creation flow as a modal
               final vaultId = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'VaultExplainerScreen'),
                   builder: (context) => const VaultExplainerScreen(),
                   fullscreenDialog: true,
                 ),
@@ -155,6 +159,7 @@ class VaultListScreen extends ConsumerWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'VaultDetailScreen'),
                     builder: (context) => VaultDetailScreen(vaultId: vaultId),
                   ),
                 );

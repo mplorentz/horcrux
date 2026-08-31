@@ -89,6 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
+                    settings: const RouteSettings(name: 'HowItWorksScreen'),
                     builder: (context) => const HowItWorksScreen(),
                   ),
                 );

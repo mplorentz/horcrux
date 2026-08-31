@@ -41,6 +41,7 @@ dependencies:
   pointycastle: ^4.0.0
   flutter_svg: ^2.3.0
   flutter_markdown_plus: ^1.0.12
+  posthog_flutter: ^5.36.6
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/analytics_service.dart';
 import '../widgets/row_button.dart';
 import '../widgets/horcrux_app_bar.dart';
 import '../widgets/horcrux_scaffold.dart';
@@ -112,6 +114,7 @@ class VaultExplainerScreen extends StatelessWidget {
               final result = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: 'VaultCreateScreen'),
                   builder: (context) => VaultCreateScreen(
                     initialContent: initialContent,
                     initialName: initialName,
@@ -123,6 +126,16 @@ class VaultExplainerScreen extends StatelessWidget {
               // If vault was created, pop with the vaultId
               // so VaultListScreen can navigate to VaultDetailScreen
               if (result != null && context.mounted) {
+                // Fire vault_created analytics event.
+                // Properties are set from the vault creation result.
+                try {
+                  final analytics =
+                      ProviderScope.containerOf(context).read(analyticsServiceProvider);
+                  analytics.capture('vault_created', properties: {
+                    'vault_id_hash': AnalyticsService.vaultHash(result),
+                  });
+                } catch (_) {}
+
                 Navigator.pop(context, result);
               }
             },
