@@ -1144,14 +1144,9 @@ class InvitationService {
       final newSteward = createSteward(pubkey: pubkey, name: name);
       final stewardsWithNew = [...backupConfig.stewards, newSteward];
 
-      // If the existing config was empty (zero stewards), reset threshold to 1.
-      // This mirrors the screen's _calculateDefaultThreshold for a single steward.
-      final effectiveThreshold = backupConfig.stewards.isEmpty
-          ? 1
-          : backupConfig.threshold;
-      final configWithUpdatedThreshold = effectiveThreshold != backupConfig.threshold
-          ? backupConfig.copyWith(threshold: effectiveThreshold)
-          : backupConfig;
+      final configWithUpdatedThreshold = backupConfig.copyWith(
+          threshold: VaultBackupConstraints.normalizeThreshold(
+              backupConfig.threshold, stewardsWithNew.length));
 
       // Update existing stewards who are holdingKey to awaitingNewKey
       final updatedConfig = _incrementDistributionVersionForNewSteward(

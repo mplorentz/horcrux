@@ -43,7 +43,7 @@ class BackupConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
-  int _threshold = VaultBackupConstraints.defaultThreshold;
+  int _threshold = VaultBackupConstraints.recommendedThreshold(0);
   final List<Steward> _stewards = [];
   final List<String> _relays = [RelayScanService.defaultHorcruxRelayUrl];
   bool _isCreating = false;
@@ -123,16 +123,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         name: ownerName,
       );
 
-      setState(() {
+      _stewardsChanged(() {
         _includeSelfAsSteward = true;
-        _stewards.insert(0, ownerSteward); // Add at beginning
-        // Update threshold if needed for new plans
-        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
-        }
-        _hasUnsavedChanges = true;
+        _stewards.insert(0, ownerSteward);
       });
     } else {
       // Disable self-steward: remove owner steward from list
@@ -181,34 +174,26 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         }
       }
 
-      setState(() {
+      _stewardsChanged(() {
         _includeSelfAsSteward = false;
         _stewards.removeWhere((s) => s.isOwner);
-        // Update threshold if needed
-        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
-        } else if (_stewards.isEmpty) {
-          _threshold = VaultBackupConstraints.minThreshold;
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
-        }
-        _hasUnsavedChanges = true;
       });
     }
   }
 
-  /// Calculate default threshold based on steward count for new plans
-  int _calculateDefaultThreshold(int stewardCount) {
-    if (stewardCount == 0) {
-      return VaultBackupConstraints.minThreshold;
-    } else if (stewardCount == 1) {
-      return 1;
-    } else if (stewardCount == 2) {
-      return 2;
-    } else {
-      // For 3+ stewards, default to n-1
-      return stewardCount - 1;
-    }
+  /// Mutate stewards via [mutate], then re-derive _threshold.
+  ///
+  /// When the user has not manually touched the threshold slider, picks the
+  /// recommended value for the new steward count; otherwise clamps the
+  /// existing threshold to the valid range.
+  void _stewardsChanged(void Function() mutate) {
+    setState(() {
+      mutate();
+      _threshold = _thresholdManuallyChanged
+          ? VaultBackupConstraints.normalizeThreshold(_threshold, _stewards.length)
+          : VaultBackupConstraints.recommendedThreshold(_stewards.length);
+      _hasUnsavedChanges = true;
+    });
   }
 
   /// Load existing recovery plan if one exists
@@ -221,8 +206,13 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (existingConfig != null && mounted) {
         _initialBackupConfig = existingConfig.copyWith();
+        final loadedThreshold = existingConfig.threshold;
+        final normalized = VaultBackupConstraints.normalizeThreshold(
+            loadedThreshold, existingConfig.stewards.length);
+        final suggested =
+            VaultBackupConstraints.recommendedThreshold(existingConfig.stewards.length);
         setState(() {
-          _threshold = existingConfig.threshold;
+          _threshold = normalized;
           _stewards.clear();
           _stewards.addAll(existingConfig.stewards);
           _relays.clear();
@@ -231,7 +221,10 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
           _isLoading = false;
           _hasUnsavedChanges = false;
           _isEditingExistingPlan = true; // We're editing an existing plan
-          _thresholdManuallyChanged = true; // Existing plan means threshold was already set
+          // Only treat as manually changed if the loaded threshold differs from
+          // the recommendation — reopening a plan set by the auto-default still
+          // auto-adjusts when stewards are added.
+          _thresholdManuallyChanged = loadedThreshold != suggested;
           // Check if owner is already included as a steward
           _includeSelfAsSteward = hasOwnerSteward(existingConfig);
           _alertStewardsWithPush = pushEnabled;
@@ -815,19 +808,9 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
         final stewardWithContact = contactInfo != null
             ? result.steward.copyWith(contactInfo: contactInfo)
             : result.steward;
-        setState(() {
+        _stewardsChanged(() {
           _stewards.add(stewardWithContact);
           _invitationLinksByInviteeName[inviteeName] = result.invitation;
-          // Apply default threshold logic for new plans (only if not manually changed)
-          if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-            _threshold = _calculateDefaultThreshold(_stewards.length);
-          } else {
-            // Ensure threshold doesn't exceed the number of stewards when editing
-            if (_threshold > _stewards.length) {
-              _threshold = _stewards.length;
-            }
-          }
-          _hasUnsavedChanges = true;
         });
 
         // Copy invitation link to clipboard
@@ -869,18 +852,8 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
       );
 
       if (!mounted) return;
-      setState(() {
+      _stewardsChanged(() {
         _stewards.add(steward);
-        // Apply default threshold logic for new plans (only if not manually changed)
-        if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-          _threshold = _calculateDefaultThreshold(_stewards.length);
-        } else {
-          // Ensure threshold doesn't exceed the number of stewards when editing
-          if (_threshold > _stewards.length) {
-            _threshold = _stewards.length;
-          }
-        }
-        _hasUnsavedChanges = true;
       });
 
       if (mounted) {
@@ -1255,25 +1228,11 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
     // Remove from local state immediately so the UI updates without waiting
     // for the network call to send the removal event. If the relay is slow
     // or unreachable, the user shouldn't be stuck waiting.
-    setState(() {
+    _stewardsChanged(() {
       _stewards.removeWhere((s) => s.id == steward.id);
       if (steward.name != null) {
         _invitationLinksByInviteeName.remove(steward.name);
       }
-
-      // Apply default threshold logic for new plans when removing stewards (only if not manually changed)
-      if (!_isEditingExistingPlan && !_thresholdManuallyChanged) {
-        _threshold = _calculateDefaultThreshold(_stewards.length);
-      } else {
-        // Ensure threshold doesn't exceed the number of stewards when editing
-        if (_stewards.isEmpty) {
-          _threshold = VaultBackupConstraints.minThreshold;
-        } else if (_threshold > _stewards.length) {
-          _threshold = _stewards.length;
-        }
-      }
-
-      _hasUnsavedChanges = true;
     });
 
     // If steward has accepted (has pubkey), send removal event (fire-and-forget
@@ -1524,7 +1483,6 @@ class _BackupConfigScreenState extends ConsumerState<BackupConfigScreen> {
 
       if (updatedConfig != null &&
           updatedConfig.isValidForDistribution &&
-          updatedConfig.canDistribute &&
           (configChanged || pushPreferenceChanged)) {
         try {
           if (configChanged) {

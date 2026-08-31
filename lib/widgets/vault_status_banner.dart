@@ -172,7 +172,7 @@ class VaultStatusBanner extends ConsumerWidget {
     // Plan exists but not ready
     if (!backupConfig.isReady) {
       // Plan is invalid
-      if (!backupConfig.isValid) {
+      if (!backupConfig.isValidForSave) {
         return _buildBanner(
           context,
           const _StatusData(

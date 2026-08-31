@@ -457,8 +457,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
-            vaultDetailProvider(vaultDetail.id)
-                .overrideWith((ref) => Stream.value(vaultDetail)),
+            vaultDetailProvider(vaultDetail.id).overrideWith((ref) => Stream.value(vaultDetail)),
             currentPublicKeyProvider.overrideWith((ref) async => testPubkey),
             recoveryStatusProvider.overrideWith(
               (ref, vaultId) => const AsyncValue.data(

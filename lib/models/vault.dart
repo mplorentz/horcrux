@@ -5,16 +5,18 @@ import 'recovery_request.dart';
 
 part 'vault.freezed.dart';
 
-/// Backup configuration constraints
+/// Backup configuration constraints.
+///
+/// A plan's threshold is always >= 1, even when it has no stewards yet — the
+/// threshold-0 sentinel was removed. A 0-steward plan carries its recommended
+/// value, inert, because [BackupConfigExtension.isValidForDistribution]
+/// gates all crypto-facing reads.
 class VaultBackupConstraints {
   /// Minimum threshold value for Shamir's Secret Sharing
   static const int minThreshold = 1;
 
   /// Maximum number of total keys / shares for backup distribution
   static const int maxTotalKeys = 10;
-
-  /// Default threshold value for new backups
-  static const int defaultThreshold = 2;
 
   /// Default total keys value for new backups
   static const int defaultTotalKeys = 3;
@@ -25,6 +27,19 @@ class VaultBackupConstraints {
   /// plan with fewer than this many stewards cannot have its keys distributed
   /// (see `SecretScheme`).
   static const int minStewardsForDistribution = 2;
+
+  /// The lowest threshold allowed for a plan with [n] stewards.
+  /// 0->0, 1->1, 2+->2.
+  static int minThresholdForDisplay(int n) => n < 2 ? n : 2;
+
+  /// Recommended threshold for a plan with [n] stewards.
+  /// 0->1, 1->1, 2->2, 3+->n-1.
+  static int recommendedThreshold(int n) => n < 3 ? (n < 2 ? 1 : 2) : n - 1;
+
+  /// Clamp a user-set [threshold] to the valid range for [n] stewards:
+  /// `[minThresholdForDisplay(n), max(n, 1)]`.
+  static int normalizeThreshold(int threshold, int n) =>
+      threshold.clamp(minThresholdForDisplay(n), n < 1 ? 1 : n);
 }
 
 /// Shared data model for a vault entry on the current device.
