@@ -6,6 +6,7 @@ import '../database/connection.dart';
 import '../database/db_key.dart';
 import '../providers/vault_provider.dart';
 import '../providers/key_provider.dart';
+import 'invitation_service.dart';
 import 'login_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
@@ -27,6 +28,7 @@ final logoutServiceProvider = Provider<LogoutService>((ref) {
     loginService: ref.watch(loginServiceProvider),
     processedNostrEventStore: ref.watch(processedNostrEventStoreProvider),
     appDatabase: ref.watch(appDatabaseProvider),
+    invitationService: ref.watch(invitationServiceProvider),
   );
 });
 
@@ -37,6 +39,7 @@ class LogoutService {
   final LoginService _loginService;
   final ProcessedNostrEventStore _processedNostrEventStore;
   final AppDatabase _appDatabase;
+  final InvitationService _invitationService;
   final Future<void> Function() _deleteDatabaseFiles;
   final Future<void> Function() _clearSharedPreferences;
   final Future<void> Function() _clearSecureStorage;
@@ -49,6 +52,7 @@ class LogoutService {
     required LoginService loginService,
     required ProcessedNostrEventStore processedNostrEventStore,
     required AppDatabase appDatabase,
+    required InvitationService invitationService,
     Future<void> Function()? deleteDatabaseFiles,
     Future<void> Function()? clearSharedPreferences,
     Future<void> Function()? clearSecureStorage,
@@ -59,6 +63,7 @@ class LogoutService {
         _loginService = loginService,
         _processedNostrEventStore = processedNostrEventStore,
         _appDatabase = appDatabase,
+        _invitationService = invitationService,
         _deleteDatabaseFiles = deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles,
         _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
         _clearSecureStorage = clearSecureStorage ?? clearSecureStorageForWipe,
@@ -134,6 +139,9 @@ class LogoutService {
     } catch (e, st) {
       Log.error('Error clearing processed Nostr event store during wipe', e, st);
     }
+
+    // Clear staged invitation so it does not re-surface after the next login.
+    _invitationService.clearStagedInvitation();
 
     if (!preserveIdentity) {
       // Clear primary key material so LoginService's in-memory cache is reset.
