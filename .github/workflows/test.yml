@@ -87,6 +87,8 @@ jobs:
 
       - name: Run unit tests
         # Exclude drift-schema: schema parity runs in "Verify drift schema dump" (shells drift_dev).
+        # SQLCipher Zetetic encryption checks also run here but skip unless a
+        # SQLCipher dylib is already present; the dedicated job below forces them.
         run: flutter test --exclude-tags=golden,drift-schema
 
       - name: Run golden tests
@@ -118,3 +120,66 @@ jobs:
               repo: context.repo.repo,
               body: '## ⚠️ Golden Tests Failed\n\nThe golden screenshot tests have failed. This could mean:\n\n1. **Intentional UI changes**: If you updated the UI, you need to update the golden files:\n   ```bash\n   flutter test test/screens --update-goldens\n   git add test/screens/goldens/*.png\n   git commit -m "Update golden test screenshots"\n   ```\n\n2. **Unintentional changes**: Review the diff images in the [test artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to see what changed.\n\n3. **Platform differences**: Golden tests must be generated on macOS. If you\'re on Linux/Windows, ask a macOS team member to regenerate them.\n\n📦 Download the failure artifacts above to see before/after comparisons.'
             })
+
+  # Dedicated parallel job for Zetetic SQLCipher encryption verification.
+  #
+  # Why a separate job (not a step on the main suite):
+  # - The main "Run Tests" job already uses macos-26 (goldens need it), but
+  #   `flutter test` loads Apple's system SQLite — not SQLCipher — so those
+  #   checks skip unless a cipher-capable dylib is injected via
+  #   SQLCIPHER_LIBRARY (or a prior `flutter build macos` left build products).
+  # - Obtaining SQLCipher via Homebrew is much cheaper than
+  #   `flutter build macos` / CocoaPods framework builds, and keeps that cost
+  #   off the main critical path (analyze + unit + golden).
+  # - REQUIRE_SQLCIPHER=1 makes the job fail-closed if the dylib does not load
+  #   (skip-when-unavailable remains the default for local/Linux hosts).
+  #
+  # Caveats: pays for a second macOS runner in parallel; uses Homebrew
+  # SQLCipher (not the app's CocoaPods SQLCipher.framework). That is enough
+  # for the advisory scenarios (correct/incorrect/no key + non-plaintext
+  # header). No codesigning/certs required.
+  sqlcipher_encryption:
+    name: SQLCipher encryption verification
+    runs-on: macos-26
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: ".fvmrc"
+          channel: "stable"
+          cache: true
+          cache-key: flutter-sqlcipher-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          pub-cache-key: flutter-pub-sqlcipher-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Install SQLCipher (Homebrew)
+        run: brew install sqlcipher
+
+      - name: Resolve SQLCipher dylib
+        id: sqlcipher_lib
+        run: |
+          PREFIX="$(brew --prefix sqlcipher)"
+          LIB="${PREFIX}/lib/libsqlcipher.dylib"
+          if [[ ! -f "$LIB" ]]; then
+            echo "::error ::Expected SQLCipher dylib at $LIB"
+            ls -la "${PREFIX}/lib" || true
+            exit 1
+          fi
+          echo "path=$LIB" >> "$GITHUB_OUTPUT"
+          echo "Using SQLCipher library: $LIB"
+          file "$LIB"
+
+      - name: Run Zetetic SQLCipher encryption verification
+        env:
+          SQLCIPHER_LIBRARY: ${{ steps.sqlcipher_lib.outputs.path }}
+          # Fail instead of skip when the library does not activate SQLCipher.
+          REQUIRE_SQLCIPHER: "1"
+        run: flutter test test/database/sqlcipher_encryption_verification_test.dart
