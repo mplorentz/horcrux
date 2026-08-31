@@ -5,6 +5,7 @@ import 'package:horcrux/models/backup_config.dart';
 import 'package:horcrux/models/steward.dart';
 import 'package:horcrux/models/share.dart';
 import 'package:horcrux/models/recovery_request.dart';
+import 'package:horcrux/models/steward_status.dart';
 import 'package:horcrux/models/vault_detail.dart';
 import 'package:horcrux/providers/vault_provider.dart';
 import 'package:horcrux/providers/key_provider.dart';
@@ -199,6 +200,114 @@ void main() {
 
       container.dispose();
     });
+
+    testWidgets(
+      'shows Initiate Recovery for owner without self-steward shard on a sealed vault',
+      (tester) async {
+        // Owner is NOT a self-steward (no share), vault is sealed
+        // (no owned_vaults row → StewardedVaultDetail with latestShare null).
+        final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice')
+            .copyWith(status: StewardStatus.holdingKey);
+        final steward2 = createSteward(pubkey: 'c' * 64, name: 'Bob')
+            .copyWith(status: StewardStatus.holdingKey);
+
+        final backupConfig = createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [steward1, steward2],
+          relays: ['wss://relay.example.com'],
+        ).copyWith(distributionVersion: 1);
+
+        final vaultDetail = StewardedVaultDetail(
+          id: 'test-vault',
+          name: 'Test Vault',
+          ownerPubkey: testPubkey,
+          ownerName: null,
+          threshold: 2,
+          totalShares: 2,
+          stewards: const [],
+          recoveryRequests: const [],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: backupConfig,
+          latestShare: null,
+        );
+
+        final container = ProviderContainer(
+          overrides: baseOverrides(vault: vaultDetail, currentPubkey: testPubkey),
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Initiate Recovery'), findsOneWidget);
+
+        container.dispose();
+      },
+    );
+
+    testWidgets(
+      'does not show Initiate Recovery for owner without shard when no steward holds a key',
+      (tester) async {
+        // Valid-for-distribution plan (2 stewards, threshold 2) but neither
+        // steward has acknowledged → acknowledgedStewardsCount == 0, so the
+        // service would throw "No stewards available for recovery" — the
+        // button must not be shown.
+        final steward1 = createSteward(pubkey: otherPubkey, name: 'Alice');
+        final steward2 = createSteward(pubkey: 'c' * 64, name: 'Bob');
+
+        final backupConfig = createBackupConfig(
+          vaultId: 'test-vault',
+          threshold: 2,
+          totalKeys: 2,
+          stewards: [steward1, steward2],
+          relays: ['wss://relay.example.com'],
+        ).copyWith(distributionVersion: 1);
+
+        final vaultDetail = StewardedVaultDetail(
+          id: 'test-vault',
+          name: 'Test Vault',
+          ownerPubkey: testPubkey,
+          ownerName: null,
+          threshold: 2,
+          totalShares: 2,
+          stewards: const [],
+          recoveryRequests: const [],
+          pushEnabled: false,
+          createdAt: DateTime(2024, 1, 1),
+          archivedAt: null,
+          archivedReason: null,
+          backupConfig: backupConfig,
+          latestShare: null,
+        );
+
+        final container = ProviderContainer(
+          overrides: baseOverrides(vault: vaultDetail, currentPubkey: testPubkey),
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: VaultDetailScreen(vaultId: 'test-vault')),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Initiate Recovery'), findsNothing);
+
+        container.dispose();
+      },
+    );
   });
 
   group('Steward vault detail buttons with concurrent multi-initiator recoveries', () {
