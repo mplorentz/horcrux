@@ -9,6 +9,7 @@ import '../providers/key_provider.dart';
 import 'login_service.dart';
 import 'logger.dart';
 import 'processed_nostr_event_store.dart';
+import 'push_notification_receiver.dart';
 import 'recovery_service.dart';
 import 'relay_scan_service.dart';
 import 'secure_storage_corruption.dart';
@@ -26,6 +27,7 @@ final logoutServiceProvider = Provider<LogoutService>((ref) {
     relayScanService: ref.watch(relayScanServiceProvider),
     loginService: ref.watch(loginServiceProvider),
     processedNostrEventStore: ref.watch(processedNostrEventStoreProvider),
+    pushNotificationReceiver: ref.watch(pushNotificationReceiverProvider),
     appDatabase: ref.watch(appDatabaseProvider),
   );
 });
@@ -36,6 +38,7 @@ class LogoutService {
   final RelayScanService _relayScanService;
   final LoginService _loginService;
   final ProcessedNostrEventStore _processedNostrEventStore;
+  final PushNotificationReceiver _pushNotificationReceiver;
   final AppDatabase _appDatabase;
   final Future<void> Function() _deleteDatabaseFiles;
   final Future<void> Function() _clearSharedPreferences;
@@ -48,6 +51,7 @@ class LogoutService {
     required RelayScanService relayScanService,
     required LoginService loginService,
     required ProcessedNostrEventStore processedNostrEventStore,
+    required PushNotificationReceiver pushNotificationReceiver,
     required AppDatabase appDatabase,
     Future<void> Function()? deleteDatabaseFiles,
     Future<void> Function()? clearSharedPreferences,
@@ -58,6 +62,7 @@ class LogoutService {
         _relayScanService = relayScanService,
         _loginService = loginService,
         _processedNostrEventStore = processedNostrEventStore,
+        _pushNotificationReceiver = pushNotificationReceiver,
         _appDatabase = appDatabase,
         _deleteDatabaseFiles = deleteDatabaseFiles ?? deleteSqlCipherDatabaseFiles,
         _clearSharedPreferences = clearSharedPreferences ?? _clearAllSharedPreferences,
@@ -99,6 +104,17 @@ class LogoutService {
   /// full secure-storage wipe; deletes only the SQLCipher salt so the next open
   /// gets a new derivation while the Nostr key remains.
   Future<void> _wipeLocalState({required bool preserveIdentity}) async {
+    // Deregister from horcrux-notifier and delete the FCM token FIRST,
+    // before any key material is cleared. The deregister call authenticates
+    // with a NIP-98 header signed by the current Nostr key, so the key must
+    // still be available. Best-effort: notifier downtime must not wedge logout.
+    try {
+      await _pushNotificationReceiver.optOut();
+      Log.info('LogoutService: push receiver opted out');
+    } catch (e, st) {
+      Log.error('Error opting out of push notifications during wipe', e, st);
+    }
+
     // Stop relay scanning first to stop NDK subscriptions
     // This must be done before invalidating the NDK provider
     try {
